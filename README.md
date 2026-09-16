@@ -277,6 +277,12 @@ The first column is what the Agent path produced when the model received the ret
 
 These numbers come from a small synthetic corpus and one local 8B model; they show the harness works and where the failure modes are, not production quality. Extend `evals/questions.json` with real questions from your own documents before trusting any figure.
 
+`scripts/check_workflows.py` executes every supported workflow shape for real — plain chat, grounded QA, Query, agent with a Docker Python tool, agent with Retrieve as a tool, router with specialists, condition branches, an HTTP tool step, extraction, memory across runs, chained agents, manual trigger, and the two submission gates — against an in-process knowledge base built from `evals/corpus`, and prints what each one actually did. It is a diagnostic report, not a gate: known gaps are labelled. The findings and the prioritised list of updates toward production-grade workflows are in [docs/production-gap-analysis.md](docs/production-gap-analysis.md).
+
+```bash
+.venv/bin/python -m scripts.check_workflows
+```
+
 
 ## Knowledge service architecture and recovery
 

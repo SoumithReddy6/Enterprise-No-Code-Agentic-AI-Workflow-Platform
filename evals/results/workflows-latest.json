@@ -1,0 +1,213 @@
+{
+ "model": "llama3.1:latest",
+ "results": [
+  {
+   "scenario": "1 plain_chat",
+   "status": "success",
+   "ok": true,
+   "seconds": 2.9,
+   "note": "",
+   "output": "A durable job queue is a type of job queue that persists data even in the event of system failures or restarts, ensuring that no jobs are lost and allowing for reliable processing of tasks. This persistence can be achieved through various means such as database storage, file systems, or message queues with built-in durability features.",
+   "error": "",
+   "trace": [
+    "input:success",
+    "agent:success",
+    "out:success"
+   ]
+  },
+  {
+   "scenario": "2 grounded_qa",
+   "status": "success",
+   "ok": true,
+   "seconds": 3.3,
+   "note": "expects $65 with an [S#] citation",
+   "output": "The meal per diem for overnight travel is $65 per day [S1]. \n\nNote: The per diem rate is reduced to 75% on the first and last day of travel, but this information is not requested in the question.",
+   "error": "",
+   "trace": [
+    "input:success",
+    "retrieve:success",
+    "agent:success",
+    "out:success"
+   ]
+  },
+  {
+   "scenario": "3 query_node",
+   "status": "success",
+   "ok": true,
+   "seconds": 9.0,
+   "note": "",
+   "output": "The meal per diem for overnight travel is $65 per day. This amount covers breakfast, lunch, dinner, and incidental tips. On the first and last day of travel, the per diem is reduced to 75 percent. [S1]",
+   "error": "",
+   "trace": [
+    "input:success",
+    "query:success",
+    "out:success"
+   ]
+  },
+  {
+   "scenario": "4 agent_python_tool",
+   "status": "failed",
+   "ok": false,
+   "seconds": 2.4,
+   "note": "KNOWN GAP: tools carry no argument schema and a tool error aborts the run",
+   "output": "",
+   "error": "Python container failed: Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<tool>\", line 1, in <module>\n  File \"<string>\", line 1\n    15% of 240, then add 17\n           ^^^\nSyntaxError: invalid syntax\n",
+   "trace": [
+    "input:success",
+    "calc:failed~",
+    "agent:failed"
+   ]
+  },
+  {
+   "scenario": "5 agent_retrieve_tool",
+   "status": "success",
+   "ok": true,
+   "seconds": 12.9,
+   "note": "KNOWN GAP: tool results are raw dicts; no citation contract on the tool path",
+   "output": "22 days",
+   "error": "",
+   "trace": [
+    "input:success",
+    "search:success~",
+    "agent:success",
+    "out:success"
+   ]
+  },
+  {
+   "scenario": "6 router_specialists",
+   "status": "success",
+   "ok": true,
+   "seconds": 10.2,
+   "note": "expects delegation to the summarizer",
+   "output": "Meridian Freight Cooperative provides a daily allowance (per diem) of $65, requires receipts for expenses over $25, reimburses drivers at 67 cents per mile, and expects reports within 30 days.",
+   "error": "",
+   "trace": [
+    "input:success",
+    "summarizer:success~",
+    "router:success",
+    "out:success"
+   ]
+  },
+  {
+   "scenario": "7 condition_branch",
+   "status": "success",
+   "ok": true,
+   "seconds": 0.0,
+   "note": "true branch only",
+   "output": "I want a refund for order 42",
+   "error": "",
+   "trace": [
+    "input:success",
+    "check:success",
+    "yes:success"
+   ]
+  },
+  {
+   "scenario": "8 http_tool_flow",
+   "status": "success",
+   "ok": true,
+   "seconds": 0.2,
+   "note": "read-only GET api.github.com/zen",
+   "output": "Approachable is better than simple.",
+   "error": "",
+   "trace": [
+    "input:success",
+    "http:success",
+    "out:success"
+   ]
+  },
+  {
+   "scenario": "9 extraction_json",
+   "status": "success",
+   "ok": true,
+   "seconds": 2.7,
+   "note": "KNOWN GAP: JSON is not validated by the runtime",
+   "output": "{\n\"per_diem\": 65,\n\"mileage_rate\": null,\n\"receipt_threshold\": null\n}",
+   "error": "",
+   "trace": [
+    "input:success",
+    "retrieve:success",
+    "agent:success",
+    "out:success"
+   ]
+  },
+  {
+   "scenario": "10a memory_store",
+   "status": "success",
+   "ok": true,
+   "seconds": 1.8,
+   "note": "",
+   "output": "I've stored the following in memory:\n\n* Your favourite database is DuckDB.\n\nThis will be recalled if you ask about your favourite database in a future conversation.",
+   "error": "",
+   "trace": [
+    "input:success",
+    "agent:success",
+    "out:success"
+   ]
+  },
+  {
+   "scenario": "10b memory_recall",
+   "status": "success",
+   "ok": true,
+   "seconds": 2.1,
+   "note": "expects DuckDB recalled",
+   "output": "You mentioned earlier that your favourite database is DuckDB. I've stored this information in my memory for future reference. If you have any questions or need further assistance, feel free to ask!",
+   "error": "",
+   "trace": [
+    "input:success",
+    "agent:success",
+    "out:success"
+   ]
+  },
+  {
+   "scenario": "11 chained_agents",
+   "status": "success",
+   "ok": true,
+   "seconds": 12.9,
+   "note": "KNOWN GAP: [S#] labels pass through the critic unverified",
+   "output": "Based on the provided evidence, it seems that there is a gap in information regarding the specific response time expectations for the on-call rotation. The passage mentions compensation for SEV1 incidents handled outside business hours, but does not provide clear guidelines on expected response times.\n\nTo improve this, I would suggest adding more detail to the runbook [S2] or creating a separate d",
+   "error": "",
+   "trace": [
+    "input:success",
+    "retrieve:success",
+    "summ:success",
+    "critic:success",
+    "out:success"
+   ]
+  },
+  {
+   "scenario": "12 manual_trigger",
+   "status": "success",
+   "ok": true,
+   "seconds": 0.6,
+   "note": "",
+   "output": "OK",
+   "error": "",
+   "trace": [
+    "input:success",
+    "agent:success",
+    "out:success"
+   ]
+  },
+  {
+   "scenario": "13 invalid_kb_rejected",
+   "status": "422",
+   "ok": true,
+   "seconds": 0,
+   "note": "validation gate",
+   "output": "",
+   "error": "",
+   "trace": []
+  },
+  {
+   "scenario": "14 write_without_consent_rejected",
+   "status": "422",
+   "ok": true,
+   "seconds": 0,
+   "note": "consent gate",
+   "output": "",
+   "error": "",
+   "trace": []
+  }
+ ]
+}
