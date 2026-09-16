@@ -91,40 +91,57 @@ async def input_node(inputs, config, ctx):
 async def prompt_node(inputs, config, ctx):
     return {'text': config.template.format_map(inputs)}
 
+def account_usage(ctx,usage):
+    """Accumulate per-node model usage on the shared run state; the compiler reports it on the node event."""
+    if ctx.run is None or not usage:return
+    totals=ctx.run.setdefault('usage',{}).setdefault(ctx.node_id or '?',{'calls':0,'prompt_tokens':0,'completion_tokens':0})
+    totals['calls']+=1;totals['prompt_tokens']+=usage.get('prompt_tokens',0);totals['completion_tokens']+=usage.get('completion_tokens',0)
+
 async def llm_node(inputs, config, ctx):
     ctx.authorize_model(config)
     if config.provider == 'demo':
         await asyncio.sleep(0.15)
         return {'text': f'[Demo · no model called]\n\nReceived prompt:\n{inputs["prompt"]}', 'provider': 'demo'}
+    from .providers import with_retries,ProviderBusy,RETRYABLE_STATUS,record_usage
     params={}
     if config.temperature is not None:params['temperature']=config.temperature
     if config.top_p is not None:params['top_p']=config.top_p
     if config.max_tokens!=2048:params['max_tokens']=config.max_tokens
+    usage={}
     if config.provider == 'ollama':
         from .providers import ollama_chat
-        return {'text': await ollama_chat(config.model, config.system, inputs['prompt'],**params), 'provider': 'ollama'}
+        text=await with_retries(lambda: ollama_chat(config.model, config.system, inputs['prompt'],usage=usage,**params))
+        account_usage(ctx,usage);return {'text': text, 'provider': 'ollama'}
     if config.provider == 'claude':
         from .providers import claude_chat
-        return {'text': await claude_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),**params), 'provider': 'claude'}
+        text=await with_retries(lambda: claude_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),usage=usage,**params))
+        account_usage(ctx,usage);return {'text': text, 'provider': 'claude'}
     if not config.credential_id:
         raise ValueError('Choose an OpenAI credential in the LLM settings.')
     key = ctx.resolve_credential(config.credential_id)
-    async with httpx.AsyncClient(timeout=60) as client:
-        try:
-            response = await client.post('https://api.openai.com/v1/chat/completions',
-                headers={'Authorization': f'Bearer {key}'},
-                json={'model': config.model, 'messages': [
-                    {'role': 'system', 'content': config.system},
-                    {'role': 'user', 'content': inputs['prompt']}], 'max_completion_tokens': config.max_tokens,**{k:v for k,v in params.items() if k!='max_tokens'}})
-            response.raise_for_status()
-            content = response.json()['choices'][0]['message']['content']
-            if not isinstance(content, str):
-                raise ValueError('Model did not return text.')
-            return {'text': content, 'provider': 'openai'}
-        except httpx.HTTPStatusError as exc:
-            raise ValueError(f'OpenAI request failed (HTTP {exc.response.status_code}). Check the credential, model and quota.') from None
-        except (httpx.RequestError, KeyError, IndexError, TypeError):
-            raise ValueError('The model request failed or returned an unsupported response.') from None
+    async def openai_call():
+        async with httpx.AsyncClient(timeout=60) as client:
+            try:
+                response = await client.post('https://api.openai.com/v1/chat/completions',
+                    headers={'Authorization': f'Bearer {key}'},
+                    json={'model': config.model, 'messages': [
+                        {'role': 'system', 'content': config.system},
+                        {'role': 'user', 'content': inputs['prompt']}], 'max_completion_tokens': config.max_tokens,**{k:v for k,v in params.items() if k!='max_tokens'}})
+                if response.status_code in RETRYABLE_STATUS:raise ProviderBusy(f'OpenAI returned HTTP {response.status_code}')
+                response.raise_for_status()
+                body=response.json();content = body['choices'][0]['message']['content']
+                if not isinstance(content, str):
+                    raise ValueError('Model did not return text.')
+                record_usage(usage,(body.get('usage') or {}).get('prompt_tokens'),(body.get('usage') or {}).get('completion_tokens'))
+                return content
+            except ProviderBusy:raise
+            except httpx.TimeoutException:raise ProviderBusy('OpenAI request timed out') from None
+            except httpx.HTTPStatusError as exc:
+                raise ValueError(f'OpenAI request failed (HTTP {exc.response.status_code}). Check the credential, model and quota.') from None
+            except (httpx.RequestError, KeyError, IndexError, TypeError):
+                raise ValueError('The model request failed or returned an unsupported response.') from None
+    text=await with_retries(openai_call)
+    account_usage(ctx,usage);return {'text': text, 'provider': 'openai'}
 
 async def condition_node(inputs, config, ctx):
     value, needle = inputs['value'], config.contains

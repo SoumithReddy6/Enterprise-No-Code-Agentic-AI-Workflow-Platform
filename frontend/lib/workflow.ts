@@ -49,6 +49,7 @@ export type RunEvent = {
   outputs?: Record<string, unknown>;
   duration_ms?: number;
   cached?: boolean;
+  usage?: { calls: number; prompt_tokens: number; completion_tokens: number };
   error?: string;
   timestamp: string;
 };

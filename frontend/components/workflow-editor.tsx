@@ -1309,6 +1309,9 @@ function Editor() {
                             {e.duration_ms !== undefined
                               ? `${e.duration_ms} ms`
                               : ''}
+                            {e.usage
+                              ? ` · ${e.usage.prompt_tokens}+${e.usage.completion_tokens} tok`
+                              : ''}
                           </span>
                           <ChevronDown size={13} />
                         </summary>

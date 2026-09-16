@@ -1,6 +1,9 @@
 """Separate worker with renewable leases and durable per-node results."""
 import asyncio
+import json
+import logging
 import os
+import time
 from pathlib import Path
 from .storage import Store, local_key, new_id
 from .models import Workflow
@@ -11,15 +14,23 @@ from .platform_validation import platform_errors,kb_errors
 from .kb_gateway import KnowledgeServices
 
 RUN_TIMEOUT_SECONDS=120
+log=logging.getLogger('relay.run')
+
+def journal(**fields):
+    """One JSON line per lifecycle event, always keyed by run_id; inputs and outputs stay in the run record."""
+    log.info(json.dumps(fields,ensure_ascii=False,default=str))
 
 class Worker:
     def __init__(self,store,concurrency=4):
         self.store=store;self.owner=new_id();self.concurrency=concurrency;self.tools=ToolService(store);self.memory=MemoryService(store);self.kbs=KnowledgeServices()
 
     async def execute(self,run):
-        id=run['id'];owner=run.get('_claim_owner',self.owner)
+        id=run['id'];owner=run.get('_claim_owner',self.owner);started=time.perf_counter()
+        journal(event='run.start',run_id=id,tenant=run.get('tenant_id'),workflow=run['workflow'].get('name'),nodes=len(run['workflow'].get('nodes',[])),resumed=bool(run.get('checkpoints')))
         async def emit(event):
             if not self.store.worker_event(id,owner,event):raise asyncio.CancelledError()
+            if event.get('node_id') and event['status']!='running':
+                journal(event='node.'+event['status'],run_id=id,node_id=event['node_id'],transient=event.get('transient',False),cached=event.get('cached',False),duration_ms=event.get('duration_ms'),usage=event.get('usage'),error=event.get('error'))
         async def graph_run():
             workflow=Workflow.model_validate(run['workflow'])
             tenant_id=self.store.run_tenant(id,owner)
@@ -62,13 +73,18 @@ class Worker:
                 await asyncio.wait({task},timeout=.2)
             output=await task
             self.store.finish_run(id,owner,'success',output=output)
+            journal(event='run.finish',run_id=id,status='success',seconds=round(time.perf_counter()-started,3))
         except asyncio.CancelledError:
             task.cancel();await asyncio.gather(task,return_exceptions=True)
-            if self.store.cancel_requested(id,owner):self.store.finish_run(id,owner,'cancelled')
+            cancelled=self.store.cancel_requested(id,owner)
+            if cancelled:self.store.finish_run(id,owner,'cancelled')
             else:self.store.release(id,owner)
+            journal(event='run.finish',run_id=id,status='cancelled' if cancelled else 'released',seconds=round(time.perf_counter()-started,3))
         except Exception as exc:
             error=f'Run timed out after {RUN_TIMEOUT_SECONDS} seconds.' if isinstance(exc,TimeoutError) else str(exc) if isinstance(exc,ValueError) else 'Run failed unexpectedly.'
+            if not isinstance(exc,(ValueError,TimeoutError)):log.exception('run %s failed unexpectedly',id)
             self.store.finish_run(id,owner,'failed',error=error)
+            journal(event='run.finish',run_id=id,status='failed',error=error,seconds=round(time.perf_counter()-started,3))
 
     async def serve(self):
         active=set()
@@ -88,7 +104,7 @@ class Worker:
 
 async def main():
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv();logging.basicConfig(level=logging.INFO,format='%(message)s')  # JSON lines from relay.run; plain text elsewhere.
     path=Path(os.environ.get('DATA_DIR','.data'));path.mkdir(parents=True,exist_ok=True,mode=0o700)
     store=Store(os.environ.get('DATABASE_URL',f'sqlite:///{path}/workflows.db'),local_key(path))
     print('Relay durable worker started (4 slots).',flush=True)

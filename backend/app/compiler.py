@@ -139,8 +139,10 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     if set(outputs) != set(definition.outputs) or any(not isinstance(v, str) for v in outputs.values()):
                         raise ValueError('Node returned outputs that do not match its declared contract.')
                     evidence_from_outputs(run_state,outputs)
-                    await emit({'node_id': node.id, 'status': 'success', 'outputs': outputs,
-                                'duration_ms': round((time.perf_counter()-started)*1000)})
+                    event={'node_id': node.id, 'status': 'success', 'outputs': outputs,'duration_ms': round((time.perf_counter()-started)*1000)}
+                    usage=run_state.get('usage',{}).get(node.id)
+                    if usage:event['usage']=usage  # Model calls made by this node (an agent's tool loop counts as one node).
+                    await emit(event)
                     return {'values': {node.id: outputs}}
                 except asyncio.CancelledError:
                     await emit({'node_id': node.id, 'status': 'cancelled'}); raise
