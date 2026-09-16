@@ -1,0 +1,127 @@
+.auth-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: radial-gradient(ellipse at top, #e9f3ee, #f7f9fb 65%);
+}
+.auth-card {
+  width: min(100%, 440px);
+  padding: 38px;
+  background: white;
+  border: 1px solid #dfe8e3;
+  border-radius: 16px;
+  box-shadow: 0 15px 60px #213b3610;
+}
+.auth-brand {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  color: #213b36;
+  font-size: 32px;
+  font-weight: 750;
+  letter-spacing: -1.5px;
+  margin-bottom: 36px;
+}
+.auth-brand svg {
+  color: #18765f;
+}
+.auth-kicker {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #748b80;
+  font-weight: 650;
+  margin-bottom: 12px;
+}
+.auth-card h1 {
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: -0.7px;
+}
+.auth-description {
+  color: #7b8798;
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 12px 0 24px;
+}
+.auth-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 550;
+  margin-bottom: 18px;
+}
+.auth-card input {
+  border: 1px solid #dfe5eb;
+  border-radius: 7px;
+  padding: 11px 12px;
+  width: 100%;
+  background: white;
+}
+.auth-card form .button {
+  width: 100%;
+  margin-top: 9px;
+  min-height: 42px;
+  justify-content: space-between;
+}
+.auth-password-hint {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #849187;
+  margin: -6px 0 14px;
+}
+.auth-switch {
+  display: block;
+  margin: 22px auto 0;
+  padding: 4px;
+  color: #327d69;
+  font-size: 12px;
+}
+.auth-switch:hover {
+  text-decoration: underline;
+}
+.auth-error {
+  padding: 12px;
+  background: #fff4ef;
+  border: 1px solid #efd9d0;
+  color: #9d5147;
+  font-size: 12px;
+  line-height: 1.65;
+  border-radius: 7px;
+  margin-bottom: 20px;
+}
+.auth-session {
+  position: fixed;
+  bottom: 0;
+  right: 12px;
+  z-index: 30;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  background: white;
+  padding: 0 6px;
+  color: #768579;
+}
+.auth-session > span {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.auth-session button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #327d69;
+}
+@media (max-width: 500px) {
+  .auth-card {
+    padding: 28px 24px;
+  }
+  .auth-session > span:not([role='alert']) {
+    display: none;
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "name": "My first AI workflow",
+  "description": "Turn an incoming message into a model response.",
+  "nodes": [
+    {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "Chat input",
+      "position": {
+        "x": 65,
+        "y": 130
+      },
+      "inputs": {},
+      "config": {}
+    },
+    {
+      "id": "prompt",
+      "type": "prompt",
+      "version": 1,
+      "label": "Build prompt",
+      "position": {
+        "x": 370,
+        "y": 130
+      },
+      "inputs": {
+        "message": "input.message"
+      },
+      "config": {
+        "template": "Explain this clearly and concisely:\n\n{message}"
+      }
+    },
+    {
+      "id": "model",
+      "type": "llm",
+      "version": 1,
+      "label": "Language model",
+      "position": {
+        "x": 675,
+        "y": 130
+      },
+      "inputs": {
+        "prompt": "prompt.text"
+      },
+      "config": {
+        "provider": "demo",
+        "model": "gpt-4.1-mini",
+        "credential_id": "",
+        "system": "You are a helpful assistant."
+      }
+    },
+    {
+      "id": "response",
+      "type": "response",
+      "version": 1,
+      "label": "Send response",
+      "position": {
+        "x": 980,
+        "y": 130
+      },
+      "inputs": {
+        "text": "model.text"
+      },
+      "config": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "input-prompt",
+      "source": "input",
+      "target": "prompt"
+    },
+    {
+      "id": "prompt-model",
+      "source": "prompt",
+      "target": "model"
+    },
+    {
+      "id": "model-response",
+      "source": "model",
+      "target": "response"
+    }
+  ]
+}

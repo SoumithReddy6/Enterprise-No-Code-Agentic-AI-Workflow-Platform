@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "name": "Hello workflow",
+  "description": "",
+  "nodes": [
+    {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "",
+      "position": {
+        "x": 20.0,
+        "y": 50.0
+      },
+      "inputs": {},
+      "config": {}
+    },
+    {
+      "id": "prompt",
+      "type": "prompt",
+      "version": 1,
+      "label": "",
+      "position": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "inputs": {
+        "message": "input.message"
+      },
+      "config": {
+        "template": "Hello {message}"
+      }
+    },
+    {
+      "id": "out",
+      "type": "response",
+      "version": 1,
+      "label": "",
+      "position": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "inputs": {
+        "text": "prompt.text"
+      },
+      "config": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "a",
+      "source": "input",
+      "target": "prompt",
+      "sourceHandle": null
+    },
+    {
+      "id": "b",
+      "source": "prompt",
+      "target": "out",
+      "sourceHandle": null
+    }
+  ]
+}

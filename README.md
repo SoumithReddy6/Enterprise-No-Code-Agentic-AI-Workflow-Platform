@@ -1,0 +1,302 @@
+# Relay — AI Workflow Studio
+
+A working **local platform with authenticated, isolated workspaces** for the visual AI orchestration platform in the supplied PDF. Build workflows from reusable nodes, save portable JSON, compile to LangGraph, and inspect execution events.
+
+## Start
+
+Dependencies have already been installed in this workspace. From the project directory:
+
+```bash
+python3 scripts/dev.py
+```
+
+Open **http://127.0.0.1:3000**. API documentation is at **http://127.0.0.1:8000/docs**. Ctrl-C stops the editor, API, workflow worker, and the three knowledge services. The launcher refuses to overwrite an existing service on either port.
+
+On first launch, create your account in the browser. The first account claims existing local workflows, credentials, and run history; later accounts have isolated workspaces. A private backup of the original SQLite database is kept in `.data/backups`.
+
+The initial canvas contains Chat input → Agent → Response. To test with **Ollama**, open **Providers** on the left (or the key icon), click **Refresh installed models**, choose a chat model such as the installed `qwen2.5:0.5b`, then click **Enable model**. Select the Agent node and choose the enabled model in the **right-hand inspector**, then click **Run workflow**. Ollama must be running on the backend machine. Demo mode remains available and echoes the prompt without calling a model.
+
+For **OpenAI or Claude**, select that provider on the left, save an API key, select the saved key, and enter the exact chat model ID available to that API account. Click **Enable model**, then select it in the node on the right. Cloud model IDs are entered manually; enabling a model does not verify access or generate a paid request. API keys never appear in the right-hand inspector or exports. Paid cloud calls were not exercised.
+
+The workspace catalog binds each model to its provider and, for cloud models, its credential. Disabled or unapproved models cannot run, including through imported JSON or direct API requests. Permissions are checked on submission, resume, worker startup and before each new model call. Disabling a model cannot undo a request already sent to the provider. Existing workflows remain saved, but their models must be enabled before they can run. Existing credentials migrate as OpenAI credentials. Each account currently owns its workspace; shared workspace roles are future work.
+
+## Setup on another machine
+
+Python 3.12+ and Node.js 22.13+ are required. Tested here on Python 3.14 and Node.js 24. Docker is required for the Python tool and optional for PostgreSQL.
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r backend/requirements.txt
+cd frontend
+npm ci
+cd ..
+python3 scripts/dev.py
+```
+
+The startup script loads a root `.env` file when present. Copy `.env.example` to `.env` to configure storage.
+
+## What's implemented
+
+- React/TypeScript/React Flow editor: draggable node library, pan/zoom/minimap, editable node configuration, input bindings, edge deletion, undo/redo, save/load, JSON import/export.
+- Backend-provided node schemas drive the configuration inspector.
+- Thirteen visible node types in six categories: Input, Agent, Tools, Retrieval, Control and Output. Legacy prompt/model/PDF and VectorDB nodes remain loadable in existing workflows; new Retrieve nodes select a named knowledge base.
+- Deterministic validation and LangGraph compilation. Each node consumes declared bindings and returns only its declared outputs.
+- Conditions choose exactly one true/false branch. All paths terminate in a Response node. Unsupported parallel fan-out and cycles are rejected.
+- Live server-sent node events, node status highlighting, input/output inspection, execution timing, cancellation, errors, persisted run history, and resume from saved successful-node results.
+- Workflow saves and run records in SQLite or PostgreSQL via SQLAlchemy.
+- OpenAI, Claude (native Messages API), and local Ollama providers; left-side configuration and workspace model catalog, with permitted-model selection on the right.
+- Credentials encrypted with Fernet, referenced only by ID, and never returned by the credential API. Inline unknown credential configuration is rejected, including on draft saves.
+
+Changes are **not autosaved**. Run history includes the executed workflow snapshot and input. Loading a historical run displays its original output without replacing your current canvas. Node highlighting appears only when the executed graph matches the current graph.
+
+## PostgreSQL
+
+SQLite is the zero-setup local default at `.data/workflows.db`. To use PostgreSQL:
+
+```bash
+docker compose up -d --wait postgres
+cp .env.example .env
+```
+
+Uncomment this line in `.env`, then restart Relay:
+
+```dotenv
+DATABASE_URL=postgresql+psycopg://relay:relay_local@127.0.0.1:55432/relay
+```
+
+PostgreSQL uses the project-owned Docker volume `relay-workflow-foundation_relay_postgres` and binds only to `127.0.0.1:55432`. The supplied password is for this local development database. Switching database URLs does not migrate existing SQLite records. The PostgreSQL verification script creates and deletes its own isolated schema:
+
+```bash
+.venv/bin/python -m scripts.check_postgres
+```
+
+To stop PostgreSQL without deleting saved data: `docker compose stop postgres`.
+
+## Credential key and data
+
+A generated encryption key is stored at `.data/credential.key` with owner-only file permissions. You can instead supply `CREDENTIAL_ENCRYPTION_KEY` as a Fernet key. Back up the encryption key with the database: changing or losing it makes saved credentials unreadable. The `.data` directory and environment files are ignored by Git.
+
+Execution inputs, outputs, and events are stored locally for debugging. Avoid putting secrets in ordinary prompt fields; use the credential form for provider keys.
+
+## Architecture
+
+```text
+React Flow canvas + schema-driven inspector
+           │ canonical Workflow v1 JSON
+           ▼
+FastAPI → validator → durable SQL queue → worker → LangGraph StateGraph
+   │                                      │
+   └── SQLAlchemy workflow/run store ◀── ordered execution events
+                 │
+          PostgreSQL / SQLite
+```
+
+- `backend/app/models.py`: canonical document models.
+- `backend/app/registry.py`: node contracts, typed configuration, provider handlers.
+- `backend/app/compiler.py`: graph validation, guaranteed-upstream binding analysis, LangGraph compilation.
+- `backend/app/storage.py`: workflow, run, event and encrypted credential persistence.
+- `backend/app/main.py`: API, bounded background execution, SSE, cancellation and restart recovery.
+- `frontend/lib/workflow.ts`: client types, API boundary, import and save guards.
+- `frontend/components/workflow-editor.tsx`: canvas/editor coordination.
+- `examples/hello-workflow.json`: importable workflow without an LLM dependency.
+
+The canonical JSON is retained alongside the compiled graph. Export returns that complete source document, including canvas layout. It does **not** claim arbitrary LangGraph objects can be reverse-engineered into lossless canvas documents.
+
+To add a reusable node, register a `NodeDefinition` with a configuration model, required string input ports, string output ports, and async handler in `registry.py`. The inspector consumes the registry schema. New control-flow semantics require compiler support; adding a tool handler alone does not create support for loops or parallel joins.
+
+## Verification
+
+```bash
+.venv/bin/python -m pytest backend/tests -q
+cd frontend
+npm test
+npm run typecheck
+npm run build
+```
+
+Backend tests cover actual LangGraph runs, condition branches, validation, credential isolation, authentication, SSE, cancellation/resume, lease recovery, stale-worker fencing, node-result restoration, and legacy database migration. Provider tests also cover Claude payloads and secret-safe errors, model revocation, credential/provider binding, workspace catalog isolation, and credential schema upgrades. Frontend unit tests cover allowed model selection, credential replacement, save races, import safety, and execution highlighting. Browser interaction/visual QA and paid cloud model calls were not performed. Ollama inference, durable recovery, workspace isolation, and PostgreSQL leasing were verified.
+
+For a built frontend, run the API separately and use `npm run build` followed by `npm start` in `frontend`. The built frontend proxies `/api/*` to the local API at port 8000.
+
+## Phase two: authenticated durable execution
+
+Accounts use salted password hashes and revocable, expiring HttpOnly session cookies. Workflows, credentials, runs, event streams, cancellation and resume are tenant-scoped. Each account currently owns one workspace; invitations and role administration are future work. This milestone uses opaque sessions, not JWT or an external identity provider.
+
+The startup script launches the API with `RELAY_EMBEDDED_WORKER=false` and a separate `python -m backend.app.worker` process. Direct API startup defaults to an embedded worker for simpler testing. The relational database is also the durable queue; Redis is not required.
+
+Workers claim jobs atomically, renew 30-second leases and persist every successful node's outputs. If a worker crashes, another worker can claim the expired job and restore successful node results. **Resume saved run** retries failed or cancelled runs from the saved workflow snapshot. An external model call interrupted before its result is committed may be repeated: execution is at-least-once. This is node-result checkpointing, not native LangGraph checkpoint serialization or exactly-once side effects.
+
+Ollama's backend address is set through `OLLAMA_BASE_URL` (default `http://127.0.0.1:11434`), not through workflow JSON. The editor discovers installed models through the backend. No key is needed for local Ollama. Native API references: [chat](https://docs.ollama.com/api/chat) and [model discovery](https://docs.ollama.com/api/tags).
+
+## Scope boundaries
+
+This remains a local development platform, **not a finished enterprise release**. Team invitations, role administration, schema-version migration tooling, token streaming, automatic workflow retry policies, MCP, scheduling, loops, parallel execution, and workflow deployment management are later phases. Keep the app on loopback until deployment hardening is complete.
+
+Each worker has four slots. A graph attempt has a 120-second limit and graphs are capped at 100 nodes. SSE streams node lifecycle events, not model tokens. Node outputs currently use string ports. SQLite and PostgreSQL are supported; switching databases does not migrate records automatically.
+
+Recommended next phase: MCP connector nodes, followed by approvals, richer control flow, and deployment management.
+
+Additional checks used for this build:
+
+```bash
+# While the local app is running:
+.venv/bin/python -m scripts.smoke
+# From frontend:
+npm run lint
+npm audit
+```
+
+Lint covers the application source. Untouched generated shadcn components and their generated mobile hook are excluded from lint; TypeScript still checks them.
+
+Claude uses the native [Messages API](https://platform.claude.com/docs/en/api/http/messages/create). OpenAI uses Chat Completions; only models supporting text chat through that endpoint should be enabled. Ollama models must support chat. Provider-specific image, audio and reasoning controls are outside this milestone. Agent tools use a bounded JSON action protocol over text chat; native provider tool-calling APIs are not used.
+
+
+## Phase 3A: Ask your PDFs
+
+1. Open **Knowledge** in the left panel and create a knowledge base.
+2. Click **Upload PDFs**. Wait for each document to show **ready**; queued/processing documents are not searchable yet.
+3. Click **Create PDF question workflow**. The starter connects Question → PDF retrieval → Grounded answer → Response.
+4. Select **Grounded answer** and choose an enabled model in the right inspector. For free local testing, first enable an installed Ollama chat model under **Providers**.
+5. Enter a question and run. The answer panel shows retrieved excerpts and links to the original PDF page. **Cited in answer** means the model used that passage reference; **Retrieved only** means it was available but not cited. References verify passage identity, not factual correctness of every claim.
+
+PDFs may cover any subject. Selectable text is extracted locally; printed English scans use local OCR. For another Mac, install the native tools before starting Relay:
+
+```bash
+brew install poppler tesseract
+```
+
+Python PDF dependencies are included in `backend/requirements.txt`. The API/worker process must have `pdftoppm` and `tesseract` on its PATH. Only installed OCR languages are available; this milestone uses English. Handwriting, charts and complex table layout are not reliably interpreted. Password-protected, corrupt, unreadable or over-limit files fail with an explanation. Truly blank pages retain their page numbers; entirely blank files cannot be indexed.
+
+Limits are **25 MB and 200 pages per PDF**, **20 active PDFs per knowledge base**, and **50,000 indexed chunks per workspace**. One indexing task runs at a time, with a 5-minute extraction limit and durable renewable leases. Failed documents can be retried. Chunks become searchable only after the entire document succeeds. Uploading another copy creates an independent document ID rather than overwriting a previous revision.
+
+Retrieval uses local BM25 keyword ranking over overlapping page passages, with four passages by default and up to eight. It does not require an embedding model or cloud credits. Paraphrases can miss relevant text; try distinctive words from the document. For semantic embeddings and hybrid search, use the new VectorDB and Retrieve/Query nodes described below. With no matching passages, the grounded-answer node returns an insufficient-evidence message without a model call.
+
+PDF contents, chunks and indexing state are stored in the workspace database; original bytes are loaded only for extraction and authorized downloads. Knowledge resources are tenant-scoped. Model catalog checks also apply to the Grounded answer node. Sources are canonicalized against stored excerpts, document text is treated as untrusted evidence, and invented bracket references are marked unsupported rather than turned into links.
+
+**Removing a PDF** prevents future retrieval/downloads and blocks resumes requiring its saved sources. Existing run history and database backups may still contain previously recorded excerpts. Resumed runs reuse checkpointed passages; they do not silently search changed documents.
+
+Verification includes text, printed scans, mixed and blank pages, encrypted/corrupt files, limits, lease recovery, process cancellation, workspace isolation, forged source metadata, removed-source resumes, binary proxy handling and source selection. PostgreSQL knowledge storage/retrieval was checked in an isolated schema. No paid cloud calls or browser interaction tests were performed.
+
+
+## Agent platform: nodes, tools and vector search
+
+The left library has these categories:
+
+| Category | Nodes |
+| --- | --- |
+| Input | Chat input, Manual trigger |
+| Agent | Agent node |
+| Tools | HTTP/REST API, Email, Jira, Confluence, GitHub, Python |
+| Knowledge section (outside canvas) | Elasticsearch, FAISS, ChromaDB, Pinecone storage |
+| Retrieval | Retrieve, Query |
+| Control | Condition |
+| Output | Response |
+
+Agent ports are **top: flow input**, **bottom: flow output**, **left: attached tools**, and **right: callable specialist agents**. Multiple tool instances can attach to the same agent. Connect a tool's attachment port to the agent's left port; connect a parent agent's right port to a specialist's top port. These attachments give the agent callable capabilities; they do not execute the attached nodes as ordinary sequential steps. Each specialist has one parent. Retrieve and Query can also attach as tools. New Retrieve/Query nodes select a named knowledge base in the inspector. Store-port connections remain available only for legacy workflows.
+
+Select an Agent to customize its role: Planner, Reasoner, Reflection, Critic, Router, Memory, Summarizer, Extraction or Classification. Role presets guide model behavior. The right inspector also provides the allowed model, system prompt, user prompt (`{input}` inserts the incoming text), temperature, top-p, maximum output tokens and call limit. Claude temperature is at most 1 and temperature/top-p cannot both be set for Claude. Keep shared provider credentials and the enabled-model catalog in the left Providers panel.
+
+Agents may make up to six tool/specialist calls per root invocation, shared across nested specialists, with at most three levels of delegation. Models must produce the documented JSON action structure to call attachments; very small models can be less reliable. Plain-text replies are final answers. In local testing, `qwen2.5:0.5b` repeated tool calls until the limit; `llama3.2:3b` completed a tool call but did not consistently follow the requested argument. Treat model-selected actions and answers as fallible and review run events during testing. Attached invocations appear in run events, and their results feed back to the calling agent. Memory agents retain a bounded conversation history under a workspace-scoped memory key; a failed/retried parent may record a memory entry more than once.
+
+### Connections and tools
+
+Configure reusable encrypted connections on the left, then select them in individual tool nodes. Tool configuration is on the right. Several nodes may share a connection while using different operations.
+
+| Tool | Implemented operations |
+| --- | --- |
+| HTTP/REST | GET, POST, PUT, PATCH, DELETE; relative path and body with `{input}` substitution |
+| Email | Send through SMTP with STARTTLS; recipient, subject, body |
+| Jira | Search, get issue, create Task, add comment |
+| Confluence | Search, get page, create page |
+| GitHub | List/get issues, create issue, add comment |
+| Python | Execute code with `input_text` in an isolated Docker container |
+
+Enable **Allow external writes** explicitly on each node that sends mail or changes a remote system. If a run stops after starting a write but before saving the owning node's result, Resume is blocked to avoid blindly repeating that write. Inspect the remote outcome before starting a new run. Successful checkpoints are reused. This does not provide distributed exactly-once execution.
+
+HTTP connections use public HTTPS/HTTP endpoints. Private, loopback and metadata addresses and redirects are rejected by shared connection adapters; this also applies to remote vector stores. Local Ollama is configured separately through `OLLAMA_BASE_URL`. For Confluence Cloud, include `/wiki` in the connection base URL. Remote accounts and their own service permissions are required; adapters do not provision those accounts.
+
+Before first Python execution on another machine:
+
+```bash
+docker pull python:3.12-alpine
+```
+
+The image is already installed here. Python runs with no network, a read-only container root, no capabilities, an unprivileged user, CPU/memory/process/output limits, and a 1–30 second timeout. Only `input_text` and the code enter the container; workspace files and credentials are not mounted. Execution never falls back to running arbitrary code on the host. Only the image's Python standard library is available.
+
+### First named knowledge-base workflow
+
+1. Open **Knowledge** on the left, then **New knowledge base**. Name it and choose FAISS (local), ChromaDB, Elasticsearch or Pinecone.
+2. Choose a logical storage path, an installed Ollama embedding model such as `embeddinggemma:latest`, a supported index method, chunking strategy, size and overlap. Keyword-only bases can be created without embeddings.
+3. Upload multiple documents and wait for indexing to complete. The Documents tab shows progress, failures, retry, replace, remove and extracted-chunk preview.
+4. Use **Test search** to inspect retrieved passages before involving an Agent. Similarity, keyword, weighted hybrid and RRF share one retrieval service. Top-k, candidate count, threshold, filters and fusion settings can be customized.
+5. Add a **Retrieve** node to a workflow and select the KB by name. The saved configuration contains its stable ID, so renaming does not break workflows. Shared indexing/storage settings stay in Knowledge; permitted search settings can be overridden per node.
+6. One possible flow is **Chat input → Retrieve → Agent → Response**. Connecting Retrieve to Agent automatically binds its question-and-evidence context. Retrieve can also be an attached agent tool; no single workflow shape is imposed.
+
+The context is a JSON envelope carried through the existing string port: original question, passage labels/text, canonical sources, KB ID and version. The question embedding stays inside retrieval. Source links are generated from validated IDs, not model-generated URLs. Agent generation remains model-dependent; use the passage inspector to assess evidence and verify generated claims.
+
+The Knowledge hub includes metadata/settings editing, rebuild/cancel, document replacement, search defaults, job progress and cleanup history. Changing chunking, embeddings or storage creates a staged rebuild. The previous active version stays searchable until the new complete version publishes. A replacement document also leaves the old original available until successful activation. Failed new documents remain visible and retryable.
+
+**Import copy** copies a legacy PDF knowledge base or vector resource into the unified section. The operation is resumable and idempotent. Originals, old canvas documents and run history remain intact. Imported PDF-only bases use keyword search until you configure embeddings and rebuild. Legacy workflows are not silently rewritten.
+
+Supported files: PDF (including printed English OCR), TXT, Markdown, CSV, JSON, HTML and DOCX. Unsupported binaries are rejected. Limits: 25 MB/file, 200 PDF pages, 20 logical documents/KB, 50,000 logical chunks/workspace and 8 million vector cells; staging has bounded additional capacity so near-limit KBs can rebuild. Extraction text is limited to 16 MB per build. Full snapshots are rebuilt in this version; extraction/embedding checkpoint reuse is not yet implemented. Interrupted attempts restart safely with new identifiers.
+
+| Backend | Current index support | Required configuration |
+| --- | --- | --- |
+| FAISS | Flat cosine | Managed local storage |
+| ChromaDB | HNSW cosine | Managed local storage; each build has an isolated collection |
+| Elasticsearch | dense_vector cosine | Public connection and existing matching-dimension index |
+| Pinecone | Existing serverless index | Public data-plane connection and matching dimensions |
+
+Storage paths are logical names; actual local indexes use generated ownership IDs under `KB_DATA_DIR/indexes`. Remote namespaces/index segments are also generated and isolated. All new embedding generation uses installed Ollama models; the digest is pinned so model changes require a rebuild. OpenAI/Claude remain available for downstream Agent/Query generation. Models are never downloaded automatically.
+
+The legacy Prompt template, Language model, PDF retrieval and Grounded answer nodes are hidden from the main palette but remain supported in saved workflows. The original Knowledge PDF workflow remains available for BM25 retrieval without embeddings.
+
+Local integration verification (temporary database and temporary vector directory; existing user data stays untouched):
+
+```bash
+.venv/bin/python -m scripts.check_platform
+```
+
+This uses installed Ollama models, real FAISS/Chroma indexes and the Docker Python image. Remote adapters are covered with mock responses; no real mail, issues, pages, cloud vector writes or paid model calls are made by these tests.
+
+
+## Knowledge service architecture and recovery
+
+```mermaid
+flowchart TB
+    UI[Knowledge hub / Retrieve node] --> API[Authenticated Relay gateway]
+    API --> M[Knowledge Management Service :8011]
+    API --> S[Retrieval and Index Service :8012]
+    I[Ingestion Worker Service] -->|Claim / renew / publish / cleanup status| M
+    I -->|Staged chunks and vectors| S
+    M --> MD[(Management database: metadata, originals, versions and jobs)]
+    S --> SD[(Search database: manifests, chunks, keyword postings and archives)]
+    S --> V[(Selected vector backend)]
+    I --> O[Ollama embeddings]
+    API -->|Question embeddings| O
+```
+
+`python3 scripts/dev.py` starts both internal HTTP services before the gateway, plus ingestion and workflow workers. Internal `/rpc` endpoints require a shared service key and an allowlisted operation. The gateway supplies the authenticated tenant; public requests cannot override it. Health endpoints expose only service health. Ports 8011/8012 bind to loopback in the launcher. Each service owns separate SQL tables and a separate database by default. The ingestion worker performs no direct SQL writes.
+
+Local defaults are `.data/knowledge/management.db` and `.data/knowledge/search.db`. Original document bytes are stored transactionally in the management database rather than a separate filesystem/object store; this makes upload metadata, original storage and job creation atomic. Index files are under `.data/knowledge/indexes`. PostgreSQL is supported through `KB_MANAGEMENT_DATABASE_URL` and `KB_SEARCH_DATABASE_URL`; provision the named databases (or separate schemas) before starting. Switching URLs does not migrate data automatically. The local launcher profile uses ports8011/8012; separately deployed services can use the configurable URLs in `.env.example`.
+
+Each upload has an idempotency key and content fingerprint. Jobs have unique attempts, renewable30-second leases and bounded crash recovery. Superseded, cancelled and expired workers cannot publish. An active build/version pointer changes only after a completed index is accepted in a fenced transaction. Uploading another file while indexing may supersede the pending full snapshot; the worker processes the latest desired document set.
+
+Failure recovery crosses service boundaries through durable cleanup records. Before vector writes, the search service records the attempt and reserves its chunk IDs. Failed/cancelled attempts remain unsearchable. Cleanup tombstones repeatedly remove abandoned vectors, postings and partial chunks; success is rechecked after300 seconds to catch delayed writes. Failed cleanup uses exponential backoff capped at300 seconds. These records remain visible in Activity; storage outages do not erase cleanup responsibility.
+
+Retired successful versions preserve canonical passage metadata for saved-source verification while vectors/postings are removed. These explicit provenance archives are not searchable. KB deletion purges them; document removal/replacement immediately revokes source authorization even before physical cleanup. Existing Relay run history and backups can still contain earlier excerpts. This is eventual physical cleanup with immediate access revocation, not a cross-database atomic transaction.
+
+Search uses persisted keyword postings instead of retokenizing every document for each question. Model digest/dimension checks prevent incompatible embedding reuse. Searches of active versions do not acquire the mutation lock held by staging builds. Resource failures return errors; they are never represented as an empty matching set. A120-second workflow deadline includes KB preflight and execution. Ingestion is separate from workflow capacity, but both can contend for the same local Ollama hardware.
+
+Back up the Relay database/encryption key, both knowledge databases, index files and `.data/kb-service.key` together. The service key also encrypts stored remote connections. Keep authenticated production mode when creating real KBs; `auth_enabled=False` is a test-only harness, and anonymous test KBs are not transferred during first-account registration.
+
+Verification commands:
+
+```bash
+# Three actual service processes, isolated temporary storage, real local embeddings:
+.venv/bin/python -m scripts.check_knowledge_services
+# Separate disposable schemas in the project PostgreSQL container:
+.venv/bin/python -m scripts.check_kb_postgres
+```
+
+The service smoke covers indexing, four search modes, direct named-KB workflow execution, rebuild activation, retained provenance, deletion and RPC authentication. Fault tests cover partial vector writes, stale leases, retries, cleanup failure/backoff, replacement failure, duplicate requests, dimension changes, quota headroom and cross-tenant denial. Remote ES/Pinecone operations use mock transports; no paid cloud calls or real remote writes were made. Browser interaction/visual QA remains for user testing.
