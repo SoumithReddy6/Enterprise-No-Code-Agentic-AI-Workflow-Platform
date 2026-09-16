@@ -82,21 +82,14 @@ import {
 import '@xyflow/react/dist/style.css';
 import StudioDialog from './studio-dialog';
 import ProviderSettings from './provider-settings';
-import KnowledgeSettings from './knowledge-settings';
 import KnowledgeHub from './knowledge-hub';
 import type { KnowledgeHubBase } from '@/lib/knowledge-hub';
 import SourcePanel from './source-panel';
 import PlatformSettings, {
   ConfigField,
-  VectorFiles,
   type ToolConnection,
-  type VectorResource,
 } from './platform-settings';
-import {
-  pdfWorkflow,
-  sourcesForRun,
-  type KnowledgeBase,
-} from '@/lib/knowledge';
+import { sourcesForRun } from '@/lib/knowledge';
 import {
   type AllowedModel,
   selectedModelId,
@@ -112,7 +105,6 @@ type CanvasNode = FlowNode<
     spec: WorkflowNode;
     definition?: Definition;
     status?: string;
-    onUpload?: () => void;
   },
   'workflow'
 >;
@@ -127,8 +119,6 @@ const icons: Record<string, typeof Zap> = {
   tool_http: Code2,
   tool_email: Send,
   tool_python: Code2,
-  grounded_answer: Sparkles,
-  retrieval: Search,
   condition: GitBranch,
   response: Send,
 };
@@ -148,7 +138,7 @@ function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
         <MoreHorizontal size={17} className="muted" />
       </div>
       <p>
-        {['llm', 'grounded_answer', 'agent', 'query'].includes(spec.type)
+        {['llm', 'agent', 'query'].includes(spec.type)
           ? spec.config.provider === 'demo'
             ? 'Demo provider'
             : String(spec.config.model)
@@ -167,60 +157,42 @@ function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
           {status || 'Ready'}
         </span>
       </div>
-      {spec.type.startsWith('vector_') ? (
+      {!['chat_input', 'manual_input'].includes(spec.type) && (
+        <Handle type="target" position={Position.Top} />
+      )}
+      {spec.type === 'agent' && (
         <>
-          <button className="button secondary nodrag" onClick={data.onUpload}>
-            Upload files
-          </button>
-          <Handle type="source" id="store" position={Position.Bottom} />
-          <span className="port-label bottom">store</span>
+          <Handle type="target" id="tools" position={Position.Left} />
+          <span className="port-label left">tools</span>
+          <Handle type="source" id="agents" position={Position.Right} />
+          <span className="port-label right">specialists</span>
+        </>
+      )}
+      {spec.type === 'condition' ? (
+        <>
+          <Handle
+            type="source"
+            id="true"
+            position={Position.Bottom}
+            style={{ left: '30%' }}
+          />
+          <span className="port-label bottom" style={{ left: '25%' }}>
+            true
+          </span>
+          <Handle
+            type="source"
+            id="false"
+            position={Position.Bottom}
+            style={{ left: '75%' }}
+          />
+          <span className="port-label bottom" style={{ left: '70%' }}>
+            false
+          </span>
         </>
       ) : (
-        <>
-          {!['chat_input', 'manual_input'].includes(spec.type) && (
-            <Handle type="target" position={Position.Top} />
-          )}
-          {spec.type === 'agent' && (
-            <>
-              <Handle type="target" id="tools" position={Position.Left} />
-              <span className="port-label left">tools</span>
-              <Handle type="source" id="agents" position={Position.Right} />
-              <span className="port-label right">specialists</span>
-            </>
-          )}
-          {['retrieve', 'query'].includes(spec.type) && (
-            <>
-              <Handle type="target" id="store" position={Position.Left} />
-              <span className="port-label left">store</span>
-            </>
-          )}
-          {spec.type === 'condition' ? (
-            <>
-              <Handle
-                type="source"
-                id="true"
-                position={Position.Bottom}
-                style={{ left: '30%' }}
-              />
-              <span className="port-label bottom" style={{ left: '25%' }}>
-                true
-              </span>
-              <Handle
-                type="source"
-                id="false"
-                position={Position.Bottom}
-                style={{ left: '75%' }}
-              />
-              <span className="port-label bottom" style={{ left: '70%' }}>
-                false
-              </span>
-            </>
-          ) : (
-            spec.type !== 'response' && (
-              <Handle type="source" position={Position.Bottom} />
-            )
-          )}
-        </>
+        spec.type !== 'response' && (
+          <Handle type="source" position={Position.Bottom} />
+        )
       )}
     </div>
   );
@@ -263,9 +235,7 @@ function Editor() {
     'nodes' | 'providers' | 'knowledge' | 'connections'
   >('nodes');
   const [connections, setConnections] = useState<ToolConnection[]>([]);
-  const [resources, setResources] = useState<VectorResource[]>([]);
   const [hubBases, setHubBases] = useState<KnowledgeHubBase[]>([]);
-  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [allowedModels, setAllowedModels] = useState<AllowedModel[]>([]);
   const [undoStack, setUndo] = useState<Workflow[]>([]);
   const [redoStack, setRedo] = useState<Workflow[]>([]);
@@ -300,27 +270,16 @@ function Editor() {
   const beginReload = useRef(latestRequestGuard());
   const reloadLists = useCallback(async () => {
     const isLatest = beginReload.current();
-    const [
-      defs,
-      files,
-      keys,
-      runs,
-      models,
-      bases,
-      toolConnections,
-      vectorResources,
-      unifiedBases,
-    ] = await Promise.all([
-      api<Definition[]>('/nodes'),
-      api<SavedWorkflow[]>('/workflows'),
-      api<Credential[]>('/credentials'),
-      api<Run[]>('/runs'),
-      api<AllowedModel[]>('/models'),
-      api<KnowledgeBase[]>('/knowledge'),
-      api<ToolConnection[]>('/connections'),
-      api<VectorResource[]>('/vector-resources'),
-      api<KnowledgeHubBase[]>('/knowledge-bases').catch(() => []),
-    ]);
+    const [defs, files, keys, runs, models, toolConnections, unifiedBases] =
+      await Promise.all([
+        api<Definition[]>('/nodes'),
+        api<SavedWorkflow[]>('/workflows'),
+        api<Credential[]>('/credentials'),
+        api<Run[]>('/runs'),
+        api<AllowedModel[]>('/models'),
+        api<ToolConnection[]>('/connections'),
+        api<KnowledgeHubBase[]>('/knowledge-bases').catch(() => []),
+      ]);
     if (!isLatest()) return;
     setCatalog(defs);
     setSaved(files);
@@ -343,10 +302,8 @@ function Editor() {
           }),
         );
     }
-    setKnowledgeBases(bases);
     setHubBases(unifiedBases);
     setConnections(toolConnections);
-    setResources(vectorResources);
     setHistory(runs);
     setConnected(true);
   }, []);
@@ -659,7 +616,7 @@ function Editor() {
           .map(([k, p]) => [k, p.default]),
       ),
     };
-    if (['agent', 'query', 'llm', 'grounded_answer'].includes(type)) {
+    if (['agent', 'query', 'llm'].includes(type)) {
       const model =
         allowedModels.find((m) => m.enabled && m.provider === 'ollama') ||
         allowedModels.find((m) => m.enabled);
@@ -776,10 +733,6 @@ function Editor() {
     data: {
       ...n.data,
       definition: catalog.find((d) => d.type === n.data.spec.type),
-      onUpload: () => {
-        setSelected(n.id);
-        setInspectorOpen(true);
-      },
       status:
         run && sameExecutionGraph(run.workflow, workflow)
           ? statuses[n.id]
@@ -971,45 +924,11 @@ function Editor() {
                 disabled={running}
               />
             ) : leftPanel === 'knowledge' ? (
-              <>
-                <KnowledgeHub
-                  connections={connections}
-                  refresh={reloadLists}
-                  disabled={running}
-                />
-                <details className="legacy-knowledge">
-                  <summary>Legacy PDF knowledge bases</summary>
-                  <KnowledgeSettings
-                    bases={knowledgeBases}
-                    refresh={reloadLists}
-                    disabled={running}
-                    onStart={(baseId) => {
-                      if (!discardAllowed()) return;
-                      const model =
-                        allowedModels.find(
-                          (m) => m.enabled && m.provider === 'ollama',
-                        ) || allowedModels.find((m) => m.enabled);
-                      loadDocument(
-                        pdfWorkflow(
-                          baseId,
-                          model
-                            ? modelConfig({}, model)
-                            : {
-                                provider: 'ollama',
-                                model: '',
-                                credential_id: '',
-                              },
-                        ),
-                      );
-                      setLeftPanel('nodes');
-                      setSelected('answer');
-                      setMessage(
-                        'What does this document say about its main topic?',
-                      );
-                    }}
-                  />
-                </details>
-              </>
+              <KnowledgeHub
+                connections={connections}
+                refresh={reloadLists}
+                disabled={running}
+              />
             ) : leftPanel === 'providers' ? (
               <ProviderSettings
                 models={allowedModels}
@@ -1168,9 +1087,7 @@ function Editor() {
                         ? '#b98b3b'
                         : e.kind === 'agent'
                           ? '#9772bb'
-                          : e.kind === 'store'
-                            ? '#3b9696'
-                            : '#aeb9c7',
+                          : '#aeb9c7',
                     strokeWidth: 1.7,
                     strokeDasharray:
                       e.kind && e.kind !== 'flow' ? '5 3' : undefined,
@@ -1538,12 +1455,7 @@ function Editor() {
                         0 && (
                         <section className="settings-section">
                           <h3>CONFIGURATION</h3>
-                          {[
-                            'llm',
-                            'grounded_answer',
-                            'agent',
-                            'query',
-                          ].includes(chosen.type) && (
+                          {['llm', 'agent', 'query'].includes(chosen.type) && (
                             <label>
                               Model
                               <select
@@ -1620,25 +1532,15 @@ function Editor() {
                           {Object.entries(definition.config_schema.properties)
                             .filter(
                               ([key]) =>
+                                // storage_path is a retired field kept only so saved JSON loads.
                                 !(
                                   ['retrieve', 'query'].includes(chosen.type) &&
-                                  ['resource_id', 'storage_path'].includes(
-                                    key,
-                                  ) &&
-                                  !chosen.config[key] &&
-                                  !edges.some(
-                                    (e) =>
-                                      e.kind === 'store' &&
-                                      e.target === chosen.id,
-                                  )
+                                  key === 'storage_path'
                                 ) &&
                                 !(
-                                  [
-                                    'llm',
-                                    'grounded_answer',
-                                    'agent',
-                                    'query',
-                                  ].includes(chosen.type) &&
+                                  ['llm', 'agent', 'query'].includes(
+                                    chosen.type,
+                                  ) &&
                                   [
                                     'provider',
                                     'model',
@@ -1653,54 +1555,6 @@ function Editor() {
                                 else config[key] = value;
                                 modifyNode({ config });
                               };
-                              if (
-                                key === 'storage_path' &&
-                                ['retrieve', 'query'].includes(chosen.type)
-                              ) {
-                                const storeEdge = edges.find(
-                                  (e) =>
-                                    e.kind === 'store' &&
-                                    e.target === chosen.id,
-                                );
-                                const storeNode = nodes.find(
-                                  (n) => n.id === storeEdge?.source,
-                                )?.data.spec;
-                                const store = resources.find(
-                                  (r) => r.id === storeNode?.config.resource_id,
-                                );
-                                return (
-                                  <label key={key}>
-                                    Storage path
-                                    <select
-                                      disabled={running}
-                                      value={displayValue(chosen.config[key])}
-                                      onChange={(e) => update(e.target.value)}
-                                    >
-                                      <option value="">
-                                        Use attached vector resource
-                                      </option>
-                                      {resources
-                                        .filter(
-                                          (r) =>
-                                            store &&
-                                            r.backend === store.backend &&
-                                            r.connection_id ===
-                                              store.connection_id &&
-                                            (r.index_name || '') ===
-                                              (store.index_name || ''),
-                                        )
-                                        .map((r) => (
-                                          <option
-                                            key={r.id}
-                                            value={r.storage_path}
-                                          >
-                                            {r.name} · {r.storage_path}
-                                          </option>
-                                        ))}
-                                    </select>
-                                  </label>
-                                );
-                              }
                               const list =
                                 key === 'connection_id'
                                   ? connections.filter(
@@ -1708,25 +1562,12 @@ function Editor() {
                                         c.provider ===
                                         chosen.type.replace('tool_', ''),
                                     )
-                                  : key === 'resource_id'
-                                    ? resources.filter(
-                                        (r) =>
-                                          !chosen.type.startsWith('vector_') ||
-                                          r.backend ===
-                                            chosen.type.replace('vector_', ''),
-                                      )
-                                    : key === 'knowledge_base_id'
-                                      ? ['retrieve', 'query'].includes(
-                                          chosen.type,
-                                        )
-                                        ? hubBases
-                                        : knowledgeBases
-                                      : null;
+                                  : key === 'knowledge_base_id'
+                                    ? hubBases
+                                    : null;
                               return list ? (
                                 <label key={key}>
-                                  {key === 'resource_id'
-                                    ? 'Vector resource & storage path'
-                                    : property.title || key}
+                                  {property.title || key}
                                   <select
                                     disabled={running}
                                     value={displayValue(
@@ -1738,9 +1579,6 @@ function Editor() {
                                     {list.map((item) => (
                                       <option key={item.id} value={item.id}>
                                         {item.name}
-                                        {'storage_path' in item
-                                          ? ` · ${displayValue(item.storage_path)}`
-                                          : ''}
                                       </option>
                                     ))}
                                   </select>
@@ -1790,23 +1628,6 @@ function Editor() {
                                 />
                               );
                             })}
-                          {chosen.type.startsWith('vector_') &&
-                            (resources.find(
-                              (r) => r.id === chosen.config.resource_id,
-                            ) ? (
-                              <VectorFiles
-                                key={String(chosen.config.resource_id)}
-                                resource={resources.find(
-                                  (r) => r.id === chosen.config.resource_id,
-                                )!}
-                                disabled={running}
-                              />
-                            ) : (
-                              <p className="helper">
-                                Select a vector resource to upload files. Create
-                                resources in Connections.
-                              </p>
-                            ))}
                           {chosen.type === 'agent' && (
                             <p className="helper">
                               Connect tools to the left port. Connect the right
@@ -1816,9 +1637,7 @@ function Editor() {
                           )}
                         </section>
                       )}
-                    {['llm', 'grounded_answer', 'agent', 'query'].includes(
-                      chosen.type,
-                    ) &&
+                    {['llm', 'agent', 'query'].includes(chosen.type) &&
                       chosen.config.provider === 'demo' && (
                         <div className="info-note">
                           <Sparkles size={16} />

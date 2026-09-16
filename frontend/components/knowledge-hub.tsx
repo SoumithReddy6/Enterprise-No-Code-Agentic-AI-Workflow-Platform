@@ -14,7 +14,6 @@ import {
 import type { ToolConnection } from './platform-settings';
 import KnowledgeConfig, { SearchFields } from './knowledge-hub-config';
 import SourcePanel from './source-panel';
-import KnowledgeLegacyImport from './knowledge-legacy-import';
 type Upload = { file: File; key: string; replaceId?: string; error?: string };
 export default function KnowledgeHub({
   connections,
@@ -655,20 +654,6 @@ export default function KnowledgeHub({
           </div>
         </>
       )}
-      <KnowledgeLegacyImport
-        disabled={locked}
-        revision={revision}
-        onImport={(load) => {
-          void act(async () => {
-            const base = await load();
-            setBases((previous) => [
-              ...previous.filter((item) => item.id !== base.id),
-              base,
-            ]);
-            choose(base.id);
-          });
-        }}
-      />
     </div>
   );
 }

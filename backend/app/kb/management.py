@@ -17,7 +17,7 @@ from sqlalchemy import create_engine, select, text, delete
 from sqlalchemy.orm import Session
 from .management_models import Base, KnowledgeBase, Original
 from ..vector_adapters import CAPABILITIES
-from ..vector_api import RetrievalOptions
+from .options import RetrievalOptions
 
 
 def uid():

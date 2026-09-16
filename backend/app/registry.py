@@ -35,10 +35,6 @@ class AgentConfig(LLMConfig):
     max_steps: int = Field(default=6,ge=1,le=6)
     memory_key: str = Field(default='default',min_length=1,max_length=120)
 
-class RetrievalConfig(StrictModel):
-    knowledge_base_id: str = Field(min_length=1,max_length=64)
-    limit: int = Field(default=4,ge=1,le=8)
-
 class ConditionConfig(StrictModel):
     contains: str = Field(min_length=1, max_length=1000)
     case_sensitive: bool = False
@@ -149,28 +145,22 @@ def validate_template(template: str):
         if name is not None and (name != 'message' or spec or conversion):
             raise ValueError('Templates support only {message}; use {{ and }} for literal braces.')
 
-from .knowledge_nodes import retrieval_node, grounded_answer_node
-register(NodeDefinition('retrieval','PDF retrieval','Knowledge','Find relevant PDF passages with page references.',{'query':'string'},{'query':'string','context':'string','sources':'string'},RetrievalConfig,retrieval_node))
-register(NodeDefinition('grounded_answer','Grounded answer','AI','Answer from verified PDF passages using an enabled model.',{'query':'string','context':'string','sources':'string'},{'text':'string','provider':'string','sources':'string'},LLMConfig,grounded_answer_node,('external_model_request',)))
-
 from .agent_runtime import agent_node,tool_node
 register(NodeDefinition('agent','Agent node','Agent','Configure a role, attach tools and delegate to specialist agents.',{'input':'string'},{'text':'string','provider':'string','sources':'string'},AgentConfig,agent_node))
-for legacy in ('prompt','llm','retrieval','grounded_answer'):REGISTRY[legacy].hidden=True
+# Prompt template and Language model stay loadable for saved workflows and the LLM-free example, but off the palette.
+for legacy in ('prompt','llm'):REGISTRY[legacy].hidden=True
 
 from .tool_service import CONFIGS
 for type,name in [('tool_http','HTTP / REST API'),('tool_email','Email'),('tool_jira','Jira'),('tool_confluence','Confluence'),('tool_github','GitHub'),('tool_python','Python')]:
     register(NodeDefinition(type,name,'Tools','Execute a configured tool with explicit operation and connection.',{'input':'string'},{'text':'string'},CONFIGS[type],tool_node,('configured_tool_request',)))
 
-from .vector_api import RetrievalOptions
-class VectorConfig(StrictModel):
-    resource_id: str = Field(default='',max_length=64)
+from .kb.options import RetrievalOptions
 class SearchConfig(RetrievalOptions):
     knowledge_base_id: str = Field(default='',max_length=64)
+    # Retired with the vector-resource stack; accepted and ignored so saved workflows keep loading.
     storage_path: str = Field(default='',max_length=64)
 class QueryConfig(LLMConfig,SearchConfig):
     pass
-from .platform_nodes import vector_node,retrieve_node,query_node
-for backend,name in [('faiss','FAISS'),('chroma','ChromaDB'),('elasticsearch','Elasticsearch'),('pinecone','Pinecone')]:
-    register(NodeDefinition('vector_'+backend,name,'VectorDB','Upload files into a configured vector store and storage path.',{},{},VectorConfig,vector_node,hidden=True))
+from .platform_nodes import retrieve_node,query_node
 register(NodeDefinition('retrieve','Retrieve','Retrieval','Search a named knowledge base with configurable retrieval and fusion.',{'query':'string'},{'query':'string','context':'string','sources':'string'},SearchConfig,retrieve_node))
 register(NodeDefinition('query','Query','Retrieval','Retrieve evidence and generate a sourced answer using an enabled model.',{'query':'string'},{'text':'string','provider':'string','sources':'string'},QueryConfig,query_node,('external_model_request',)))

@@ -24,7 +24,7 @@ class Edge(StrictModel):
     target: str
     sourceHandle: str | None = None
     targetHandle: str | None = None
-    kind: Literal['flow','tool','agent','store'] = 'flow'
+    kind: Literal['flow','tool','agent'] = 'flow'
 
 class Workflow(StrictModel):
     version: Literal[1] = 1

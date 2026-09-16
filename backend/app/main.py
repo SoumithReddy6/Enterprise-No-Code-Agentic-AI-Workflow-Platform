@@ -18,13 +18,8 @@ from .storage import Store, local_key
 from .auth import install_auth
 from .worker import Worker
 from .providers import ollama_models,supports
-from .knowledge import Knowledge
-from .knowledge_api import install_knowledge_routes
-from .knowledge_nodes import knowledge_errors
 from .tool_service import ToolService
 from .tool_api import install_tool_routes
-from .vector_service import VectorService
-from .vector_api import install_vector_routes
 from .platform_validation import platform_errors,kb_errors
 from .kb_gateway import install_kb_routes
 
@@ -59,14 +54,11 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     app.add_middleware(CORSMiddleware,allow_origins=['http://127.0.0.1:3000','http://localhost:3000'],allow_credentials=True,allow_methods=['GET','POST','PUT'],allow_headers=['Content-Type'])
     auth=install_auth(app,store,enabled=auth_enabled)
     tenant=auth.tenant
-    knowledge=Knowledge(store)
-    app.state.knowledge=knowledge
-    install_knowledge_routes(app,knowledge,tenant)
     app.state.tools=ToolService(store)
-    app.state.vectors=VectorService(store)
     install_tool_routes(app,app.state.tools,tenant)
-    install_vector_routes(app,app.state.vectors,tenant)
     install_kb_routes(app,store,tenant,knowledge_services)
+    async def submission_errors(workflow,tenant_id,checkpoints=None,dependencies=None):
+        return validate_workflow(workflow)+store.model_errors(workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id,checkpoints,dependencies)
 
     @app.exception_handler(RequestValidationError)
     async def safe_validation_error(request,exc):
@@ -94,7 +86,7 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
         return {**discovery,'models':[m for m in discovery['models'] if supports(m,'completion')]}
     @app.post('/api/validate')
     async def validate(workflow:Workflow,tenant_id:str=Depends(tenant)):
-        errors=validate_workflow(workflow)+store.model_errors(workflow,tenant_id)+knowledge_errors(knowledge,workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id)
+        errors=await submission_errors(workflow,tenant_id)
         return {'valid':not errors,'errors':errors,'workflow':workflow.model_dump(mode='json')}
     @app.get('/api/workflows')
     async def workflows(tenant_id:str=Depends(tenant)):return store.workflows(tenant_id)
@@ -127,7 +119,7 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     async def runs(tenant_id:str=Depends(tenant)):return store.runs(tenant_id)
     @app.post('/api/runs',status_code=201)
     async def start(body:RunRequest,tenant_id:str=Depends(tenant)):
-        errors=validate_workflow(body.workflow)+store.model_errors(body.workflow,tenant_id)+knowledge_errors(knowledge,body.workflow,tenant_id)+platform_errors(store,body.workflow,tenant_id)+await kb_errors(app.state.knowledge_services,body.workflow,tenant_id)
+        errors=await submission_errors(body.workflow,tenant_id)
         if errors:raise HTTPException(422,detail=errors)
         run=store.create_run(body.workflow.model_dump(mode='json'),body.message,tenant_id)
         return {'id':run['id'],'status':'queued'}
@@ -147,7 +139,7 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     async def resume(id:str,tenant_id:str=Depends(tenant)):
         previous=fetch_run(id,tenant_id)
         workflow=Workflow.model_validate(previous['workflow'])
-        errors=store.model_errors(workflow,tenant_id)+knowledge_errors(knowledge,workflow,tenant_id,previous.get('checkpoints'))+platform_errors(store,workflow,tenant_id,previous.get('checkpoints'),previous.get('vector_dependencies'))+await kb_errors(app.state.knowledge_services,workflow,tenant_id,previous.get('checkpoints'),previous.get('vector_dependencies'))
+        errors=store.model_errors(workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id,previous.get('checkpoints'),previous.get('vector_dependencies'))
         if errors:raise HTTPException(422,detail=errors)
         try:run=store.resume_run(id,tenant_id);return {'id':run['id'],'status':run['status']}
         except KeyError:raise HTTPException(404,'Run not found') from None

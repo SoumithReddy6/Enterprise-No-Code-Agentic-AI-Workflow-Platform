@@ -88,18 +88,14 @@ import { connectionKind, paletteCategory } from '../lib/workflow.ts';
 void test('typed attachments reject incompatible endpoints and preserve normal flow', () => {
   assert.equal(connectionKind('tool_http', 'agent', null, 'tools'), 'tool');
   assert.equal(connectionKind('agent', 'agent', 'agents', null), 'agent');
-  assert.equal(
-    connectionKind('vector_faiss', 'query', 'store', 'store'),
-    'store',
-  );
-  assert.equal(connectionKind('vector_faiss', 'response', 'store', null), null);
+  assert.equal(connectionKind('retrieve', 'agent', null, 'tools'), 'tool');
   assert.equal(connectionKind('chat_input', 'agent', null, 'tools'), null);
   assert.equal(connectionKind('agent', 'response', null, null), 'flow');
   assert.equal(paletteCategory('llm'), null);
-  assert.equal(paletteCategory('vector_chroma'), null);
+  assert.equal(paletteCategory('retrieve'), 'Retrieval');
 });
 
-void test('retrieval flow binds evidence envelope to Agent and hides legacy vector palette only', async () => {
+void test('retrieval flow binds evidence envelope to Agent', async () => {
   const { flowBinding, paletteCategory, seed } =
     await import('../lib/workflow.ts');
   const from = { ...seed.nodes[0], type: 'retrieve' };
@@ -120,7 +116,7 @@ void test('retrieval flow binds evidence envelope to Agent and hides legacy vect
     }),
     { port: 'input', output: 'context' },
   );
-  assert.equal(paletteCategory('vector_faiss'), null);
+  assert.equal(paletteCategory('prompt'), null);
   assert.deepEqual(
     flowBinding(
       { ...from, type: 'chat_input' },

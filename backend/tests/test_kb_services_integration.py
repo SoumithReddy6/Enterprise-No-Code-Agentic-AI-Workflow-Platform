@@ -27,6 +27,17 @@ def services(tmp_path):
     yield services
     management.engine.dispose();search.engine.dispose()
 
+def text_pdf():
+    from io import BytesIO
+    from pypdf import PdfWriter
+    from pypdf.generic import DictionaryObject, NameObject, DecodedStreamObject
+    writer=PdfWriter();page=writer.add_blank_page(612,792)
+    font=DictionaryObject({NameObject('/Type'):NameObject('/Font'),NameObject('/Subtype'):NameObject('/Type1'),NameObject('/BaseFont'):NameObject('/Helvetica')})
+    page[NameObject('/Resources')]=DictionaryObject({NameObject('/Font'):DictionaryObject({NameObject('/F1'):font})})
+    stream=DecodedStreamObject();stream.set_data(b'BT /F1 18 Tf 50 700 Td (Mercury contains the large Caloris basin.) Tj ET')
+    page[NameObject('/Contents')]=writer._add_object(stream)
+    out=BytesIO();writer.write(out);return out.getvalue()
+
 async def populated(services):
     kb=await services.management.call('create','local',{'name':'Policies','config':{'search_defaults':{'mode':'keyword'}}})
     doc=await services.management.call('upload','local',{'kb_id':kb['id'],'filename':'policy.txt','content_b64':base64.b64encode(b'Bluebird is the project codename.').decode(),'idempotency_key':'upload1'})
@@ -72,7 +83,6 @@ async def test_nonready_is_not_empty_search(services):
 
 @pytest.mark.asyncio
 async def test_pdf_extraction_works_under_service_module_path(services):
-    from backend.tests.test_knowledge import text_pdf
     worker=Ingestion(services.management,services.index)
     pages=await worker.extract('facts.pdf',text_pdf())
     assert any('Mercury' in page for page in pages)
@@ -104,15 +114,14 @@ async def test_gateway_upload_idempotency_search_download_and_authorization(serv
         assert client.get(response.json()['sources'][0]['url']).status_code==404
 
 @pytest.mark.asyncio
-async def test_legacy_import_is_resumable_and_keeps_original_workflow_resources(services,tmp_path):
-    from backend.app.knowledge import Knowledge
-    from backend.tests.test_knowledge import text_pdf
-    from backend.app.kb_migration import import_legacy
-    store=Store(f'sqlite:///{tmp_path}/legacy.db',Fernet.generate_key())
-    old=Knowledge(store);base=old.create('Legacy PDF','owner');doc=old.upload(base['id'],'facts.pdf',text_pdf(),'owner')
-    first=await import_legacy(store,services,'owner','pdf',base['id'])
-    second=await import_legacy(store,services,'owner','pdf',base['id'])
-    assert first['id']==second['id'] and second['document_count']==1
-    assert old.download(doc['id'],'owner')[1]==text_pdf()
-    with pytest.raises(KeyError):await import_legacy(store,services,'other','pdf',base['id'])
-    store.engine.dispose()
+async def test_chat_models_are_refused_as_knowledge_base_embedders(services,tmp_path,monkeypatch):
+    from fastapi.testclient import TestClient
+    from backend.app.main import create_app
+    async def fingerprint(model,require_embedding=False):
+        if require_embedding and model=='chatty':raise ValueError('chatty is a chat model and cannot produce embeddings.')
+        return 'digest'
+    monkeypatch.setattr(services.embeddings,'fingerprint',fingerprint)
+    with TestClient(create_app(f'sqlite:///{tmp_path}/embed.db',Fernet.generate_key(),auth_enabled=False,embedded_worker=False,knowledge_services=services)) as client:
+        refused=client.post('/api/knowledge-bases',json={'name':'Bad','config':{'embedding_model':'chatty'}})
+        assert refused.status_code==400 and 'chat model' in refused.text
+        assert client.post('/api/knowledge-bases',json={'name':'Good','config':{'embedding_model':'embedder'}}).status_code==201

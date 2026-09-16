@@ -42,48 +42,8 @@ try:
     assert queue.claim_next('replacement')['id']==pending['id']
     assert queue.finish_run(pending['id'],'expired','success') is False
     assert queue.finish_run(pending['id'],'replacement','success') is True
-    from backend.app.knowledge import Knowledge
-    knowledge=Knowledge(queue)
-    base=knowledge.create('Postgres PDFs','pg-owner')
-    document=knowledge.upload(base['id'],'facts.pdf',b'%PDF-test-fixture','pg-owner')
-    document_id,owner=knowledge.claim()
-    assert knowledge.publish(document_id,owner,['Caloris is a basin on Mercury.'])
-    sources=knowledge.retrieve(base['id'],'Caloris',4,'pg-owner')
-    assert sources[0]['document_id']==document['id'] and sources[0]['page']==1
-    assert knowledge.verify_sources(sources,'pg-owner')==sources
-    assert knowledge.download(document['id'],'pg-owner')[1]==b'%PDF-test-fixture'
-    try:knowledge.verify_sources(sources,'pg-other')
-    except ValueError:pass
-    else:raise AssertionError('Foreign sources were accepted')
-    knowledge.remove(document['id'],'pg-owner')
-    assert knowledge.retrieve(base['id'],'Caloris',4,'pg-owner')==[]
-    import asyncio
-    from tempfile import TemporaryDirectory
-    from backend.app.vector_service import VectorService
     from backend.app.tool_service import ToolService
     from backend.app.agent_memory import MemoryService
-    async def vector_check():
-        with TemporaryDirectory(prefix='relay-pg-vectors-') as directory:
-            prior=os.environ.get('VECTOR_DATA_DIR');os.environ['VECTOR_DATA_DIR']=directory
-            try:
-                vectors=VectorService(queue)
-                async def embed(model,texts):return [[1.,0.,1.] for _ in texts]
-                vectors.embed=embed
-                resource=vectors.create({'name':'Postgres vectors','embedding_model':'fixture'},'pg-owner')
-                doc=vectors.upload(resource['id'],'facts.txt',b'Caloris is a basin on Mercury.','pg-owner')
-                assert await vectors.process_once()
-                sources=await vectors.retrieve(resource['id'],'Caloris',{'mode':'rrf'},'pg-owner')
-                assert sources[0]['document_id']==doc['id']
-                assert vectors.verify_sources(sources,'pg-owner')==sources
-                try:vectors.verify_sources(sources,'pg-other')
-                except ValueError:pass
-                else:raise AssertionError('Foreign vector sources were accepted')
-                vectors.remove(doc['id'],'pg-owner');await vectors.cleanup()
-                assert await vectors.retrieve(resource['id'],'Caloris',{'mode':'keyword'},'pg-owner')==[]
-            finally:
-                if prior is None:os.environ.pop('VECTOR_DATA_DIR',None)
-                else:os.environ['VECTOR_DATA_DIR']=prior
-    asyncio.run(vector_check())
     tools=ToolService(queue)
     connection=tools.save_connection({'name':'Read-only fixture','provider':'http','endpoint':'https://example.com','secret':'fixture'},'pg-owner')
     assert tools.resolve(connection['id'],'pg-owner')['secret']=='fixture'
@@ -91,7 +51,7 @@ try:
     memory=MemoryService(queue);memory.write('context','question','answer','pg-owner')
     assert 'answer' in memory.read('context','pg-owner') and memory.read('context','pg-other')=='[]'
     queue.engine.dispose()
-    print('PostgreSQL verified: workflows/runs, tenant isolation, ownership, leases, fencing, PDF/vector indexing, removal, encrypted connections and agent memory. Remote calls were not made.')
+    print('PostgreSQL verified: workflows/runs, tenant isolation, ownership, leases, fencing, encrypted connections and agent memory. Knowledge services are covered by scripts.check_kb_postgres. Remote calls were not made.')
 finally:
     with engine.begin() as conn: conn.execute(text(f'DROP SCHEMA {schema} CASCADE'))
     engine.dispose()

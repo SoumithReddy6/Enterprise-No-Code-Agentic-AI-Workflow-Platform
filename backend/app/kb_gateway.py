@@ -10,8 +10,8 @@ from pydantic import Field
 from .models import StrictModel
 from .kb.rpc import Client,ServiceUnavailable
 from .kb.embedding import Embeddings
+from .kb.options import RetrievalOptions,KBSettings
 from .providers import supports
-from .vector_api import RetrievalOptions,ResourceCreate
 from .vector_adapters import CAPABILITIES
 from .tool_service import ToolService
 
@@ -22,9 +22,6 @@ class KBCreate(StrictModel):
 class KBUpdate(StrictModel):
     name:str|None=Field(default=None,min_length=1,max_length=120)
     description:str|None=Field(default=None,max_length=2000)
-class KBImport(StrictModel):
-    kind:str
-    id:str=Field(min_length=1,max_length=64)
 class KBRebuild(StrictModel):config:dict
 class KBSearch(StrictModel):
     query:str=Field(min_length=1,max_length=20000)
@@ -67,10 +64,8 @@ async def checked_config(raw,store,tenant,embeddings):
     allowed={'backend','storage_path','embedding_model','embedding_digest','chunking','chunk_size','chunk_overlap','index_method','connection_id','index_name','search_defaults'}
     if set(raw)-allowed:raise ValueError('Unknown knowledge configuration fields')
     settings={k:v for k,v in raw.items() if k not in ('search_defaults','embedding_digest')}
-    model=settings.get('embedding_model','')
-    # Keyword-only bases are valid and can be rebuilt with embeddings later.
-    settings['embedding_model']=model or 'keyword-only'
-    c=ResourceCreate.model_validate({'name':'Settings',**settings}).model_dump();c.pop('name');c['embedding_model']=model
+    # Keyword-only bases (blank embedding model) are valid and can be rebuilt with embeddings later.
+    c=KBSettings.model_validate(settings).model_dump();model=c['embedding_model']
     import re
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}',c['storage_path']):raise ValueError('Choose a logical storage path using letters, numbers, dash and underscore')
     if c['chunk_overlap']>=c['chunk_size']:raise ValueError('Chunk overlap must be smaller than chunk size')
@@ -105,17 +100,6 @@ def install_kb_routes(app,store,tenant_dependency,services=None):
         discovery=await ollama_models()
         # Only embedding-capable models are offered; a chat model would index silently and search badly.
         return {'backends':CAPABILITIES,'embedding_models':[m for m in discovery['models'] if supports(m,'embedding')],'embedding_connected':discovery['connected'],'extensions':['pdf','txt','md','markdown','csv','json','html','htm','docx'],'max_file_bytes':25*1024*1024}
-    @app.get('/api/knowledge-bases/legacy-resources')
-    async def legacy(tenant=Depends(tenant_dependency)):
-        from .kb_migration import legacy_resources
-        return legacy_resources(store,tenant)
-    @app.post('/api/knowledge-bases/import-legacy')
-    async def migrate(body:KBImport,tenant=Depends(tenant_dependency)):
-        from .kb_migration import import_legacy
-        try:return await import_legacy(store,services,tenant,body.kind,body.id)
-        except KeyError:raise HTTPException(404,'Legacy resource or previously imported knowledge base unavailable') from None
-        except ServiceUnavailable as e:raise HTTPException(503,str(e)) from None
-        except ValueError as e:raise HTTPException(400,str(e)) from None
     @app.post('/api/knowledge-bases',status_code=201)
     async def create(body:KBCreate,request:Request,tenant=Depends(tenant_dependency)):
         config,connection=await settings(body.config,tenant)

@@ -32,7 +32,7 @@ def _validate_flow(workflow: Workflow) -> list[str]:
         try:
             config = definition.config_model.model_validate(node.config)
             if node.type == 'prompt': validate_template(config.template)
-            if node.type in ('llm','grounded_answer','agent','query') and config.provider in ('openai','claude') and not config.credential_id:
+            if node.type in ('llm','agent','query') and config.provider in ('openai','claude') and not config.credential_id:
                 errors.append(f'{node.id}: choose a credential for {config.provider}.')
         except (ValidationError, ValueError):
             errors.append(f'{node.id}: invalid configuration. Check required fields and template syntax; inline credentials are not allowed.')

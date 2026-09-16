@@ -149,11 +149,9 @@ def install_auth(app, store, enabled=True):
                 if session.get(BootstrapRecord, 1) is None:
                     session.add(BootstrapRecord(id=1, tenant_id=account.tenant_id))
                     session.flush()
-                    from .knowledge import TENANT_MODELS
                     from .tool_service import TENANT_MODELS as TOOL_MODELS
-                    from .vector_service import TENANT_MODELS as VECTOR_MODELS
                     from .agent_memory import TENANT_MODELS as MEMORY_MODELS
-                    for model in (WorkflowRecord, RunRecord, CredentialRecord, ModelRecord, *TENANT_MODELS,*TOOL_MODELS,*VECTOR_MODELS,*MEMORY_MODELS):
+                    for model in (WorkflowRecord, RunRecord, CredentialRecord, ModelRecord, *TOOL_MODELS, *MEMORY_MODELS):
                         session.execute(update(model).where(model.tenant_id == 'local').values(tenant_id=account.tenant_id))
                 session.add(account)
                 session.flush()

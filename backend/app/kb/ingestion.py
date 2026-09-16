@@ -5,14 +5,30 @@ import json
 import logging
 import os
 from pathlib import Path
+import re
 import signal
 import sys
 import tempfile
+import uuid
 from .rpc import Client
 from .embedding import Embeddings
-from ..vector_service import VectorService
 
 log=logging.getLogger('relay.knowledge.ingestion')
+
+def chunk_pages(pages,config):
+    """Fixed or paragraph passages with overlap; the caller assigns document-level ordinals."""
+    if not isinstance(pages,list) or not 1<=len(pages)<=200:raise ValueError('Document must have 1–200 pages')
+    size,step=config['chunk_size'],config['chunk_size']-config['chunk_overlap'];chunks=[]
+    for page,value in enumerate(pages,1):
+        if not isinstance(value,str):raise ValueError('Invalid extracted text')
+        sections=re.split(r'\n\s*\n',value) if config['chunking']=='paragraph' else [value]
+        for section in sections:
+            for start in range(0,len(section),step):
+                passage=section[start:start+size].strip()
+                if passage:chunks.append({'id':uuid.uuid4().hex,'ordinal':len(chunks),'page':page,'text':passage})
+                if len(chunks)>50000:raise ValueError('Document exceeds 50,000 chunks')
+    if not chunks:raise ValueError('Document has no readable text')
+    return chunks
 
 class Ingestion:
     def __init__(self,management=None,search=None,embeddings=None):
@@ -48,8 +64,7 @@ class Ingestion:
                 artifact=await self.management.call('artifact',tenant,{**fence,'document_id':document['id']})
                 pages=await self.extract(document['filename'],base64.b64decode(artifact['content_b64'],validate=True))
                 await progress('chunking',completed=number,total=len(job['documents']))
-                split=VectorService.split(None,pages,config)
-                for chunk in split:
+                for chunk in chunk_pages(pages,config):
                     chunk['document_id']=document['id'];chunk['ordinal']=len(chunks);chunks.append(chunk)
                 if len(chunks)>50000 or sum(len(c['text']) for c in chunks)>16*1024*1024:raise ValueError('Knowledge base exceeds its chunk/text budget')
             if config.get('embedding_model'):

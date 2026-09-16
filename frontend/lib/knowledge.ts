@@ -1,18 +1,9 @@
 import type { Workflow, RunEvent } from './workflow';
-export type KnowledgeBase = { id: string; name: string };
-export type KnowledgeDocument = {
-  id: string;
-  filename: string;
-  status: string;
-  error?: string;
-  pages?: number;
-};
 export type KnowledgeSource = {
   id: string;
   document_id: string;
-  resource_id?: string;
-  knowledge_base_id?: string;
-  version?: number;
+  knowledge_base_id: string;
+  version: number;
   url?: string;
   filename: string;
   page: number;
@@ -22,71 +13,60 @@ export type KnowledgeSource = {
   cited: boolean;
 };
 const safeId = (value: unknown): value is string =>
-  typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value);
+  typeof value === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(value);
+/** Accept only canonical knowledge-base sources; presentation fields default so Retrieve output renders too. */
 export function parseSources(value: unknown): KnowledgeSource[] {
   try {
     const parsed: unknown =
       typeof value === 'string' ? JSON.parse(value) : value;
     if (!Array.isArray(parsed) || parsed.length > 100) return [];
-    const normalized = parsed.map((source: unknown, index: number) => {
-      if (
-        source &&
-        typeof source === 'object' &&
-        (('resource_id' in source && safeId(source.resource_id)) ||
-          ('knowledge_base_id' in source && safeId(source.knowledge_base_id)))
-      ) {
+    const candidates: Record<string, unknown>[] = parsed.flatMap(
+      (source: unknown, index: number) => {
+        if (!source || typeof source !== 'object') return [];
         const entry = source as Record<string, unknown>;
-        return {
-          ...entry,
-          citation: entry.citation ?? `S${index + 1}`,
-          cited: entry.cited ?? false,
-        };
-      }
-      return source as Record<string, unknown>;
-    });
-    return normalized.filter((s): s is KnowledgeSource =>
-      Boolean(
-        s &&
-        typeof s === 'object' &&
-        safeId(s.id) &&
-        safeId(s.document_id) &&
-        (s.resource_id === undefined || safeId(s.resource_id)) &&
-        (s.knowledge_base_id === undefined ||
-          (safeId(s.knowledge_base_id) &&
-            s.knowledge_base_id.length <= 64 &&
-            s.document_id.length <= 64 &&
-            s.id.length <= 64 &&
-            Number.isInteger(s.version) &&
-            Number(s.version) >= 1)) &&
-        typeof s.filename === 'string' &&
-        typeof s.text === 'string' &&
-        typeof s.page === 'number' &&
-        Number.isInteger(s.page) &&
-        s.page >= 1 &&
-        s.page <= 200 &&
-        typeof s.score === 'number' &&
-        Number.isFinite(s.score) &&
-        typeof s.citation === 'string' &&
-        /^S([1-9][0-9]?|100)$/.test(s.citation) &&
-        typeof s.cited === 'boolean',
-      ),
+        return [
+          {
+            ...entry,
+            citation: entry.citation ?? `S${index + 1}`,
+            cited: entry.cited ?? false,
+          },
+        ];
+      },
     );
+    return candidates.filter((s): s is KnowledgeSource =>
+        Boolean(
+          s &&
+          typeof s === 'object' &&
+          safeId(s.id) &&
+          safeId(s.document_id) &&
+          safeId(s.knowledge_base_id) &&
+          Number.isInteger(s.version) &&
+          Number(s.version) >= 1 &&
+          typeof s.filename === 'string' &&
+          typeof s.text === 'string' &&
+          typeof s.page === 'number' &&
+          Number.isInteger(s.page) &&
+          s.page >= 1 &&
+          s.page <= 200 &&
+          typeof s.score === 'number' &&
+          Number.isFinite(s.score) &&
+          typeof s.citation === 'string' &&
+          /^S([1-9][0-9]?|100)$/.test(s.citation) &&
+          typeof s.cited === 'boolean',
+        ),
+      );
   } catch {
     return [];
   }
 }
+/** Links are built from validated identifiers, never from a URL carried in the source. */
 export function documentLink(source: KnowledgeSource): string {
-  return safeId(source.document_id) &&
+  return safeId(source.knowledge_base_id) &&
+    safeId(source.document_id) &&
     Number.isInteger(source.page) &&
     source.page >= 1 &&
     source.page <= 200
-    ? source.knowledge_base_id
-      ? safeId(source.knowledge_base_id) &&
-        source.knowledge_base_id.length <= 64 &&
-        source.document_id.length <= 64
-        ? `/api/knowledge-bases/${source.knowledge_base_id}/documents/${source.document_id}/file#page=${source.page}`
-        : ''
-      : `/api/${source.resource_id && safeId(source.resource_id) ? 'vector-files' : 'documents'}/${source.document_id}/file#page=${source.page}`
+    ? `/api/knowledge-bases/${source.knowledge_base_id}/documents/${source.document_id}/file#page=${source.page}`
     : '';
 }
 export function sourcesForRun(
@@ -96,9 +76,7 @@ export function sourcesForRun(
   if (!run) return [];
   const answerIds = new Set(
     run.workflow.nodes
-      .filter((n) =>
-        ['grounded_answer', 'query', 'retrieve', 'agent'].includes(n.type),
-      )
+      .filter((n) => ['query', 'retrieve', 'agent'].includes(n.type))
       .map((n) => n.id),
   );
   const latest = new Map<string, RunEvent>();
@@ -115,64 +93,4 @@ export function sourcesForRun(
       merged.set(source.id, source);
   }
   return [...merged.values()];
-}
-export function pdfWorkflow(
-  baseId: string,
-  config: Record<string, unknown>,
-): Workflow {
-  return {
-    version: 1,
-    name: 'Ask your PDFs',
-    description: 'Answer a question using local PDF evidence.',
-    nodes: [
-      {
-        id: 'input',
-        type: 'chat_input',
-        version: 1,
-        label: 'Question',
-        position: { x: 65, y: 130 },
-        inputs: {},
-        config: {},
-      },
-      {
-        id: 'retrieve',
-        type: 'retrieval',
-        version: 1,
-        label: 'Retrieve passages',
-        position: { x: 370, y: 130 },
-        inputs: { query: 'input.message' },
-        config: { knowledge_base_id: baseId, limit: 4 },
-      },
-      {
-        id: 'answer',
-        type: 'grounded_answer',
-        version: 1,
-        label: 'Grounded answer',
-        position: { x: 675, y: 130 },
-        inputs: {
-          query: 'retrieve.query',
-          context: 'retrieve.context',
-          sources: 'retrieve.sources',
-        },
-        config: {
-          system: 'Answer clearly using the supplied evidence.',
-          ...config,
-        },
-      },
-      {
-        id: 'out',
-        type: 'response',
-        version: 1,
-        label: 'Send response',
-        position: { x: 980, y: 130 },
-        inputs: { text: 'answer.text' },
-        config: {},
-      },
-    ],
-    edges: [
-      { id: 'input-retrieve', source: 'input', target: 'retrieve' },
-      { id: 'retrieve-answer', source: 'retrieve', target: 'answer' },
-      { id: 'answer-out', source: 'answer', target: 'out' },
-    ],
-  };
 }

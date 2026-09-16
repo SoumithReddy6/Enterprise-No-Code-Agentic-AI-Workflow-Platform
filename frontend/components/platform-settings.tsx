@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api, type ConfigProperty } from '@/lib/workflow';
 const scalar = (value: unknown): string =>
   ['string', 'number', 'boolean'].includes(typeof value) ? String(value) : '';
@@ -12,16 +12,6 @@ export type ToolConnection = {
   port?: number;
   sender?: string;
   has_secret?: boolean;
-};
-export type VectorResource = {
-  id: string;
-  name: string;
-  backend: string;
-  storage_path: string;
-  connection_id?: string;
-  embedding_model: string;
-  index_method: string;
-  index_name?: string;
 };
 
 export function ConfigField({
@@ -136,145 +126,6 @@ export function ConfigField({
       )}
       {error && <span className="error-text">{error}</span>}
     </label>
-  );
-}
-
-export function VectorFiles({
-  resource,
-  disabled,
-}: {
-  resource: VectorResource;
-  disabled: boolean;
-}) {
-  const [files, setFiles] = useState<
-    { id: string; filename: string; status: string; error?: string }[]
-  >([]);
-  const [revision, setRevision] = useState(0);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    let active = true;
-    let timer: ReturnType<typeof setTimeout>;
-    async function poll() {
-      try {
-        const result = await api<typeof files>(
-          `/vector-resources/${encodeURIComponent(resource.id)}/files`,
-        );
-        if (!active) return;
-        setFiles(result);
-        if (
-          result.some((f) =>
-            ['queued', 'processing', 'indexing'].includes(f.status),
-          )
-        )
-          timer = setTimeout(poll, 2000);
-      } catch (e) {
-        if (active) setError((e as Error).message);
-      }
-    }
-    void poll();
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [resource.id, revision]);
-  async function action(fn: () => Promise<void>) {
-    setBusy(true);
-    setError('');
-    try {
-      await fn();
-      setRevision((x) => x + 1);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <section className="settings-section">
-      <h3>FILES · {resource.storage_path}</h3>
-      <p className="helper">
-        Files belong only to this resource and storage path. PDF, text,
-        Markdown, CSV, JSON, HTML and DOCX are supported.
-      </p>
-      <label className="button secondary">
-        Upload files
-        <input
-          type="file"
-          multiple
-          disabled={disabled || busy}
-          onChange={(e) => {
-            const uploads = Array.from(e.target.files || []);
-            e.target.value = '';
-            void action(async () => {
-              const failures: string[] = [];
-              for (const file of uploads) {
-                const response = await fetch(
-                  `/api/vector-resources/${encodeURIComponent(resource.id)}/files?filename=${encodeURIComponent(file.name)}`,
-                  {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/octet-stream' },
-                    body: file,
-                  },
-                );
-                if (!response.ok) {
-                  const detail = (await response.json().catch(() => ({}))) as {
-                    detail?: string;
-                  };
-                  failures.push(
-                    `${file.name}: ${detail.detail || 'Upload failed'}`,
-                  );
-                }
-              }
-              setRevision((x) => x + 1);
-              if (failures.length) throw Error(failures.join('\n'));
-            });
-          }}
-        />
-      </label>
-      {error && <p className="error-text">{error}</p>}
-      {files.map((f) => (
-        <div className="resource-file" key={f.id}>
-          <a
-            href={`/api/vector-files/${encodeURIComponent(f.id)}/file`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {f.filename}
-          </a>
-          <small>{f.status}</small>
-          {f.error && <p className="error-text">{f.error}</p>}
-          <button
-            disabled={disabled || busy}
-            className="text-button"
-            onClick={() =>
-              void action(async () => {
-                await api(
-                  `/vector-files/${encodeURIComponent(f.id)}/retry`,
-                  'POST',
-                );
-              })
-            }
-          >
-            Retry
-          </button>
-          <button
-            disabled={disabled || busy}
-            className="text-button"
-            onClick={() =>
-              void action(async () => {
-                await api(
-                  `/vector-files/${encodeURIComponent(f.id)}/remove`,
-                  'POST',
-                );
-              })
-            }
-          >
-            Remove
-          </button>
-        </div>
-      ))}
-    </section>
   );
 }
 

@@ -1,35 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  pdfWorkflow,
-  parseSources,
-  documentLink,
-  sourcesForRun,
-} from '../lib/knowledge.ts';
+import { parseSources, documentLink, sourcesForRun } from '../lib/knowledge.ts';
+import type { Workflow } from '../lib/workflow.ts';
 
-void test('PDF starter binds every retrieval and answer port', () => {
-  const workflow = pdfWorkflow('base123', {
-    provider: 'ollama',
-    model: 'test',
-  });
-  assert.deepEqual(
-    workflow.nodes.map((n) => n.type),
-    ['chat_input', 'retrieval', 'grounded_answer', 'response'],
-  );
-  assert.deepEqual(workflow.nodes[1].config, {
-    knowledge_base_id: 'base123',
-    limit: 4,
-  });
-  assert.deepEqual(workflow.nodes[2].inputs, {
-    query: 'retrieve.query',
-    context: 'retrieve.context',
-    sources: 'retrieve.sources',
-  });
-  assert.equal(workflow.nodes[3].inputs.text, 'answer.text');
-});
 const source = {
   id: 'chunk123',
   document_id: 'doc123',
+  knowledge_base_id: 'kb_123',
+  version: 2,
   filename: '<script>.pdf',
   page: 2,
   text: '[evil](javascript:alert(1))',
@@ -37,9 +15,29 @@ const source = {
   citation: 'S1',
   cited: true,
 };
+const node = (id: string, type: string) => ({
+  id,
+  type,
+  version: 1 as const,
+  label: '',
+  position: { x: 0, y: 0 },
+  inputs: {},
+  config: {},
+});
+const workflow: Workflow = {
+  version: 1,
+  name: 'Ask the knowledge base',
+  description: '',
+  nodes: [node('input', 'chat_input'), node('answer', 'query')],
+  edges: [],
+};
+
 void test('sources preserve plain strings and links only use bounded identifiers', () => {
   assert.deepEqual(parseSources(JSON.stringify([source])), [source]);
-  assert.equal(documentLink(source), '/api/documents/doc123/file#page=2');
+  assert.equal(
+    documentLink(source),
+    '/api/knowledge-bases/kb_123/documents/doc123/file#page=2',
+  );
   assert.equal(
     parseSources(JSON.stringify([{ ...source, document_id: '../foreign' }]))
       .length,
@@ -52,8 +50,8 @@ void test('sources preserve plain strings and links only use bounded identifiers
   );
   assert.deepEqual(parseSources('invalid'), []);
 });
+
 void test('sources come only from successful answer events in the selected run snapshot', () => {
-  const workflow = pdfWorkflow('base123', {});
   const events = [
     {
       status: 'success',
@@ -69,6 +67,28 @@ void test('sources come only from successful answer events in the selected run s
     sourcesForRun({ workflow }, [{ ...events[0], status: 'failed' }]),
     [],
   );
+});
+
+void test('unified KB sources retain version and ignore carried URLs', () => {
+  const modern = { ...source, url: 'javascript:bad' };
+  assert.equal(
+    documentLink(parseSources([modern])[0]),
+    '/api/knowledge-bases/kb_123/documents/doc123/file#page=2',
+  );
+  const { citation: _citation, cited: _cited, ...bare } = modern;
+  assert.equal(parseSources([bare])[0].citation, 'S1');
+  assert.deepEqual(
+    parseSources([{ ...modern, knowledge_base_id: '../bad' }]),
+    [],
+  );
+  assert.deepEqual(parseSources([{ ...modern, version: -1 }]), []);
+  assert.deepEqual(
+    parseSources([{ ...modern, knowledge_base_id: 'x'.repeat(65) }]),
+    [],
+  );
+  // Sources without a knowledge-base identity never render as links.
+  const { knowledge_base_id: _kb, version: _v, ...orphan } = modern;
+  assert.deepEqual(parseSources([orphan]), []);
 });
 
 void test('proxy preserves PDF bytes and authenticated download headers', async () => {
@@ -91,7 +111,7 @@ void test('proxy preserves PDF bytes and authenticated download headers', async 
   };
   try {
     const response = await POST(
-      new Request('http://localhost/api/knowledge/base/documents', {
+      new Request('http://localhost/api/knowledge-bases/base/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/pdf', cookie: 'session=test' },
         body: bytes,
@@ -107,10 +127,11 @@ void test('proxy preserves PDF bytes and authenticated download headers', async 
     globalThis.fetch = originalFetch;
   }
 });
+
 void test('proxy rejects over-limit bodies even without content-length', async () => {
   const { POST } = await import('../app/api/[...path]/route.ts');
   const response = await POST(
-    new Request('http://localhost/api/knowledge/base/documents', {
+    new Request('http://localhost/api/knowledge-bases/base/documents', {
       method: 'POST',
       body: new Uint8Array(25 * 1024 * 1024 + 1),
     }),
@@ -118,48 +139,6 @@ void test('proxy rejects over-limit bodies even without content-length', async (
   assert.equal(response.status, 413);
 });
 
-void test('vector sources use tenant vector-file routes and query events', () => {
-  const vector = { ...source, resource_id: 'resource123' };
-  assert.equal(documentLink(vector), '/api/vector-files/doc123/file#page=2');
-  const workflow = pdfWorkflow('base123', {});
-  workflow.nodes[2].type = 'query';
-  assert.equal(
-    sourcesForRun({ workflow }, [
-      {
-        status: 'success',
-        node_id: 'answer',
-        outputs: { sources: [vector] },
-        seq: 1,
-        timestamp: '',
-      },
-    ]).length,
-    1,
-  );
-});
-
-void test('unified KB sources retain version and build bounded original links', () => {
-  const modern = {
-    ...source,
-    knowledge_base_id: 'kb_123',
-    version: 2,
-    url: 'javascript:bad',
-  };
-  assert.equal(
-    documentLink(parseSources([modern])[0]),
-    '/api/knowledge-bases/kb_123/documents/doc123/file#page=2',
-  );
-  const { citation: _citation, cited: _cited, ...bare } = modern;
-  assert.equal(parseSources([bare])[0].citation, 'S1');
-  assert.deepEqual(
-    parseSources([{ ...modern, knowledge_base_id: '../bad' }]),
-    [],
-  );
-  assert.deepEqual(parseSources([{ ...modern, version: -1 }]), []);
-  assert.deepEqual(
-    parseSources([{ ...modern, knowledge_base_id: 'x'.repeat(65) }]),
-    [],
-  );
-});
 void test('raw KB uploads and proxy preserve replay identity', async () => {
   const { uploadDocument } = await import('../lib/knowledge-hub.ts');
   const { POST } = await import('../app/api/[...path]/route.ts');

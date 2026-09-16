@@ -21,7 +21,7 @@ from sqlalchemy import create_engine, select, delete, func, text
 from sqlalchemy.orm import Session
 from .search_models import SQLBase, Segment, Chunk, Posting, ChunkOwner
 from ..vector_adapters import ADAPTERS, CAPABILITIES
-from ..vector_api import RetrievalOptions
+from .options import RetrievalOptions
 
 
 _ID = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
@@ -239,13 +239,17 @@ class Search:
             elif o['mode']=='keyword':ranked=lexical
             else:
                 scores=Counter()
-                for is_vector,weight,ranking in ((True,o['vector_weight'],semantic),(False,1-o['vector_weight'],lexical)):
-                    if o['mode']=='hybrid' and weight==0:continue
-                    maximum=max((score for _,score in ranking),default=1) or 1
+                for weight,ranking in ((o['vector_weight'],semantic),(1-o['vector_weight'],lexical)):
+                    if (o['mode']=='hybrid' and weight==0) or not ranking:continue
+                    # Cosine and BM25 live on different scales (cosine clusters near 0.6–0.9, BM25 spreads
+                    # 0–max), so weighting raw values lets one signal dominate whatever vector_weight says.
+                    # Min–max over each candidate list puts both on 0–1 before the convex combination.
+                    values=[score for _,score in ranking];low=min(values);spread=max(values)-low
                     for rank,(id,score) in enumerate(ranking,1):
-                        contribution=1/(o['rrf_k']+rank) if o['mode']=='rrf' else weight*(min(1,max(0,(score+1)/2)) if is_vector else max(0,score)/maximum)
-                        if contribution>0:scores[id]+=contribution
-                ranked=sorted(scores.items(),key=lambda x:(-x[1],x[0]))
+                        scores[id]+=1/(o['rrf_k']+rank) if o['mode']=='rrf' else weight*((score-low)/spread if spread>0 else 1.)
+                # Chunk IDs are random per build, so ties must resolve by rank, not by ID, to keep results repeatable.
+                order={id:rank for rank,(id,_) in enumerate(semantic or lexical)}
+                ranked=sorted(scores.items(),key=lambda x:(-x[1],order.get(x[0],len(order)),x[0]))
             eligible={c.id for c in metadata};result=[];seen=set()
             for id,score in ranked:
                 if id in seen or id not in eligible or not math.isfinite(score) or (o['score_threshold'] is not None and score<o['score_threshold']):continue

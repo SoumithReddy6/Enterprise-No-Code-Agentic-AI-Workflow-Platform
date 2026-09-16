@@ -13,7 +13,7 @@ export type WorkflowEdge = {
   target: string;
   sourceHandle?: string | null;
   targetHandle?: string | null;
-  kind?: 'flow' | 'tool' | 'agent' | 'store';
+  kind?: 'flow' | 'tool' | 'agent';
 };
 export type Workflow = {
   version: 1;
@@ -247,29 +247,20 @@ export function connectionKind(
       : null;
   if (sourceHandle === 'agents')
     return sourceType === 'agent' && targetType === 'agent' ? 'agent' : null;
-  if (targetHandle === 'store' || sourceType.startsWith('vector_'))
-    return sourceType.startsWith('vector_') &&
-      ['retrieve', 'query'].includes(targetType) &&
-      targetHandle === 'store'
-      ? 'store'
-      : null;
-  if (targetType.startsWith('vector_')) return null;
   return 'flow';
 }
 export const paletteCategories = [
   'Input',
   'Agent',
   'Tools',
-  'VectorDB',
   'Retrieval',
   'Control',
   'Output',
 ];
 export function paletteCategory(type: string): string | null {
-  if (['prompt', 'llm', 'retrieval', 'grounded_answer'].includes(type))
-    return null;
+  // Prompt template and Language model stay loadable for saved workflows but are not offered.
+  if (['prompt', 'llm'].includes(type)) return null;
   if (type.startsWith('tool_')) return 'Tools';
-  if (type.startsWith('vector_')) return null;
   if (['retrieve', 'query'].includes(type)) return 'Retrieval';
   return (
     (

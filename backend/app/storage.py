@@ -69,7 +69,7 @@ class Store:
     def __init__(self,database_url,encryption_key):
         self.engine=create_engine(database_url,connect_args={'check_same_thread':False,'timeout':30} if database_url.startswith('sqlite') else {})
         self.cipher=Fernet(encryption_key)
-        from . import knowledge, tool_service, vector_service, agent_memory  # Register feature tables before schema creation.
+        from . import tool_service, agent_memory  # Register feature tables before schema creation.
         # Additive v1 -> v2 migration. Existing records stay in local until account setup.
         with self.engine.begin() as conn:
             if conn.dialect.name=='postgresql':conn.execute(text('SELECT pg_advisory_xact_lock(19482026)'))
