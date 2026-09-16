@@ -40,7 +40,7 @@ class Ingestion:
             config=job['config'];chunks=[];vectors=[]
             digest=config.get('embedding_digest','')
             if config.get('embedding_model'):
-                actual=await self.embeddings.fingerprint(config['embedding_model'])
+                actual=await self.embeddings.fingerprint(config['embedding_model'],require_embedding=True)
                 if digest and actual!=digest:raise ValueError('Embedding model changed. Rebuild using its current version.')
                 digest=actual
             for number,document in enumerate(job['documents']):

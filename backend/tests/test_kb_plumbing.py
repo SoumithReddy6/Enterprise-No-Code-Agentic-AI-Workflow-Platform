@@ -48,6 +48,23 @@ async def test_embedding_fingerprint_drift_prevents_call(monkeypatch):
     with pytest.raises(ValueError,match='changed'):await e.embed('model',['text'],'old')
 
 @pytest.mark.asyncio
+async def test_chat_models_cannot_be_configured_as_embedding_models(monkeypatch):
+    from backend.app import providers
+    from backend.app.kb.embedding import Embeddings
+    def handler(request):
+        if request.url.path=='/api/tags':return httpx.Response(200,json={'models':[{'name':'chatty','digest':'abc'},{'name':'embedder','digest':'def'},{'name':'old','digest':'ghi'}]})
+        name=json.loads(request.content)['model']
+        return httpx.Response(200,json={'capabilities':['completion','tools'] if name=='chatty' else ['embedding']} if name!='old' else {})
+    real=httpx.AsyncClient
+    monkeypatch.setattr(providers,'client',lambda timeout:real(transport=httpx.MockTransport(handler)))
+    e=Embeddings()
+    with pytest.raises(ValueError,match='chat model'):await e.fingerprint('chatty',require_embedding=True)
+    assert await e.fingerprint('chatty')=='abc'  # An existing index keeps answering with the model it was built with.
+    assert await e.fingerprint('embedder',require_embedding=True)=='def'
+    assert await e.fingerprint('old',require_embedding=True)=='ghi'  # Servers without capability data are not blocked.
+    with pytest.raises(ValueError,match='installed'):await e.fingerprint('absent')
+
+@pytest.mark.asyncio
 async def test_run_deadline_includes_service_preflight(tmp_path,monkeypatch):
     from backend.app import worker as module
     from backend.app.storage import Store

@@ -1,4 +1,5 @@
 """Ollama transport. Service addresses are operator config, never workflow inputs."""
+import asyncio
 import os
 import httpx
 
@@ -21,14 +22,35 @@ async def ollama_chat(model,system,prompt,temperature=None,top_p=None,max_tokens
     except httpx.TimeoutException:raise ValueError('Ollama timed out. Try a smaller model or shorter input.') from None
     except (httpx.HTTPError,KeyError,TypeError):raise ValueError('Ollama request failed. Check that the selected model supports chat.') from None
 
+async def ollama_capabilities(http,name):
+    """Capabilities from /api/show ('completion', 'embedding', ...); None on servers that predate the field."""
+    try:
+        response=await http.post(ollama_url()+'/api/show',json={'model':name});response.raise_for_status()
+        capabilities=response.json().get('capabilities')
+        return [c for c in capabilities if isinstance(c,str)] if isinstance(capabilities,list) else None
+    except (httpx.HTTPError,ValueError,AttributeError):return None
+
+def supports(model,capability):
+    """Unknown capability lists never block a model; only a known list without the capability does."""
+    return model.get('capabilities') is None or capability in model['capabilities']
+
 async def ollama_models():
     try:
         async with client(5) as http:
             response=await http.get(ollama_url()+'/api/tags');response.raise_for_status()
-            models=response.json()['models']
-            return {'connected':True,'models':[{'name':m['name'],'size':m.get('size',0)} for m in models if isinstance(m.get('name'),str)]}
+            tags=[m for m in response.json()['models'] if isinstance(m.get('name'),str)]
+            capabilities=await asyncio.gather(*(ollama_capabilities(http,m['name']) for m in tags))
+            return {'connected':True,'models':[{'name':m['name'],'size':m.get('size',0),'digest':m.get('digest','') if isinstance(m.get('digest'),str) else '','capabilities':c} for m,c in zip(tags,capabilities)]}
     except (httpx.HTTPError,KeyError,TypeError,ValueError):
         return {'connected':False,'models':[],'error':'Cannot list local models. Start Ollama and check OLLAMA_BASE_URL.'}
+
+async def ollama_model(name):
+    """One installed model's digest and capabilities, or a ValueError the operator can act on."""
+    discovery=await ollama_models()
+    if not discovery['connected']:raise ValueError('Cannot verify the Ollama embedding model. Start Ollama and refresh models.')
+    model=next((m for m in discovery['models'] if m['name']==name),None)
+    if not model or not model['digest']:raise ValueError('Select an installed Ollama embedding model.')
+    return model
 
 async def claude_chat(model,system,prompt,key,temperature=None,top_p=None,max_tokens=2048):
     """Claude's native Messages API; system instructions are a top-level field."""

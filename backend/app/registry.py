@@ -154,7 +154,7 @@ register(NodeDefinition('retrieval','PDF retrieval','Knowledge','Find relevant P
 register(NodeDefinition('grounded_answer','Grounded answer','AI','Answer from verified PDF passages using an enabled model.',{'query':'string','context':'string','sources':'string'},{'text':'string','provider':'string','sources':'string'},LLMConfig,grounded_answer_node,('external_model_request',)))
 
 from .agent_runtime import agent_node,tool_node
-register(NodeDefinition('agent','Agent node','Agent','Configure a role, attach tools and delegate to specialist agents.',{'input':'string'},{'text':'string','provider':'string'},AgentConfig,agent_node))
+register(NodeDefinition('agent','Agent node','Agent','Configure a role, attach tools and delegate to specialist agents.',{'input':'string'},{'text':'string','provider':'string','sources':'string'},AgentConfig,agent_node))
 for legacy in ('prompt','llm','retrieval','grounded_answer'):REGISTRY[legacy].hidden=True
 
 from .tool_service import CONFIGS

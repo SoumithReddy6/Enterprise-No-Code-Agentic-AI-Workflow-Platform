@@ -17,7 +17,7 @@ from .compiler import validate_workflow
 from .storage import Store, local_key
 from .auth import install_auth
 from .worker import Worker
-from .providers import ollama_models
+from .providers import ollama_models,supports
 from .knowledge import Knowledge
 from .knowledge_api import install_knowledge_routes
 from .knowledge_nodes import knowledge_errors
@@ -88,7 +88,10 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     @app.get('/api/nodes')
     async def nodes(tenant_id:str=Depends(tenant)):return [n.public() for n in REGISTRY.values()]
     @app.get('/api/providers/ollama/models')
-    async def models(tenant_id:str=Depends(tenant)):return await ollama_models()
+    async def models(tenant_id:str=Depends(tenant)):
+        # The chat-model picker must not offer embedding-only models.
+        discovery=await ollama_models()
+        return {**discovery,'models':[m for m in discovery['models'] if supports(m,'completion')]}
     @app.post('/api/validate')
     async def validate(workflow:Workflow,tenant_id:str=Depends(tenant)):
         errors=validate_workflow(workflow)+store.model_errors(workflow,tenant_id)+knowledge_errors(knowledge,workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id)

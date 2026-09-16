@@ -12,7 +12,7 @@ def test_named_kb_flow_needs_no_vector_node():assert validate_workflow(graph())=
 async def test_retrieve_preserves_question_and_evidence_for_agent():
     async def platform(action,*args):
         if action=='kb_retrieve':return {'query':args[1],'knowledge_base_id':'kb1','version':1,'sources':[{'text':'Bluebird is the codename','id':'chunk','document_id':'doc'}]}
-        if action=='record_vector_sources':return None
+        if action in ('record_vector_sources','verify_vector_sources'):return None
         raise AssertionError(action)
     result=await compile_workflow(graph(),message='What codename?',platform_resolver=platform).graph.ainvoke({'values':{}})
     context=json.loads(result['values']['retrieve']['context'])

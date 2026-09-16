@@ -96,16 +96,25 @@ export function sourcesForRun(
   if (!run) return [];
   const answerIds = new Set(
     run.workflow.nodes
-      .filter((n) => ['grounded_answer', 'query', 'retrieve'].includes(n.type))
+      .filter((n) =>
+        ['grounded_answer', 'query', 'retrieve', 'agent'].includes(n.type),
+      )
       .map((n) => n.id),
   );
   const latest = new Map<string, RunEvent>();
   for (const event of events)
     if (event.node_id && answerIds.has(event.node_id))
       latest.set(event.node_id, event);
-  return [...latest.values()]
+  // Retrieve reports what was found; the Agent reports what it cited. Same passage, one card.
+  const merged = new Map<string, KnowledgeSource>();
+  for (const source of [...latest.values()]
     .filter((e) => e.status === 'success')
-    .flatMap((e) => parseSources(e.outputs?.sources));
+    .flatMap((e) => parseSources(e.outputs?.sources))) {
+    const previous = merged.get(source.id);
+    if (!previous || (source.cited && !previous.cited))
+      merged.set(source.id, source);
+  }
+  return [...merged.values()];
 }
 export function pdfWorkflow(
   baseId: string,

@@ -2,19 +2,18 @@
 import asyncio
 import math
 import httpx
-from ..providers import ollama_url
+from ..providers import ollama_url,ollama_model,supports
 
 class Embeddings:
     def __init__(self,concurrency=1):self.limit=asyncio.Semaphore(concurrency)
-    async def fingerprint(self,model):
+    async def fingerprint(self,model,require_embedding=False):
+        """Pinned digest of an installed model. Configuration and indexing also require embedding capability;
+        query-time checks only pin the digest so an existing index keeps answering with the model it was built with."""
         if not model:return ''
-        try:
-            async with httpx.AsyncClient(timeout=10,trust_env=False) as http:
-                r=await http.get(ollama_url()+'/api/tags');r.raise_for_status()
-                item=next((x for x in r.json()['models'] if x.get('name')==model),None)
-                if not item or not isinstance(item.get('digest'),str) or not item['digest']:raise ValueError('Select an installed Ollama embedding model.')
-                return item['digest']
-        except (httpx.HTTPError,KeyError,TypeError):raise ValueError('Cannot verify the Ollama embedding model. Start Ollama and refresh models.') from None
+        info=await ollama_model(model)
+        if require_embedding and not supports(info,'embedding'):
+            raise ValueError(f'{model} is a chat model and cannot produce embeddings. Choose an embedding model such as embeddinggemma.')
+        return info['digest']
     async def embed(self,model,texts,digest):
         if not texts:return []
         if not model:raise ValueError('This knowledge base has no embedding model. Choose keyword search or configure embeddings and rebuild.')

@@ -10,6 +10,7 @@ from pydantic import Field
 from .models import StrictModel
 from .kb.rpc import Client,ServiceUnavailable
 from .kb.embedding import Embeddings
+from .providers import supports
 from .vector_api import RetrievalOptions,ResourceCreate
 from .vector_adapters import CAPABILITIES
 from .tool_service import ToolService
@@ -77,7 +78,7 @@ async def checked_config(raw,store,tenant,embeddings):
     if c['index_method'] not in cap['index_methods']:raise ValueError('Unsupported index method for this backend')
     options=RetrievalOptions.model_validate(raw.get('search_defaults',{'mode':'similarity' if model else 'keyword'})).model_dump()
     if options['candidate_k']<options['top_k']:raise ValueError('candidate_k must be at least top_k')
-    c['search_defaults']=options;c['embedding_digest']=await embeddings.fingerprint(model) if model else ''
+    c['search_defaults']=options;c['embedding_digest']=await embeddings.fingerprint(model,require_embedding=True) if model else ''
     connection=None
     if not cap['local']:
         connection=ToolService(store).resolve(c['connection_id'],tenant)
@@ -102,7 +103,8 @@ def install_kb_routes(app,store,tenant_dependency,services=None):
     async def capabilities(tenant=Depends(tenant_dependency)):
         from .providers import ollama_models
         discovery=await ollama_models()
-        return {'backends':CAPABILITIES,'embedding_models':discovery['models'],'embedding_connected':discovery['connected'],'extensions':['pdf','txt','md','markdown','csv','json','html','htm','docx'],'max_file_bytes':25*1024*1024}
+        # Only embedding-capable models are offered; a chat model would index silently and search badly.
+        return {'backends':CAPABILITIES,'embedding_models':[m for m in discovery['models'] if supports(m,'embedding')],'embedding_connected':discovery['connected'],'extensions':['pdf','txt','md','markdown','csv','json','html','htm','docx'],'max_file_bytes':25*1024*1024}
     @app.get('/api/knowledge-bases/legacy-resources')
     async def legacy(tenant=Depends(tenant_dependency)):
         from .kb_migration import legacy_resources
