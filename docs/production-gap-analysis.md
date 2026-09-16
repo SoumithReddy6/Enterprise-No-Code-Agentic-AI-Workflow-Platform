@@ -70,6 +70,8 @@ Strengths confirmed: the durable runtime (queue, leases, checkpoints, resume, tr
 6. **Provider hygiene.** Retry with backoff on 429/5xx/timeouts; per-call token counts (Ollama `prompt_eval_count`/`eval_count`, OpenAI/Claude `usage`) recorded on the node event; structured JSON logs keyed by run and node ID. (F10)
 
 **Tier 2 — weeks; makes real use cases safe**
+6a. Section-aware chunking (heading paths as metadata), a wider candidate set with a cross-encoder reranker, and metadata filters; measured against `evals/real`. (F11)
+6b. Claim–evidence entailment check on grounded answers, so a faithful citation of an unsupporting passage is caught. (F12)
 7. Native tool calling for OpenAI, Claude and Ollama models that report the `tools` capability, replacing the JSON action protocol where available.
 8. Durable per-action approval: run status `waiting_approval`, approval record with a hash of the exact action and arguments, expiry, approver; editing invalidates; resume from approval without holding a worker slot.
 9. Action ledger and idempotency keys for Jira/GitHub/Confluence/email; reconciliation view for uncertain outcomes.
@@ -84,6 +86,30 @@ Strengths confirmed: the durable runtime (queue, leases, checkpoints, resume, tr
 16. Roles and invitations; connection-level permissions; audit log; retention and PII controls.
 17. Deployment hardening: TLS, managed PostgreSQL, migration tooling, OpenTelemetry export, load tests on target hardware.
 
-## 5. Reference workflow to build against
+## 5. Status after the Tier 1 fixes (same day)
+
+Tier 1 items 1–6 were implemented, each with tests, and the campaign was re-run (`evals/results/workflows-latest.json`). Every shape is green, including the two that were red or hollow:
+
+| # | Shape | Before | After |
+| --- | --- | --- | --- |
+| 4 | Agent + Python tool | run failed on the first tool error | `53.0`; the tool is described to the model, a bad call would come back as a `tool_error` observation |
+| 5 | Agent + Retrieve as a tool | described "a JSON data format" | `22 days`; retrieval observations are rendered passages, citations validated |
+| 9 | Extraction → JSON | valid by luck | parsed and validated by the runtime; one repair, then the node fails |
+| 11 | Retrieve → Summarizer → Critic → Response | `[S4]` leaked unverified | labels are run-unique; Response validates every `[S#]` and reports cited sources |
+
+Findings F1–F5 and F10 are closed: tool errors are observations (F1); targets carry descriptions and input hints and inputs are validated (F2); observations are rendered (F3); evidence is registered run-wide with unique labels and validated at the Response boundary (F4); structured outputs are schema-checked (F5); provider calls retry transient failures with backoff, token usage is on every node event, and the worker writes a JSON journal per run and node (F10). F6 (latency/streaming/parallelism), F7 (substring Condition), F8 (untyped HTTP result) and F9 (memory scope) remain open and are Tier 2.
+
+**Measured on real documents** (`evals/real/`: IRS Publication 463, NIST SP 800-63B-4, 29 CFR 1910.178, 49 CFR Part 395; 38 labelled questions; ~2,900 chunks):
+
+- Retrieval, answer passage in top-4: similarity 0.818, keyword 0.818, hybrid 0.879, **RRF 0.909** (paraphrases 0.722 → 0.889). On real regulatory prose the two signals miss different paragraphs and fusion recovers most of both — the opposite of the synthetic handbook, where pure similarity was best. Top-k 8 does not recover the remaining misses (RRF still 0.909): they are right-document-wrong-paragraph cases deep in the ranking.
+- Grounded generation, `llama3.1:latest` over hybrid retrieval: answer accuracy **0.879 — exactly the share of questions whose answer passage was retrieved**; accuracy 1.0 and false abstention 0.0 when the passage was retrieved; 5/5 abstentions on unanswerable questions; citation faithfulness 0.964; zero `[unsupported reference]` rewrites. Generation is retrieval-bound.
+
+Two findings that only real data produced:
+
+- **F11 — Chunking and ranking, not k.** The residual misses (the IRS 60/120-day accountable-plan bullets, the §395.3 11-hour limit) sit in documents with many near-duplicate passages; fixed 800-character windows split lists and lose section context. Production retrieval over regulatory text uses section-aware chunking (heading paths as metadata), a wider candidate set with a cross-encoder reranker, and per-document metadata filters. This is the next retrieval work, ahead of any new backend.
+- **F12 — Inference without evidence.** On the one question where retrieval missed the NIST password-hint rule, the model inferred a "yes" from an unrelated passage instead of abstaining. The citation was faithful to a passage that did not support the claim. Citation validation proves provenance, not entailment; an entailment check (LLM-as-judge or NLI) between claim and cited passage is the production-grade safeguard and is Tier 2.
+- **F13 — Descriptions prime behaviour.** Showing the Python tool's source in its default description made the model send code (`eval(...)`) instead of data. Tool contracts should describe the interface, never the implementation; the default was changed and the operator description should always state the expected input with an example.
+
+## 6. Reference workflow to build against
 
 Internal knowledge assistant, production shape: ingest with ACL metadata → conversation-scoped memory → hybrid retrieve with ACL filter → grounded answer with schema `{answer, citations[], confidence, abstain}` → citation validation at the response boundary → response; every call logged with tokens and latency; eval set from real documents gating releases. Tiers 1–2 above are exactly what turns today's scenario 2 into that workflow. The support-ticket assistant (classify → retrieve → draft → **approve** → update ticket) needs items 5, 7, 8 and 9 before it can be trusted with a real ticket system.

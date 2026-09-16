@@ -94,7 +94,8 @@ def describe_target(id,node):
     description=config.get('description') or ''
     if not description:
         if kind=='agent':description=f"Specialist agent with the {config.get('role','reasoner')} role. "+config.get('system','')[:200]
-        elif kind=='tool_python':description='Runs fixed Python code with your input available as input_text. Code: '+config.get('code','')[:300]
+        # Showing the source primes models to write code; describe the contract, not the implementation.
+        elif kind=='tool_python':description='Runs fixed Python code written by the workflow author; your input is handed to it as input_text. Send only the data that code expects, never code.'
         elif kind=='tool_http':description=f"Sends an HTTP {config.get('method','GET')} request to {config.get('path','/')} on a configured connection"
         elif kind in ('retrieve','query'):description='Searches a knowledge base and returns numbered evidence passages'
         elif kind.startswith('tool_'):description=f"{kind.removeprefix('tool_').capitalize()} {config.get('operation','')}".strip()
