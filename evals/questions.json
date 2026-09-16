@@ -16,7 +16,7 @@
   {"question": "What service credit does a customer receive when a delivery window is missed?", "document": "customer-sla.md", "answers": ["15 percent", "15%"], "kind": "verbatim"},
   {"question": "Who approves purchases above $25,000?", "document": "procurement-approvals.md", "answers": ["Chief Financial Officer", "CFO"], "kind": "verbatim"},
   {"question": "By what time are next-day routes finalised in Waypoint?", "document": "dispatch-scheduling.md", "answers": ["18:00", "6 pm", "6:00 pm"], "kind": "verbatim"},
-  {"question": "What is the refrigerated temperature range for cold chain shipments?", "document": "cold-chain-handling.md", "answers": ["2 °C to 8 °C", "2°C to 8°C", "2 to 8", "2-8"], "kind": "verbatim"},
+  {"question": "What is the refrigerated temperature range for cold chain shipments?", "document": "cold-chain-handling.md", "answers": ["2 °C to 8 °C", "2°C to 8°C", "2 °C and 8 °C", "2°C and 8°C", "2 to 8", "2-8", "2–8"], "kind": "verbatim"},
   {"question": "What is the API rate limit per customer account?", "document": "api-integration-guide.md", "answers": ["600 requests per minute", "600"], "kind": "verbatim"},
   {"question": "What percentage of traffic does a canary release receive?", "document": "release-process.md", "answers": ["10 percent", "10%"], "kind": "verbatim"},
 

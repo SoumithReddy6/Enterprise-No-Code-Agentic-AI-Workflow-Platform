@@ -39,7 +39,7 @@ The startup script loads a root `.env` file when present. Copy `.env.example` to
 
 - React/TypeScript/React Flow editor: draggable node library, pan/zoom/minimap, editable node configuration, input bindings, edge deletion, undo/redo, save/load, JSON import/export.
 - Backend-provided node schemas drive the configuration inspector.
-- Thirteen visible node types in six categories: Input, Agent, Tools, Retrieval, Control and Output. Legacy prompt/model/PDF and VectorDB nodes remain loadable in existing workflows; new Retrieve nodes select a named knowledge base.
+- Thirteen visible node types in six categories: Input, Agent, Tools, Retrieval, Control and Output. Retrieve and Query select a named knowledge base. The original Prompt template and Language model nodes stay loadable for saved workflows and the LLM-free example but are not offered on the palette.
 - Deterministic validation and LangGraph compilation. Each node consumes declared bindings and returns only its declared outputs.
 - Conditions choose exactly one true/false branch. All paths terminate in a Response node. Unsupported parallel fan-out and cycles are rejected.
 - Live server-sent node events, node status highlighting, input/output inspection, execution timing, cancellation, errors, persisted run history, and resume from saved successful-node results.
@@ -114,7 +114,7 @@ npm run typecheck
 npm run build
 ```
 
-Backend tests cover actual LangGraph runs, condition branches, validation, credential isolation, authentication, SSE, cancellation/resume, lease recovery, stale-worker fencing, node-result restoration, and legacy database migration. Provider tests also cover Claude payloads and secret-safe errors, model revocation, credential/provider binding, workspace catalog isolation, and credential schema upgrades. Frontend unit tests cover allowed model selection, credential replacement, save races, import safety, and execution highlighting. Browser interaction/visual QA and paid cloud model calls were not performed. Ollama inference, durable recovery, workspace isolation, and PostgreSQL leasing were verified.
+Backend tests cover actual LangGraph runs, condition branches, validation, credential isolation, authentication, SSE, cancellation/resume, lease recovery, stale-worker fencing, node-result restoration, agent grounding (citation rewriting, abstention without a model call, post-generation source verification), evidence provenance across API resume, lease recovery and cached replay, and the knowledge services (ingestion, four search modes, staged rebuilds, cleanup, tenant denial, embedding-capability refusal). Provider tests also cover Claude payloads and secret-safe errors, model revocation, credential/provider binding, workspace catalog isolation, and credential schema upgrades. Frontend unit tests cover allowed model selection, credential replacement, save races, import safety, execution highlighting and source-card merging. Browser interaction/visual QA and paid cloud model calls were not performed. Ollama inference, durable recovery, workspace isolation, and PostgreSQL leasing were verified.
 
 For a built frontend, run the API separately and use `npm run build` followed by `npm start` in `frontend`. The built frontend proxies `/api/*` to the local API at port 8000.
 
@@ -134,7 +134,7 @@ This remains a local development platform, **not a finished enterprise release**
 
 Each worker has four slots. A graph attempt has a 120-second limit and graphs are capped at 100 nodes. SSE streams node lifecycle events, not model tokens. Node outputs currently use string ports. SQLite and PostgreSQL are supported; switching databases does not migrate records automatically.
 
-Recommended next phase: MCP connector nodes, followed by approvals, richer control flow, and deployment management.
+Recommended next phase: durable per-action approval for external writes, then typed (schema-validated) node outputs. Both are prerequisites for MCP connectors, richer control flow and deployment management. See `docs/superpowers/plans/2026-09-16-priority-fixes.md` for the current state and evidence.
 
 Additional checks used for this build:
 
@@ -151,13 +151,7 @@ Lint covers the application source. Untouched generated shadcn components and th
 Claude uses the native [Messages API](https://platform.claude.com/docs/en/api/http/messages/create). OpenAI uses Chat Completions; only models supporting text chat through that endpoint should be enabled. Ollama models must support chat. Provider-specific image, audio and reasoning controls are outside this milestone. Agent tools use a bounded JSON action protocol over text chat; native provider tool-calling APIs are not used.
 
 
-## Phase 3A: Ask your PDFs
-
-1. Open **Knowledge** in the left panel and create a knowledge base.
-2. Click **Upload PDFs**. Wait for each document to show **ready**; queued/processing documents are not searchable yet.
-3. Click **Create PDF question workflow**. The starter connects Question → PDF retrieval → Grounded answer → Response.
-4. Select **Grounded answer** and choose an enabled model in the right inspector. For free local testing, first enable an installed Ollama chat model under **Providers**.
-5. Enter a question and run. The answer panel shows retrieved excerpts and links to the original PDF page. **Cited in answer** means the model used that passage reference; **Retrieved only** means it was available but not cited. References verify passage identity, not factual correctness of every claim.
+## PDF handling
 
 PDFs may cover any subject. Selectable text is extracted locally; printed English scans use local OCR. For another Mac, install the native tools before starting Relay:
 
@@ -165,20 +159,10 @@ PDFs may cover any subject. Selectable text is extracted locally; printed Englis
 brew install poppler tesseract
 ```
 
-Python PDF dependencies are included in `backend/requirements.txt`. The API/worker process must have `pdftoppm` and `tesseract` on its PATH. Only installed OCR languages are available; this milestone uses English. Handwriting, charts and complex table layout are not reliably interpreted. Password-protected, corrupt, unreadable or over-limit files fail with an explanation. Truly blank pages retain their page numbers; entirely blank files cannot be indexed.
-
-Limits are **25 MB and 200 pages per PDF**, **20 active PDFs per knowledge base**, and **50,000 indexed chunks per workspace**. One indexing task runs at a time, with a 5-minute extraction limit and durable renewable leases. Failed documents can be retried. Chunks become searchable only after the entire document succeeds. Uploading another copy creates an independent document ID rather than overwriting a previous revision.
-
-Retrieval uses local BM25 keyword ranking over overlapping page passages, with four passages by default and up to eight. It does not require an embedding model or cloud credits. Paraphrases can miss relevant text; try distinctive words from the document. For semantic embeddings and hybrid search, use the new VectorDB and Retrieve/Query nodes described below. With no matching passages, the grounded-answer node returns an insufficient-evidence message without a model call.
-
-PDF contents, chunks and indexing state are stored in the workspace database; original bytes are loaded only for extraction and authorized downloads. Knowledge resources are tenant-scoped. Model catalog checks also apply to the Grounded answer node. Sources are canonicalized against stored excerpts, document text is treated as untrusted evidence, and invented bracket references are marked unsupported rather than turned into links.
-
-**Removing a PDF** prevents future retrieval/downloads and blocks resumes requiring its saved sources. Existing run history and database backups may still contain previously recorded excerpts. Resumed runs reuse checkpointed passages; they do not silently search changed documents.
-
-Verification includes text, printed scans, mixed and blank pages, encrypted/corrupt files, limits, lease recovery, process cancellation, workspace isolation, forged source metadata, removed-source resumes, binary proxy handling and source selection. PostgreSQL knowledge storage/retrieval was checked in an isolated schema. No paid cloud calls or browser interaction tests were performed.
+Python PDF dependencies are included in `backend/requirements.txt`. The ingestion process must have `pdftoppm` and `tesseract` on its PATH. Only installed OCR languages are available; this milestone uses English. Handwriting, charts and complex table layout are not reliably interpreted. Password-protected, corrupt, unreadable or over-limit files fail with an explanation. Truly blank pages retain their page numbers; entirely blank files cannot be indexed.
 
 
-## Agent platform: nodes, tools and vector search
+## Agent platform: nodes, tools and knowledge bases
 
 The left library has these categories:
 
@@ -187,16 +171,16 @@ The left library has these categories:
 | Input | Chat input, Manual trigger |
 | Agent | Agent node |
 | Tools | HTTP/REST API, Email, Jira, Confluence, GitHub, Python |
-| Knowledge section (outside canvas) | Elasticsearch, FAISS, ChromaDB, Pinecone storage |
+| Knowledge (left panel, outside the canvas) | Named knowledge bases on FAISS, ChromaDB, Elasticsearch or Pinecone |
 | Retrieval | Retrieve, Query |
 | Control | Condition |
 | Output | Response |
 
-Agent ports are **top: flow input**, **bottom: flow output**, **left: attached tools**, and **right: callable specialist agents**. Multiple tool instances can attach to the same agent. Connect a tool's attachment port to the agent's left port; connect a parent agent's right port to a specialist's top port. These attachments give the agent callable capabilities; they do not execute the attached nodes as ordinary sequential steps. Each specialist has one parent. Retrieve and Query can also attach as tools. New Retrieve/Query nodes select a named knowledge base in the inspector. Store-port connections remain available only for legacy workflows.
+Agent ports are **top: flow input**, **bottom: flow output**, **left: attached tools**, and **right: callable specialist agents**. Multiple tool instances can attach to the same agent. Connect a tool's attachment port to the agent's left port; connect a parent agent's right port to a specialist's top port. These attachments give the agent callable capabilities; they do not execute the attached nodes as ordinary sequential steps. Each specialist has one parent. Retrieve and Query can also attach as tools. Both select a named knowledge base in the inspector.
 
 Select an Agent to customize its role: Planner, Reasoner, Reflection, Critic, Router, Memory, Summarizer, Extraction or Classification. Role presets guide model behavior. The right inspector also provides the allowed model, system prompt, user prompt (`{input}` inserts the incoming text), temperature, top-p, maximum output tokens and call limit. Claude temperature is at most 1 and temperature/top-p cannot both be set for Claude. Keep shared provider credentials and the enabled-model catalog in the left Providers panel.
 
-Agents may make up to six tool/specialist calls per root invocation, shared across nested specialists, with at most three levels of delegation. Models must produce the documented JSON action structure to call attachments; very small models can be less reliable. Plain-text replies are final answers. In local testing, `qwen2.5:0.5b` repeated tool calls until the limit; `llama3.2:3b` completed a tool call but did not consistently follow the requested argument. Treat model-selected actions and answers as fallible and review run events during testing. Attached invocations appear in run events, and their results feed back to the calling agent. Memory agents retain a bounded conversation history under a workspace-scoped memory key; a failed/retried parent may record a memory entry more than once.
+Agents may make up to six tool/specialist calls per root invocation, shared across nested specialists, with at most three levels of delegation. Models must produce the documented JSON action structure to call attachments; very small models can be less reliable. Plain-text replies are final answers. **Model size matters more than any other setting.** In local testing `qwen2.5:0.5b` confabulated answers about retrieved documents and repeated tool calls until the limit; `llama3.2:3b` completed a tool call but did not consistently follow the requested argument; `llama3.1:latest` (8B) answered from evidence, cited passages and abstained when the evidence did not contain the answer. Use an 8B-class local model or a cloud model for anything beyond smoke tests. Treat model-selected actions and answers as fallible and review run events during testing. Attached invocations appear in run events, and their results feed back to the calling agent. Memory agents retain a bounded conversation history under a workspace-scoped memory key; a failed/retried parent may record a memory entry more than once.
 
 ### Connections and tools
 
@@ -232,11 +216,13 @@ The image is already installed here. Python runs with no network, a read-only co
 5. Add a **Retrieve** node to a workflow and select the KB by name. The saved configuration contains its stable ID, so renaming does not break workflows. Shared indexing/storage settings stay in Knowledge; permitted search settings can be overridden per node.
 6. One possible flow is **Chat input → Retrieve → Agent → Response**. Connecting Retrieve to Agent automatically binds its question-and-evidence context. Retrieve can also be an attached agent tool; no single workflow shape is imposed.
 
-The context is a JSON envelope carried through the existing string port: original question, passage labels/text, canonical sources, KB ID and version. The question embedding stays inside retrieval. Source links are generated from validated IDs, not model-generated URLs. Agent generation remains model-dependent; use the passage inspector to assess evidence and verify generated claims.
+The context is a JSON envelope carried through the existing string port: original question, passage labels/text, canonical sources, KB ID and version. The question embedding stays inside retrieval. Source links are generated from validated IDs, not model-generated URLs.
+
+When an Agent receives that envelope it applies the same grounding contract as the Query node. The model sees the question and numbered passages (identifiers, URLs and scores stay out of the prompt); citations must use the passage labels; any `[S#]` the evidence does not carry is rewritten to `[unsupported reference]`; sources are re-verified after generation; and an empty evidence set returns the insufficient-evidence message without calling a model. The Agent reports which passages it cited through its `sources` output, and the run panel shows one card per passage marked **Cited in answer** or **Retrieved only**. Citation checks verify passage identity, not the factual correctness of every claim; use the passage cards to verify generated claims.
 
 The Knowledge hub includes metadata/settings editing, rebuild/cancel, document replacement, search defaults, job progress and cleanup history. Changing chunking, embeddings or storage creates a staged rebuild. The previous active version stays searchable until the new complete version publishes. A replacement document also leaves the old original available until successful activation. Failed new documents remain visible and retryable.
 
-**Import copy** copies a legacy PDF knowledge base or vector resource into the unified section. The operation is resumable and idempotent. Originals, old canvas documents and run history remain intact. Imported PDF-only bases use keyword search until you configure embeddings and rebuild. Legacy workflows are not silently rewritten.
+The earlier PDF-only knowledge stack and the canvas VectorDB resource stack were removed on 2026-09-16; named knowledge bases are the only retrieval path. Databases created before then may still contain empty `knowledge_*` and `vector_*` tables, which are ignored. Saved Retrieve/Query nodes that carry the retired `storage_path` field keep loading; the field is ignored.
 
 Supported files: PDF (including printed English OCR), TXT, Markdown, CSV, JSON, HTML and DOCX. Unsupported binaries are rejected. Limits: 25 MB/file, 200 PDF pages, 20 logical documents/KB, 50,000 logical chunks/workspace and 8 million vector cells; staging has bounded additional capacity so near-limit KBs can rebuild. Extraction text is limited to 16 MB per build. Full snapshots are rebuilt in this version; extraction/embedding checkpoint reuse is not yet implemented. Interrupted attempts restart safely with new identifiers.
 
@@ -247,17 +233,49 @@ Supported files: PDF (including printed English OCR), TXT, Markdown, CSV, JSON, 
 | Elasticsearch | dense_vector cosine | Public connection and existing matching-dimension index |
 | Pinecone | Existing serverless index | Public data-plane connection and matching dimensions |
 
-Storage paths are logical names; actual local indexes use generated ownership IDs under `KB_DATA_DIR/indexes`. Remote namespaces/index segments are also generated and isolated. All new embedding generation uses installed Ollama models; the digest is pinned so model changes require a rebuild. OpenAI/Claude remain available for downstream Agent/Query generation. Models are never downloaded automatically.
+Storage paths are logical names; actual local indexes use generated ownership IDs under `KB_DATA_DIR/indexes`. Remote namespaces/index segments are also generated and isolated. All embedding generation uses installed Ollama models; the digest is pinned so model changes require a rebuild. Only embedding-capable models (Ollama `/api/show` capabilities) are offered and accepted; a chat model such as `qwen2.5:0.5b` is refused at configuration and indexing time with an explanation. A knowledge base created earlier with a chat model as its embedder keeps answering with that model until it is rebuilt. OpenAI/Claude remain available for downstream Agent/Query generation. Models are never downloaded automatically.
 
-The legacy Prompt template, Language model, PDF retrieval and Grounded answer nodes are hidden from the main palette but remain supported in saved workflows. The original Knowledge PDF workflow remains available for BM25 retrieval without embeddings.
+Prompt template and Language model are hidden from the palette but remain supported in saved workflows. Keyword-only knowledge bases (no embedding model) provide BM25 retrieval without embeddings.
 
-Local integration verification (temporary database and temporary vector directory; existing user data stays untouched):
+Hybrid search min–max normalises the cosine and BM25 candidate lists before the weighted combination, so `vector_weight` means what it says; the earlier scheme compressed cosine scores and let keyword ranking dominate at 0.5 (measured below). Score thresholds are therefore on a 0–1 scale for hybrid, raw cosine for similarity, raw BM25 for keyword and reciprocal-rank sums for RRF. Ties resolve by semantic rank so results are repeatable across index builds.
+
+## Evaluation
+
+`evals/` holds a labelled synthetic corpus: 20 internal-handbook documents for a fictional freight cooperative and 45 questions — 20 phrased with the documents' own terms, 20 paraphrased without them, and 5 that no document answers. `scripts/eval_retrieval.py` runs the real management, search and ingestion code in-process with real `embeddinggemma` embeddings in temporary storage, measures every retrieval mode, and optionally runs grounded generation through the workflow runtime (Chat input → Retrieve → Agent → Response). It never touches the signed-in workspace and makes no paid calls.
 
 ```bash
-.venv/bin/python -m scripts.check_platform
+.venv/bin/python -m scripts.eval_retrieval
+.venv/bin/python -m scripts.eval_retrieval --generate llama3.1:latest --generate-mode hybrid
 ```
 
-This uses installed Ollama models, real FAISS/Chroma indexes and the Docker Python image. Remote adapters are covered with mock responses; no real mail, issues, pages, cloud vector writes or paid model calls are made by these tests.
+Retrieval, 40 answerable questions, top-k 4, paragraph chunks of 800 characters (`evals/results/`):
+
+| mode | doc R@1 | doc R@4 | MRR | answer in top-4 | paraphrase answer in top-4 | ms/query |
+| --- | --- | --- | --- | --- | --- | --- |
+| similarity | 0.975 | 1.0 | 0.988 | 0.975 | 0.95 | ~230 |
+| keyword (BM25) | 0.775 | 0.95 | 0.858 | 0.825 | 0.80 | 3 |
+| hybrid, before normalisation fix | 0.90 | 0.975 | 0.929 | — | — | ~235 |
+| hybrid, after | 0.95–0.975 | 1.0 | 0.971–0.988 | 0.95 | 0.90 | ~230 |
+| rrf | 0.90 | 0.975 | 0.933 | 0.925 | 0.85 | ~230 |
+
+"Answer in top-4" checks that a retrieved passage contains the expected answer text, which is what generation actually needs; document-level hits can hide a right-file-wrong-paragraph miss. One question is 0.025, so differences below that are noise. Keyword search is 70× faster and adequate for verbatim questions; it loses paraphrases. Equal-weight RRF inherits keyword's paraphrase misses, which is why it trails similarity here.
+
+Grounded generation with `llama3.1:latest` (8B, temperature 0) through Chat input → Retrieve → Agent → Response, 45 questions:
+
+| metric | raw JSON envelope in prompt (rrf) | rendered passages (rrf) | rendered passages (hybrid) |
+| --- | --- | --- | --- |
+| answer accuracy (40 answerable) | 0.65 | 0.90 | 0.925 |
+| accuracy when the answer passage was retrieved | — | 0.973 | 0.974 |
+| false abstention | 0.425 | 0.10 | 0.125 |
+| abstention on 5 unanswerable | 5/5 | 5/5 | 5/5 |
+| citation rate | 0.625 | 0.925 | 0.95 |
+| citation faithfulness (cited passage from the expected document) | 1.0 | 1.0 | 0.974 |
+| `[unsupported reference]` rewrites | 0 | 0 | 0 |
+| seconds per answer (Apple M5) | 8.5 | 3.6 | 3.7 |
+
+The first column is what the Agent path produced when the model received the retrieval envelope as raw JSON: it abstained on 42% of answerable questions even when the right passage was in front of it. Rendering the evidence as numbered passages fixed most of that without changing the model. Nearly all remaining misses are retrieval misses where abstaining is the right behaviour; the genuine model errors (one wrong-passage pick, one over-eager citation) are recorded in `evals/results/*.json` with the full answers. Before this work, the same workflow on `qwen2.5:0.5b` produced confident, wrong answers about an uploaded résumé.
+
+These numbers come from a small synthetic corpus and one local 8B model; they show the harness works and where the failure modes are, not production quality. Extend `evals/questions.json` with real questions from your own documents before trusting any figure.
 
 
 ## Knowledge service architecture and recovery
