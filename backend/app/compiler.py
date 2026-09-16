@@ -110,11 +110,12 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
     errors = validate_workflow(workflow)
     if errors: raise ValueError('\n'.join(errors))
     from .platform_graph import split_graph
-    from .agent_runtime import execute_agent
+    from .agent_runtime import execute_agent,evidence_from_outputs
     full_workflow=workflow
     workflow,_,_=split_graph(workflow)
     graph = StateGraph(State)
-    context = Context(message=message, resolve_credential=credential_resolver, authorize_model=authorize_model,knowledge=knowledge_resolver,platform=platform_resolver)
+    run_state={'evidence':[]}  # Every passage retrieved in this run, under a run-unique citation label.
+    context = Context(message=message, resolve_credential=credential_resolver, authorize_model=authorize_model,knowledge=knowledge_resolver,platform=platform_resolver,run=run_state)
     async def invoke_agent(id,text):return await execute_agent(id,text,full_workflow,context,emit)
     context.invoke_agent=invoke_agent
     context.workflow=full_workflow
@@ -127,6 +128,7 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     outputs=completed[node.id]
                     validation=validate_cached(node,outputs)
                     if inspect.isawaitable(validation):await validation
+                    evidence_from_outputs(run_state,outputs)  # Restored evidence keeps its original labels.
                     await emit({'node_id':node.id,'status':'success','outputs':outputs,'cached':True,'duration_ms':0})
                     return {'values':{node.id:outputs}}
                 inputs = {key: state['values'][ref.split('.')[0]][ref.split('.')[1]] for key, ref in node.inputs.items()}
@@ -136,6 +138,7 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     outputs = await definition.handler(inputs, config, replace(context,node_id=node.id,node_type=node.type,checkpoint_owner=node.id))
                     if set(outputs) != set(definition.outputs) or any(not isinstance(v, str) for v in outputs.values()):
                         raise ValueError('Node returned outputs that do not match its declared contract.')
+                    evidence_from_outputs(run_state,outputs)
                     await emit({'node_id': node.id, 'status': 'success', 'outputs': outputs,
                                 'duration_ms': round((time.perf_counter()-started)*1000)})
                     return {'values': {node.id: outputs}}

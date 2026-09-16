@@ -53,7 +53,7 @@ async def test_agent_evidence_checked_on_api_resume(setup, services, removed, mo
         response=client.post(f'/api/runs/{run["id"]}/resume')
     assert response.status_code == (422 if removed else 202), response.text
     if not removed:
-        async def finish(inputs,config,ctx):return {'text':inputs['text']}
+        async def finish(inputs,config,ctx):return {'text':inputs['text'],'sources':'[]'}
         monkeypatch.setattr(REGISTRY['response'],'handler',finish)
         await worker.execute(store.claim_next(worker.owner))
         assert store.run(run['id'])['output']=='Verified answer'

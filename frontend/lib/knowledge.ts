@@ -76,7 +76,9 @@ export function sourcesForRun(
   if (!run) return [];
   const answerIds = new Set(
     run.workflow.nodes
-      .filter((n) => ['query', 'retrieve', 'agent'].includes(n.type))
+      .filter((n) =>
+        ['query', 'retrieve', 'agent', 'response'].includes(n.type),
+      )
       .map((n) => n.id),
   );
   const latest = new Map<string, RunEvent>();

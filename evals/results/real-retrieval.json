@@ -1,0 +1,703 @@
+{
+ "settings": {
+  "corpus": "evals/real",
+  "questions": "evals/real/questions.json",
+  "embedding_model": "embeddinggemma:latest",
+  "chunking": "paragraph",
+  "chunk_size": 800,
+  "chunk_overlap": 120,
+  "modes": [
+   "similarity",
+   "keyword",
+   "hybrid",
+   "rrf"
+  ],
+  "top_k": 4,
+  "generate": "",
+  "generate_mode": "rrf",
+  "limit": 0
+ },
+ "questions": 38,
+ "retrieval": {
+  "similarity": {
+   "all": {
+    "n": 33,
+    "recall@1": 0.909,
+    "recall@4": 1.0,
+    "mrr": 0.955,
+    "answer@4": 0.848
+   },
+   "verbatim": {
+    "n": 15,
+    "recall@1": 0.933,
+    "recall@4": 1.0,
+    "mrr": 0.967,
+    "answer@4": 1.0
+   },
+   "paraphrase": {
+    "n": 18,
+    "recall@1": 0.889,
+    "recall@4": 1.0,
+    "mrr": 0.944,
+    "answer@4": 0.722
+   },
+   "latency_ms": 247,
+   "misses": [
+    {
+     "question": "How long do I have to hand back money my employer advanced me for a trip that I did not end up spending?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "answer_present": false,
+     "top": [
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "How many cents can I count for each mile I drive my own car for work this year?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "49-cfr-part-395-hours-of-service.html",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "49-cfr-part-395-hours-of-service.html",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "How quickly must I give my employer an accounting of my expenses for the reimbursement plan to count as accountable?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "answer_present": false,
+     "top": [
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "Can a website let people save a reminder of how they made up their password?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "answer_present": false,
+     "top": [
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "How many hours may a property-carrying commercial motor vehicle driver drive during the 14-hour period?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "What is the on-duty limit over 8 consecutive days for a trucker whose company runs vehicles every day of the week?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "answer_present": false,
+     "top": [
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "How long must a driver stay off duty to restart the 7- or 8-day on-duty clock?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "answer_present": false,
+     "top": [
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "How much space should a forklift keep between itself and the lift truck ahead of it?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "29-cfr-1910.178-powered-industrial-trucks.html"
+     ]
+    }
+   ]
+  },
+  "keyword": {
+   "all": {
+    "n": 33,
+    "recall@1": 0.121,
+    "recall@4": 0.97,
+    "mrr": 0.515,
+    "answer@4": 1.0
+   },
+   "verbatim": {
+    "n": 15,
+    "recall@1": 0.267,
+    "recall@4": 1.0,
+    "mrr": 0.622,
+    "answer@4": 1.0
+   },
+   "paraphrase": {
+    "n": 18,
+    "recall@1": 0.0,
+    "recall@4": 0.944,
+    "mrr": 0.426,
+    "answer@4": 1.0
+   },
+   "latency_ms": 20,
+   "misses": [
+    {
+     "question": "Under an accountable plan, within how many days must you return any excess reimbursement?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "How much of the $319 high-cost per diem rate is for M&IE?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "questions.json"
+     ]
+    },
+    {
+     "question": "What is the per diem amount for all other (non-high-cost) localities under the high-low method?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "What percentage limit generally applies to meal expenses?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "If my employer does not reimburse my lunch on a work trip, what fraction of the meal cost can I deduct?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "How long do I have to hand back money my employer advanced me for a trip that I did not end up spending?",
+     "kind": "paraphrase",
+     "rank": 0,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "questions.json",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "How many cents can I count for each mile I drive my own car for work this year?",
+     "kind": "paraphrase",
+     "rank": 3,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "Which months does the federal fiscal year used for per diem tables cover?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "How quickly must I give my employer an accounting of my expenses for the reimbursement plan to count as accountable?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "What is the minimum password length when a password is used as a single-factor authentication mechanism?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf"
+     ]
+    },
+    {
+     "question": "What is the minimum length for passwords used only as part of multi-factor authentication?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf"
+     ]
+    },
+    {
+     "question": "What maximum password length should verifiers permit at least?",
+     "kind": "verbatim",
+     "rank": 3,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "questions.json",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf"
+     ]
+    },
+    {
+     "question": "How many consecutive failed login attempts on one account can a verifier allow before it must disable that authenticator?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf"
+     ]
+    },
+    {
+     "question": "Am I allowed to force users to include a digit and a symbol in their passwords?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf"
+     ]
+    },
+    {
+     "question": "Can a website let people save a reminder of how they made up their password?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "When measuring password length, how is a single Unicode code point counted?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "questions.json"
+     ]
+    },
+    {
+     "question": "Should a login form allow users to paste a password from a password manager?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf"
+     ]
+    },
+    {
+     "question": "How many hours may a property-carrying commercial motor vehicle driver drive during the 14-hour period?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "49-cfr-part-395-hours-of-service.html",
+      "questions.json",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "How many consecutive hours off duty must a property-carrying driver take before driving at the start of a work shift?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "After how many hours of driving time is a consecutive 30-minute interruption of driving status required?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "What is the on-duty limit over 8 consecutive days for a trucker whose company runs vehicles every day of the week?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "How long must a driver stay off duty to restart the 7- or 8-day on-duty clock?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "Within what distance of the normal work reporting location does the short-haul driver exemption apply?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "What information must the operator training certification include?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "29-cfr-1910.178-powered-industrial-trucks.html"
+     ]
+    },
+    {
+     "question": "When topping up a forklift battery, do you pour the water into the acid or the acid into the water?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "questions.json"
+     ]
+    },
+    {
+     "question": "Can someone smoke in the area where forklift batteries are charged?",
+     "kind": "paraphrase",
+     "rank": 4,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "49-cfr-part-395-hours-of-service.html",
+      "29-cfr-1910.178-powered-industrial-trucks.html"
+     ]
+    },
+    {
+     "question": "How much space should a forklift keep between itself and the lift truck ahead of it?",
+     "kind": "paraphrase",
+     "rank": 4,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "questions.json",
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html"
+     ]
+    },
+    {
+     "question": "What should be done with a lift truck that is discovered to be unsafe during a shift?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html"
+     ]
+    },
+    {
+     "question": "Is it acceptable to fill a forklift's fuel tank while the engine is running?",
+     "kind": "paraphrase",
+     "rank": 3,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "29-cfr-1910.178-powered-industrial-trucks.html"
+     ]
+    }
+   ]
+  },
+  "hybrid": {
+   "all": {
+    "n": 33,
+    "recall@1": 0.788,
+    "recall@4": 1.0,
+    "mrr": 0.886,
+    "answer@4": 1.0
+   },
+   "verbatim": {
+    "n": 15,
+    "recall@1": 0.867,
+    "recall@4": 1.0,
+    "mrr": 0.933,
+    "answer@4": 1.0
+   },
+   "paraphrase": {
+    "n": 18,
+    "recall@1": 0.722,
+    "recall@4": 1.0,
+    "mrr": 0.847,
+    "answer@4": 1.0
+   },
+   "latency_ms": 262,
+   "misses": [
+    {
+     "question": "How long do I have to hand back money my employer advanced me for a trip that I did not end up spending?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "How many cents can I count for each mile I drive my own car for work this year?",
+     "kind": "paraphrase",
+     "rank": 4,
+     "answer_present": true,
+     "top": [
+      "49-cfr-part-395-hours-of-service.html",
+      "questions.json",
+      "questions.json",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "How many hours may a property-carrying commercial motor vehicle driver drive during the 14-hour period?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "How many consecutive hours off duty must a property-carrying driver take before driving at the start of a work shift?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "When topping up a forklift battery, do you pour the water into the acid or the acid into the water?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html"
+     ]
+    },
+    {
+     "question": "How much space should a forklift keep between itself and the lift truck ahead of it?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "questions.json"
+     ]
+    },
+    {
+     "question": "What should be done with a lift truck that is discovered to be unsafe during a shift?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "29-cfr-1910.178-powered-industrial-trucks.html"
+     ]
+    }
+   ]
+  },
+  "rrf": {
+   "all": {
+    "n": 33,
+    "recall@1": 0.909,
+    "recall@4": 1.0,
+    "mrr": 0.955,
+    "answer@4": 0.97
+   },
+   "verbatim": {
+    "n": 15,
+    "recall@1": 0.933,
+    "recall@4": 1.0,
+    "mrr": 0.967,
+    "answer@4": 1.0
+   },
+   "paraphrase": {
+    "n": 18,
+    "recall@1": 0.889,
+    "recall@4": 1.0,
+    "mrr": 0.944,
+    "answer@4": 0.944
+   },
+   "latency_ms": 257,
+   "misses": [
+    {
+     "question": "How quickly must I give my employer an accounting of my expenses for the reimbursement plan to count as accountable?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "answer_present": false,
+     "top": [
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "How many hours may a property-carrying commercial motor vehicle driver drive during the 14-hour period?",
+     "kind": "verbatim",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "How much space should a forklift keep between itself and the lift truck ahead of it?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html"
+     ]
+    },
+    {
+     "question": "Is it acceptable to fill a forklift's fuel tank while the engine is running?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "answer_present": true,
+     "top": [
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html",
+      "questions.json",
+      "29-cfr-1910.178-powered-industrial-trucks.html"
+     ]
+    }
+   ]
+  }
+ }
+}

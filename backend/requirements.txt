@@ -62,3 +62,6 @@ pypdf==6.18.1
 # Local vector indexes
 faiss-cpu==1.12.0
 chromadb==1.1.1
+
+# Structured agent outputs
+jsonschema==4.26.0

@@ -50,8 +50,10 @@ def mean(values):return round(statistics.fmean(values),3) if values else None
 async def build(services,args):
     config={'backend':'faiss','embedding_model':args.embedding_model,'chunking':args.chunking,'chunk_size':args.chunk_size,'chunk_overlap':args.chunk_overlap,'search_defaults':{'mode':'rrf'}}
     kb=await services.management.call('create','local',{'name':'Evaluation corpus','config':config})
-    files=sorted(Path(args.corpus).glob('*.md'))
-    if not files:raise SystemExit(f'No .md documents in {args.corpus}')
+    # The labelled question file may sit beside the corpus; it must never be indexed as evidence.
+    questions_file=Path(args.questions).resolve()
+    files=sorted(f for f in Path(args.corpus).iterdir() if f.suffix.lower() in ('.md','.markdown','.txt','.pdf','.html','.htm','.csv','.json','.docx') and f.resolve()!=questions_file)
+    if not files:raise SystemExit(f'No supported documents in {args.corpus}')
     for file in files:
         await services.management.call('upload','local',{'kb_id':kb['id'],'filename':file.name,'content_b64':base64.b64encode(file.read_bytes()).decode(),'idempotency_key':file.name})
     ingestion=Ingestion(services.management,services.index,services.embeddings)

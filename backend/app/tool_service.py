@@ -36,6 +36,7 @@ class ConnectionConfig(StrictModel):
 class ToolConfig(StrictModel):
     connection_id:str=''
     enable_writes:bool=False
+    description:str=Field(default='',max_length=500)  # Shown to an agent that may call this tool.
 class HTTPConfig(ToolConfig):
     method:Literal['GET','POST','PUT','PATCH','DELETE']='GET'
     path:str=Field(default='/',max_length=2000)
@@ -63,6 +64,7 @@ class GithubConfig(ToolConfig):
 class PythonConfig(StrictModel):
     code:str=Field(default='print(input_text)',min_length=1,max_length=32000)
     timeout_seconds:int=Field(default=10,ge=1,le=30)
+    description:str=Field(default='',max_length=500)  # Tell calling agents what input_text must contain.
 CONFIGS={'tool_http':HTTPConfig,'tool_email':EmailConfig,'tool_jira':JiraConfig,'tool_confluence':ConfluenceConfig,'tool_github':GithubConfig,'tool_python':PythonConfig}
 
 def public_addresses(host,port):

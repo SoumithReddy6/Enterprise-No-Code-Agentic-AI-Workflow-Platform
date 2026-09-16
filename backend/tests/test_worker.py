@@ -19,7 +19,7 @@ async def test_resume_reuses_completed_nodes(tmp_path,monkeypatch):
     worker=Worker(store)
     await worker.execute(store.claim_next(worker.owner))
     assert store.run(run['id'])['status']=='failed'
-    async def response(inputs,config,ctx):return {'text':inputs['text']}
+    async def response(inputs,config,ctx):return {'text':inputs['text'],'sources':'[]'}
     monkeypatch.setattr(REGISTRY['response'],'handler',response)
     store.resume_run(run['id'])
     await worker.execute(store.claim_next(worker.owner))

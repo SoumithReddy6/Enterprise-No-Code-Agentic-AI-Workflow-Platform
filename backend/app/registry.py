@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from typing import Awaitable, Callable, Literal
 import asyncio
+import json
 import string
 import httpx
 from pydantic import Field, model_validator
@@ -34,6 +35,17 @@ class AgentConfig(LLMConfig):
     user_prompt: str = Field(default='{input}',max_length=20000)
     max_steps: int = Field(default=6,ge=1,le=6)
     memory_key: str = Field(default='default',min_length=1,max_length=120)
+    description: str = Field(default='',max_length=500)  # Shown to a parent agent that may delegate here.
+    output_schema: dict = Field(default_factory=dict,title='Output JSON schema',description='When set, the answer must be JSON matching this schema; extraction and classification roles always require a JSON object.')
+
+    @model_validator(mode='after')
+    def valid_output_schema(self):
+        if self.output_schema:
+            import jsonschema
+            if len(json.dumps(self.output_schema))>20000:raise ValueError('Output schema is too large.')
+            try:jsonschema.Draft202012Validator.check_schema(self.output_schema)
+            except jsonschema.SchemaError as exc:raise ValueError(f'Output schema is not a valid JSON Schema: {exc.message}') from None
+        return self
 
 class ConditionConfig(StrictModel):
     contains: str = Field(min_length=1, max_length=1000)
@@ -51,6 +63,7 @@ class Context:
     node_type: str = ''
     checkpoint_owner: str = ''
     workflow: object = None
+    run: dict | None = None  # Shared per run: {'evidence': [passages with unique citation labels]}
 
 @dataclass
 class NodeDefinition:
@@ -120,7 +133,11 @@ async def condition_node(inputs, config, ctx):
     return {'branch': 'true' if needle in value else 'false'}
 
 async def response_node(inputs, config, ctx):
-    return {'text': inputs['text']}
+    """The response boundary: any [S#] label must name evidence this run actually retrieved."""
+    from .agent_runtime import ground_answer
+    evidence=(ctx.run or {}).get('evidence',[])
+    text,sources=ground_answer(inputs['text'],evidence) if evidence else (inputs['text'],[])
+    return {'text': text, 'sources': json.dumps(sources,ensure_ascii=False)}
 
 REGISTRY: dict[str, NodeDefinition] = {}
 
@@ -135,7 +152,7 @@ for definition in [
     NodeDefinition('prompt', 'Prompt template', 'Transform', 'Compose a prompt with {message}.', {'message':'string'}, {'text':'string'}, PromptConfig, prompt_node),
     NodeDefinition('llm', 'Language model', 'AI', 'Generate text with a model, or test with demo mode.', {'prompt':'string'}, {'text':'string','provider':'string'}, LLMConfig, llm_node, ('external_model_request',)),
     NodeDefinition('condition', 'Condition', 'Control', 'Route to true or false when text contains a phrase.', {'value':'string'}, {'branch':'string'}, ConditionConfig, condition_node),
-    NodeDefinition('response', 'Response', 'Output', 'Finish this path and return text.', {'text':'string'}, {'text':'string'}, EmptyConfig, response_node),
+    NodeDefinition('response', 'Response', 'Output', 'Finish this path and return text.', {'text':'string'}, {'text':'string','sources':'string'}, EmptyConfig, response_node),
 ]:
     register(definition)
 
@@ -157,6 +174,7 @@ for type,name in [('tool_http','HTTP / REST API'),('tool_email','Email'),('tool_
 from .kb.options import RetrievalOptions
 class SearchConfig(RetrievalOptions):
     knowledge_base_id: str = Field(default='',max_length=64)
+    description: str = Field(default='',max_length=500)  # Shown to an agent that may call this node as a tool.
     # Retired with the vector-resource stack; accepted and ignored so saved workflows keep loading.
     storage_path: str = Field(default='',max_length=64)
 class QueryConfig(LLMConfig,SearchConfig):
