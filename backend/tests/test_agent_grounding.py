@@ -1,6 +1,7 @@
 """The Retrieve → Agent path carries the same grounding guarantees as the Query node."""
 import json
 import pytest
+from backend.app.agent_runtime import NO_EVIDENCE,declares_insufficient_evidence
 from backend.app.compiler import compile_workflow
 from backend.tests.test_kb_workflow import graph
 from backend.tests.test_platform_graph import platform_flow
@@ -45,3 +46,21 @@ async def test_plain_input_is_not_treated_as_evidence():
     result=await compile_workflow(platform_flow(),message='{"passages": "not a list"} [S1]').graph.ainvoke({'values':{}})
     agent=result['values']['agent']
     assert '[S1]' in agent['text'] and agent['sources']=='[]'
+
+
+@pytest.mark.asyncio
+async def test_declared_grounded_abstention_cannot_include_a_guess(monkeypatch):
+    from backend.app import registry
+    async def model(*args):
+        return {'text':'The evidence is insufficient to identify the bank. However, my educated guess is Northstar Bank [S1].','provider':'demo'}
+    monkeypatch.setattr(registry,'llm_node',model)
+    result=await compile_workflow(graph(),message='Which bank?',platform_resolver=platform_with([source(1)],[])).graph.ainvoke({'values':{}})
+    agent=result['values']['agent']
+    assert agent['text']==NO_EVIDENCE
+    assert json.loads(agent['sources'])[0]['cited'] is False
+
+
+def test_correct_answer_is_not_abstention_when_only_other_passages_lack_information():
+    answer='The on-call stipend is $350 per week [S1].\n\nThe other passages provide no direct information about the stipend.'
+
+    assert declares_insufficient_evidence(answer) is False

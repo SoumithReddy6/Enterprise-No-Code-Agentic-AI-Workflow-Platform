@@ -1,0 +1,253 @@
+{
+ "settings": {
+  "corpus": "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/evals/corpus",
+  "questions": "evals/test01-regressions.json",
+  "embedding_model": "qwen3-embedding:0.6b",
+  "chunking": "fixed",
+  "chunk_size": 800,
+  "chunk_overlap": 120,
+  "modes": [
+   "rrf"
+  ],
+  "top_k": 4,
+  "generate": "llama3.1:latest",
+  "judge": "",
+  "generate_mode": "rrf",
+  "limit": 0
+ },
+ "questions": 7,
+ "retrieval": {
+  "rrf": {
+   "all": {
+    "n": 6,
+    "recall@1": 0.833,
+    "recall@4": 1.0,
+    "mrr": 0.917,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "verbatim": {
+    "n": 2,
+    "recall@1": 1.0,
+    "recall@4": 1.0,
+    "mrr": 1.0,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "paraphrase": {
+    "n": 1,
+    "recall@1": 0.0,
+    "recall@4": 1.0,
+    "mrr": 0.5,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "reasoning": {
+    "n": 3,
+    "recall@1": 1.0,
+    "recall@4": 1.0,
+    "mrr": 1.0,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "latency_ms": 249,
+   "misses": [
+    {
+     "question": "Do I need to keep the paper slip for a $30 lunch I want to claim back?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "procurement-approvals.md",
+      "expense-reimbursement.md",
+      "expense-reimbursement.md",
+      "on-call-runbook.md"
+     ]
+    }
+   ]
+  }
+ },
+ "generation": {
+  "metric_version": 2,
+  "limitations": [
+   "Answer scoring checks expected substrings, not semantic correctness.",
+   "Citation scoring checks source documents, not claim entailment.",
+   "Abstention detection is a phrase-based heuristic."
+  ],
+  "summary": {
+   "model": "llama3.1:latest",
+   "mode": "rrf",
+   "n": 7,
+   "answer_substring_match_rate": 0.5,
+   "answer_retrieved": 1.0,
+   "substring_match_when_answer_retrieved": 0.5,
+   "false_abstention": 0.333,
+   "false_abstention_when_answer_retrieved": 0.333,
+   "heuristic_abstention_on_unanswerable": 1.0,
+   "citation_rate": 0.667,
+   "citation_document_match": 1.0,
+   "unsupported_references": 0,
+   "errors": 0,
+   "mean_seconds": 6.514
+  },
+  "rows": [
+   {
+    "question": "What is the on-call stipend per week?",
+    "kind": "verbatim",
+    "seconds": 4.3,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "on-call-runbook.md",
+     "remote-work-policy.md",
+     "remote-work-policy.md",
+     "expense-reimbursement.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "What is the API rate limit per customer account?",
+    "kind": "verbatim",
+    "seconds": 7.8,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "api-integration-guide.md",
+     "api-integration-guide.md",
+     "api-integration-guide.md",
+     "customer-sla.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "Do I need to keep the paper slip for a $30 lunch I want to claim back?",
+    "kind": "paraphrase",
+    "seconds": 7.1,
+    "error": "",
+    "answer": "Based on the evidence passages, you do not need to keep the paper slip for a $30 lunch because:\n\n* [S2] states that itemized receipts are required for any single expense of $25 or more.\n* Since your lunch expense is only $30, it does not meet this threshold.\n\nTherefore, the answer is: No.",
+    "retrieved": [
+     "procurement-approvals.md",
+     "expense-reimbursement.md",
+     "expense-reimbursement.md",
+     "on-call-runbook.md"
+    ],
+    "cited": [
+     "S2"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "I submitted an expense after 45 days. Does the policy say it is on time?",
+    "kind": "reasoning",
+    "seconds": 7.0,
+    "error": "",
+    "answer": "The policy does not say that an expense submitted after 45 days is on time. According to [S1], reports must be submitted within 30 days of the expense date, and reports submitted after 30 days require written approval from the employee's director and are paid at the discretion of Finance.",
+    "retrieved": [
+     "expense-reimbursement.md",
+     "performance-reviews.md",
+     "api-integration-guide.md",
+     "remote-work-policy.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Can I work remotely four days each week if I remain available during core hours?",
+    "kind": "reasoning",
+    "seconds": 6.7,
+    "error": "",
+    "answer": "Based on the provided evidence passages, I can answer your question as follows:\n\nNo, you cannot work remotely four days each week if you remain available during core hours.\n\nThe reason is that [S1] states: \"Eligible employees may work remotely up to 3 days per week.\" This limit is explicitly stated in the Remote Work Policy.",
+    "retrieved": [
+     "remote-work-policy.md",
+     "remote-work-policy.md",
+     "onboarding-checklist.md",
+     "customer-sla.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "A customer-facing outage affects 6% of active shipments. What severity is it, and when must the postmortem be published?",
+    "kind": "reasoning",
+    "seconds": 7.7,
+    "error": "",
+    "answer": "The severity of this customer-facing outage is SEV2 because it affects more than 5% (6%) of active shipments. \n\nAccording to [S1], a SEV2 incident requires a written postmortem published within 5 business days of resolution.\n\nTherefore, the postmortem must be published within 5 business days of resolution.",
+    "retrieved": [
+     "incident-severity.md",
+     "incident-severity.md",
+     "on-call-runbook.md",
+     "on-call-runbook.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Which bank processes the cooperative's payroll?",
+    "kind": "unanswerable",
+    "seconds": 5.0,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "expense-reimbursement.md",
+     "holiday-schedule.md",
+     "expense-reimbursement.md",
+     "performance-reviews.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": true
+   }
+  ]
+ }
+}

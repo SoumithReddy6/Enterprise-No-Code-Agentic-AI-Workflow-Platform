@@ -66,3 +66,16 @@ async def test_usage_reaches_the_node_event_and_the_run_journal(tmp_path,monkeyp
     assert node_line['usage']['completion_tokens']==7 and 'outputs' not in node_line
     assert lines[-1]['status']=='success' and lines[-1]['seconds']>=0
     store.engine.dispose()
+
+@pytest.mark.asyncio
+async def test_ollama_timeout_is_retried(monkeypatch):
+    attempts=[]
+    def handler(request):
+        attempts.append(1)
+        if len(attempts)<3:raise httpx.ReadTimeout('slow',request=request)
+        return httpx.Response(200,json={'message':{'content':'Recovered'}})
+    transport(monkeypatch,handler)
+    async def sleep(seconds):pass
+    monkeypatch.setattr(providers.asyncio,'sleep',sleep)
+    result=await llm_node({'prompt':'Q'},LLMConfig(provider='ollama',model='mock'),Context('',lambda _:''))
+    assert result['text']=='Recovered' and len(attempts)==3

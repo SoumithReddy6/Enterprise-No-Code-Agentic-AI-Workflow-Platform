@@ -70,3 +70,25 @@ def test_memory_is_workspace_scoped_and_bounded(client):
     for _ in range(12):memory.write('conversation','x'*3000,'y'*3000,'one')
     assert memory.read('conversation','two')=='[]'
     assert len(memory.read('conversation','one'))<=16000
+
+@pytest.mark.asyncio
+async def test_agent_write_failure_stops_and_keeps_resume_blocked(client,monkeypatch):
+    from backend.tests.test_agent_tools import calc_flow,scripted
+    connection=client.post('/api/connections',json={'name':'API','provider':'http','endpoint':'https://example.com'}).json()
+    graph=calc_flow();graph.nodes[2].type='tool_http'
+    graph.nodes[2].config={'method':'POST','enable_writes':True,'connection_id':connection['id']}
+    scripted(monkeypatch,['{"action":"call","target":"calc","input":"create"}']*3)
+    store=client.app.state.store;worker=Worker(store);attempts=[]
+    async def uncertain(*args):
+        attempts.append(1)
+        raise ValueError('Remote accepted request; connection lost')
+    monkeypatch.setattr(worker.tools,'execute',uncertain)
+    response=client.post('/api/runs',json={'workflow':graph.model_dump()})
+    assert response.status_code==201,response.text
+    id=response.json()['id']
+    await worker.execute(store.claim_next(worker.owner))
+    run=store.run(id)
+    assert attempts==[1] and run['status']=='failed'
+    assert 'reconciliation' in run['error'] and run['write_nodes']==['agent']
+    assert 'agent' not in run['checkpoints']
+    assert client.post(f'/api/runs/{id}/resume').status_code==409

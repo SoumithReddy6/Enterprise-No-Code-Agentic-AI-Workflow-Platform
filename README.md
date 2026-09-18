@@ -350,3 +350,20 @@ Verification commands:
 ```
 
 The service smoke covers indexing, four search modes, direct named-KB workflow execution, rebuild activation, retained provenance, deletion and RPC authentication. Fault tests cover partial vector writes, stale leases, retries, cleanup failure/backoff, replacement failure, duplicate requests, dimension changes, quota headroom and cross-tenant denial. Remote ES/Pinecone operations use mock transports; no paid cloud calls or real remote writes were made. Browser interaction/visual QA remains for user testing.
+
+
+### Reliability and evaluation corrections
+
+Failed external writes now stop the active agent run, including through specialist delegation. Inspect the remote system and reconcile the result before attempting the action again. Read-only tool failures remain bounded observations. The existing durable write marker continues to block unsafe resume; this is conservative stop-and-inspect behavior, not an automated action ledger or exactly-once delivery.
+
+A structured Agent with no retrieved evidence and no attached tools fails explicitly instead of returning plain text that violates its output schema. Ordinary text-answer agents retain their no-evidence response. Ollama timeouts now use the bounded provider retry policy, subject to the overall workflow deadline.
+
+New generation evaluation reports use `metric_version: 2`: `answer_substring_match_rate`, `substring_match_when_answer_retrieved`, and `citation_document_match`. These are heuristic checks, not semantic accuracy or claim-level citation faithfulness. Answer-passage matching also requires the expected source document. Each report carries these limitations. Previously saved reports retain their original names and values; they have not been rerun or retroactively rescored. Human review or a separately validated claim-evidence evaluator is still required to assess entailment.
+
+### Optional claim-level evaluation (local Ollama)
+
+Run ` .venv/bin/python -m scripts.eval_retrieval --generate llama3.1:latest --judge llama3.1:latest --limit 5 --out evals/results/claims-latest.json` from the project root. The judge runs only in the evaluation harness; live workflow answers are unchanged. No cloud API credits are required.
+
+Each answer receives exact quoted claims, citation labels, support/contradiction/insufficient-evidence verdicts and rationale. Invalid citations, malformed judgments and unavailable models produce explicit evaluation errors, not passing scores. Empty claim lists receive no support score. Inputs over 50,000 characters are rejected instead of silently truncating evidence. Reports include judged/error/skipped counts and the mean supported fraction for judged answers only.
+
+These are model estimates. A judge may omit claims, assign citations incorrectly, or be wrong about entailment; using the same model to answer and judge can create correlated errors. Calibrate with human-reviewed examples before using this as a release gate. Existing substring and document-match metrics remain separately labeled.

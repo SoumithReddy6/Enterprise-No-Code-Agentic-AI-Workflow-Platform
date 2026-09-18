@@ -113,3 +113,7 @@ Two findings that only real data produced:
 ## 6. Reference workflow to build against
 
 Internal knowledge assistant, production shape: ingest with ACL metadata → conversation-scoped memory → hybrid retrieve with ACL filter → grounded answer with schema `{answer, citations[], confidence, abstain}` → citation validation at the response boundary → response; every call logged with tokens and latency; eval set from real documents gating releases. Tiers 1–2 above are exactly what turns today's scenario 2 into that workflow. The support-ticket assistant (classify → retrieve → draft → **approve** → update ticket) needs items 5, 7, 8 and 9 before it can be trusted with a real ticket system.
+
+## 7. Manual Employee Handbook findings
+
+Manual testing of the reference Chat Input → Retrieve → Agent → Response workflow found deterministic resource-integrity gaps, citation-contract gaps, unsafe abstention behavior, and reasoning failures on terminology, deadlines, and numeric thresholds. The recorded evidence, reproductions, priorities, regression requirements, and remediation sequence are in [Manual test findings — Employee Handbook workflow](manual-test-findings-2026-09-16.md).

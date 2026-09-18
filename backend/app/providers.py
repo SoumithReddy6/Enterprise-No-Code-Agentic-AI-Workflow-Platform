@@ -44,7 +44,7 @@ async def ollama_chat(model,system,prompt,temperature=None,top_p=None,max_tokens
             record_usage(usage,body.get('prompt_eval_count'),body.get('eval_count'))
             return text
     except httpx.ConnectError:raise ValueError('Cannot connect to Ollama. Start Ollama and check OLLAMA_BASE_URL.') from None
-    except httpx.TimeoutException:raise ValueError('Ollama timed out. Try a smaller model or shorter input.') from None
+    except httpx.TimeoutException:raise ProviderBusy('Ollama timed out. Try a smaller model or shorter input.') from None
     except (httpx.HTTPError,KeyError,TypeError):raise ValueError('Ollama request failed. Check that the selected model supports chat.') from None
 
 async def ollama_capabilities(http,name):

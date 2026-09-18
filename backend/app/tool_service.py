@@ -17,6 +17,9 @@ from sqlalchemy.orm import Session
 from .models import StrictModel
 from .storage import Base, new_id
 
+class UncertainWriteError(ValueError):
+    """An external mutation may have completed; automatic retries must stop."""
+
 class ConnectionRecord(Base):
     __tablename__='tool_connections'
     id=Column(String(64),primary_key=True)

@@ -1,0 +1,494 @@
+{
+ "settings": {
+  "corpus": "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/evals/corpus",
+  "questions": "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/evals/questions.json",
+  "embedding_model": "embeddinggemma:latest",
+  "chunking": "paragraph",
+  "chunk_size": 800,
+  "chunk_overlap": 120,
+  "modes": [
+   "similarity",
+   "keyword",
+   "hybrid",
+   "rrf"
+  ],
+  "top_k": 8,
+  "generate": "",
+  "judge": "",
+  "generate_mode": "rrf",
+  "limit": 0
+ },
+ "questions": 50,
+ "retrieval": {
+  "similarity": {
+   "all": {
+    "n": 45,
+    "recall@1": 0.978,
+    "recall@8": 1.0,
+    "mrr": 0.989,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 0.978,
+    "answer@8": 0.978
+   },
+   "verbatim": {
+    "n": 20,
+    "recall@1": 1.0,
+    "recall@8": 1.0,
+    "mrr": 1.0,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 1.0,
+    "answer@8": 1.0
+   },
+   "paraphrase": {
+    "n": 20,
+    "recall@1": 0.95,
+    "recall@8": 1.0,
+    "mrr": 0.975,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 0.95,
+    "answer@8": 0.95
+   },
+   "reasoning": {
+    "n": 5,
+    "recall@1": 1.0,
+    "recall@8": 1.0,
+    "mrr": 1.0,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 1.0,
+    "answer@8": 1.0
+   },
+   "latency_ms": 237,
+   "misses": [
+    {
+     "question": "Do I need to keep the paper slip for a $30 lunch I want to claim back?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "expense-reimbursement.md",
+      "expense-reimbursement.md",
+      "customer-sla.md",
+      "travel-policy.md",
+      "travel-policy.md",
+      "expense-reimbursement.md",
+      "vacation-leave.md",
+      "expense-reimbursement.md"
+     ]
+    },
+    {
+     "question": "How many times will you try to send a tracking callback to my server if it is down?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "customer-sla.md",
+      "api-integration-guide.md",
+      "cold-chain-handling.md",
+      "on-call-runbook.md",
+      "on-call-runbook.md",
+      "remote-work-policy.md",
+      "fleet-maintenance.md",
+      "fleet-maintenance.md"
+     ]
+    }
+   ]
+  },
+  "keyword": {
+   "all": {
+    "n": 45,
+    "recall@1": 0.8,
+    "recall@8": 0.978,
+    "mrr": 0.877,
+    "document_coverage@8": 0.978,
+    "evidence_coverage@8": 0.911,
+    "answer@8": 0.911
+   },
+   "verbatim": {
+    "n": 20,
+    "recall@1": 0.95,
+    "recall@8": 1.0,
+    "mrr": 0.975,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 0.95,
+    "answer@8": 0.95
+   },
+   "paraphrase": {
+    "n": 20,
+    "recall@1": 0.6,
+    "recall@8": 0.95,
+    "mrr": 0.749,
+    "document_coverage@8": 0.95,
+    "evidence_coverage@8": 0.85,
+    "answer@8": 0.85
+   },
+   "reasoning": {
+    "n": 5,
+    "recall@1": 1.0,
+    "recall@8": 1.0,
+    "mrr": 1.0,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 1.0,
+    "answer@8": 1.0
+   },
+   "latency_ms": 4,
+   "misses": [
+    {
+     "question": "What is the on-call stipend per week?",
+     "kind": "verbatim",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "remote-work-policy.md",
+      "on-call-runbook.md",
+      "expense-reimbursement.md",
+      "on-call-runbook.md",
+      "remote-work-policy.md",
+      "release-process.md",
+      "api-integration-guide.md",
+      "on-call-runbook.md"
+     ]
+    },
+    {
+     "question": "What is the minimum password length?",
+     "kind": "verbatim",
+     "rank": 1,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "security-passwords.md",
+      "security-passwords.md",
+      "incident-severity.md",
+      "cold-chain-handling.md",
+      "data-retention.md",
+      "cold-chain-handling.md",
+      "api-integration-guide.md",
+      "expense-reimbursement.md"
+     ]
+    },
+    {
+     "question": "Do I need to keep the paper slip for a $30 lunch I want to claim back?",
+     "kind": "paraphrase",
+     "rank": 7,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "on-call-runbook.md",
+      "onboarding-checklist.md",
+      "dispatch-scheduling.md",
+      "procurement-approvals.md",
+      "release-process.md",
+      "data-retention.md",
+      "expense-reimbursement.md",
+      "release-process.md"
+     ]
+    },
+    {
+     "question": "How large does a customer-facing outage have to be before it counts as the top severity?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "cold-chain-handling.md",
+      "incident-severity.md",
+      "fleet-maintenance.md",
+      "onboarding-checklist.md",
+      "release-process.md",
+      "data-retention.md",
+      "incident-severity.md",
+      "incident-severity.md"
+     ]
+    },
+    {
+     "question": "How much notice do I need to give for a three-week holiday?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "onboarding-checklist.md",
+      "vacation-leave.md",
+      "customer-sla.md",
+      "holiday-schedule.md",
+      "holiday-schedule.md",
+      "release-process.md",
+      "holiday-schedule.md",
+      "incident-severity.md"
+     ]
+    },
+    {
+     "question": "How long does a customer have to report that a parcel arrived broken?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "data-retention.md",
+      "customer-sla.md",
+      "security-passwords.md",
+      "data-retention.md",
+      "security-passwords.md",
+      "performance-reviews.md",
+      "dispatch-scheduling.md",
+      "incident-severity.md"
+     ]
+    },
+    {
+     "question": "When does a new hire get their first proper performance conversation?",
+     "kind": "paraphrase",
+     "rank": 3,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "warehouse-safety.md",
+      "performance-reviews.md",
+      "onboarding-checklist.md",
+      "performance-reviews.md",
+      "onboarding-checklist.md",
+      "performance-reviews.md",
+      "procurement-approvals.md",
+      "performance-reviews.md"
+     ]
+    },
+    {
+     "question": "What is the longest a driver is allowed to be behind the wheel in one shift?",
+     "kind": "paraphrase",
+     "rank": 0,
+     "document_coverage": 0.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "onboarding-checklist.md",
+      "data-retention.md",
+      "onboarding-checklist.md",
+      "security-passwords.md",
+      "fleet-maintenance.md",
+      "warehouse-safety.md",
+      "holiday-schedule.md",
+      "procurement-approvals.md"
+     ]
+    },
+    {
+     "question": "How long can a vaccine shipment be too warm before it is treated as a problem?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "data-retention.md",
+      "cold-chain-handling.md",
+      "cold-chain-handling.md",
+      "holiday-schedule.md",
+      "fleet-maintenance.md",
+      "holiday-schedule.md",
+      "security-passwords.md",
+      "onboarding-checklist.md"
+     ]
+    },
+    {
+     "question": "How many times will you try to send a tracking callback to my server if it is down?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "data-retention.md",
+      "api-integration-guide.md",
+      "holiday-schedule.md",
+      "cold-chain-handling.md",
+      "on-call-runbook.md",
+      "customer-sla.md",
+      "on-call-runbook.md",
+      "cold-chain-handling.md"
+     ]
+    }
+   ]
+  },
+  "hybrid": {
+   "all": {
+    "n": 45,
+    "recall@1": 0.978,
+    "recall@8": 1.0,
+    "mrr": 0.989,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 0.978,
+    "answer@8": 0.978
+   },
+   "verbatim": {
+    "n": 20,
+    "recall@1": 1.0,
+    "recall@8": 1.0,
+    "mrr": 1.0,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 1.0,
+    "answer@8": 1.0
+   },
+   "paraphrase": {
+    "n": 20,
+    "recall@1": 0.95,
+    "recall@8": 1.0,
+    "mrr": 0.975,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 0.95,
+    "answer@8": 0.95
+   },
+   "reasoning": {
+    "n": 5,
+    "recall@1": 1.0,
+    "recall@8": 1.0,
+    "mrr": 1.0,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 1.0,
+    "answer@8": 1.0
+   },
+   "latency_ms": 248,
+   "misses": [
+    {
+     "question": "Do I need to keep the paper slip for a $30 lunch I want to claim back?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "onboarding-checklist.md",
+      "expense-reimbursement.md",
+      "on-call-runbook.md",
+      "dispatch-scheduling.md",
+      "expense-reimbursement.md",
+      "customer-sla.md",
+      "procurement-approvals.md",
+      "travel-policy.md"
+     ]
+    }
+   ]
+  },
+  "rrf": {
+   "all": {
+    "n": 45,
+    "recall@1": 0.911,
+    "recall@8": 1.0,
+    "mrr": 0.944,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 0.956,
+    "answer@8": 0.956
+   },
+   "verbatim": {
+    "n": 20,
+    "recall@1": 1.0,
+    "recall@8": 1.0,
+    "mrr": 1.0,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 1.0,
+    "answer@8": 1.0
+   },
+   "paraphrase": {
+    "n": 20,
+    "recall@1": 0.8,
+    "recall@8": 1.0,
+    "mrr": 0.875,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 0.9,
+    "answer@8": 0.9
+   },
+   "reasoning": {
+    "n": 5,
+    "recall@1": 1.0,
+    "recall@8": 1.0,
+    "mrr": 1.0,
+    "document_coverage@8": 1.0,
+    "evidence_coverage@8": 1.0,
+    "answer@8": 1.0
+   },
+   "latency_ms": 248,
+   "misses": [
+    {
+     "question": "Do I need to keep the paper slip for a $30 lunch I want to claim back?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "onboarding-checklist.md",
+      "expense-reimbursement.md",
+      "expense-reimbursement.md",
+      "on-call-runbook.md",
+      "expense-reimbursement.md",
+      "customer-sla.md",
+      "dispatch-scheduling.md",
+      "travel-policy.md"
+     ]
+    },
+    {
+     "question": "How long does a customer have to report that a parcel arrived broken?",
+     "kind": "paraphrase",
+     "rank": 6,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "incident-severity.md",
+      "security-passwords.md",
+      "incident-severity.md",
+      "cold-chain-handling.md",
+      "data-retention.md",
+      "customer-sla.md",
+      "data-retention.md",
+      "fleet-maintenance.md"
+     ]
+    },
+    {
+     "question": "What is the longest a driver is allowed to be behind the wheel in one shift?",
+     "kind": "paraphrase",
+     "rank": 3,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "warehouse-safety.md",
+      "fleet-maintenance.md",
+      "dispatch-scheduling.md",
+      "dispatch-scheduling.md",
+      "onboarding-checklist.md",
+      "dispatch-scheduling.md",
+      "data-retention.md",
+      "hazmat-shipping.md"
+     ]
+    },
+    {
+     "question": "Is the office open on the day before Christmas?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "onboarding-checklist.md",
+      "holiday-schedule.md",
+      "holiday-schedule.md",
+      "holiday-schedule.md",
+      "remote-work-policy.md",
+      "expense-reimbursement.md",
+      "holiday-schedule.md",
+      "remote-work-policy.md"
+     ]
+    }
+   ]
+  }
+ }
+}

@@ -86,3 +86,33 @@ async def test_citation_labels_are_unique_across_the_run_and_validated_at_respon
     assert result['values']['out']['text']=='Critique: fine [S1], but [S3] is weak and [unsupported reference] is missing.'
     cited=[s['citation'] for s in json.loads(result['values']['out']['sources']) if s['cited']]
     assert cited==['S1','S3']
+
+@pytest.mark.asyncio
+async def test_uncertain_write_stops_agent_instead_of_retrying(monkeypatch):
+    workflow=calc_flow()
+    workflow.nodes[2].type='tool_http'
+    workflow.nodes[2].config={'method':'POST','enable_writes':True,'connection_id':'mock'}
+    scripted(monkeypatch,['{"action":"call","target":"calc","input":"create"}']*3)
+    attempts=[]
+    async def platform(action,*args):
+        attempts.append(args)
+        raise ValueError('Response lost after remote acceptance')
+    with pytest.raises(ValueError,match='reconcil'):
+        await compile_workflow(workflow,platform_resolver=platform,message='Create').graph.ainvoke({'values':{}})
+    assert len(attempts)==1
+
+@pytest.mark.asyncio
+async def test_uncertain_write_from_specialist_is_not_a_recoverable_observation(monkeypatch):
+    from backend.app.tool_service import UncertainWriteError
+    workflow=calc_flow()
+    workflow.nodes[2].type='agent'
+    workflow.nodes[2].config={'provider':'demo'}
+    workflow.edges[-1]=workflow.edges[-1].model_copy(update={'source':'agent','target':'calc','kind':'agent','sourceHandle':'agents','targetHandle':'input'})
+    scripted(monkeypatch,['{"action":"call","target":"calc","input":"create"}'])
+    original=__import__('backend.app.agent_runtime',fromlist=['execute_agent']).execute_agent
+    async def child(node_id,*args,**kwargs):
+        if node_id=='calc':raise UncertainWriteError('External write requires reconciliation')
+        return await original(node_id,*args,**kwargs)
+    monkeypatch.setattr('backend.app.agent_runtime.execute_agent',child)
+    with pytest.raises(ValueError,match='reconciliation'):
+        await compile_workflow(workflow,message='Create').graph.ainvoke({'values':{}})

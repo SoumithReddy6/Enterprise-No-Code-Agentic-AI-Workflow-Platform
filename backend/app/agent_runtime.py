@@ -2,6 +2,7 @@
 import json
 import re
 from dataclasses import replace
+from .tool_service import UncertainWriteError, is_write
 
 ROLES={
  'planner':'Create an actionable ordered plan with dependencies and concrete completion criteria.',
@@ -49,6 +50,20 @@ def validate_structured(text,schema):
 
 CITATION=re.compile(r'\[(S\d+)\]')
 NO_EVIDENCE='I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.'
+
+def declares_insufficient_evidence(answer):
+    paragraphs=[paragraph.strip().lower() for paragraph in answer.split('\n\n') if paragraph.strip()]
+    if not paragraphs:return False
+    opening=paragraphs[0];closing=paragraphs[-1]
+    if answer.startswith(NO_EVIDENCE):return True
+    if any(phrase in opening for phrase in (
+        'evidence is insufficient',
+        'insufficient evidence',
+        'cannot determine from the evidence',
+        'not enough evidence',
+        'no direct information',
+    )):return True
+    return 'evidence is insufficient' in closing or 'insufficient to determine' in closing
 
 def remember_evidence(run,sources):
     """Run-wide evidence registry keyed by citation label. Labels are assigned once per run, so any
@@ -116,6 +131,8 @@ async def execute_agent(node_id,input_text,workflow,ctx,emit,depth=0,budget=None
     envelope=evidence_envelope(input_text)
     # Same contract as the Query node: no evidence and nothing else to call means no model call.
     if envelope is not None and not envelope['passages'] and not targets:
+        if config.output_schema or config.role in ('extraction','classification'):
+            raise ValueError('Insufficient evidence to produce the required structured output. Adjust retrieval or provide relevant documents.')
         return {'text':NO_EVIDENCE,'provider':'none','sources':'[]'}
     prompt=config.user_prompt.replace('{input}',render_evidence(envelope) if envelope is not None else input_text)
     evidence=[]
@@ -155,6 +172,7 @@ async def execute_agent(node_id,input_text,workflow,ctx,emit,depth=0,budget=None
         invocation=f'{checkpoint_owner}:{budget["counter"]}:{target}'
         common={'node_id':target,'invocation_id':invocation,'parent_node_id':node_id,'transient':True}
         await emit({**common,'status':'running','inputs':{'input':task}})
+        write_attempt=False
         try:
             if target in specialists:
                 output=await execute_agent(target,task,workflow,ctx,emit,depth+1,budget,checkpoint_owner)
@@ -163,12 +181,16 @@ async def execute_agent(node_id,input_text,workflow,ctx,emit,depth=0,budget=None
                 child=replace(ctx,node_id=target,node_type=tool.type,checkpoint_owner=checkpoint_owner)
                 if tool.type.startswith('tool_'):
                     if ctx.platform is None:raise ValueError('Tool execution unavailable.')
+                    write_attempt=is_write(tool.type,tool_config)
                     output={'text':await ctx.platform('tool',tool.type,tool_config.model_dump(),task,checkpoint_owner)}
                 else:output=await definition.handler({'query':task},tool_config,child)
             await emit({**common,'status':'success','outputs':output})
         except Exception as exc:
             message=str(exc) if isinstance(exc,ValueError) else 'Attached node execution failed.'
             await emit({**common,'status':'failed','error':message})
+            if isinstance(exc,UncertainWriteError):raise
+            if write_attempt:
+                raise UncertainWriteError('External write outcome is uncertain; reconciliation is required before trying again. Check the remote system.') from None
             # A failed call is an observation for the model, not the end of the run; the budget bounds retries.
             transcript.extend([{'agent_action':action},{'tool_error':message}]);continue
         # Observations are rendered for the model; evidence passages keep their run-wide labels.
@@ -192,6 +214,8 @@ async def execute_agent(node_id,input_text,workflow,ctx,emit,depth=0,budget=None
                 final=action['text'] if action and action.get('action')=='final' and isinstance(action.get('text'),str) else result['text']
     sources=[]
     if evidence:
+        # Once the model declares the evidence insufficient, no guessed continuation may escape as an answer.
+        if declares_insufficient_evidence(final):final=NO_EVIDENCE
         final,sources=ground_answer(final,evidence)
         # Evidence must still be authorized after generation, exactly as the Query node checks.
         if ctx.platform:

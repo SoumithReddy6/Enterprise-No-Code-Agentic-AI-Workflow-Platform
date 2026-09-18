@@ -8,7 +8,7 @@ from pathlib import Path
 from .storage import Store, local_key, new_id
 from .models import Workflow
 from .compiler import compile_workflow
-from .tool_service import ToolService,CONFIGS,is_write
+from .tool_service import ToolService,CONFIGS,is_write,UncertainWriteError
 from .agent_memory import MemoryService
 from .platform_validation import platform_errors,kb_errors
 from .kb_gateway import KnowledgeServices
@@ -45,8 +45,14 @@ class Worker:
                         node_type,settings,input_text,checkpoint_owner=args
                         config=CONFIGS[node_type].model_validate(settings)
                         self.tools.check(config,tenant)
-                        if is_write(node_type,config):self.store.mark_write(id,owner,checkpoint_owner)
-                        return await self.tools.execute(node_type,settings,input_text,tenant)
+                        write=is_write(node_type,config)
+                        if write:self.store.mark_write(id,owner,checkpoint_owner)
+                        try:
+                            return await self.tools.execute(node_type,settings,input_text,tenant)
+                        except Exception:
+                            if write:
+                                raise UncertainWriteError('External write outcome is uncertain; reconciliation is required before trying again. Check the remote system.') from None
+                            raise
                     if action=='kb_retrieve':return await self.kbs.retrieve(*args,tenant)
                     if action=='verify_vector_sources':return await self.kbs.verify(args[0],tenant)
                     if action=='record_vector_sources':

@@ -1,0 +1,552 @@
+{
+ "settings": {
+  "corpus": "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/evals/corpus",
+  "questions": "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/evals/questions.json",
+  "embedding_model": "embeddinggemma:latest",
+  "chunking": "fixed",
+  "chunk_size": 800,
+  "chunk_overlap": 120,
+  "modes": [
+   "similarity",
+   "keyword",
+   "hybrid",
+   "rrf"
+  ],
+  "top_k": 4,
+  "generate": "",
+  "judge": "",
+  "generate_mode": "rrf",
+  "limit": 0
+ },
+ "questions": 50,
+ "retrieval": {
+  "similarity": {
+   "all": {
+    "n": 45,
+    "recall@1": 0.844,
+    "recall@4": 1.0,
+    "mrr": 0.911,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 0.978,
+    "answer@4": 0.978
+   },
+   "verbatim": {
+    "n": 20,
+    "recall@1": 0.9,
+    "recall@4": 1.0,
+    "mrr": 0.942,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "paraphrase": {
+    "n": 20,
+    "recall@1": 0.75,
+    "recall@4": 1.0,
+    "mrr": 0.858,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 0.95,
+    "answer@4": 0.95
+   },
+   "reasoning": {
+    "n": 5,
+    "recall@1": 1.0,
+    "recall@4": 1.0,
+    "mrr": 1.0,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "latency_ms": 250,
+   "misses": [
+    {
+     "question": "What is the on-call stipend per week?",
+     "kind": "verbatim",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "customer-sla.md",
+      "on-call-runbook.md",
+      "remote-work-policy.md",
+      "expense-reimbursement.md"
+     ]
+    },
+    {
+     "question": "How often is forklift certification renewed?",
+     "kind": "verbatim",
+     "rank": 3,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "data-retention.md",
+      "cold-chain-handling.md",
+      "warehouse-safety.md",
+      "customer-sla.md"
+     ]
+    },
+    {
+     "question": "How much can I spend on a hotel room each night when I travel for work?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "expense-reimbursement.md",
+      "travel-policy.md",
+      "travel-policy.md",
+      "expense-reimbursement.md"
+     ]
+    },
+    {
+     "question": "Which hours of the day do I have to be contactable when working from home?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "on-call-runbook.md",
+      "remote-work-policy.md",
+      "remote-work-policy.md",
+      "customer-sla.md"
+     ]
+    },
+    {
+     "question": "If nobody picks up an overnight alert from the first responder, what happens next?",
+     "kind": "paraphrase",
+     "rank": 3,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "hazmat-shipping.md",
+      "hazmat-shipping.md",
+      "on-call-runbook.md",
+      "performance-reviews.md"
+     ]
+    },
+    {
+     "question": "When does a new hire get their first proper performance conversation?",
+     "kind": "paraphrase",
+     "rank": 3,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "performance-reviews.md",
+      "performance-reviews.md",
+      "onboarding-checklist.md",
+      "onboarding-checklist.md"
+     ]
+    },
+    {
+     "question": "Is the office open on the day before Christmas?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "on-call-runbook.md",
+      "holiday-schedule.md",
+      "holiday-schedule.md",
+      "customer-sla.md"
+     ]
+    }
+   ]
+  },
+  "keyword": {
+   "all": {
+    "n": 45,
+    "recall@1": 0.822,
+    "recall@4": 0.933,
+    "mrr": 0.869,
+    "document_coverage@4": 0.933,
+    "evidence_coverage@4": 0.889,
+    "answer@4": 0.889
+   },
+   "verbatim": {
+    "n": 20,
+    "recall@1": 0.9,
+    "recall@4": 1.0,
+    "mrr": 0.942,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "paraphrase": {
+    "n": 20,
+    "recall@1": 0.7,
+    "recall@4": 0.85,
+    "mrr": 0.762,
+    "document_coverage@4": 0.85,
+    "evidence_coverage@4": 0.75,
+    "answer@4": 0.75
+   },
+   "reasoning": {
+    "n": 5,
+    "recall@1": 1.0,
+    "recall@4": 1.0,
+    "mrr": 1.0,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "latency_ms": 3,
+   "misses": [
+    {
+     "question": "What is the on-call stipend per week?",
+     "kind": "verbatim",
+     "rank": 3,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "remote-work-policy.md",
+      "remote-work-policy.md",
+      "on-call-runbook.md",
+      "on-call-runbook.md"
+     ]
+    },
+    {
+     "question": "How long is the paid sabbatical after 7 years of service?",
+     "kind": "verbatim",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "data-retention.md",
+      "vacation-leave.md",
+      "data-retention.md",
+      "customer-sla.md"
+     ]
+    },
+    {
+     "question": "Do I need to keep the paper slip for a $30 lunch I want to claim back?",
+     "kind": "paraphrase",
+     "rank": 0,
+     "document_coverage": 0.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "procurement-approvals.md",
+      "onboarding-checklist.md",
+      "onboarding-checklist.md",
+      "on-call-runbook.md"
+     ]
+    },
+    {
+     "question": "Which hours of the day do I have to be contactable when working from home?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "remote-work-policy.md",
+      "onboarding-checklist.md",
+      "holiday-schedule.md",
+      "on-call-runbook.md"
+     ]
+    },
+    {
+     "question": "If nobody picks up an overnight alert from the first responder, what happens next?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "on-call-runbook.md",
+      "incident-severity.md",
+      "expense-reimbursement.md",
+      "onboarding-checklist.md"
+     ]
+    },
+    {
+     "question": "How much notice do I need to give for a three-week holiday?",
+     "kind": "paraphrase",
+     "rank": 4,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "holiday-schedule.md",
+      "onboarding-checklist.md",
+      "holiday-schedule.md",
+      "vacation-leave.md"
+     ]
+    },
+    {
+     "question": "How long does a customer have to report that a parcel arrived broken?",
+     "kind": "paraphrase",
+     "rank": 0,
+     "document_coverage": 0.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "data-retention.md",
+      "api-integration-guide.md",
+      "security-passwords.md",
+      "data-retention.md"
+     ]
+    },
+    {
+     "question": "When does a new hire get their first proper performance conversation?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "performance-reviews.md",
+      "onboarding-checklist.md",
+      "holiday-schedule.md",
+      "onboarding-checklist.md"
+     ]
+    },
+    {
+     "question": "What is the longest a driver is allowed to be behind the wheel in one shift?",
+     "kind": "paraphrase",
+     "rank": 0,
+     "document_coverage": 0.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "warehouse-safety.md",
+      "security-passwords.md",
+      "warehouse-safety.md",
+      "onboarding-checklist.md"
+     ]
+    },
+    {
+     "question": "How many times will you try to send a tracking callback to my server if it is down?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "on-call-runbook.md",
+      "api-integration-guide.md",
+      "data-retention.md",
+      "customer-sla.md"
+     ]
+    }
+   ]
+  },
+  "hybrid": {
+   "all": {
+    "n": 45,
+    "recall@1": 0.911,
+    "recall@4": 1.0,
+    "mrr": 0.95,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 0.978,
+    "answer@4": 0.978
+   },
+   "verbatim": {
+    "n": 20,
+    "recall@1": 0.95,
+    "recall@4": 1.0,
+    "mrr": 0.975,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "paraphrase": {
+    "n": 20,
+    "recall@1": 0.85,
+    "recall@4": 1.0,
+    "mrr": 0.912,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 0.95,
+    "answer@4": 0.95
+   },
+   "reasoning": {
+    "n": 5,
+    "recall@1": 1.0,
+    "recall@4": 1.0,
+    "mrr": 1.0,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "latency_ms": 251,
+   "misses": [
+    {
+     "question": "What is the on-call stipend per week?",
+     "kind": "verbatim",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "remote-work-policy.md",
+      "on-call-runbook.md",
+      "remote-work-policy.md",
+      "on-call-runbook.md"
+     ]
+    },
+    {
+     "question": "If nobody picks up an overnight alert from the first responder, what happens next?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "incident-severity.md",
+      "on-call-runbook.md",
+      "hazmat-shipping.md",
+      "hazmat-shipping.md"
+     ]
+    },
+    {
+     "question": "When does a new hire get their first proper performance conversation?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "performance-reviews.md",
+      "onboarding-checklist.md",
+      "performance-reviews.md",
+      "onboarding-checklist.md"
+     ]
+    },
+    {
+     "question": "What is the longest a driver is allowed to be behind the wheel in one shift?",
+     "kind": "paraphrase",
+     "rank": 4,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "warehouse-safety.md",
+      "warehouse-safety.md",
+      "cold-chain-handling.md",
+      "dispatch-scheduling.md"
+     ]
+    }
+   ]
+  },
+  "rrf": {
+   "all": {
+    "n": 45,
+    "recall@1": 0.889,
+    "recall@4": 1.0,
+    "mrr": 0.939,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "verbatim": {
+    "n": 20,
+    "recall@1": 0.95,
+    "recall@4": 1.0,
+    "mrr": 0.975,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "paraphrase": {
+    "n": 20,
+    "recall@1": 0.8,
+    "recall@4": 1.0,
+    "mrr": 0.887,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "reasoning": {
+    "n": 5,
+    "recall@1": 1.0,
+    "recall@4": 1.0,
+    "mrr": 1.0,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "latency_ms": 246,
+   "misses": [
+    {
+     "question": "What is the on-call stipend per week?",
+     "kind": "verbatim",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "remote-work-policy.md",
+      "on-call-runbook.md",
+      "remote-work-policy.md",
+      "expense-reimbursement.md"
+     ]
+    },
+    {
+     "question": "If nobody picks up an overnight alert from the first responder, what happens next?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "incident-severity.md",
+      "on-call-runbook.md",
+      "on-call-runbook.md",
+      "customer-sla.md"
+     ]
+    },
+    {
+     "question": "How long does a customer have to report that a parcel arrived broken?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "warehouse-safety.md",
+      "customer-sla.md",
+      "customer-sla.md",
+      "incident-severity.md"
+     ]
+    },
+    {
+     "question": "When does a new hire get their first proper performance conversation?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "performance-reviews.md",
+      "onboarding-checklist.md",
+      "performance-reviews.md",
+      "onboarding-checklist.md"
+     ]
+    },
+    {
+     "question": "What is the longest a driver is allowed to be behind the wheel in one shift?",
+     "kind": "paraphrase",
+     "rank": 4,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "warehouse-safety.md",
+      "warehouse-safety.md",
+      "cold-chain-handling.md",
+      "dispatch-scheduling.md"
+     ]
+    }
+   ]
+  }
+ }
+}

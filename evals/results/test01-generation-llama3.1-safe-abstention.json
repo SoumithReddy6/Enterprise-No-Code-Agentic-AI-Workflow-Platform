@@ -1,0 +1,1225 @@
+{
+ "settings": {
+  "corpus": "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/evals/corpus",
+  "questions": "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/evals/questions.json",
+  "embedding_model": "embeddinggemma:latest",
+  "chunking": "paragraph",
+  "chunk_size": 800,
+  "chunk_overlap": 120,
+  "modes": [
+   "similarity"
+  ],
+  "top_k": 4,
+  "generate": "llama3.1:latest",
+  "judge": "",
+  "generate_mode": "similarity",
+  "limit": 0
+ },
+ "questions": 50,
+ "retrieval": {
+  "similarity": {
+   "all": {
+    "n": 45,
+    "recall@1": 0.978,
+    "recall@4": 1.0,
+    "mrr": 0.989,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 0.978,
+    "answer@4": 0.978
+   },
+   "verbatim": {
+    "n": 20,
+    "recall@1": 1.0,
+    "recall@4": 1.0,
+    "mrr": 1.0,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "paraphrase": {
+    "n": 20,
+    "recall@1": 0.95,
+    "recall@4": 1.0,
+    "mrr": 0.975,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 0.95,
+    "answer@4": 0.95
+   },
+   "reasoning": {
+    "n": 5,
+    "recall@1": 1.0,
+    "recall@4": 1.0,
+    "mrr": 1.0,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 1.0,
+    "answer@4": 1.0
+   },
+   "latency_ms": 267,
+   "misses": [
+    {
+     "question": "Do I need to keep the paper slip for a $30 lunch I want to claim back?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "expense-reimbursement.md",
+      "expense-reimbursement.md",
+      "customer-sla.md",
+      "travel-policy.md"
+     ]
+    },
+    {
+     "question": "How many times will you try to send a tracking callback to my server if it is down?",
+     "kind": "paraphrase",
+     "rank": 2,
+     "document_coverage": 1.0,
+     "evidence_coverage": 1.0,
+     "answer_present": true,
+     "top": [
+      "customer-sla.md",
+      "api-integration-guide.md",
+      "cold-chain-handling.md",
+      "on-call-runbook.md"
+     ]
+    }
+   ]
+  }
+ },
+ "generation": {
+  "metric_version": 2,
+  "limitations": [
+   "Answer scoring checks expected substrings, not semantic correctness.",
+   "Citation scoring checks source documents, not claim entailment.",
+   "Abstention detection is a phrase-based heuristic."
+  ],
+  "summary": {
+   "model": "llama3.1:latest",
+   "mode": "similarity",
+   "n": 50,
+   "answer_substring_match_rate": 0.756,
+   "answer_retrieved": 0.978,
+   "substring_match_when_answer_retrieved": 0.773,
+   "false_abstention": 0.133,
+   "false_abstention_when_answer_retrieved": 0.136,
+   "heuristic_abstention_on_unanswerable": 1.0,
+   "citation_rate": 0.867,
+   "citation_document_match": 0.974,
+   "unsupported_references": 0,
+   "errors": 0,
+   "mean_seconds": 2.618
+  },
+  "rows": [
+   {
+    "question": "What is the meal per diem for overnight travel?",
+    "kind": "verbatim",
+    "seconds": 3.5,
+    "error": "",
+    "answer": "The meal per diem for overnight travel is $65 per day [S2]. \n\nNote: The per diem rate is reduced to 75% on the first and last day of travel, but this information is not requested in the question.",
+    "retrieved": [
+     "expense-reimbursement.md",
+     "expense-reimbursement.md",
+     "travel-policy.md",
+     "travel-policy.md"
+    ],
+    "cited": [
+     "S2"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Within how many days must expense reports be submitted in Ledgerly?",
+    "kind": "verbatim",
+    "seconds": 3.4,
+    "error": "",
+    "answer": "Within 30 days of the expense date [S1]. \n\nNote: The question asks about the deadline for submitting expense reports, which is explicitly stated in passage S1 as \"within 30 days of the expense date\".",
+    "retrieved": [
+     "expense-reimbursement.md",
+     "expense-reimbursement.md",
+     "expense-reimbursement.md",
+     "procurement-approvals.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How many days per week can eligible employees work remotely?",
+    "kind": "verbatim",
+    "seconds": 3.2,
+    "error": "",
+    "answer": "Eligible employees can work remotely up to 3 days per week [S1]. \n\nNote: The other passages do not provide relevant information about the number of remote workdays per week, so they are not cited in this answer.",
+    "retrieved": [
+     "remote-work-policy.md",
+     "remote-work-policy.md",
+     "remote-work-policy.md",
+     "remote-work-policy.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What is the home office stipend amount?",
+    "kind": "verbatim",
+    "seconds": 1.9,
+    "error": "",
+    "answer": "The home office stipend amount is $400 per calendar year [S1].",
+    "retrieved": [
+     "remote-work-policy.md",
+     "performance-reviews.md",
+     "on-call-runbook.md",
+     "on-call-runbook.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How quickly must the on-call primary acknowledge a page in Klaxon?",
+    "kind": "verbatim",
+    "seconds": 2.4,
+    "error": "",
+    "answer": "The on-call primary must acknowledge a page in Klaxon within 15 minutes [S1].",
+    "retrieved": [
+     "on-call-runbook.md",
+     "incident-severity.md",
+     "on-call-runbook.md",
+     "on-call-runbook.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What is the on-call stipend per week?",
+    "kind": "verbatim",
+    "seconds": 1.8,
+    "error": "",
+    "answer": "The on-call stipend per week is $350 [S1].",
+    "retrieved": [
+     "on-call-runbook.md",
+     "performance-reviews.md",
+     "on-call-runbook.md",
+     "remote-work-policy.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Within how many business days must a postmortem be published after a SEV1?",
+    "kind": "verbatim",
+    "seconds": 1.9,
+    "error": "",
+    "answer": "Within 5 business days [S1].",
+    "retrieved": [
+     "incident-severity.md",
+     "incident-severity.md",
+     "incident-severity.md",
+     "on-call-runbook.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How often is forklift certification renewed?",
+    "kind": "verbatim",
+    "seconds": 4.8,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "warehouse-safety.md",
+     "hazmat-shipping.md",
+     "warehouse-safety.md",
+     "fleet-maintenance.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "What is the maximum stack height for palletised freight?",
+    "kind": "verbatim",
+    "seconds": 1.8,
+    "error": "",
+    "answer": "The maximum stack height for palletised freight is 4.2 metres [S1].",
+    "retrieved": [
+     "warehouse-safety.md",
+     "warehouse-safety.md",
+     "warehouse-safety.md",
+     "warehouse-safety.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How many vacation days can be carried over into the next year?",
+    "kind": "verbatim",
+    "seconds": 1.8,
+    "error": "",
+    "answer": "Up to 5 unused vacation days may be carried into the next calendar year [S1].",
+    "retrieved": [
+     "vacation-leave.md",
+     "vacation-leave.md",
+     "vacation-leave.md",
+     "vacation-leave.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How long is the paid sabbatical after 7 years of service?",
+    "kind": "verbatim",
+    "seconds": 1.9,
+    "error": "",
+    "answer": "The paid sabbatical after 7 years of service is 4 weeks [S1].",
+    "retrieved": [
+     "vacation-leave.md",
+     "vacation-leave.md",
+     "holiday-schedule.md",
+     "vacation-leave.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What is the minimum password length?",
+    "kind": "verbatim",
+    "seconds": 1.8,
+    "error": "",
+    "answer": "The minimum password length is at least 14 characters long [S3].",
+    "retrieved": [
+     "security-passwords.md",
+     "security-passwords.md",
+     "security-passwords.md",
+     "security-passwords.md"
+    ],
+    "cited": [
+     "S3"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How long is vehicle telemetry retained?",
+    "kind": "verbatim",
+    "seconds": 2.1,
+    "error": "",
+    "answer": "Vehicle telemetry is retained for 90 days [S1].",
+    "retrieved": [
+     "data-retention.md",
+     "fleet-maintenance.md",
+     "data-retention.md",
+     "data-retention.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "At what interval is engine oil changed on fleet vehicles?",
+    "kind": "verbatim",
+    "seconds": 2.3,
+    "error": "",
+    "answer": "The engine oil is changed every 15,000 km or 6 months, whichever comes first [S3].",
+    "retrieved": [
+     "fleet-maintenance.md",
+     "fleet-maintenance.md",
+     "fleet-maintenance.md",
+     "fleet-maintenance.md"
+    ],
+    "cited": [
+     "S3"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What service credit does a customer receive when a delivery window is missed?",
+    "kind": "verbatim",
+    "seconds": 2.5,
+    "error": "",
+    "answer": "When a delivery window is missed, a customer receives a service credit of 15 percent of the shipment charge [S1].",
+    "retrieved": [
+     "customer-sla.md",
+     "customer-sla.md",
+     "customer-sla.md",
+     "customer-sla.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Who approves purchases above $25,000?",
+    "kind": "verbatim",
+    "seconds": 2.0,
+    "error": "",
+    "answer": "The Chief Financial Officer approves purchases above $25,000 [S1].",
+    "retrieved": [
+     "procurement-approvals.md",
+     "procurement-approvals.md",
+     "procurement-approvals.md",
+     "procurement-approvals.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "By what time are next-day routes finalised in Waypoint?",
+    "kind": "verbatim",
+    "seconds": 1.7,
+    "error": "",
+    "answer": "By 18:00 the previous day [S1].",
+    "retrieved": [
+     "dispatch-scheduling.md",
+     "dispatch-scheduling.md",
+     "dispatch-scheduling.md",
+     "performance-reviews.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What is the refrigerated temperature range for cold chain shipments?",
+    "kind": "verbatim",
+    "seconds": 2.3,
+    "error": "",
+    "answer": "The refrigerated temperature range for cold chain shipments is between 2 °C to 8 °C [S2].",
+    "retrieved": [
+     "cold-chain-handling.md",
+     "cold-chain-handling.md",
+     "cold-chain-handling.md",
+     "cold-chain-handling.md"
+    ],
+    "cited": [
+     "S2"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What is the API rate limit per customer account?",
+    "kind": "verbatim",
+    "seconds": 2.2,
+    "error": "",
+    "answer": "The API rate limit per customer account is 600 requests per minute [S2].",
+    "retrieved": [
+     "api-integration-guide.md",
+     "api-integration-guide.md",
+     "api-integration-guide.md",
+     "api-integration-guide.md"
+    ],
+    "cited": [
+     "S2"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What percentage of traffic does a canary release receive?",
+    "kind": "verbatim",
+    "seconds": 1.9,
+    "error": "",
+    "answer": "The canary release receives 10 percent of traffic for 30 minutes [S1].",
+    "retrieved": [
+     "release-process.md",
+     "release-process.md",
+     "release-process.md",
+     "procurement-approvals.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How much can I spend on a hotel room each night when I travel for work?",
+    "kind": "paraphrase",
+    "seconds": 2.5,
+    "error": "",
+    "answer": "You can spend up to $220 per night on a hotel room before taxes [S1].",
+    "retrieved": [
+     "travel-policy.md",
+     "travel-policy.md",
+     "expense-reimbursement.md",
+     "expense-reimbursement.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Do I need to keep the paper slip for a $30 lunch I want to claim back?",
+    "kind": "paraphrase",
+    "seconds": 2.1,
+    "error": "",
+    "answer": "No, you do not need to keep the paper slip for a $30 lunch [S4].",
+    "retrieved": [
+     "expense-reimbursement.md",
+     "expense-reimbursement.md",
+     "customer-sla.md",
+     "travel-policy.md"
+    ],
+    "cited": [
+     "S4"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 0.0,
+    "answer_retrieved": false,
+    "citation_document_match": false
+   },
+   {
+    "question": "Which hours of the day do I have to be contactable when working from home?",
+    "kind": "paraphrase",
+    "seconds": 2.3,
+    "error": "",
+    "answer": "You must be contactable during core hours, which are 10:00 to 15:00 Eastern Time [S1].",
+    "retrieved": [
+     "remote-work-policy.md",
+     "remote-work-policy.md",
+     "remote-work-policy.md",
+     "remote-work-policy.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "If nobody picks up an overnight alert from the first responder, what happens next?",
+    "kind": "paraphrase",
+    "seconds": 4.2,
+    "error": "",
+    "answer": "If nobody picks up an overnight alert from the first responder, what happens next?\n\nThe evidence suggests that if the primary engineer does not acknowledge a page in Klaxon within 15 minutes, Klaxon automatically pages the secondary [S4]. Therefore, if nobody picks up an overnight alert from the first responder, the secondary will be paged.",
+    "retrieved": [
+     "on-call-runbook.md",
+     "incident-severity.md",
+     "incident-severity.md",
+     "on-call-runbook.md"
+    ],
+    "cited": [
+     "S4"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How large does a customer-facing outage have to be before it counts as the top severity?",
+    "kind": "paraphrase",
+    "seconds": 2.7,
+    "error": "",
+    "answer": "A customer-facing outage has to be affecting more than 5 percent of active shipments for it to count as the top severity [S1].",
+    "retrieved": [
+     "incident-severity.md",
+     "on-call-runbook.md",
+     "incident-severity.md",
+     "incident-severity.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Who runs the safety programme across the regions?",
+    "kind": "paraphrase",
+    "seconds": 1.7,
+    "error": "",
+    "answer": "Priya Natarajan runs the safety programme across the regions [S1].",
+    "retrieved": [
+     "warehouse-safety.md",
+     "travel-policy.md",
+     "warehouse-safety.md",
+     "onboarding-checklist.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How much notice do I need to give for a three-week holiday?",
+    "kind": "paraphrase",
+    "seconds": 1.9,
+    "error": "",
+    "answer": "You need at least 2 weeks' notice for a three-week holiday [S1].",
+    "retrieved": [
+     "vacation-leave.md",
+     "vacation-leave.md",
+     "holiday-schedule.md",
+     "vacation-leave.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Where are we supposed to keep the shared logins for carrier websites?",
+    "kind": "paraphrase",
+    "seconds": 4.0,
+    "error": "",
+    "answer": "We are supposed to keep shared logins for carrier websites in KeyVault, the approved password manager. [S1]\n\nThe passage explicitly states that \"Shared team credentials, such as carrier portal logins, live in KeyVault shared folders...\" [S1] \n\nNote: The other passages do not provide relevant information about storing shared logins for carrier websites.",
+    "retrieved": [
+     "security-passwords.md",
+     "security-passwords.md",
+     "api-integration-guide.md",
+     "security-passwords.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How long after someone asks us to erase their personal details do we have to do it?",
+    "kind": "paraphrase",
+    "seconds": 2.9,
+    "error": "",
+    "answer": "We have to fulfill a customer's request for their personal information to be deleted within 30 days [S1].",
+    "retrieved": [
+     "data-retention.md",
+     "data-retention.md",
+     "data-retention.md",
+     "data-retention.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "When are the tyres on the front axle of a truck considered worn out?",
+    "kind": "paraphrase",
+    "seconds": 2.1,
+    "error": "",
+    "answer": "The tyres on the front axle of a truck are considered worn out when the tread depth falls below 4 mm [S1].",
+    "retrieved": [
+     "fleet-maintenance.md",
+     "fleet-maintenance.md",
+     "warehouse-safety.md",
+     "fleet-maintenance.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How long does a customer have to report that a parcel arrived broken?",
+    "kind": "paraphrase",
+    "seconds": 3.1,
+    "error": "",
+    "answer": "Based on the provided evidence passages, a customer has 14 days to report that a parcel arrived broken [S3]. This is stated in passage S3 as part of the process for filing loss or damage claims.",
+    "retrieved": [
+     "customer-sla.md",
+     "fleet-maintenance.md",
+     "customer-sla.md",
+     "incident-severity.md"
+    ],
+    "cited": [
+     "S3"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "When does a new hire get their first proper performance conversation?",
+    "kind": "paraphrase",
+    "seconds": 2.0,
+    "error": "",
+    "answer": "A new hire gets their first proper performance conversation at 90 days [S1].",
+    "retrieved": [
+     "onboarding-checklist.md",
+     "onboarding-checklist.md",
+     "performance-reviews.md",
+     "performance-reviews.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How many competing bids do I need before buying something worth $12,000?",
+    "kind": "paraphrase",
+    "seconds": 3.1,
+    "error": "",
+    "answer": "You need 3 competing bids before buying something worth $12,000. [S1]\n\nNote: The other passages do not provide relevant information about the number of competing bids required for a purchase above $10,000.",
+    "retrieved": [
+     "procurement-approvals.md",
+     "procurement-approvals.md",
+     "procurement-approvals.md",
+     "procurement-approvals.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What is the longest a driver is allowed to be behind the wheel in one shift?",
+    "kind": "paraphrase",
+    "seconds": 3.4,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "dispatch-scheduling.md",
+     "dispatch-scheduling.md",
+     "hazmat-shipping.md",
+     "warehouse-safety.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "How long can a vaccine shipment be too warm before it is treated as a problem?",
+    "kind": "paraphrase",
+    "seconds": 1.3,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "cold-chain-handling.md",
+     "hazmat-shipping.md",
+     "cold-chain-handling.md",
+     "warehouse-safety.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "How many times will you try to send a tracking callback to my server if it is down?",
+    "kind": "paraphrase",
+    "seconds": 1.7,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "customer-sla.md",
+     "api-integration-guide.md",
+     "cold-chain-handling.md",
+     "on-call-runbook.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "Which tool do we use to undo a bad production deploy?",
+    "kind": "paraphrase",
+    "seconds": 1.7,
+    "error": "",
+    "answer": "We use the Rewind tool to undo a bad production deploy [S1].",
+    "retrieved": [
+     "release-process.md",
+     "release-process.md",
+     "release-process.md",
+     "release-process.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Is the office open on the day before Christmas?",
+    "kind": "paraphrase",
+    "seconds": 4.0,
+    "error": "",
+    "answer": "The office is closed on the day before Christmas, which falls on December 24th. [S1]\n\nNote: I only relied on passage S1 to answer the question, as it explicitly states that offices are closed from December 24th to 26th inclusive. The other passages do not provide relevant information about the office's schedule for the day before Christmas.",
+    "retrieved": [
+     "holiday-schedule.md",
+     "holiday-schedule.md",
+     "remote-work-policy.md",
+     "holiday-schedule.md"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What paperwork must a shipper hand over before we move flammable liquids?",
+    "kind": "paraphrase",
+    "seconds": 2.9,
+    "error": "",
+    "answer": "The paperwork that must be handed over before moving flammable liquids is a completed HZ-7 Dangerous Goods Declaration signed by the shipper [S2].",
+    "retrieved": [
+     "hazmat-shipping.md",
+     "hazmat-shipping.md",
+     "hazmat-shipping.md",
+     "hazmat-shipping.md"
+    ],
+    "cited": [
+     "S2"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "In which month can someone be put forward for a promotion?",
+    "kind": "paraphrase",
+    "seconds": 4.4,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "performance-reviews.md",
+     "performance-reviews.md",
+     "performance-reviews.md",
+     "onboarding-checklist.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "During overnight work travel, what is the combined daily allowance for one hotel night and meals, before taxes?",
+    "kind": "reasoning",
+    "seconds": 7.5,
+    "error": "",
+    "answer": "The combined daily allowance for one hotel night and meals is $65 (meals) + $220 (hotel room) = $285.\n\n[Note: I added the two amounts together to get the total.]\n\nHowever, since [S1] states that the per diem covers breakfast, lunch, dinner, and incidental tips, it's likely that the actual reimbursement for meals is less than $65. But without further information on what \"incidental tips\" entails, we can't accurately calculate the meal allowance.\n\nTo be safe, I'll stick with the evidence provided: [S1] states the per diem for meals as $65, and [S4] states the hotel room cap as $220.",
+    "retrieved": [
+     "expense-reimbursement.md",
+     "expense-reimbursement.md",
+     "travel-policy.md",
+     "travel-policy.md"
+    ],
+    "cited": [
+     "S1",
+     "S4"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "I submitted an expense after 45 days. Does the policy say it is on time?",
+    "kind": "reasoning",
+    "seconds": 3.1,
+    "error": "",
+    "answer": "No, the policy does not say it is on time [S2]. The policy states that reports must be submitted within 30 days of the expense date, which means submitting an expense after 45 days would be late.",
+    "retrieved": [
+     "expense-reimbursement.md",
+     "expense-reimbursement.md",
+     "performance-reviews.md",
+     "expense-reimbursement.md"
+    ],
+    "cited": [
+     "S2"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Can I work remotely four days each week if I remain available during core hours?",
+    "kind": "reasoning",
+    "seconds": 4.4,
+    "error": "",
+    "answer": "Based on the provided evidence, I can conclude that:\n\nThe evidence is insufficient to determine if you can work remotely four days each week while remaining available during core hours. \n\nHowever, it does indicate that eligible employees may work remotely up to 3 days per week [S2]. There is no mention of working remotely four days a week or any specific arrangement for core hours in the provided passages.",
+    "retrieved": [
+     "remote-work-policy.md",
+     "remote-work-policy.md",
+     "remote-work-policy.md",
+     "remote-work-policy.md"
+    ],
+    "cited": [
+     "S2"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "A customer-facing outage affects 6% of active shipments. What severity is it, and when must the postmortem be published?",
+    "kind": "reasoning",
+    "seconds": 3.7,
+    "error": "",
+    "answer": "The severity of this customer-facing outage is SEV2, as it affects more than 5% of active shipments. \n\nA postmortem must be published within 5 business days of resolution [S3].",
+    "retrieved": [
+     "incident-severity.md",
+     "incident-severity.md",
+     "incident-severity.md",
+     "on-call-runbook.md"
+    ],
+    "cited": [
+     "S3"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "A cold-chain shipment stayed outside the permitted temperature range for 20 minutes. Must it be treated as an excursion?",
+    "kind": "reasoning",
+    "seconds": 3.1,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "cold-chain-handling.md",
+     "cold-chain-handling.md",
+     "hazmat-shipping.md",
+     "cold-chain-handling.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "What is the parental leave policy?",
+    "kind": "unanswerable",
+    "seconds": 1.1,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "remote-work-policy.md",
+     "vacation-leave.md",
+     "vacation-leave.md",
+     "vacation-leave.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": true
+   },
+   {
+    "question": "Who is the chief executive of the cooperative?",
+    "kind": "unanswerable",
+    "seconds": 2.2,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "expense-reimbursement.md",
+     "expense-reimbursement.md",
+     "travel-policy.md",
+     "security-passwords.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": true
+   },
+   {
+    "question": "What discount do employees get on personal shipments?",
+    "kind": "unanswerable",
+    "seconds": 1.2,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "holiday-schedule.md",
+     "performance-reviews.md",
+     "holiday-schedule.md",
+     "onboarding-checklist.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": true
+   },
+   {
+    "question": "Which bank processes the cooperative's payroll?",
+    "kind": "unanswerable",
+    "seconds": 1.9,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "expense-reimbursement.md",
+     "expense-reimbursement.md",
+     "performance-reviews.md",
+     "travel-policy.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": true
+   },
+   {
+    "question": "What is the dress code for customer meetings?",
+    "kind": "unanswerable",
+    "seconds": 1.5,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "incident-severity.md",
+     "onboarding-checklist.md",
+     "travel-policy.md",
+     "remote-work-policy.md"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": true
+   }
+  ]
+ }
+}
