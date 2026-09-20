@@ -10,6 +10,10 @@ from .models import Workflow
 from .registry import REGISTRY, Context, validate_template
 
 
+class PersistedNodeCancellation(asyncio.CancelledError):
+    """Cancellation observed after a terminal node event committed successfully."""
+
+
 def _validate_flow(workflow: Workflow) -> list[str]:
     errors = []
     nodes = {n.id: n for n in workflow.nodes}
@@ -106,15 +110,17 @@ async def silent(event):
     pass
 
 
-def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None):
+def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0):
     errors = validate_workflow(workflow)
     if errors: raise ValueError('\n'.join(errors))
     from .platform_graph import split_graph
     from .agent_runtime import execute_agent,evidence_from_outputs
+    from .evidence_registry import prepare_checkpoint_labels,emit_evidence_notice
     full_workflow=workflow
     workflow,_,_=split_graph(workflow)
     graph = StateGraph(State)
-    run_state={'evidence':[]}  # Every passage retrieved in this run, under a run-unique citation label.
+    run_state={'evidence':[],'citation_counter':citation_counter}  # Every passage retrieved in this run, under a run-unique citation label.
+    prepare_checkpoint_labels(run_state,completed)
     context = Context(message=message, resolve_credential=credential_resolver, authorize_model=authorize_model,knowledge=knowledge_resolver,platform=platform_resolver,run=run_state)
     async def invoke_agent(id,text):return await execute_agent(id,text,full_workflow,context,emit)
     context.invoke_agent=invoke_agent
@@ -129,6 +135,7 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     validation=validate_cached(node,outputs)
                     if inspect.isawaitable(validation):await validation
                     evidence_from_outputs(run_state,outputs)  # Restored evidence keeps its original labels.
+                    await emit_evidence_notice(run_state,emit,node.id)
                     await emit({'node_id':node.id,'status':'success','outputs':outputs,'cached':True,'duration_ms':0})
                     return {'values':{node.id:outputs}}
                 inputs = {key: state['values'][ref.split('.')[0]][ref.split('.')[1]] for key, ref in node.inputs.items()}
@@ -139,16 +146,21 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     if set(outputs) != set(definition.outputs) or any(not isinstance(v, str) for v in outputs.values()):
                         raise ValueError('Node returned outputs that do not match its declared contract.')
                     evidence_from_outputs(run_state,outputs)
+                    await emit_evidence_notice(run_state,emit,node.id)
                     event={'node_id': node.id, 'status': 'success', 'outputs': outputs,'duration_ms': round((time.perf_counter()-started)*1000)}
                     usage=run_state.get('usage',{}).get(node.id)
                     if usage:event['usage']=usage  # Model calls made by this node (an agent's tool loop counts as one node).
                     await emit(event)
                     return {'values': {node.id: outputs}}
-                except asyncio.CancelledError:
-                    await emit({'node_id': node.id, 'status': 'cancelled'}); raise
+                except asyncio.CancelledError as exc:
+                    if isinstance(exc,PersistedNodeCancellation):
+                        # Python 3.12 asyncio.timeout recognizes the exact base type.
+                        raise asyncio.CancelledError() from None
+                    await emit({'node_id': node.id, 'status': 'cancelled',**({'usage':run_state['usage'][node.id]} if run_state.get('usage',{}).get(node.id) else {})})
+                    raise
                 except Exception as exc:
                     error = str(exc) if isinstance(exc, ValueError) else 'Node execution failed.'
-                    await emit({'node_id': node.id, 'status': 'failed', 'error': error})
+                    await emit({'node_id': node.id, 'status': 'failed', 'error': error,**({'usage':run_state['usage'][node.id]} if run_state.get('usage',{}).get(node.id) else {})})
                     raise ValueError(error) from None
             return handler
         graph.add_node(node.id, handler_factory(node, definition, config))

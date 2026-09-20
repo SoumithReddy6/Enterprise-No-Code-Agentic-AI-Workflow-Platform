@@ -148,6 +148,12 @@ flowchart TB
 
 The API does not execute a submitted workflow inside the request. It validates the graph, records an immutable run snapshot, and places the run in a SQL-backed queue. A separate worker claims the run and checkpoints completed node outputs.
 
+Run events are stored as ordered SQL rows, with indexed cursor pagination for history. Budget-capped agents return flagged partial answers or abstain. See the [upgrade procedure and retention limits](docs/run-history-upgrade.md) before updating an existing database.
+
+Operational endpoints: `/api/health` for liveness, `/api/ready` for dependency readiness, and authenticated operator-only `/api/operator/metrics` for time-window metrics. Requests and worker execution share a request ID in structured JSON logs. See [operations and metric definitions](docs/operations.md).
+
+
+
 ```mermaid
 sequenceDiagram
     actor User

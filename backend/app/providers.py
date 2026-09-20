@@ -1,10 +1,9 @@
 """Model provider transports. Service addresses are operator config, never workflow inputs."""
 import asyncio
-import logging
+from .observability import journal
 import os
 import httpx
 
-log=logging.getLogger('relay.provider')
 RETRYABLE_STATUS={429,500,502,503,504,529}
 
 class ProviderBusy(ValueError):
@@ -13,14 +12,16 @@ class ProviderBusy(ValueError):
 def client(timeout):return httpx.AsyncClient(timeout=timeout,trust_env=False)
 def ollama_url():return os.environ.get('OLLAMA_BASE_URL','http://127.0.0.1:11434').rstrip('/')
 
-async def with_retries(call,attempts=3,base_delay=.5):
+async def with_retries(call,attempts=3,base_delay=.5,provider=None,model=None):
     """Exponential backoff for transient failures only; configuration and model errors surface immediately."""
     for attempt in range(attempts):
         try:return await call()
         except ProviderBusy as exc:
-            if attempt==attempts-1:raise ValueError(f'{exc} (after {attempts} attempts)') from None
+            if attempt==attempts-1:
+                journal(event='provider.failure',provider=provider,model=model,attempt=attempt+1,error_type=type(exc).__name__)
+                raise ValueError(f'{exc} (after {attempts} attempts)') from None
             delay=base_delay*2**attempt
-            log.warning('provider retry attempt=%d delay=%.1fs reason=%s',attempt+1,delay,exc)
+            journal(event='provider.retry',provider=provider,model=model,attempt=attempt+1,delay_seconds=delay,error_type=type(exc).__name__)
             await asyncio.sleep(delay)
 
 def record_usage(usage,prompt_tokens,completion_tokens):

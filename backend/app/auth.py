@@ -12,8 +12,9 @@ from sqlalchemy import Column, Integer, String, delete, select, update, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from .observability import journal
 from .auth_security import reserve_login, clear_success, client_address, security_transaction
-from .storage import Base, ModelRecord, CredentialRecord, RunRecord, WorkflowRecord, new_id
+from .storage import Base, ModelRecord, CredentialRecord, RunRecord, RunEventRecord, WorkflowRecord, new_id
 
 COOKIE_NAME = 'relay_session'
 SESSION_SECONDS = 7 * 24 * 60 * 60
@@ -128,12 +129,28 @@ class AuthController:
             account = session.get(AccountRecord, record.account_id)
             if not account:
                 raise HTTPException(401, 'Sign in to continue.')
+            request.state.tenant_id=account.tenant_id
             return public_account(account)
 
     def tenant(self, request: Request) -> str:
         if self.enabled and request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
             self.require_same_origin(request)
-        return self.account(request)['tenant_id'] if self.enabled else 'local'
+        tenant=self.account(request)['tenant_id'] if self.enabled else 'local'
+        request.state.tenant_id=tenant
+        from .observability import tenant_id
+        tenant_id.set(tenant)
+        return tenant
+
+    def operator(self,request:Request):
+        if not self.enabled:raise HTTPException(401,'Operator authentication is required.')
+        account=self.account(request)
+        configured=os.environ.get('RELAY_OPERATOR_ACCOUNT_IDS')
+        with Session(self.store.engine) as session:
+            bootstrap=session.get(BootstrapRecord,1)
+            allowed=account['id'] in {value.strip() for value in configured.split(',')} if configured is not None else bool(bootstrap and bootstrap.tenant_id==account['tenant_id'])
+        if not allowed:raise HTTPException(403,'Operator access is required.')
+        request.state.tenant_id=account['tenant_id']
+        return account
 
     def create_session(self, session, account, request):
         old = request.cookies.get(COOKIE_NAME)
@@ -189,7 +206,7 @@ def install_auth(app, store, enabled=True):
                     session.flush()
                     from .tool_service import TENANT_MODELS as TOOL_MODELS
                     from .agent_memory import TENANT_MODELS as MEMORY_MODELS
-                    for model in (WorkflowRecord, RunRecord, CredentialRecord, ModelRecord, *TOOL_MODELS, *MEMORY_MODELS):
+                    for model in (WorkflowRecord, RunRecord, RunEventRecord, CredentialRecord, ModelRecord, *TOOL_MODELS, *MEMORY_MODELS):
                         session.execute(update(model).where(model.tenant_id == 'local').values(tenant_id=account.tenant_id))
                 session.add(account)
                 session.flush()
@@ -197,6 +214,9 @@ def install_auth(app, store, enabled=True):
                 result = public_account(account)
         except IntegrityError:
             raise HTTPException(409, 'Account already exists. Try signing in.') from None
+        if controller.registration_mode=='invite':journal(event='auth.invite_consumed',tenant=result['tenant_id'])
+        journal(event='auth.register_success',tenant=result['tenant_id'],status=201)
+        request.state.tenant_id=result['tenant_id']
         controller.set_cookie(response, request, token)
         return result
 
@@ -204,16 +224,26 @@ def install_auth(app, store, enabled=True):
     def login(body: LoginInput, request: Request, response: Response):
         if not enabled:
             raise HTTPException(403, 'Authentication is disabled.')
-        reservations = reserve_login(store.engine, body.email, client_address(request))
+        try:reservations = reserve_login(store.engine, body.email, client_address(request))
+        except HTTPException:
+            journal(event='auth.login_blocked',status=429);raise
         with Session(store.engine) as session:
             account = session.scalar(select(AccountRecord).where(AccountRecord.email == body.email))
             matches = password_matches(body.password, account.password_hash if account else controller.dummy_hash)
             if not account or not matches:
+                journal(event='auth.login_failure',status=401,tenant=account.tenant_id if account else None)
+                from .auth_security import LoginBudget
+                for key,revision in reservations.items():
+                    budget=session.get(LoginBudget,key)
+                    if budget and budget.revision==revision and budget.attempts>=10:
+                        journal(event='auth.lockout',scope=key.split(':',1)[0],reason_code='attempt_limit',tenant=account.tenant_id if account else None)
                 raise HTTPException(401, 'Invalid email or password.')
             token = controller.create_session(session, account, request)
             result = public_account(account)
             session.commit()
         clear_success(store.engine, reservations)
+        request.state.tenant_id=result['tenant_id']
+        journal(event='auth.login_success',tenant=result['tenant_id'],status=200)
         controller.set_cookie(response, request, token)
         return result
 

@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 from typing import Literal
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -22,6 +22,8 @@ from .tool_service import ToolService
 from .tool_api import install_tool_routes
 from .platform_validation import platform_errors,kb_errors
 from .kb_gateway import install_kb_routes
+from .observability import RequestJournalMiddleware,request_id,run_id as trace_run_id
+from .readiness import Readiness
 
 class RunRequest(StrictModel):
     workflow:Workflow
@@ -53,12 +55,14 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     app=FastAPI(title='Relay Workflow API',version='0.2.0',lifespan=lifespan)
     app.state.store=store
     app.add_middleware(TrustedHostMiddleware,allowed_hosts=['localhost','127.0.0.1','testserver','backend'])
-    app.add_middleware(CORSMiddleware,allow_origins=['http://127.0.0.1:3000','http://localhost:3000'],allow_credentials=True,allow_methods=['GET','POST','PUT'],allow_headers=['Content-Type'])
+    app.add_middleware(CORSMiddleware,allow_origins=['http://127.0.0.1:3000','http://localhost:3000'],allow_credentials=True,allow_methods=['GET','POST','PUT'],allow_headers=['Content-Type','X-Request-ID'],expose_headers=['X-Request-ID'])
+    app.add_middleware(RequestJournalMiddleware)
     auth=install_auth(app,store,enabled=auth_enabled)
     tenant=auth.tenant
     app.state.tools=ToolService(store)
     install_tool_routes(app,app.state.tools,tenant)
     install_kb_routes(app,store,tenant,knowledge_services)
+    app.state.readiness=Readiness(store,app.state.knowledge_services)
     async def submission_errors(workflow,tenant_id,checkpoints=None,dependencies=None):
         return validate_workflow(workflow)+store.model_errors(workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id,checkpoints,dependencies)
 
@@ -81,6 +85,14 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
 
     @app.get('/api/health')
     async def health():return {'status':'ok','mode':'authenticated-workspaces' if auth_enabled else 'test-local','durable_execution':True}
+    @app.get('/api/ready')
+    async def ready():
+        body,status=await app.state.readiness.check()
+        return JSONResponse(body,status_code=status,headers={'Cache-Control':'no-store'})
+    @app.get('/api/operator/metrics')
+    def operator_metrics(hours:int=Query(default=168,ge=1,le=2160),operator=Depends(auth.operator)):
+        from .operator_metrics import metrics
+        return JSONResponse(metrics(store,hours),headers={'Cache-Control':'no-store'})
     @app.get('/api/nodes')
     async def nodes(tenant_id:str=Depends(tenant)):return [n.public() for n in REGISTRY.values()]
     @app.get('/api/providers/ollama/models')
@@ -124,11 +136,16 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     async def credential(body:CredentialRequest,tenant_id:str=Depends(tenant)):return store.credential(body.name,body.secret,tenant_id,body.provider)
     @app.get('/api/runs')
     async def runs(tenant_id:str=Depends(tenant)):return store.runs(tenant_id)
+    @app.get('/api/runs/page')
+    async def runs_page(cursor:str|None=None,limit:int=Query(default=100,ge=1,le=100),tenant_id:str=Depends(tenant)):
+        try:return store.runs_page(tenant_id,cursor,limit)
+        except ValueError as exc:raise HTTPException(422,str(exc)) from None
     @app.post('/api/runs',status_code=201)
     async def start(body:RunRequest,tenant_id:str=Depends(tenant)):
         errors=await submission_errors(body.workflow,tenant_id)
         if errors:raise HTTPException(422,detail=errors)
-        run=store.create_run(body.workflow.model_dump(mode='json'),body.message,tenant_id)
+        run=store.create_run(body.workflow.model_dump(mode='json'),body.message,tenant_id,request_id=request_id.get())
+        trace_run_id.set(run['id'])
         return {'id':run['id'],'status':'queued'}
     @app.get('/api/runs/{id}')
     async def run(id:str,tenant_id:str=Depends(tenant)):return fetch_run(id,tenant_id)
@@ -153,19 +170,26 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
         except ValueError as exc:raise HTTPException(409,str(exc)) from None
     @app.get('/api/runs/{id}/events')
     async def events(id:str,request:Request,tenant_id:str=Depends(tenant)):
-        fetch_run(id,tenant_id)
+        try:store.run_status(id,tenant_id)
+        except KeyError:raise HTTPException(404,'Run not found') from None
+        try:
+            cursor=int(request.headers.get('last-event-id','-1'))
+            if cursor < -1 or cursor > 2**63-1:raise ValueError()
+        except ValueError:raise HTTPException(422,'Invalid event cursor') from None
         async def stream():
-            cursor=0
+            nonlocal cursor
             while True:
                 # A revoked/expired session must not keep an existing stream authorized.
                 try:auth.tenant(request)
                 except HTTPException:
                     yield 'event: done\ndata: {"status":"unauthorized"}\n\n';break
-                run=fetch_run(id,tenant_id)
-                for event in run['events'][cursor:]:
-                    yield f'id: {event["seq"]}\nevent: node\ndata: {json.dumps(event)}\n\n';cursor+=1
-                if run['status'] not in ('queued','running'):
-                    yield f'event: done\ndata: {json.dumps({"status":run["status"]})}\n\n';break
+                status=store.run_status(id,tenant_id)
+                batch=store.run_events(id,tenant_id,after=cursor,limit=200)
+                for event in batch:
+                    yield f'id: {event["seq"]}\nevent: node\ndata: {json.dumps(event)}\n\n';cursor=event['seq']
+                if len(batch)==200:continue
+                if status not in ('queued','running'):
+                    yield f'event: done\ndata: {json.dumps({"status":status})}\n\n';break
                 yield ': heartbeat\n\n';await asyncio.sleep(.15)
         return StreamingResponse(stream(),media_type='text/event-stream',headers={'Cache-Control':'no-cache','X-Accel-Buffering':'no'})
     return app

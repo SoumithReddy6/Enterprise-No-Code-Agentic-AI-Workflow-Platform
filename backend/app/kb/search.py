@@ -6,6 +6,7 @@ covers vector side effects as well as SQL commits; PostgreSQL advisory locks or
 SQLite flock are released by the OS on process exit. Inventories and permanent
 tombstones survive crashes and remote eventually-consistent late writes.
 """
+from ..observability import log_failures
 import asyncio
 from collections import Counter
 from contextlib import asynccontextmanager
@@ -84,6 +85,7 @@ class Search:
                 try:yield
                 finally:fcntl.flock(handle,fcntl.LOCK_UN)
 
+    @log_failures('search')
     async def call(self,action,tenant,payload):
         if action not in self.actions:raise ValueError('Unknown search action')
         identifier(tenant)

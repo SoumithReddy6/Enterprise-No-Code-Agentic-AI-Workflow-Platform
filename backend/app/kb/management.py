@@ -4,6 +4,7 @@ Originals live in the management database so registering an upload and its build
 is one durable transaction. All processes serialize manifest changes using the
 same database lock (SQLite immediate transaction / PostgreSQL advisory lock).
 """
+from ..observability import log_failures,request_id
 import base64
 import copy
 import hashlib
@@ -137,10 +138,11 @@ class Management:
         attempt=uid()
         v={'version':version,'config':copy.deepcopy(config or k['config']),'connection':connection or k['connection'],'documents':docs,'status':'pending','segment_id':attempt}
         k['versions'].append(v)
-        k['jobs'].append({'id':uid(),'attempt_id':attempt,'version':version,'status':'queued','stage':'queued','error':'','cleanup_status':'none','cleanup_attempts':0,'next_cleanup_at':0,'cleanup_failures':0,'lease_until':0,'created_at':time.time(),'retries':0})
+        k['jobs'].append({'request_id':request_id.get(),'id':uid(),'attempt_id':attempt,'version':version,'status':'queued','stage':'queued','error':'','cleanup_status':'none','cleanup_attempts':0,'next_cleanup_at':0,'cleanup_failures':0,'lease_until':0,'created_at':time.time(),'retries':0})
         k.update(pending_version=version,status='indexing',updated_at=time.time())
         for d in self._desired(k): d.update(status='queued',error='')
 
+    @log_failures('management')
     def call(self, action, tenant, payload):
         if action not in self.ACTIONS: raise ValueError('Unsupported management action')
         p=payload

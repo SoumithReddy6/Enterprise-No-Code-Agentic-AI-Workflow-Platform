@@ -91,11 +91,19 @@ async def input_node(inputs, config, ctx):
 async def prompt_node(inputs, config, ctx):
     return {'text': config.template.format_map(inputs)}
 
-def account_usage(ctx,usage):
+def account_usage(ctx,usage,config):
     """Accumulate per-node model usage on the shared run state; the compiler reports it on the node event."""
     if ctx.run is None or not usage:return
-    totals=ctx.run.setdefault('usage',{}).setdefault(ctx.node_id or '?',{'calls':0,'prompt_tokens':0,'completion_tokens':0})
+    totals=ctx.run.setdefault('usage',{}).setdefault(ctx.checkpoint_owner or ctx.node_id or '?',{'calls':0,'prompt_tokens':0,'completion_tokens':0})
     totals['calls']+=1;totals['prompt_tokens']+=usage.get('prompt_tokens',0);totals['completion_tokens']+=usage.get('completion_tokens',0)
+    groups=totals.setdefault('by_model',[])
+    row=next((r for r in groups if r['provider']==config.provider and r['model']==config.model),None)
+    if row is None:
+        row={'provider':config.provider,'model':config.model,'calls':0,'prompt_tokens':0,'completion_tokens':0};groups.append(row)
+    row['calls']+=1;row['prompt_tokens']+=usage.get('prompt_tokens',0);row['completion_tokens']+=usage.get('completion_tokens',0)
+    from .observability import journal
+    journal(event='model.usage',node_id=ctx.node_id,provider=config.provider,model=config.model,prompt_tokens=usage.get('prompt_tokens'),completion_tokens=usage.get('completion_tokens'))
+
 
 async def llm_node(inputs, config, ctx):
     ctx.authorize_model(config)
@@ -110,12 +118,12 @@ async def llm_node(inputs, config, ctx):
     usage={}
     if config.provider == 'ollama':
         from .providers import ollama_chat
-        text=await with_retries(lambda: ollama_chat(config.model, config.system, inputs['prompt'],usage=usage,**params))
-        account_usage(ctx,usage);return {'text': text, 'provider': 'ollama'}
+        text=await with_retries(lambda: ollama_chat(config.model, config.system, inputs['prompt'],usage=usage,**params),provider=config.provider,model=config.model)
+        account_usage(ctx,usage,config);return {'text': text, 'provider': 'ollama'}
     if config.provider == 'claude':
         from .providers import claude_chat
-        text=await with_retries(lambda: claude_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),usage=usage,**params))
-        account_usage(ctx,usage);return {'text': text, 'provider': 'claude'}
+        text=await with_retries(lambda: claude_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),usage=usage,**params),provider=config.provider,model=config.model)
+        account_usage(ctx,usage,config);return {'text': text, 'provider': 'claude'}
     if not config.credential_id:
         raise ValueError('Choose an OpenAI credential in the LLM settings.')
     key = ctx.resolve_credential(config.credential_id)
@@ -140,8 +148,8 @@ async def llm_node(inputs, config, ctx):
                 raise ValueError(f'OpenAI request failed (HTTP {exc.response.status_code}). Check the credential, model and quota.') from None
             except (httpx.RequestError, KeyError, IndexError, TypeError):
                 raise ValueError('The model request failed or returned an unsupported response.') from None
-    text=await with_retries(openai_call)
-    account_usage(ctx,usage);return {'text': text, 'provider': 'openai'}
+    text=await with_retries(openai_call,provider=config.provider,model=config.model)
+    account_usage(ctx,usage,config);return {'text': text, 'provider': 'openai'}
 
 async def condition_node(inputs, config, ctx):
     value, needle = inputs['value'], config.contains

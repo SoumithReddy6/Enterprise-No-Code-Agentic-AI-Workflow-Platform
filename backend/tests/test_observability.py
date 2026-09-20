@@ -27,7 +27,7 @@ async def test_transient_provider_failures_are_retried_with_backoff(monkeypatch)
     ctx=Context('',lambda _:'',node_id='agent',run={'evidence':[]})
     result=await llm_node({'prompt':'Q'},LLMConfig(provider='ollama',model='tiny'),ctx)
     assert result['text']=='Ready' and len(attempts)==3 and delays==[.5,1.]
-    assert ctx.run['usage']['agent']=={'calls':1,'prompt_tokens':12,'completion_tokens':3}
+    assert ctx.run['usage']['agent']=={'calls':1,'prompt_tokens':12,'completion_tokens':3,'by_model':[{'provider':'ollama','model':'tiny','calls':1,'prompt_tokens':12,'completion_tokens':3}]}
 
 @pytest.mark.asyncio
 async def test_persistent_failure_surfaces_after_bounded_attempts(monkeypatch):
@@ -53,13 +53,13 @@ async def test_usage_reaches_the_node_event_and_the_run_journal(tmp_path,monkeyp
     store=Store(f'sqlite:///{tmp_path}/obs.db',Fernet.generate_key());store.allow_model('ollama','tiny','','local')
     raw=sample();raw['nodes'][1]={'id':'prompt','type':'llm','inputs':{'prompt':'input.message'},'config':{'provider':'ollama','model':'tiny'}}
     run=store.create_run(raw,'Hello');worker=Worker(store)
-    with caplog.at_level(logging.INFO,logger='relay.run'):
+    with caplog.at_level(logging.INFO,logger='relay.journal'):
         await worker.execute(store.claim_next(worker.owner))
     record=store.run(run['id'])
     assert record['status']=='success'
     event=next(e for e in record['events'] if e.get('node_id')=='prompt' and e['status']=='success')
-    assert event['usage']=={'calls':1,'prompt_tokens':40,'completion_tokens':7}
-    lines=[json.loads(r.message) for r in caplog.records if r.name=='relay.run']
+    assert event['usage']=={'calls':1,'prompt_tokens':40,'completion_tokens':7,'by_model':[{'provider':'ollama','model':'tiny','calls':1,'prompt_tokens':40,'completion_tokens':7}]}
+    lines=[json.loads(r.message) for r in caplog.records if r.name=='relay.journal' and json.loads(r.message)['event'].startswith(('run.','node.'))]
     assert [l['event'] for l in lines][0]=='run.start' and [l['event'] for l in lines][-1]=='run.finish'
     assert all(l['run_id']==run['id'] for l in lines)
     node_line=next(l for l in lines if l['event']=='node.success' and l['node_id']=='prompt')

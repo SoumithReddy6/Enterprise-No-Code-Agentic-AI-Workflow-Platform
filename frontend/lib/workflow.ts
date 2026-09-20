@@ -52,6 +52,8 @@ export type RunEvent = {
   usage?: { calls: number; prompt_tokens: number; completion_tokens: number };
   error?: string;
   timestamp: string;
+  reason?: string;
+  truncated?: boolean;
 };
 export type Run = {
   id: string;
@@ -61,6 +63,8 @@ export type Run = {
   error: string;
   created_at: string;
   finished_at?: string;
+  truncated?: boolean;
+  truncation_reason?: string;
   events: RunEvent[];
   workflow: Workflow;
   message: string;

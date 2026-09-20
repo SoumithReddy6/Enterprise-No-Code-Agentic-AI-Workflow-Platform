@@ -41,11 +41,12 @@ async def test_tool_error_is_an_observation_not_a_run_failure(monkeypatch):
     assert 'Evaluates one Python arithmetic expression' in seen[0] and '"input": "text the configured code receives as input_text"' in seen[0]
 
 @pytest.mark.asyncio
-async def test_exhausted_budget_after_repeated_tool_errors_fails_clearly(monkeypatch):
+async def test_exhausted_budget_after_repeated_tool_errors_abstains(monkeypatch):
     scripted(monkeypatch,['{"action":"call","target":"calc","input":"x"}']*8)
     async def platform(action,*args):raise ValueError('always broken')
-    with pytest.raises(ValueError,match='limit'):
-        await compile_workflow(calc_flow(),platform_resolver=platform,message='Compute').graph.ainvoke({'values':{}})
+    result=await compile_workflow(calc_flow(),platform_resolver=platform,message='Compute').graph.ainvoke({'values':{}})
+    assert json.loads(result['values']['agent']['grounding'])['truncated']
+    assert json.loads(result['values']['agent']['grounding'])['abstain']
 
 @pytest.mark.asyncio
 async def test_retrieve_as_tool_is_rendered_and_citations_validated(monkeypatch):

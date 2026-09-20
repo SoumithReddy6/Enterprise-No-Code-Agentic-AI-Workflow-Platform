@@ -35,7 +35,18 @@ class Client:
     def __init__(self,name,url=None,key=None):
         self.name=name;self.url=(url or os.environ.get('KB_'+name.upper()+'_URL','http://127.0.0.1:'+('8011' if name=='management' else '8012'))).rstrip('/')
         self.key=key
-    def headers(self):return {'X-Relay-Service-Key':self.key or service_key()}
+    def headers(self):
+        from ..observability import request_id
+        return {'X-Relay-Service-Key':self.key or service_key(),**({'X-Request-ID':request_id.get()} if request_id.get() else {})}
+    async def health(self):
+        async with httpx.AsyncClient(timeout=1,trust_env=False) as http:
+            from ..observability import request_id
+            response=await http.get(self.url+'/health',headers={'X-Request-ID':request_id.get()} if request_id.get() else {})
+            response.raise_for_status()
+            value=response.json()
+            if value.get('status')!='ok':raise ServiceUnavailable('Knowledge service is not healthy')
+            return value
+
     def decode(self,response):
         if response.status_code==404:raise KeyError('Knowledge resource unavailable')
         if response.status_code==409:raise KnowledgeConflict(response.json().get('detail','Knowledge operation conflicts'))
@@ -57,6 +68,8 @@ class Client:
 
 def app_for(domain,name,allowed,async_domain=False,key=None):
     app=FastAPI(title='Relay Knowledge '+name,docs_url=None,redoc_url=None,openapi_url=None)
+    from ..observability import RequestJournalMiddleware
+    app.add_middleware(RequestJournalMiddleware)
     token=key or service_key()
     @app.get('/health')
     def health():return {'status':'ok','service':name}
@@ -72,6 +85,7 @@ def app_for(domain,name,allowed,async_domain=False,key=None):
             if not isinstance(data,dict) or set(data)-{'action','tenant','payload'}:raise ValueError('Invalid RPC request')
             action=data.get('action');tenant=data.get('tenant');payload=data.get('payload',{})
             if action not in allowed or not isinstance(tenant,str) or not 1<=len(tenant)<=128 or not isinstance(payload,dict):raise ValueError('Invalid RPC operation')
+            request.state.tenant_id=tenant
             if async_domain:result=await domain.call(action,tenant,payload)
             else:
                 from starlette.concurrency import run_in_threadpool

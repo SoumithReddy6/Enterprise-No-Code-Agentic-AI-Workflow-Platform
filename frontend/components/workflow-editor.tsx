@@ -231,6 +231,27 @@ function Editor() {
   const [run, setRun] = useState<Run>();
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [history, setHistory] = useState<Run[]>([]);
+  const [historyCursor, setHistoryCursor] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const historyVersion = useRef(0);
+  const applyHistory = useCallback((page: { items: Run[]; next_cursor: string | null }) => {
+    historyVersion.current += 1;
+    setHistory(page.items);
+    setHistoryCursor(page.next_cursor);
+  }, []);
+  async function loadMoreHistory() {
+    if (!historyCursor || historyLoading) return;
+    const version = historyVersion.current;
+    setHistoryLoading(true);
+    try {
+      const page = await api<{ items: Run[]; next_cursor: string | null }>(`/runs/page?cursor=${encodeURIComponent(historyCursor)}`);
+      if (historyVersion.current !== version) return;
+      setHistory((previous) => [...new Map([...previous, ...page.items].map((item) => [item.id, item])).values()]);
+      setHistoryCursor(page.next_cursor);
+    } catch (error) {
+      setNotice((error as Error).message);
+    } finally { setHistoryLoading(false); }
+  }
   const [tab, setTab] = useState('output');
   const [modal, setModal] = useState<'files' | 'help' | null>(null);
   const [connected, setConnected] = useState(false);
@@ -278,7 +299,7 @@ function Editor() {
         api<Definition[]>('/nodes'),
         api<SavedWorkflow[]>('/workflows'),
         api<Credential[]>('/credentials'),
-        api<Run[]>('/runs'),
+        api<{ items: Run[]; next_cursor: string | null }>('/runs/page'),
         api<AllowedModel[]>('/models'),
         api<ToolConnection[]>('/connections'),
         api<KnowledgeHubBase[]>('/knowledge-bases').catch(() => []),
@@ -307,9 +328,9 @@ function Editor() {
     }
     setHubBases(unifiedBases);
     setConnections(toolConnections);
-    setHistory(runs);
+    applyHistory(runs);
     setConnected(true);
-  }, []);
+  }, [applyHistory]);
   useEffect(() => {
     void Promise.resolve()
       .then(reloadLists)
@@ -513,7 +534,7 @@ function Editor() {
           if (source.current !== stream) return;
           setRun(final);
           setEvents(final.events);
-          setHistory(await api<Run[]>('/runs'));
+          applyHistory(await api<{ items: Run[]; next_cursor: string | null }>('/runs/page'));
         } catch (e) {
           setNotice((e as Error).message);
         } finally {
@@ -551,7 +572,7 @@ function Editor() {
       } else {
         setRunning(false);
         activeRun.current = undefined;
-        setHistory(await api<Run[]>('/runs'));
+        applyHistory(await api<{ items: Run[]; next_cursor: string | null }>('/runs/page'));
       }
     } catch {
       setNotice(
@@ -1265,6 +1286,7 @@ function Editor() {
                         </button>
                       )}
                     </div>
+                    {run?.truncated && <output className="helper">Incomplete answer: {run.truncation_reason || 'The agent reached its tool budget.'}</output>}
                     {/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Scroll regions need keyboard focus for arrow and page navigation. */}
                     <section
                       className="response-scroll"
@@ -1329,7 +1351,7 @@ function Editor() {
                         <pre>
                           {JSON.stringify(
                             e.inputs ||
-                              e.outputs || { status: e.status, error: e.error },
+                              e.outputs || { status: e.status, error: e.error, reason: e.reason, truncated: e.truncated },
                             null,
                             2,
                           )}
@@ -1365,6 +1387,7 @@ function Editor() {
                       No runs yet. Your executions will be saved here.
                     </p>
                   )}
+                  {historyCursor && <button type="button" disabled={historyLoading || running} onClick={() => void loadMoreHistory()}>{historyLoading ? 'Loading…' : 'Load older runs'}</button>}
                 </div>
               )}
             </section>

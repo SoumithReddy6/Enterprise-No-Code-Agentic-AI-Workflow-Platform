@@ -3,6 +3,7 @@ import asyncio
 import base64
 import json
 import logging
+from ..observability import journal,request_id,tenant_id
 import os
 from pathlib import Path
 import re
@@ -56,6 +57,11 @@ class Ingestion:
             if result.get('error'):raise ValueError(result['error'])
             return result['pages']
     async def execute(self,job):
+        request_token=request_id.set(job.get('request_id'));tenant_token=tenant_id.set(job.get('tenant_id'))
+        try:return await self._execute(job)
+        finally:request_id.reset(request_token);tenant_id.reset(tenant_token)
+
+    async def _execute(self,job):
         tenant=job['tenant_id'];fence={'job_id':job['id'],'attempt_id':job['attempt_id']}
         async def progress(stage,**extra):
             await self.management.call('progress',tenant,{**fence,'stage':stage,**extra})
@@ -99,9 +105,10 @@ class Ingestion:
             task.cancel();raise
         except Exception as exc:
             task.cancel()
+            journal(event='kb.build.failure',tenant=tenant,error_type=type(exc).__name__)
             error=str(exc) if isinstance(exc,ValueError) else 'Document processing failed unexpectedly'
             try:await self.management.call('fail',tenant,{**fence,'error':error})
-            except Exception:log.warning('Could not record indexing failure; lease recovery will retry job %s',job['id'])
+            except Exception as exc:journal(event='kb.build.failure_record_failed',tenant=tenant,error_type=type(exc).__name__)
         finally:
             task.cancel();await asyncio.gather(task,return_exceptions=True)
     async def cleanup(self):
@@ -120,7 +127,7 @@ class Ingestion:
                 if job:await self.execute(job)
                 else:await asyncio.sleep(1)
             except asyncio.CancelledError:raise
-            except Exception:log.warning('Knowledge services unavailable; retrying in two seconds');await asyncio.sleep(2)
+            except Exception as exc:journal(event='kb.ingestion.retry',error_type=type(exc).__name__,delay_seconds=2);await asyncio.sleep(2)
 
 async def main():
     from dotenv import load_dotenv

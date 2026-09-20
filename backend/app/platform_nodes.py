@@ -1,4 +1,5 @@
 """Named knowledge-base retrieval and generation over canonical evidence."""
+from .evidence_registry import allocate_labels
 import json
 from .agent_runtime import evidence_envelope,remember_evidence,finalize_grounded_answer,immediate_abstention,GROUNDED_INSTRUCTIONS,render_evidence
 
@@ -12,9 +13,8 @@ async def retrieve_node(inputs,config,ctx):
     sources=result['sources']
     await ctx.platform('record_vector_sources',ctx.checkpoint_owner or ctx.node_id,sources)
     # Citation labels are unique across the whole run so any later node can validate them.
-    offset=len(ctx.run['evidence']) if ctx.run is not None else 0
-    passages=[dict(s,citation=f'S{offset+i+1}') for i,s in enumerate(sources)]
-    remember_evidence(ctx.run,passages)
+    labels=allocate_labels(ctx.run,len(sources))
+    passages=remember_evidence(ctx.run,[dict(s,citation=label) for s,label in zip(sources,labels)])
     envelope={'question':inputs['query'],'passages':passages,'sources':[{k:v for k,v in p.items() if k!='text'} for p in passages],'knowledge_base_id':config.knowledge_base_id,'version':result['version']}
     return {'query':inputs['query'],'context':json.dumps(envelope,ensure_ascii=False),'sources':json.dumps([{**p,'cited':False} for p in passages],ensure_ascii=False)}
 
