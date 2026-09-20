@@ -117,6 +117,16 @@ export const seed: Workflow = {
   ],
 };
 
+export class ApiError extends Error {
+  status: number;
+  data: unknown;
+  constructor(message: string, status: number, data: unknown) {
+    super(message);
+    this.status = status;
+    this.data = data;
+  }
+}
+
 export async function api<T>(
   path: string,
   method = 'GET',
@@ -141,7 +151,7 @@ export async function api<T>(
       data && typeof data === 'object' && 'detail' in data
         ? data.detail
         : undefined;
-    throw new Error(
+    throw new ApiError(
       Array.isArray(detail)
         ? detail
             .map((d: unknown) =>
@@ -150,7 +160,11 @@ export async function api<T>(
             .join('\n')
         : typeof detail === 'string'
           ? detail
+          : detail && typeof detail === 'object' && 'message' in detail && typeof detail.message === 'string'
+            ? detail.message
           : 'The request failed. Check that the local API is running.',
+      response.status,
+      data,
     );
   }
   return data as T;
@@ -226,6 +240,9 @@ export function importableWorkflow(
   workflow: Workflow,
   supportedTypes: string[],
 ): Workflow {
+  if (workflow.nodes.some((node) => node.type.startsWith('vector_')) ||
+      workflow.edges.some((edge) => String(edge.kind) === 'store'))
+    throw new Error('This workflow used the retired VectorDB nodes. Create a named knowledge base and reconnect a Retrieve node before importing or replaying it.');
   const unsupported = workflow.nodes.find(
     (node) => !supportedTypes.includes(node.type),
   );

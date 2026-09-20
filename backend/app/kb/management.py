@@ -13,8 +13,10 @@ import uuid
 from pathlib import Path
 
 from cryptography.fernet import Fernet
-from sqlalchemy import create_engine, select, text, delete
+from sqlalchemy import create_engine, select, text, delete, inspect
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from .rpc import KnowledgeConflict
 from .management_models import Base, KnowledgeBase, Original
 from ..vector_adapters import CAPABILITIES
 from .options import RetrievalOptions
@@ -33,7 +35,40 @@ class Management:
         self.database_url, self.root, self.secret_key = database_url, Path(root), secret_key
         self.cipher = Fernet(secret_key.encode() if isinstance(secret_key, str) else secret_key)
         self.engine = create_engine(database_url, connect_args={'check_same_thread':False,'timeout':30} if database_url.startswith('sqlite') else {})
-        Base.metadata.create_all(self.engine)
+        self._migrate_names()
+
+    @staticmethod
+    def _name_key(name):
+        return ' '.join(name.split()).casefold()
+
+    def _migrate_names(self):
+        # The same lock as manifest writes serializes multi-process startup.
+        with self.engine.begin() as connection:
+            if self.engine.dialect.name == 'sqlite':
+                connection.execute(text('BEGIN IMMEDIATE'))
+            elif self.engine.dialect.name == 'postgresql':
+                connection.execute(text('SELECT pg_advisory_xact_lock(716293846)'))
+            Base.metadata.create_all(connection)
+            columns = {c['name'] for c in inspect(connection).get_columns('kb_management_bases')}
+            records = connection.execute(text('SELECT id, tenant_id, state FROM kb_management_bases')).all()
+            keys, updates = {}, []
+            for ident, tenant, state in records:
+                state = json.loads(state) if isinstance(state, str) else state
+                key = None if state['status'] == 'deleted' else self._name_key(state['name'])
+                if key is not None:
+                    keys.setdefault((tenant, key), []).append(ident)
+                updates.append({'id': ident, 'key': key})
+            duplicates = [(tenant, key, sorted(ids)) for (tenant, key), ids in keys.items() if len(ids) > 1]
+            if duplicates:
+                raise RuntimeError('Knowledge base name migration blocked. Back up the database, then rename conflicting active bases in their stored state and restart. Conflicts (tenant, normalized name, IDs): ' + repr(sorted(duplicates)))
+            if 'name_key' not in columns:
+                connection.execute(text('ALTER TABLE kb_management_bases ADD COLUMN name_key VARCHAR(600)'))
+            if updates:
+                connection.execute(text('UPDATE kb_management_bases SET name_key = :key WHERE id = :id'), updates)
+            connection.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS uq_kb_management_tenant_name ON kb_management_bases (tenant_id, name_key)'))
+
+    def _name_conflict(self, submitted):
+        return KnowledgeConflict({'code': 'knowledge_base_name_conflict', 'message': 'A knowledge base with this name already exists. Choose another name.', 'name': submitted})
 
     def _config(self, raw):
         if not isinstance(raw, dict): raise ValueError('config must be an object')
@@ -41,8 +76,11 @@ class Management:
         if set(raw)-allowed: raise ValueError('Unknown configuration fields')
         c={'backend':'faiss','storage_path':'default','embedding_model':'','embedding_digest':'','chunking':'fixed','chunk_size':1200,'chunk_overlap':200,'index_method':'','connection_id':'','index_name':'','search_defaults':{}}
         c.update(copy.deepcopy(raw))
-        if c['backend'] not in {'faiss','chroma','elasticsearch','pinecone'}: raise ValueError('Unsupported backend')
-        if c['chunking'] not in {'fixed','paragraph'}: raise ValueError('Unsupported chunking')
+        if c['backend']=='chroma':
+            from ..vector_adapters import RETIRED_CHROMA
+            raise ValueError(RETIRED_CHROMA)
+        if c['backend'] not in {'faiss','elasticsearch','pinecone'}: raise ValueError('Unsupported backend')
+        if c['chunking'] not in {'fixed','paragraph','section'}: raise ValueError('Unsupported chunking')
         if not isinstance(c['chunk_size'],int) or not 100<=c['chunk_size']<=8000: raise ValueError('Invalid chunk size')
         if not isinstance(c['chunk_overlap'],int) or not 0<=c['chunk_overlap']<=4000 or c['chunk_overlap']>=c['chunk_size']: raise ValueError('Invalid overlap')
         if not isinstance(c['storage_path'],str) or not c['storage_path'] or len(c['storage_path'])>64 or any(x not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-' for x in c['storage_path']): raise ValueError('storage_path must be a logical slug')
@@ -117,7 +155,15 @@ class Management:
             result=self._dispatch(s,states,action,str(tenant),p)
             for row in rows:
                 if row.state!=states[row.id]: row.state=states[row.id]
-            s.commit()
+                row.name_key = None if row.state['status']=='deleted' else self._name_key(row.state['name'])
+            try:
+                s.commit()
+            except IntegrityError as exc:
+                s.rollback()
+                # Keep unrelated integrity failures visible as service failures.
+                if action in {'create','update'} and 'name' in p and ('uq_kb_management_tenant_name' in str(exc.orig) or 'kb_management_bases.tenant_id, kb_management_bases.name_key' in str(exc.orig)):
+                    raise self._name_conflict(p['name']) from None
+                raise
             return result
 
     def _dispatch(self,s,states,action,tenant,p):
@@ -149,8 +195,10 @@ class Management:
                 if key and k['tenant_id']==tenant and k.get('create_key')==key:
                     if k['create_fingerprint']!=fingerprint: raise ValueError('Idempotency conflict')
                     return self._public(k)
+            if any(k['status']!='deleted' and self._name_key(k['name'])==self._name_key(name) for k in states.values()):
+                raise self._name_conflict(p.get('name',''))
             k={'id':uid(),'tenant_id':tenant,'name':name,'description':str(p.get('description','')),'config':config,'connection':self._encrypt(p.get('connection')),'status':'empty','active_version':None,'pending_version':None,'created_at':now,'updated_at':now,'documents':[],'versions':[],'jobs':[],'uploads':{},'create_key':key,'create_fingerprint':fingerprint}
-            s.add(KnowledgeBase(id=k['id'],tenant_id=tenant,state=k)); return self._public(k)
+            s.add(KnowledgeBase(id=k['id'],tenant_id=tenant,state=k,name_key=self._name_key(name))); return self._public(k)
         if action=='list': return [self._public(k) for k in states.values() if k['tenant_id']==tenant and k['status']!='deleted']
         if action=='claim':
             for k in states.values():
@@ -235,6 +283,8 @@ class Management:
             if 'name' in p:
                 name=str(p['name']).strip()
                 if not name or len(name)>200: raise ValueError('Invalid name')
+                if any(other['id']!=k['id'] and other['status']!='deleted' and self._name_key(other['name'])==self._name_key(name) for other in states.values()):
+                    raise self._name_conflict(p['name'])
                 k['name']=name
             if 'description' in p: k['description']=str(p['description'])
         if action=='upload':

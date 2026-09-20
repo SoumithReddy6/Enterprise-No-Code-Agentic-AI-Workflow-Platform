@@ -49,7 +49,10 @@ async def populated(services):
     return kb,doc,worker
 
 @pytest.mark.asyncio
-async def test_full_ingestion_named_retrieve_agent_and_deleted_provenance(services,tmp_path):
+async def test_full_ingestion_named_retrieve_agent_and_deleted_provenance(services,tmp_path,monkeypatch):
+    async def model(inputs,config,ctx):
+        return {'text':'{"answer":"Bluebird [S1]","citations":["S1"],"abstain":false,"reason":""}','provider':'demo'}
+    monkeypatch.setattr('backend.app.registry.llm_node',model)
     kb,doc,ingestion=await populated(services)
     result=await services.retrieve(kb['id'],'codename',{'mode':'keyword'},'local')
     assert result['sources'][0]['text']=='Bluebird is the project codename.'

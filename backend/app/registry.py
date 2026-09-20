@@ -153,7 +153,7 @@ async def response_node(inputs, config, ctx):
     """The response boundary: any [S#] label must name evidence this run actually retrieved."""
     from .agent_runtime import ground_answer
     evidence=(ctx.run or {}).get('evidence',[])
-    text,sources=ground_answer(inputs['text'],evidence) if evidence else (inputs['text'],[])
+    text,sources=ground_answer(inputs['text'],evidence)
     return {'text': text, 'sources': json.dumps(sources,ensure_ascii=False)}
 
 REGISTRY: dict[str, NodeDefinition] = {}
@@ -180,7 +180,7 @@ def validate_template(template: str):
             raise ValueError('Templates support only {message}; use {{ and }} for literal braces.')
 
 from .agent_runtime import agent_node,tool_node
-register(NodeDefinition('agent','Agent node','Agent','Configure a role, attach tools and delegate to specialist agents.',{'input':'string'},{'text':'string','provider':'string','sources':'string'},AgentConfig,agent_node))
+register(NodeDefinition('agent','Agent node','Agent','Configure a role, attach tools and delegate to specialist agents.',{'input':'string'},{'text':'string','provider':'string','sources':'string','grounding':'string'},AgentConfig,agent_node))
 # Prompt template and Language model stay loadable for saved workflows and the LLM-free example, but off the palette.
 for legacy in ('prompt','llm'):REGISTRY[legacy].hidden=True
 
@@ -198,4 +198,4 @@ class QueryConfig(LLMConfig,SearchConfig):
     pass
 from .platform_nodes import retrieve_node,query_node
 register(NodeDefinition('retrieve','Retrieve','Retrieval','Search a named knowledge base with configurable retrieval and fusion.',{'query':'string'},{'query':'string','context':'string','sources':'string'},SearchConfig,retrieve_node))
-register(NodeDefinition('query','Query','Retrieval','Retrieve evidence and generate a sourced answer using an enabled model.',{'query':'string'},{'text':'string','provider':'string','sources':'string'},QueryConfig,query_node,('external_model_request',)))
+register(NodeDefinition('query','Query','Retrieval','Retrieve evidence and generate a sourced answer using an enabled model.',{'query':'string'},{'text':'string','provider':'string','sources':'string','grounding':'string'},QueryConfig,query_node,('external_model_request',)))

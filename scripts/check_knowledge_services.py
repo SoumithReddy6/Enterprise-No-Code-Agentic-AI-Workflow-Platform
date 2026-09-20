@@ -1,4 +1,4 @@
-"""Real service-process smoke in isolated storage; never uses the signed-in workspace."""
+"""Real service-process smoke in isolated storage; requires embeddinggemma and llama3.1 in Ollama."""
 import asyncio
 import os
 from pathlib import Path
@@ -61,6 +61,11 @@ def main(directory):
             saved_sources=result.json()['sources']
             assert client.get(saved_sources[0]['url']).content.startswith(b'The Relay')
             workflow=graph();workflow.nodes[1].config.update(knowledge_base_id=kb['id'],mode='rrf')
+            # Demo intentionally echoes prose and cannot satisfy grounded JSON.
+            # Exercise the real local answer model used by the generation suite.
+            model=os.getenv('SMOKE_OLLAMA_MODEL','llama3.1:latest')
+            assert client.post('/api/models',json={'provider':'ollama','model':model}).status_code==201
+            workflow.nodes[2].config.update(provider='ollama',model=model,temperature=0)
             run=client.post('/api/runs',json={'workflow':workflow.model_dump(),'message':'What is the codename?'})
             assert run.status_code==201,run.text
             worker=Worker(client.app.state.store)

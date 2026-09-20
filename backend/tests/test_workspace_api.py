@@ -5,7 +5,8 @@ from backend.tests.test_compiler import sample
 from backend.tests.test_api import wait_run
 
 
-def test_all_resource_routes_enforce_tenant_scope(tmp_path):
+def test_all_resource_routes_enforce_tenant_scope(tmp_path,monkeypatch):
+    monkeypatch.setenv('AUTH_REGISTRATION_MODE','open')
     app=create_app(f'sqlite:///{tmp_path}/tenants.db',Fernet.generate_key())
     with TestClient(app) as client:
         assert client.get('/api/workflows').status_code==401

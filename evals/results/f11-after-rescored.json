@@ -1,0 +1,196 @@
+{
+  "source_artifact": "evals/results/f11-after.json",
+  "limitation": "Recomputed cross-encoder scores on saved top-four texts, not historical fused scores or a new retrieval run. No threshold selected.",
+  "rows": [
+    {
+      "question": "What is the standard mileage rate for business use of a car in 2025?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 9.704975128173828
+    },
+    {
+      "question": "Under an accountable plan, within how many days must you return any excess reimbursement?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 9.066201210021973
+    },
+    {
+      "question": "What is the high-low per diem rate for high-cost localities effective October 1, 2025?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 8.425921440124512
+    },
+    {
+      "question": "How much of the $319 high-cost per diem rate is for M&IE?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 8.150544166564941
+    },
+    {
+      "question": "What is the per diem amount for all other (non-high-cost) localities under the high-low method?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 7.926285266876221
+    },
+    {
+      "question": "What percentage limit generally applies to meal expenses?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 7.311801433563232
+    },
+    {
+      "question": "If my employer does not reimburse my lunch on a work trip, what fraction of the meal cost can I deduct?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 3.958500623703003
+    },
+    {
+      "question": "How long do I have to hand back money my employer advanced me for a trip that I did not end up spending?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 1.2900657653808594
+    },
+    {
+      "question": "How many cents can I count for each mile I drive my own car for work this year?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 2.724551200866699
+    },
+    {
+      "question": "Which months does the federal fiscal year used for per diem tables cover?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 3.608790159225464
+    },
+    {
+      "question": "How quickly must I give my employer an accounting of my expenses for the reimbursement plan to count as accountable?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 5.220288276672363
+    },
+    {
+      "question": "What is the minimum password length when a password is used as a single-factor authentication mechanism?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 8.136205673217773
+    },
+    {
+      "question": "What is the minimum length for passwords used only as part of multi-factor authentication?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 7.874040126800537
+    },
+    {
+      "question": "What maximum password length should verifiers permit at least?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 7.240139961242676
+    },
+    {
+      "question": "May verifiers require subscribers to change passwords periodically?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 9.092374801635742
+    },
+    {
+      "question": "How many consecutive failed login attempts on one account can a verifier allow before it must disable that authenticator?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 5.75794792175293
+    },
+    {
+      "question": "Am I allowed to force users to include a digit and a symbol in their passwords?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 3.0226564407348633
+    },
+    {
+      "question": "Can a website let people save a reminder of how they made up their password?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": -3.575778007507324
+    },
+    {
+      "question": "When measuring password length, how is a single Unicode code point counted?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 3.6701269149780273
+    },
+    {
+      "question": "Should a login form allow users to paste a password from a password manager?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 2.0989999771118164
+    },
+    {
+      "question": "How many hours may a property-carrying commercial motor vehicle driver drive during the 14-hour period?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 8.663125991821289
+    },
+    {
+      "question": "How many consecutive hours off duty must a property-carrying driver take before driving at the start of a work shift?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 8.10016918182373
+    },
+    {
+      "question": "After how many hours of driving time is a consecutive 30-minute interruption of driving status required?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 7.074260711669922
+    },
+    {
+      "question": "What is the on-duty limit over 8 consecutive days for a trucker whose company runs vehicles every day of the week?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 6.23905086517334
+    },
+    {
+      "question": "How long must a driver stay off duty to restart the 7- or 8-day on-duty clock?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 4.434747695922852
+    },
+    {
+      "question": "Within what distance of the normal work reporting location does the short-haul driver exemption apply?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 5.892317295074463
+    },
+    {
+      "question": "How often must an evaluation of each powered industrial truck operator's performance be conducted?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 9.826053619384766
+    },
+    {
+      "question": "What information must the operator training certification include?",
+      "kind": "verbatim",
+      "max_recomputed_reranker_score": 6.190973281860352
+    },
+    {
+      "question": "When topping up a forklift battery, do you pour the water into the acid or the acid into the water?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 2.005427837371826
+    },
+    {
+      "question": "Can someone smoke in the area where forklift batteries are charged?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 2.4593451023101807
+    },
+    {
+      "question": "How much space should a forklift keep between itself and the lift truck ahead of it?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": -3.2107255458831787
+    },
+    {
+      "question": "What should be done with a lift truck that is discovered to be unsafe during a shift?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": -1.2599380016326904
+    },
+    {
+      "question": "Is it acceptable to fill a forklift's fuel tank while the engine is running?",
+      "kind": "paraphrase",
+      "max_recomputed_reranker_score": 4.694081783294678
+    },
+    {
+      "question": "What is the maximum load weight a forklift is allowed to lift?",
+      "kind": "unanswerable",
+      "max_recomputed_reranker_score": 1.5414575338363647
+    },
+    {
+      "question": "What is the federal minimum hourly wage for truck drivers?",
+      "kind": "unanswerable",
+      "max_recomputed_reranker_score": -7.160405158996582
+    },
+    {
+      "question": "How many days of paid vacation do federal employees receive each year?",
+      "kind": "unanswerable",
+      "max_recomputed_reranker_score": -3.0060033798217773
+    },
+    {
+      "question": "What is the application fee for a commercial driver's license?",
+      "kind": "unanswerable",
+      "max_recomputed_reranker_score": -1.5621392726898193
+    },
+    {
+      "question": "What will the IRS standard mileage rate be in 2030?",
+      "kind": "unanswerable",
+      "max_recomputed_reranker_score": 3.410053014755249
+    }
+  ]
+}

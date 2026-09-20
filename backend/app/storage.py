@@ -1,5 +1,5 @@
 """Tenant-scoped relational storage and a leased, fenced execution queue."""
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import os
 import time
@@ -55,6 +55,11 @@ class JobRecord(Base):
 def now():return datetime.now(timezone.utc).isoformat()
 def new_id():return uuid.uuid4().hex
 
+class WorkflowConflict(Exception):
+    def __init__(self,current):
+        super().__init__('This workflow changed elsewhere. Reload the server version before saving.')
+        self.current=current
+
 def local_key(data_dir:Path):
     env_key=os.environ.get('CREDENTIAL_ENCRYPTION_KEY')
     if env_key:return env_key.encode()
@@ -88,11 +93,21 @@ class Store:
                     row.data={**row.data,'status':'queued','checkpoints':row.data.get('checkpoints',{})}
             session.commit()
 
-    def save_workflow(self,document,id=None,tenant_id='local'):
+    def save_workflow(self,document,id=None,tenant_id='local',expected_updated_at=None):
         with Session(self.engine) as s:
-            row=s.get(WorkflowRecord,id) if id else None
-            if id and (not row or row.tenant_id!=tenant_id):raise KeyError(id)
-            if not row:row=WorkflowRecord(id=new_id(),tenant_id=tenant_id);s.add(row)
+            if id:
+                stamp=now()
+                if expected_updated_at and stamp<=expected_updated_at:
+                    try:stamp=(datetime.fromisoformat(expected_updated_at)+timedelta(microseconds=1)).isoformat()
+                    except (ValueError,OverflowError):pass  # An invalid token cannot match a stored timestamp.
+                result=s.execute(update(WorkflowRecord).where(WorkflowRecord.id==id,WorkflowRecord.tenant_id==tenant_id,WorkflowRecord.updated_at==expected_updated_at).values(document=document,updated_at=stamp))
+                if result.rowcount!=1:
+                    s.rollback()
+                    current=self.workflow(id,tenant_id)
+                    raise WorkflowConflict(current)
+                s.commit()
+                return {'id':id,'workflow':document,'updated_at':stamp}
+            row=WorkflowRecord(id=new_id(),tenant_id=tenant_id);s.add(row)
             row.document,row.updated_at=document,now();s.commit()
             return {'id':row.id,'workflow':row.document,'updated_at':row.updated_at}
 

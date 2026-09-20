@@ -2,6 +2,7 @@ export type SearchOptions = {
   mode: 'similarity' | 'keyword' | 'hybrid' | 'rrf';
   top_k: number;
   candidate_k: number;
+  reranker: 'none' | 'local_cross_encoder';
   score_threshold: number | null;
   rrf_k: number;
   vector_weight: number;
@@ -59,7 +60,8 @@ export type KBCapabilities = {
 export const defaultSearch: SearchOptions = {
   mode: 'keyword',
   top_k: 4,
-  candidate_k: 20,
+  candidate_k: 50,
+  reranker: 'none',
   score_threshold: null,
   rrf_k: 60,
   vector_weight: 0.5,

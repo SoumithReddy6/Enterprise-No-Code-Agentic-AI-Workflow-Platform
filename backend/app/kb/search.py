@@ -17,11 +17,13 @@ import re
 import time
 
 from cryptography.fernet import Fernet
-from sqlalchemy import create_engine, select, delete, func, text
+from sqlalchemy import create_engine, select, delete, func, text, inspect
 from sqlalchemy.orm import Session
 from .search_models import SQLBase, Segment, Chunk, Posting, ChunkOwner
-from ..vector_adapters import ADAPTERS, CAPABILITIES
+from ..vector_adapters import ADAPTERS, CAPABILITIES, RETIRED_CHROMA
 from .options import RetrievalOptions
+from .section_chunking import contextual_text
+from . import reranking
 
 
 _ID = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
@@ -47,6 +49,11 @@ class Search:
             database_url=database_url.replace('postgresql://','postgresql+psycopg://',1)
         self.engine=create_engine(database_url,connect_args={'check_same_thread':False,'timeout':30} if database_url.startswith('sqlite') else {})
         SQLBase.metadata.create_all(self.engine)
+        with self.engine.begin() as connection:
+            if self.engine.dialect.name=='sqlite':connection.execute(text('BEGIN IMMEDIATE'))
+            elif self.engine.dialect.name=='postgresql':connection.execute(text('SELECT pg_advisory_xact_lock(716293847)'))
+            if 'heading_path' not in {c['name'] for c in inspect(connection).get_columns('kb_search_chunks')}:
+                connection.execute(text("ALTER TABLE kb_search_chunks ADD COLUMN heading_path JSON NOT NULL DEFAULT '[]'"))
 
     @asynccontextmanager
     async def _lock(self,tenant):
@@ -99,7 +106,7 @@ class Search:
         connection=json.loads(self.cipher.decrypt(segment.connection)) if segment.connection else {}
         # Namespaces and paths are generated from trusted ownership, not supplied paths.
         namespace=segment.tenant_id+':'+segment.kb_id
-        if config['backend']=='chroma':namespace+=':'+segment.id
+        if config['backend']=='chroma':raise ValueError(RETIRED_CHROMA)
         resource_id=hashlib.sha256(namespace.encode()).hexdigest()[:32]
         resource=dict(config,id=resource_id)
         return ADAPTERS[config['backend']](self.root/resource_id,resource,connection)
@@ -108,6 +115,7 @@ class Search:
         identifier(p['kb_id']);identifier(p['segment_id'])
         if type(p.get('version')) is not int or p['version']<1:raise ValueError('Invalid version')
         config=p.get('config',{})
+        if isinstance(config,dict) and config.get('backend')=='chroma':raise ValueError(RETIRED_CHROMA)
         if not isinstance(config,dict) or config.get('backend') not in CAPABILITIES:raise ValueError('Invalid backend')
         if config.get('index_method') and config['index_method'] not in CAPABILITIES[config['backend']]['index_methods']:raise ValueError('Unsupported index method')
         if not isinstance(p.get('connection',{}),dict):raise ValueError('Invalid connection')
@@ -130,6 +138,8 @@ class Search:
             ids.add(c['id'])
             if type(c.get('ordinal')) is not int or c['ordinal']<0 or type(c.get('page')) is not int or not 1<=c['page']<=200:raise ValueError('Invalid chunk position')
             if not isinstance(c.get('text'),str) or not 1<=len(c['text'])<=100000:raise ValueError('Invalid chunk text')
+            headings=c.get('heading_path',[])
+            if not isinstance(headings,list) or len(headings)>10 or any(not isinstance(h,str) or len(h)>240 for h in headings):raise ValueError('Invalid heading path')
         if not isinstance(vectors,list) or (vectors and len(vectors)!=len(chunks)):raise ValueError('Vector count mismatch')
         dimensions=0
         if vectors:
@@ -186,8 +196,8 @@ class Search:
                 s.execute(delete(Chunk).where(Chunk.segment_id==segment.id))
                 postings=[]
                 for ordinal,c in enumerate(p['chunks']):
-                    d=documents[c['document_id']];counts=Counter(t[:128] for t in tokens(c['text']))
-                    s.add(Chunk(id=c['id'],segment_id=segment.id,document_id=d['id'],filename=d['filename'],content_hash=d['content_hash'],ordinal=ordinal,page=c['page'],text=c['text'],token_count=sum(counts.values())))
+                    d=documents[c['document_id']];counts=Counter(t[:128] for t in tokens(contextual_text(c)))
+                    s.add(Chunk(id=c['id'],segment_id=segment.id,document_id=d['id'],filename=d['filename'],content_hash=d['content_hash'],ordinal=ordinal,page=c['page'],text=c['text'],heading_path=c.get('heading_path',[]),token_count=sum(counts.values())))
                     postings.extend({'segment_id':segment.id,'term':term,'chunk_id':c['id'],'frequency':frequency} for term,frequency in counts.items())
                     if len(postings)>=5000:
                         s.execute(Posting.__table__.insert(),postings);postings=[]
@@ -201,7 +211,7 @@ class Search:
             return {'segment_id':segment.id,'chunk_count':segment.chunk_count}
 
     def _source(self,segment,c,score=0):
-        return {'id':c.id,'knowledge_base_id':segment.kb_id,'version':segment.version,'document_id':c.document_id,'filename':c.filename,'page':c.page,'text':c.text,'score':score,'url':f'/api/knowledge-bases/{segment.kb_id}/documents/{c.document_id}/file'}
+        return {'id':c.id,'knowledge_base_id':segment.kb_id,'version':segment.version,'document_id':c.document_id,'filename':c.filename,'page':c.page,'text':contextual_text({'text':c.text,'heading_path':c.heading_path}),**({'heading_path':c.heading_path} if c.heading_path else {}),'score':score,'url':f'/api/knowledge-bases/{segment.kb_id}/documents/{c.document_id}/file'}
 
     async def _search(self,tenant,p):
         query=p.get('query')
@@ -213,6 +223,7 @@ class Search:
         for id in allowed:identifier(id)
         with Session(self.engine,expire_on_commit=False) as s:
             segment=self._segment(s,tenant,p['kb_id'],p['segment_id'],ready=True,version=p['version'])
+            if segment.config.get('backend')=='chroma':raise ValueError(RETIRED_CHROMA)
             conditions=[Chunk.segment_id==segment.id,Chunk.document_id.in_(allowed)]
             for field,value in o['filter'].items():conditions.append(getattr(Chunk,field)==value)
             metadata=s.execute(select(Chunk.id,Chunk.ordinal,Chunk.token_count).where(*conditions)).all()
@@ -234,7 +245,8 @@ class Search:
                 df=Counter(r.term for r in postings);scores=Counter()
                 for term,id,frequency in postings:
                     scores[id]+=math.log(1+(len(lengths)-df[term]+.5)/(df[term]+.5))*frequency*2.5/(frequency+1.5*(.25+.75*lengths[id]/avg))
-                lexical=sorted(scores.items(),key=lambda x:(-x[1],x[0]))[:o['candidate_k']]
+                ordinals={c.id:c.ordinal for c in metadata}
+                lexical=sorted(scores.items(),key=lambda x:(-x[1],ordinals[x[0]]))[:o['candidate_k']]
             if o['mode']=='similarity':ranked=semantic
             elif o['mode']=='keyword':ranked=lexical
             else:
@@ -256,7 +268,9 @@ class Search:
                 chunk=s.get(Chunk,id)
                 if chunk is None:raise KeyError('Source was retired during retrieval')
                 seen.add(id);result.append(self._source(segment,chunk,float(score)))
-                if len(result)>=o['top_k']:break
+                if len(result)>=(o['candidate_k'] if o['reranker']!='none' else o['top_k']):break
+            if o['reranker']=='local_cross_encoder':
+                result=(await reranking.rerank(query,result))[:o['top_k']]
             # A remote query can overlap retirement; never return a now-retired
             # segment as a current search result. Management also checks authority.
             with Session(self.engine) as fresh:
@@ -279,6 +293,11 @@ class Search:
                 score=value.get('score')
                 if type(score) not in (int,float) or not math.isfinite(score):raise ValueError('Invalid source score')
                 canonical=self._source(segment,c,score)
+                if 'rerank_score' in value:
+                    rerank_score=value['rerank_score']
+                    if type(rerank_score) not in (int,float) or not math.isfinite(rerank_score):raise ValueError('Invalid reranker score')
+                    # Query-specific telemetry, like score; not proof of answer support.
+                    canonical['rerank_score']=rerank_score
                 if value!=canonical:raise ValueError('Source metadata does not match stored evidence')
                 result.append(canonical)
         return result
@@ -310,7 +329,15 @@ class Search:
             segment.state='tombstone';segment.cleanup_attempts=(segment.cleanup_attempts or 0)+1
             s.commit() # Tombstone before potentially failing remote deletion.
             try:
-                if segment.config and segment.dimensions:await self._adapter(segment).remove(segment.id)
+                if segment.config and segment.config.get('backend')=='chroma':
+                    # Retired local indexes still support authorized cleanup without
+                    # importing the vulnerable package. This path was per segment.
+                    import shutil
+                    namespace=segment.tenant_id+':'+segment.kb_id+':'+segment.id
+                    path=self.root/hashlib.sha256(namespace.encode()).hexdigest()[:32]
+                    if path.is_symlink():path.unlink()
+                    elif path.exists():await asyncio.to_thread(shutil.rmtree,path)
+                elif segment.config and segment.dimensions:await self._adapter(segment).remove(segment.id)
                 s.execute(delete(Posting).where(Posting.segment_id==segment.id))
                 if not segment.retain_provenance:s.execute(delete(Chunk).where(Chunk.segment_id==segment.id))
                 segment.chunk_count=0;segment.cleanup_error='';s.commit()

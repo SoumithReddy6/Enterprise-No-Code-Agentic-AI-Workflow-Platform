@@ -6,7 +6,8 @@ from ..models import StrictModel
 class RetrievalOptions(StrictModel):
     mode:Literal['similarity','keyword','hybrid','rrf']='similarity'
     top_k:int=Field(default=4,ge=1,le=20)
-    candidate_k:int=Field(default=20,ge=1,le=100)
+    candidate_k:int=Field(default=50,ge=1,le=100)
+    reranker:Literal['none','local_cross_encoder']='none'
     score_threshold:float|None=Field(default=None,allow_inf_nan=False)
     rrf_k:int=Field(default=60,ge=1,le=1000)
     vector_weight:float=Field(default=.5,ge=0,le=1,allow_inf_nan=False)
@@ -19,12 +20,12 @@ class RetrievalOptions(StrictModel):
 
 class KBSettings(StrictModel):
     """Immutable indexing settings of one knowledge-base version. Blank embedding_model means keyword-only."""
-    backend:Literal['faiss','chroma','elasticsearch','pinecone']='faiss'
+    backend:Literal['faiss','elasticsearch','pinecone']='faiss'
     storage_path:str=Field(default='default',min_length=1,max_length=64)
     embedding_model:str=Field(default='',max_length=100)
     chunk_size:int=Field(default=1200,ge=100,le=8000)
     chunk_overlap:int=Field(default=200,ge=0,le=4000)
-    chunking:Literal['fixed','paragraph']='fixed'
+    chunking:Literal['fixed','paragraph','section']='fixed'
     index_method:str=Field(default='',max_length=40)
     connection_id:str=Field(default='',max_length=64)
     index_name:str=Field(default='',max_length=101)

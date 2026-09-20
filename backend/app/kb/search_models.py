@@ -34,6 +34,7 @@ class Chunk(SQLBase):
     ordinal = Column(Integer, nullable=False)
     page = Column(Integer, nullable=False)
     text = Column(Text, nullable=False)
+    heading_path = Column(JSON, nullable=False, default=list)
     token_count = Column(Integer, nullable=False)
 
 

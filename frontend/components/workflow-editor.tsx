@@ -65,6 +65,7 @@ import {
   friendlyStatus,
   sameExecutionGraph,
   saveCompletion,
+  ApiError,
   importableWorkflow,
   connectionKind,
   paletteCategory,
@@ -214,6 +215,8 @@ function Editor() {
   const [name, setName] = useState(seed.name);
   const [description, setDescription] = useState(seed.description);
   const [workflowId, setWorkflowId] = useState<string>();
+  const [workflowVersion, setWorkflowVersion] = useState<string>();
+  const [saveConflict, setSaveConflict] = useState<{ id: string; workflow: Workflow; updated_at: string }>();
   const [dirty, setDirty] = useState(true);
   const [catalog, setCatalog] = useState<Definition[]>([]);
   const [saved, setSaved] = useState<SavedWorkflow[]>([]);
@@ -374,7 +377,7 @@ function Editor() {
     setRun(undefined);
     setEvents([]);
   }
-  function loadDocument(w: Workflow, id?: string) {
+  function loadDocument(w: Workflow, id?: string, updatedAt?: string) {
     documentToken.current += 1;
     clearRun();
     if (!id && sameExecutionGraph(w, seed)) {
@@ -393,6 +396,8 @@ function Editor() {
     }
     apply(w);
     setWorkflowId(id);
+    setWorkflowVersion(updatedAt);
+    setSaveConflict(undefined);
     setDirty(!id);
     setUndo([]);
     setRedo([]);
@@ -407,10 +412,10 @@ function Editor() {
   async function load(id: string) {
     if (!discardAllowed()) return;
     try {
-      const result = await api<{ workflow: Workflow; id: string }>(
+      const result = await api<{ workflow: Workflow; id: string; updated_at: string }>(
         `/workflows/${id}`,
       );
-      loadDocument(result.workflow, id);
+      loadDocument(result.workflow, id, result.updated_at);
     } catch (e) {
       setNotice((e as Error).message);
     }
@@ -420,10 +425,10 @@ function Editor() {
     const savedSnapshot = structuredClone(current.current);
     setBusy(true);
     try {
-      const result = await api<{ id: string }>(
+      const result = await api<{ id: string; updated_at: string }>(
         workflowId ? `/workflows/${workflowId}` : '/workflows',
         workflowId ? 'PUT' : 'POST',
-        savedSnapshot,
+        workflowId ? { ...savedSnapshot, updated_at: workflowVersion } : savedSnapshot,
       );
       const completion = saveCompletion(
         startToken,
@@ -433,6 +438,8 @@ function Editor() {
       );
       if (completion.sameDocument) {
         setWorkflowId(result.id);
+        setWorkflowVersion(result.updated_at);
+        setSaveConflict(undefined);
         setDirty(completion.dirty);
         setNotice(
           completion.dirty
@@ -442,6 +449,10 @@ function Editor() {
       }
       setSaved(await api<SavedWorkflow[]>('/workflows'));
     } catch (e) {
+      if (e instanceof ApiError && e.status === 409 && startToken === documentToken.current) {
+        const data = e.data as { current?: { id: string; workflow: Workflow; updated_at: string } };
+        if (data.current) setSaveConflict(data.current);
+      }
       setNotice((e as Error).message);
     } finally {
       setBusy(false);
@@ -1709,6 +1720,17 @@ function Editor() {
           </span>
         </footer>
       </div>
+      {saveConflict && (
+        <StudioDialog title="Workflow changed elsewhere" onClose={() => setSaveConflict(undefined)}>
+          <h2>Workflow changed elsewhere</h2>
+          <p>This workflow changed elsewhere. Your local edits have been preserved. Export them before reloading if you want to keep both versions.</p>
+          <button className="button" onClick={exportFile}>Export local edits</button>
+          <button className="button primary" onClick={() => {
+            if (discardAllowed()) loadDocument(saveConflict.workflow, saveConflict.id, saveConflict.updated_at);
+          }}>Reload server version</button>
+          <button className="button" onClick={() => setSaveConflict(undefined)}>Keep editing</button>
+        </StudioDialog>
+      )}
       {notice && (
         <output className="toast">
           <span>{notice}</span>

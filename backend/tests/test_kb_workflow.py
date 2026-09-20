@@ -9,7 +9,11 @@ def graph():
 def test_named_kb_flow_needs_no_vector_node():assert validate_workflow(graph())==[]
 
 @pytest.mark.asyncio
-async def test_retrieve_preserves_question_and_evidence_for_agent():
+async def test_retrieve_preserves_question_and_evidence_for_agent(monkeypatch):
+    async def model(inputs,config,ctx):
+        assert 'What codename?' in inputs['prompt'] and 'Bluebird' in inputs['prompt']
+        return {'text':json.dumps({'answer':'Bluebird [S1]','citations':['S1'],'abstain':False,'reason':''}),'provider':'demo'}
+    monkeypatch.setattr('backend.app.registry.llm_node',model)
     async def platform(action,*args):
         if action=='kb_retrieve':return {'query':args[1],'knowledge_base_id':'kb1','version':1,'sources':[{'text':'Bluebird is the codename','id':'chunk','document_id':'doc'}]}
         if action in ('record_vector_sources','verify_vector_sources'):return None

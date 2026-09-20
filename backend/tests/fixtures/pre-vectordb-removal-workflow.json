@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "name": "Pre-2026-09-16 VectorDB export",
+  "nodes": [
+    {"id":"input","type":"chat_input"},
+    {"id":"store","type":"vector_faiss","config":{"storage_path":"default"}},
+    {"id":"retrieve","type":"retrieve","inputs":{"query":"input.message"},"config":{"storage_path":"default","mode":"keyword"}},
+    {"id":"out","type":"response","inputs":{"text":"retrieve.context"}}
+  ],
+  "edges": [
+    {"id":"a","source":"input","target":"retrieve"},
+    {"id":"b","source":"retrieve","target":"out"},
+    {"id":"s","source":"store","target":"retrieve","kind":"store","sourceHandle":"store","targetHandle":"store"}
+  ]
+}

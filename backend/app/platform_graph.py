@@ -10,6 +10,9 @@ def split_graph(workflow):
     flow_ids={n.id for n in workflow.nodes if n.type in ('chat_input','manual_input')}
     for edge in flow_edges:flow_ids.update((edge.source,edge.target))
     for edge in workflow.edges:
+        if edge.kind=='store':
+            errors.append('This workflow used the retired VectorDB nodes. Create a named knowledge base and reconnect a Retrieve node before importing or replaying it.')
+            continue
         if edge.source not in nodes or edge.target not in nodes:
             if edge.kind!='flow':errors.append(f'Edge {edge.id} references a missing node.')
             continue

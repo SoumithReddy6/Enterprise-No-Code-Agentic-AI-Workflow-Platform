@@ -8,10 +8,11 @@ from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import Column, Integer, String, delete, select, update
+from sqlalchemy import Column, Integer, String, delete, select, update, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from .auth_security import reserve_login, clear_success, client_address, security_transaction
 from .storage import Base, ModelRecord, CredentialRecord, RunRecord, WorkflowRecord, new_id
 
 COOKIE_NAME = 'relay_session'
@@ -40,6 +41,14 @@ class SessionRecord(Base):
     expires_at = Column(Integer, nullable=False)
 
 
+class InviteRecord(Base):
+    __tablename__ = 'auth_invites'
+    token_hash = Column(String(64), primary_key=True)
+    email = Column(String(254), nullable=False, default='')
+    expires_at = Column(Integer, nullable=False)
+    used_at = Column(Integer, nullable=True)
+
+
 class LoginInput(BaseModel):
     email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=1, max_length=1024)
@@ -54,6 +63,7 @@ class LoginInput(BaseModel):
 
 
 class RegisterInput(LoginInput):
+    invite_token: str = Field(default='', max_length=256)
     password: str = Field(min_length=12, max_length=1024)
 
 
@@ -73,6 +83,19 @@ def token_hash(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def issue_invite(engine, email='', hours=24):
+    if not 1 <= hours <= 168:
+        raise ValueError('Invite lifetime must be 1–168 hours')
+    if email:
+        email = LoginInput(email=email, password='validation-only').email
+    token = secrets.token_urlsafe(32)
+    with security_transaction(engine) as session:
+        session.execute(delete(InviteRecord).where(InviteRecord.expires_at <= int(time.time())))
+        session.add(InviteRecord(token_hash=token_hash(token), email=email,
+                                 expires_at=int(time.time()) + hours * 3600))
+    return token
+
+
 def public_account(account):
     return {'id': account.id, 'email': account.email, 'tenant_id': account.tenant_id}
 
@@ -81,6 +104,9 @@ class AuthController:
     def __init__(self, store, enabled):
         self.store = store
         self.enabled = enabled
+        self.registration_mode = os.getenv('AUTH_REGISTRATION_MODE', 'closed').strip().lower()
+        if self.registration_mode not in {'open', 'invite', 'closed'}:
+            raise ValueError('AUTH_REGISTRATION_MODE must be open, invite, or closed')
         self.dummy_hash = password_hash(secrets.token_urlsafe(24))
         self.origin = os.getenv('AUTH_ORIGIN', '').rstrip('/')
 
@@ -133,20 +159,32 @@ def install_auth(app, store, enabled=True):
     def status(response: Response):
         response.headers['Cache-Control'] = 'no-store'
         with Session(store.engine) as session:
-            return {'enabled': enabled, 'needs_setup': enabled and session.get(BootstrapRecord, 1) is None}
+            return {'enabled': enabled, 'needs_setup': enabled and session.get(BootstrapRecord, 1) is None, 'registration_mode': controller.registration_mode}
 
     @router.post('/register', status_code=201, dependencies=[Depends(controller.require_same_origin)])
     def register(body: RegisterInput, request: Request, response: Response):
         if not enabled:
-            raise HTTPException(403, 'Authentication is disabled.')
-        encoded = password_hash(body.password)
+            raise HTTPException(403, 'Registration is not permitted.')
         try:
-            with Session(store.engine) as session:
+            with security_transaction(store.engine) as session:
+                # Serialize mode check, bootstrap ownership, invite consumption and
+                # account creation across workers, including the empty database.
+                if store.engine.dialect.name == 'postgresql':
+                    session.execute(text('SELECT pg_advisory_xact_lock(19482027)'))
+                first = session.get(BootstrapRecord, 1) is None
+                existing = session.scalar(select(AccountRecord.id).limit(1))
+                if controller.registration_mode == 'closed' and (not first or existing):
+                    raise HTTPException(403, 'Registration is not permitted.')
+                if controller.registration_mode == 'invite':
+                    invite = session.get(InviteRecord, token_hash(body.invite_token))
+                    if not invite or invite.used_at is not None or invite.expires_at <= int(time.time()) or (invite.email and invite.email != body.email):
+                        raise HTTPException(403, 'Registration is not permitted.')
+                    invite.used_at = int(time.time())
+                # Denied registration must not spend a password hash or expose
+                # whether the submitted email belongs to an existing account.
+                encoded = password_hash(body.password)
                 account = AccountRecord(id=new_id(), email=body.email, password_hash=encoded, tenant_id=new_id())
-                # The unique singleton is claimed before any migration/account write.
-                # A concurrent first registration either loses here or observes it
-                # committed and creates its own empty workspace.
-                if session.get(BootstrapRecord, 1) is None:
+                if first:
                     session.add(BootstrapRecord(id=1, tenant_id=account.tenant_id))
                     session.flush()
                     from .tool_service import TENANT_MODELS as TOOL_MODELS
@@ -157,9 +195,8 @@ def install_auth(app, store, enabled=True):
                 session.flush()
                 token = controller.create_session(session, account, request)
                 result = public_account(account)
-                session.commit()
         except IntegrityError:
-            raise HTTPException(409, 'Account already exists or setup just completed. Try signing in or registering again.') from None
+            raise HTTPException(409, 'Account already exists. Try signing in.') from None
         controller.set_cookie(response, request, token)
         return result
 
@@ -167,6 +204,7 @@ def install_auth(app, store, enabled=True):
     def login(body: LoginInput, request: Request, response: Response):
         if not enabled:
             raise HTTPException(403, 'Authentication is disabled.')
+        reservations = reserve_login(store.engine, body.email, client_address(request))
         with Session(store.engine) as session:
             account = session.scalar(select(AccountRecord).where(AccountRecord.email == body.email))
             matches = password_matches(body.password, account.password_hash if account else controller.dummy_hash)
@@ -175,6 +213,7 @@ def install_auth(app, store, enabled=True):
             token = controller.create_session(session, account, request)
             result = public_account(account)
             session.commit()
+        clear_success(store.engine, reservations)
         controller.set_cookie(response, request, token)
         return result
 

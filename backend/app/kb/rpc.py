@@ -11,6 +11,14 @@ from fastapi.responses import JSONResponse
 
 class ServiceUnavailable(ValueError):pass
 
+class KnowledgeConflict(ValueError):
+    status_code = 409
+
+    def __init__(self, detail):
+        self.detail = detail
+        super().__init__(detail.get('message', 'Knowledge operation conflicts') if isinstance(detail, dict) else str(detail))
+
+
 def service_key():
     configured=os.environ.get('KB_SERVICE_KEY')
     if configured:
@@ -30,7 +38,8 @@ class Client:
     def headers(self):return {'X-Relay-Service-Key':self.key or service_key()}
     def decode(self,response):
         if response.status_code==404:raise KeyError('Knowledge resource unavailable')
-        if response.status_code in (400,409,422):raise ValueError(response.json().get('detail','Invalid knowledge operation'))
+        if response.status_code==409:raise KnowledgeConflict(response.json().get('detail','Knowledge operation conflicts'))
+        if response.status_code in (400,422):raise ValueError(response.json().get('detail','Invalid knowledge operation'))
         if response.status_code>=400:raise ServiceUnavailable(f'Knowledge {self.name} service is unavailable. Check service status.')
         return response.json()
     async def call(self,action,tenant='local',payload=None):
@@ -69,6 +78,7 @@ def app_for(domain,name,allowed,async_domain=False,key=None):
                 result=await run_in_threadpool(domain.call,action,tenant,payload)
             return result
         except KeyError:return JSONResponse({'detail':'Knowledge resource unavailable'},status_code=404)
+        except KnowledgeConflict as exc:return JSONResponse({'detail':exc.detail},status_code=409)
         except ValueError as exc:return JSONResponse({'detail':str(exc)[:1000]},status_code=400)
         except Exception:return JSONResponse({'detail':'Knowledge operation failed; service recovery may be required'},status_code=503)
     app.state.domain=domain

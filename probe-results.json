@@ -1,0 +1,74 @@
+[
+ {
+  "id": "P1",
+  "claim": "Abstention enforcement wipes an answer that hedges in its opening sentence",
+  "detail": "final='I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.'",
+  "defect": true
+ },
+ {
+  "id": "P2",
+  "claim": "Combined citation [S1, S2] marks no source as cited (MT-003 open)",
+  "detail": "text='Rewind is the rollback tool [S1, S2].' cited=[]",
+  "defect": true
+ },
+ {
+  "id": "P3",
+  "claim": "Agent with a tool attached and zero retrieved passages bypasses abstention enforcement",
+  "detail": "agent='The parental leave policy grants 12 weeks [S1].' response='The parental leave policy grants 12 weeks [S1].'",
+  "defect": true
+ },
+ {
+  "id": "P4",
+  "claim": "Legacy workflow JSON with kind=\"store\" is rejected by the model (import/backup break)",
+  "detail": "1 validation error for Workflow",
+  "defect": true
+ },
+ {
+  "id": "P5",
+  "claim": "Duplicate/normalised-equal KB names accepted in one workspace (MT-001 open)",
+  "detail": "ids=a5ebfb,06d51a names='First','first'",
+  "defect": true
+ },
+ {
+  "id": "P6",
+  "claim": "No login throttling or lockout; each attempt costs full PBKDF2 work (CPU-exhaustion vector)",
+  "detail": "8 failures all {401}, 43 ms CPU each",
+  "defect": false
+ },
+ {
+  "id": "P7",
+  "claim": "Concurrent workflow saves silently overwrite (no version/ETag check)",
+  "detail": "last write wins: 'EditorTwo'",
+  "defect": true
+ },
+ {
+  "id": "P8",
+  "claim": "Every run event rewrites the entire run JSON (quadratic write amplification)",
+  "detail": "60 events -> record 20336 bytes, db grew 32 KB",
+  "defect": true
+ },
+ {
+  "id": "P9a",
+  "claim": "Abstention heuristic classification",
+  "detail": "'No direct information is available about parental leave.' -> wipe=True (expected True)",
+  "defect": false
+ },
+ {
+  "id": "P9b",
+  "claim": "Abstention heuristic classification",
+  "detail": "'The deadline is 30 days [S1].' -> wipe=False (expected False)",
+  "defect": false
+ },
+ {
+  "id": "P9a",
+  "claim": "Abstention heuristic classification",
+  "detail": "'Certification renews every 24 months [S1].\\n\\nThe evidence is ' -> wipe=True (expected True)",
+  "defect": false
+ },
+ {
+  "id": "P10",
+  "claim": "Run-wide evidence registry is unbounded in memory",
+  "detail": "5000 passages accepted",
+  "defect": true
+ }
+]

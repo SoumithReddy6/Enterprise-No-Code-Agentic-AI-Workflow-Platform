@@ -1,0 +1,32 @@
+{
+  "field": "margin",
+  "aggregation": "first",
+  "decision": "abstain when score < threshold",
+  "distributions": {
+    "answerable": {
+      "n": 33,
+      "min": -5.671940922737122,
+      "median": 9.539291381835938,
+      "max": 16.4019912481308
+    },
+    "unanswerable": {
+      "n": 20,
+      "min": -17.956289529800415,
+      "median": -5.2130972146987915,
+      "max": 10.402714252471924
+    }
+  },
+  "feasible_threshold_count": 0,
+  "selected_threshold": null,
+  "best_rejection_with_false_abstention_at_most_0091": {
+    "threshold": 2.787875652313233,
+    "answerable": 33,
+    "unanswerable": 13,
+    "false_abstention": 0.06060606060606061,
+    "unanswerable_rejection_rate": 0.8461538461538461
+  },
+  "calibration": null,
+  "holdout": null,
+  "limitation": "Exploratory relevance scores, not probabilities of support. Selection uses calibration labels only. Holdout contains negatives only; unseen-positive false abstention is unmeasured. Generation quality must be evaluated separately.",
+  "source_artifact": "evals/results/answerability-reader.json"
+}

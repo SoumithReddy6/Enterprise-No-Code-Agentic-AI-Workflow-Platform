@@ -1,6 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { seed, sameExecutionGraph } from '../lib/workflow.ts';
+import { seed, sameExecutionGraph, api, ApiError } from '../lib/workflow.ts';
+
+void test('save conflict retains the server version and submitted edits', async (t) => {
+  const local = structuredClone(seed);
+  local.name = 'Local edits';
+  const current = { id: 'one', workflow: seed, updated_at: 'new-version' };
+  t.mock.method(globalThis, 'fetch', async (_url: unknown, options: RequestInit) => {
+    assert.equal(typeof options.body, 'string');
+    assert.equal(JSON.parse(options.body as string).updated_at, 'old-version');
+    return new Response(JSON.stringify({ detail: 'This workflow changed elsewhere.', current }), { status: 409 });
+  });
+  await assert.rejects(api('/workflows/one', 'PUT', { ...local, updated_at: 'old-version' }), (error: unknown) => {
+    assert.ok(error instanceof ApiError);
+    assert.equal(error.status, 409);
+    assert.deepEqual(error.data, { detail: 'This workflow changed elsewhere.', current });
+    return true;
+  });
+  assert.equal(local.name, 'Local edits');
+});
+
+void test('KB name conflicts expose the service message and original name', async (t) => {
+  const detail = { message: 'A knowledge base with this name already exists.', name: ' First ' };
+  t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({ detail }), { status: 409 }));
+  await assert.rejects(api('/knowledge-bases', 'POST', { name: detail.name }), (error: unknown) => {
+    assert.ok(error instanceof ApiError);
+    assert.equal(error.message, detail.message);
+    assert.deepEqual(error.data, { detail });
+    return true;
+  });
+});
 
 void test('server normalization and layout changes preserve execution highlighting', () => {
   const normalized = structuredClone(seed);
@@ -17,6 +46,12 @@ void test('changing a node configuration invalidates old execution highlighting'
 });
 
 import { importableWorkflow, saveCompletion } from '../lib/workflow.ts';
+
+void test('legacy VectorDB imports explain how to migrate', () => {
+  const old = structuredClone(seed);
+  old.nodes[1].type = 'vector_faiss';
+  assert.throws(() => importableWorkflow(old, ['chat_input','agent','response']), /retired VectorDB nodes/);
+});
 
 void test('save completion keeps newer edits dirty and does not change another document', () => {
   const newer = structuredClone(seed);

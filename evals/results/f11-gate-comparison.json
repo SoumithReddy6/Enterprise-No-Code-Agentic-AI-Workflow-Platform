@@ -1,0 +1,154 @@
+{
+  "f11-before": {
+    "artifact": "evals/results/f11-before.json",
+    "generation_gate": {
+      "accepted": false,
+      "checks": {
+        "complete_real_corpus": true,
+        "first_attempt_compliance": true,
+        "answer_substring_match_rate": false,
+        "false_abstention": true,
+        "abstention_on_unanswerable": false,
+        "citation_rate": true,
+        "uncited_answerable_rows": true,
+        "no_generation_errors": true,
+        "compliance_measured": true
+      }
+    },
+    "requested_retrieval_goal": {
+      "threshold": 0.95,
+      "per_mode": {
+        "similarity": {
+          "answer_at_4": 0.818,
+          "met": false
+        },
+        "keyword": {
+          "answer_at_4": 0.818,
+          "met": false
+        },
+        "hybrid": {
+          "answer_at_4": 0.879,
+          "met": false
+        },
+        "rrf": {
+          "answer_at_4": 0.909,
+          "met": false
+        }
+      }
+    }
+  },
+  "f11-after": {
+    "artifact": "evals/results/f11-after.json",
+    "generation_gate": {
+      "accepted": false,
+      "checks": {
+        "complete_real_corpus": true,
+        "first_attempt_compliance": true,
+        "answer_substring_match_rate": true,
+        "false_abstention": true,
+        "abstention_on_unanswerable": false,
+        "citation_rate": true,
+        "uncited_answerable_rows": true,
+        "no_generation_errors": true,
+        "compliance_measured": true
+      }
+    },
+    "requested_retrieval_goal": {
+      "threshold": 0.95,
+      "per_mode": {
+        "similarity": {
+          "answer_at_4": 0.879,
+          "met": false
+        },
+        "keyword": {
+          "answer_at_4": 0.879,
+          "met": false
+        },
+        "hybrid": {
+          "answer_at_4": 0.879,
+          "met": false
+        },
+        "rrf": {
+          "answer_at_4": 0.879,
+          "met": false
+        }
+      }
+    }
+  },
+  "f11-after-boundaries": {
+    "artifact": "evals/results/f11-after-boundaries.json",
+    "generation_gate": {
+      "accepted": false,
+      "checks": {
+        "complete_real_corpus": true,
+        "first_attempt_compliance": true,
+        "answer_substring_match_rate": true,
+        "false_abstention": true,
+        "abstention_on_unanswerable": false,
+        "citation_rate": true,
+        "uncited_answerable_rows": true,
+        "no_generation_errors": true,
+        "compliance_measured": true
+      }
+    },
+    "requested_retrieval_goal": {
+      "threshold": 0.95,
+      "per_mode": {
+        "similarity": {
+          "answer_at_4": 0.909,
+          "met": false
+        },
+        "keyword": {
+          "answer_at_4": 0.909,
+          "met": false
+        },
+        "hybrid": {
+          "answer_at_4": 0.909,
+          "met": false
+        },
+        "rrf": {
+          "answer_at_4": 0.909,
+          "met": false
+        }
+      }
+    }
+  },
+  "f11-after-review": {
+    "artifact": "evals/results/f11-after-review.json",
+    "generation_gate": {
+      "accepted": false,
+      "checks": {
+        "complete_real_corpus": true,
+        "first_attempt_compliance": true,
+        "answer_substring_match_rate": true,
+        "false_abstention": true,
+        "abstention_on_unanswerable": false,
+        "citation_rate": true,
+        "uncited_answerable_rows": true,
+        "no_generation_errors": true,
+        "compliance_measured": true
+      }
+    },
+    "requested_retrieval_goal": {
+      "threshold": 0.95,
+      "per_mode": {
+        "similarity": {
+          "answer_at_4": 0.909,
+          "met": false
+        },
+        "keyword": {
+          "answer_at_4": 0.909,
+          "met": false
+        },
+        "hybrid": {
+          "answer_at_4": 0.909,
+          "met": false
+        },
+        "rrf": {
+          "answer_at_4": 0.909,
+          "met": false
+        }
+      }
+    }
+  }
+}

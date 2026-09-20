@@ -12,12 +12,19 @@ import tempfile
 import uuid
 from .rpc import Client
 from .embedding import Embeddings
+from .section_chunking import section_chunks,contextual_text
 
 log=logging.getLogger('relay.knowledge.ingestion')
 
 def chunk_pages(pages,config):
     """Fixed or paragraph passages with overlap; the caller assigns document-level ordinals."""
     if not isinstance(pages,list) or not 1<=len(pages)<=200:raise ValueError('Document must have 1–200 pages')
+    if any(not isinstance(value,str) for value in pages):raise ValueError('Invalid extracted text')
+    if config['chunking']=='section':
+        chunks=section_chunks(pages,config['chunk_size'],config['chunk_overlap'])
+        if not chunks:raise ValueError('Document has no readable text')
+        if len(chunks)>50000:raise ValueError('Document exceeds 50,000 chunks')
+        return [dict(c,id=uuid.uuid4().hex,ordinal=i) for i,c in enumerate(chunks)]
     size,step=config['chunk_size'],config['chunk_size']-config['chunk_overlap'];chunks=[]
     for page,value in enumerate(pages,1):
         if not isinstance(value,str):raise ValueError('Invalid extracted text')
@@ -70,7 +77,7 @@ class Ingestion:
             if config.get('embedding_model'):
                 for offset in range(0,len(chunks),32):
                     await progress('embedding',completed=offset,total=len(chunks))
-                    batch=await self.embeddings.embed(config['embedding_model'],[c['text'] for c in chunks[offset:offset+32]],digest)
+                    batch=await self.embeddings.embed(config['embedding_model'],[contextual_text(c) for c in chunks[offset:offset+32]],digest)
                     if len(chunks)*len(batch[0])>8_000_000:raise ValueError('Knowledge base exceeds vector memory budget; use larger chunks or smaller embeddings')
                     vectors.extend(batch)
             await progress('indexing',completed=0,total=len(chunks))

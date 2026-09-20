@@ -1,0 +1,996 @@
+{
+ "settings": {
+  "corpus": "evals/real",
+  "questions": "evals/real/questions.json",
+  "embedding_model": "embeddinggemma:latest",
+  "chunking": "paragraph",
+  "chunk_size": 800,
+  "chunk_overlap": 120,
+  "modes": [
+   "hybrid"
+  ],
+  "top_k": 4,
+  "generate": "llama3.1:latest",
+  "judge": "",
+  "generate_mode": "hybrid",
+  "limit": 0
+ },
+ "questions": 38,
+ "retrieval": {
+  "hybrid": {
+   "all": {
+    "n": 33,
+    "recall@1": 1.0,
+    "recall@4": 1.0,
+    "mrr": 1.0,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 0.879,
+    "answer@4": 0.879
+   },
+   "verbatim": {
+    "n": 15,
+    "recall@1": 1.0,
+    "recall@4": 1.0,
+    "mrr": 1.0,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 0.933,
+    "answer@4": 0.933
+   },
+   "paraphrase": {
+    "n": 18,
+    "recall@1": 1.0,
+    "recall@4": 1.0,
+    "mrr": 1.0,
+    "document_coverage@4": 1.0,
+    "evidence_coverage@4": 0.833,
+    "answer@4": 0.833
+   },
+   "reasoning": {
+    "n": 0,
+    "recall@1": null,
+    "recall@4": null,
+    "mrr": null,
+    "document_coverage@4": null,
+    "evidence_coverage@4": null,
+    "answer@4": null
+   },
+   "latency_ms": 279,
+   "misses": [
+    {
+     "question": "How long do I have to hand back money my employer advanced me for a trip that I did not end up spending?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    },
+    {
+     "question": "How quickly must I give my employer an accounting of my expenses for the reimbursement plan to count as accountable?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf",
+      "irs-publication-463-travel-gift-car-expenses.pdf"
+     ]
+    },
+    {
+     "question": "Can a website let people save a reminder of how they made up their password?",
+     "kind": "paraphrase",
+     "rank": 1,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf",
+      "nist-sp-800-63b-4-authentication.pdf"
+     ]
+    },
+    {
+     "question": "How many hours may a property-carrying commercial motor vehicle driver drive during the 14-hour period?",
+     "kind": "verbatim",
+     "rank": 1,
+     "document_coverage": 1.0,
+     "evidence_coverage": 0.0,
+     "answer_present": false,
+     "top": [
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html",
+      "49-cfr-part-395-hours-of-service.html"
+     ]
+    }
+   ]
+  }
+ },
+ "generation": {
+  "metric_version": 2,
+  "limitations": [
+   "Answer scoring checks expected substrings, not semantic correctness.",
+   "Citation scoring checks source documents, not claim entailment.",
+   "Abstention detection is a phrase-based heuristic."
+  ],
+  "summary": {
+   "model": "llama3.1:latest",
+   "mode": "hybrid",
+   "n": 38,
+   "answer_substring_match_rate": 0.879,
+   "answer_retrieved": 0.879,
+   "substring_match_when_answer_retrieved": 1.0,
+   "false_abstention": 0.091,
+   "false_abstention_when_answer_retrieved": 0.0,
+   "heuristic_abstention_on_unanswerable": 1.0,
+   "citation_rate": 0.788,
+   "citation_document_match": 0.962,
+   "unsupported_references": 0,
+   "errors": 0,
+   "mean_seconds": 7.137
+  },
+  "rows": [
+   {
+    "question": "What is the standard mileage rate for business use of a car in 2025?",
+    "kind": "verbatim",
+    "seconds": 10.6,
+    "error": "",
+    "answer": "The standard mileage rate for business use of a car in 2025 is 70 cents ($0.70) per mile [S1, S2, S3, S4].",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "Under an accountable plan, within how many days must you return any excess reimbursement?",
+    "kind": "verbatim",
+    "seconds": 4.7,
+    "error": "",
+    "answer": "Under an accountable plan, you must return any excess reimbursement within 120 days after the expense was paid or incurred [S3].",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf"
+    ],
+    "cited": [
+     "S3"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What is the high-low per diem rate for high-cost localities effective October 1, 2025?",
+    "kind": "verbatim",
+    "seconds": 13.9,
+    "error": "",
+    "answer": "Based on the provided evidence passages, the high-low per diem rate for high-cost localities effective October 1, 2025 is $319 (which includes $86 for meals and incidental expenses (M&IE)).\n\nThis answer is supported by:\n\n* [S1] Notice 2025-54 lists the high-cost localities that are eligible for $319 (which includes $86 for M&IE) per diem, effective October 1, 2025.\n* [S2] Effective October 1, 2025, the per diem rate for certain high-cost locations remained $319 (which includes $86 for M&IE).\n* [S3] Under the high-low method, the per diem amount for travel during January through September of 2025 is $319 (which includes $86 for M&IE) for certain high-cost locations.\n\nNote that passage [S4] mentions a different rate ($178) but it's referring to the regular federal per diem rate method, not the high-low method.",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf"
+    ],
+    "cited": [
+     "S1",
+     "S2",
+     "S3",
+     "S4"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How much of the $319 high-cost per diem rate is for M&IE?",
+    "kind": "verbatim",
+    "seconds": 10.9,
+    "error": "",
+    "answer": "The amount of the $319 high-cost per diem rate that is for M&IE is $86. \n\nThis can be determined from passage [S1], which states: \"cost localities that are eligible for $319 (which includes $86 for meals and incidental expenses (M&IE)) per diem, effective October 1, 2024.\"",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What is the per diem amount for all other (non-high-cost) localities under the high-low method?",
+    "kind": "verbatim",
+    "seconds": 9.8,
+    "error": "",
+    "answer": "The per diem amount for all other (non-high-cost) localities under the high-low method is $225, which includes $74 for meals and incidental expenses (M&IE). [S1], [S4]\n\nThis answer is based on passages S1 and S4, which both mention that for travel on or after October 1, 2025, all other localities within the continental United States are eligible for a per diem of $225, which includes $74 for M&IE.",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf"
+    ],
+    "cited": [
+     "S1",
+     "S4"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What percentage limit generally applies to meal expenses?",
+    "kind": "verbatim",
+    "seconds": 7.4,
+    "error": "",
+    "answer": "The percentage limit that generally applies to meal expenses is 50%. \n\nThis can be seen from passages [S1], [S2], and [S3] which all mention the \"50% limit\" on meal expenses. Passage [S4] also mentions this limit, stating that you can deduct only 50% of the unreimbursed cost of your meals.\n\nTherefore, the answer is: 50%.",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf"
+    ],
+    "cited": [
+     "S1",
+     "S2",
+     "S3",
+     "S4"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "If my employer does not reimburse my lunch on a work trip, what fraction of the meal cost can I deduct?",
+    "kind": "paraphrase",
+    "seconds": 7.9,
+    "error": "",
+    "answer": "Based on the provided evidence passages, the answer to the question \"If my employer does not reimburse my lunch on a work trip, what fraction of the meal cost can I deduct?\" is:\n\n50% [S1]\n\nAccording to passage S1 (page 7), regardless of the method used to calculate meal expenses, you can generally deduct only 50% of the unreimbursed cost of your meals.",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How long do I have to hand back money my employer advanced me for a trip that I did not end up spending?",
+    "kind": "paraphrase",
+    "seconds": 9.1,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "49-cfr-part-395-hours-of-service.html"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 0.0,
+    "answer_retrieved": false,
+    "citation_document_match": false
+   },
+   {
+    "question": "How many cents can I count for each mile I drive my own car for work this year?",
+    "kind": "paraphrase",
+    "seconds": 5.6,
+    "error": "",
+    "answer": "You can count 70 cents per mile [S1]. The standard mileage rate is 70 cents ($0.70) per mile for operating your car for business use in 2025 [S1]. This rate applies whether or not you are reimbursed, and it allows you to generally use the standard mileage rate regardless of personal or business use [S3].",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "49-cfr-part-395-hours-of-service.html",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf"
+    ],
+    "cited": [
+     "S1",
+     "S3"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Which months does the federal fiscal year used for per diem tables cover?",
+    "kind": "paraphrase",
+    "seconds": 7.9,
+    "error": "",
+    "answer": "The federal fiscal year used for per diem tables covers October 1 to September 30 [S1]. This is consistent with all other passages, which also mention that new CONUS per diem rates become effective on October 1 of each year and remain in effect through September 30 of the following year [S2] and [S3].",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf"
+    ],
+    "cited": [
+     "S1",
+     "S2",
+     "S3"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How quickly must I give my employer an accounting of my expenses for the reimbursement plan to count as accountable?",
+    "kind": "paraphrase",
+    "seconds": 13.2,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 0.0,
+    "answer_retrieved": false,
+    "citation_document_match": false
+   },
+   {
+    "question": "What is the minimum password length when a password is used as a single-factor authentication mechanism?",
+    "kind": "verbatim",
+    "seconds": 7.1,
+    "error": "",
+    "answer": "The minimum password length when a password is used as a single-factor authentication mechanism is at least 15 characters in length [S1]. \n\nThis answer relies on passage S1, which explicitly states that verifiers and CSPs \"SHALL require passwords that are used as a single-factor authentication mechanism to be a minimum of 15 characters in length.\"",
+    "retrieved": [
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What is the minimum length for passwords used only as part of multi-factor authentication?",
+    "kind": "verbatim",
+    "seconds": 10.7,
+    "error": "",
+    "answer": "Based on the provided evidence passages [S1] and [S3], the minimum length for passwords used only as part of multi-factor authentication is 8 characters.\n\n[S1]: \"Verifiers and CSPs MAY allow passwords that are only used as part of multi-factor authentication processes to be shorter but SHALL require them to be a minimum of eight characters in length.\" (page 25)\n\n[S3]: This passage does not directly address the minimum length for multi-factor authentication, but it mentions that users should be allowed at least 64 characters in length to support passphrases. However, this is a recommendation and not a requirement.\n\nTherefore, based on [S1], the answer is:\n\nThe minimum length for passwords used only as part of multi-factor authentication is 8 characters. [S1]",
+    "retrieved": [
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf"
+    ],
+    "cited": [
+     "S1",
+     "S3"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What maximum password length should verifiers permit at least?",
+    "kind": "verbatim",
+    "seconds": 5.2,
+    "error": "",
+    "answer": "The maximum password length that verifiers should permit at least is 64 characters [S1, point 2].",
+    "retrieved": [
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "May verifiers require subscribers to change passwords periodically?",
+    "kind": "verbatim",
+    "seconds": 8.3,
+    "error": "",
+    "answer": "Based on the provided evidence passages, verifiers are allowed to force a password change if there is evidence that the authenticator has been compromised [S1, point 6]. However, it does not explicitly state that verifiers can require subscribers to change passwords periodically. In fact, point 6 of S1 states that \"Verifiers and CSPs SHALL NOT require subscribers to change passwords periodically.\" Therefore, the answer is:\n\nNo, verifiers are not required to allow subscribers to change passwords periodically, but they may force a password change if there is evidence of compromise.",
+    "retrieved": [
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "How many consecutive failed login attempts on one account can a verifier allow before it must disable that authenticator?",
+    "kind": "paraphrase",
+    "seconds": 13.5,
+    "error": "",
+    "answer": "The evidence is sufficient to answer the question.\n\nAccording to [S1], a verifier SHALL limit consecutive failed authentication attempts using a specific authenticator on a single subscriber account to no more than 100 by disabling that authenticator. This is an upper bound, and agencies MAY impose lower limits.\n\nHowever, there are other passages that provide additional information:\n\n* [S2] specifies different limits for biometric systems: 5 consecutive failed authentication attempts or 10 if PAD is implemented, with an overall limit of no more than 50 (or 100 if PAD is implemented) consecutive failed authentication attempts.\n* [S3] mentions that a rate-limiting mechanism SHOULD be implemented to effectively limit the number of failed authentication attempts, but does not specify a specific limit.\n* [S4] specifies a retry-limiting mechanism for activation attempts: no more than 10 consecutive failed attempts.\n\nConsidering all these passages, it appears that there is no single answer to the question. However, based on the most restrictive limit mentioned in [S1], we can conclude that:\n\nA verifier SHALL allow no more than 100 consecutive failed login attempts on one account before disabling that authenticator.",
+    "retrieved": [
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf"
+    ],
+    "cited": [
+     "S1",
+     "S2",
+     "S3",
+     "S4"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Am I allowed to force users to include a digit and a symbol in their passwords?",
+    "kind": "paraphrase",
+    "seconds": 8.8,
+    "error": "",
+    "answer": "You are not allowed to force users to include a digit and a symbol in their passwords.\n\nRationale: According to passage [S2], it is recommended that \"Do not impose other composition rules (e.g., mixtures of different character types) on passwords.\" This suggests that forcing users to include specific character types, such as digits or symbols, is not recommended. Additionally, passage [S3] states that \"analyses of breached password databases reveal that the benefit of such rules is less significant than initially thought\" and that they have \"severe impacts on usability and memorability.\"",
+    "retrieved": [
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf"
+    ],
+    "cited": [
+     "S2",
+     "S3"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Can a website let people save a reminder of how they made up their password?",
+    "kind": "paraphrase",
+    "seconds": 9.9,
+    "error": "",
+    "answer": "Based on the provided evidence passages, it appears that a website can let people save a reminder of how they made up their password.\n\nThe relevant passage is [S4], which states: \"Encourage users to make passwords as lengthy as they want and use any characters that they like (including spaces) to aid memorization.\" This suggests that the website should allow users to create long, memorable passwords with various characters, including spaces. \n\nAdditionally, the passage mentions allowing at least 64 characters in length to support the use of passphrases, which implies that the website can accommodate lengthy password reminders.\n\nTherefore, the answer is: Yes, a website can let people save a reminder of how they made up their password.",
+    "retrieved": [
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf"
+    ],
+    "cited": [
+     "S4"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 0.0,
+    "answer_retrieved": false,
+    "citation_document_match": true
+   },
+   {
+    "question": "When measuring password length, how is a single Unicode code point counted?",
+    "kind": "paraphrase",
+    "seconds": 7.2,
+    "error": "",
+    "answer": "A single Unicode code point is counted as a single character when evaluating password length.\n\nThe evidence for this answer comes from passages [S2] and [S3]. Passage [S2] explicitly states that \"Each Unicode code point SHALL be counted as a single character when evaluating password length.\" This directly answers the question. \n\nPassage [S3] is not necessary to answer the question, but it provides additional context on password security.\n\nNote: Passage [S4] is irrelevant to the question and can be ignored.",
+    "retrieved": [
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "49-cfr-part-395-hours-of-service.html"
+    ],
+    "cited": [
+     "S2",
+     "S3",
+     "S4"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "Should a login form allow users to paste a password from a password manager?",
+    "kind": "paraphrase",
+    "seconds": 10.8,
+    "error": "",
+    "answer": "Based on the provided evidence passages, it is clear that a login form should allow users to paste a password from a password manager.\n\n[S3] states that \"Verifiers SHALL allow the use of password managers and autofill functionality.\" This indicates that allowing users to paste passwords from password managers is a requirement for verifiers (login forms).\n\nAdditionally, [S1] mentions that \"Support copy and paste functionality in fields for entering passwords, including passphrases\" is one of the usability considerations for typical usage with a password manager. While this passage does not explicitly state that login forms should allow pasting passwords from password managers, it suggests that such functionality is desirable.\n\nTherefore, based on the provided evidence passages, the answer to the question is:\n\nYes, a login form should allow users to paste a password from a password manager.",
+    "retrieved": [
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf",
+     "nist-sp-800-63b-4-authentication.pdf"
+    ],
+    "cited": [
+     "S1",
+     "S3"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How many hours may a property-carrying commercial motor vehicle driver drive during the 14-hour period?",
+    "kind": "verbatim",
+    "seconds": 4.1,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": false,
+    "expected_retrieved": true,
+    "evidence_coverage": 0.0,
+    "answer_retrieved": false,
+    "citation_document_match": false
+   },
+   {
+    "question": "How many consecutive hours off duty must a property-carrying driver take before driving at the start of a work shift?",
+    "kind": "verbatim",
+    "seconds": 3.2,
+    "error": "",
+    "answer": "According to [S1], a property-carrying driver must take 10 consecutive hours off duty before driving at the start of a work shift.\n\nAnswer: 10 hours.",
+    "retrieved": [
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "After how many hours of driving time is a consecutive 30-minute interruption of driving status required?",
+    "kind": "verbatim",
+    "seconds": 3.3,
+    "error": "",
+    "answer": "After 8 hours of driving time, a consecutive 30-minute interruption of driving status is required [S1].",
+    "retrieved": [
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What is the on-duty limit over 8 consecutive days for a trucker whose company runs vehicles every day of the week?",
+    "kind": "paraphrase",
+    "seconds": 3.0,
+    "error": "",
+    "answer": "The on-duty limit over 8 consecutive days for a trucker whose company runs vehicles every day of the week is 70 hours [S3].",
+    "retrieved": [
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html"
+    ],
+    "cited": [
+     "S3"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How long must a driver stay off duty to restart the 7- or 8-day on-duty clock?",
+    "kind": "paraphrase",
+    "seconds": 4.3,
+    "error": "",
+    "answer": "To restart the 7- or 8-day on-duty clock, a driver must take at least 34 consecutive hours off duty [S2]. This is because the exemption allows a new period to begin with the start of any off-duty period of 34 or more consecutive hours.",
+    "retrieved": [
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html"
+    ],
+    "cited": [
+     "S2"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Within what distance of the normal work reporting location does the short-haul driver exemption apply?",
+    "kind": "paraphrase",
+    "seconds": 3.1,
+    "error": "",
+    "answer": "The short-haul driver exemption applies within a 150 air-mile radius of the normal work reporting location [S1, S2, S3].",
+    "retrieved": [
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": false
+   },
+   {
+    "question": "How often must an evaluation of each powered industrial truck operator's performance be conducted?",
+    "kind": "verbatim",
+    "seconds": 5.1,
+    "error": "",
+    "answer": "According to [S1], an evaluation of each powered industrial truck operator's performance must be conducted at least once every three years. \n\nNote: The other passages do not specifically address how often evaluations should be conducted, but rather discuss who should conduct the training and evaluation ([S2]), when refresher training and evaluation are required ([S3]), and what is expected of operators after completing training ([S4]).",
+    "retrieved": [
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html"
+    ],
+    "cited": [
+     "S1",
+     "S2",
+     "S3",
+     "S4"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What information must the operator training certification include?",
+    "kind": "verbatim",
+    "seconds": 5.4,
+    "error": "",
+    "answer": "The operator training certification must include:\n\n* The name of the operator\n* The date of the training\n* The date of the evaluation\n* The identity of the person(s) performing the training or evaluation [S1]\n\nAdditionally, it is implied that the certification should also indicate that the operator has successfully completed the training and evaluation specified in paragraph (l), but this specific information is not explicitly stated as something to be included in the certification.",
+    "retrieved": [
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "When topping up a forklift battery, do you pour the water into the acid or the acid into the water?",
+    "kind": "paraphrase",
+    "seconds": 3.0,
+    "error": "",
+    "answer": "When topping up a forklift battery, you pour the acid into the water [S1]. This is explicitly stated in passage S1 as part of the safety guidelines for charging batteries.",
+    "retrieved": [
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Can someone smoke in the area where forklift batteries are charged?",
+    "kind": "paraphrase",
+    "seconds": 5.6,
+    "error": "",
+    "answer": "Based on the provided evidence passages, it is clear that smoking is prohibited in the area where forklift batteries are charged.\n\nThe passage [S1] explicitly states: \"Smoking shall be prohibited in the charging area.\" This directly answers the question and provides a clear rule regarding smoking in battery charging areas.\n\nTherefore, the answer to the question is:\n\nYes, someone can smoke in the area where forklift batteries are charged.",
+    "retrieved": [
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "49-cfr-part-395-hours-of-service.html"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "How much space should a forklift keep between itself and the lift truck ahead of it?",
+    "kind": "paraphrase",
+    "seconds": 5.4,
+    "error": "",
+    "answer": "Based on the provided evidence passages, the answer to the question is:\n\nA safe distance of approximately three truck lengths should be maintained between a forklift and the lift truck ahead of it. [S1]\n\nThis answer relies solely on passage S1, which explicitly states that \"A safe distance shall be maintained approximately three truck lengths from the truck ahead...\"",
+    "retrieved": [
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "irs-publication-463-travel-gift-car-expenses.pdf"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What should be done with a lift truck that is discovered to be unsafe during a shift?",
+    "kind": "paraphrase",
+    "seconds": 5.4,
+    "error": "",
+    "answer": "According to [S1] and [S2], if a powered industrial truck is discovered to be unsafe during a shift, it should be taken out of service until it has been restored to safe operating condition. This is explicitly stated in both passages: \"the truck shall be taken out of service\" ([S1]) and \"any power-operated industrial truck not in safe operating condition shall be removed from service\" ([S2]).",
+    "retrieved": [
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html"
+    ],
+    "cited": [
+     "S1",
+     "S2"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "Is it acceptable to fill a forklift's fuel tank while the engine is running?",
+    "kind": "paraphrase",
+    "seconds": 4.9,
+    "error": "",
+    "answer": "No, it is not acceptable to fill a forklift's fuel tank while the engine is running.\n\nThe passage [S1] explicitly states that \"Fuel tanks shall not be filled while the engine is running.\" This directly answers the question and provides clear guidance on safe operating procedures. \n\nTherefore, based on this evidence, the answer is no, it is not acceptable to fill a forklift's fuel tank while the engine is running.",
+    "retrieved": [
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html"
+    ],
+    "cited": [
+     "S1"
+    ],
+    "unsupported": 0,
+    "abstained": false,
+    "heuristic_pass": true,
+    "expected_retrieved": true,
+    "evidence_coverage": 1.0,
+    "answer_retrieved": true,
+    "citation_document_match": true
+   },
+   {
+    "question": "What is the maximum load weight a forklift is allowed to lift?",
+    "kind": "unanswerable",
+    "seconds": 7.7,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": true
+   },
+   {
+    "question": "What is the federal minimum hourly wage for truck drivers?",
+    "kind": "unanswerable",
+    "seconds": 2.9,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "49-cfr-part-395-hours-of-service.html",
+     "29-cfr-1910.178-powered-industrial-trucks.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": true
+   },
+   {
+    "question": "How many days of paid vacation do federal employees receive each year?",
+    "kind": "unanswerable",
+    "seconds": 6.9,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "49-cfr-part-395-hours-of-service.html"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": true
+   },
+   {
+    "question": "What is the application fee for a commercial driver's license?",
+    "kind": "unanswerable",
+    "seconds": 2.8,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html",
+     "49-cfr-part-395-hours-of-service.html"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": true
+   },
+   {
+    "question": "What will the IRS standard mileage rate be in 2030?",
+    "kind": "unanswerable",
+    "seconds": 12.6,
+    "error": "",
+    "answer": "I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.",
+    "retrieved": [
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf",
+     "irs-publication-463-travel-gift-car-expenses.pdf"
+    ],
+    "cited": [],
+    "unsupported": 0,
+    "abstained": true,
+    "heuristic_pass": true
+   }
+  ]
+ }
+}

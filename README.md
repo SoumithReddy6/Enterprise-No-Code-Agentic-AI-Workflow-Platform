@@ -12,7 +12,7 @@ Relay is a full-stack visual platform for building, validating, and running AI-a
 | Frontend | React, TypeScript, React Flow, schema-driven node inspector |
 | Backend | FastAPI, LangGraph, SQLAlchemy, durable worker processes |
 | Model providers | Local Ollama, OpenAI, Anthropic Claude |
-| Knowledge | PDF/DOCX/text ingestion, FAISS, ChromaDB, Elasticsearch, Pinecone |
+| Knowledge | PDF/DOCX/text ingestion, FAISS, Elasticsearch, Pinecone |
 | Retrieval | Semantic similarity, BM25 keyword, weighted hybrid, RRF |
 | Tools | HTTP/REST, Email, Jira, Confluence, GitHub, sandboxed Python |
 | Reliability | SQL queue, leases, fencing, checkpoints, staged KB publishing and cleanup |
@@ -95,7 +95,7 @@ flowchart TB
         INGEST["Ingestion Worker<br/>extract, chunk and embed"]
         SEARCH["Search Service<br/>index and retrieve"]
         KBMETA[("Knowledge metadata<br/>and job state")]
-        VECTOR[("FAISS / ChromaDB<br/>Elasticsearch / Pinecone")]
+        VECTOR[("FAISS<br/>Elasticsearch / Pinecone")]
     end
 
     subgraph DATA["Platform persistence"]
@@ -190,7 +190,7 @@ flowchart LR
     UPLOAD --> META["Create document metadata<br/>and durable ingestion job"]
     META --> CLAIM["Ingestion worker claims lease"]
     CLAIM --> EXTRACT["Extract text / OCR"]
-    EXTRACT --> CHUNK["Chunk by fixed window<br/>or paragraph"]
+    EXTRACT --> CHUNK["Fixed, paragraph, or<br/>section-aware chunks"]
     CHUNK --> EMBED{"Embedding model selected?"}
     EMBED -- Yes --> VECTORS["Create Ollama embeddings"]
     EMBED -- No --> KEYWORD["Build keyword postings"]
@@ -236,7 +236,9 @@ flowchart LR
     CHECK --> ANSWER["Answer and source cards"]
 ```
 
-Embedding model, chunking strategy, chunk size, and overlap are index-time settings. Search mode, candidate count, top-k, score threshold, metadata filters, fusion constant, and vector weight are retrieval-time settings. The system keeps retrieval metrics separate from answer-generation metrics because a correct passage can be retrieved and still be reasoned over incorrectly.
+Embedding model, chunking strategy, chunk size, and overlap are index-time settings. Search mode, candidate count, top-k, score threshold, metadata filters, fusion constant, vector weight, and optional local reranking are retrieval-time settings. The system keeps retrieval metrics separate from answer-generation metrics because a correct passage can be retrieved and still be reasoned over incorrectly.
+
+The opt-in `section` strategy retains heading paths, inline section headings, and related list/regulatory clauses within paragraph-sized chunks. Heading context is included in both embeddings and lexical search. New search configurations default to 50 candidates. The optional `local_cross_encoder` reranker scores candidates before selecting top-k; its weights must be installed explicitly. Existing knowledge bases need a rebuild to gain heading metadata. See [configuration and evaluation instructions](docs/section-retrieval.md). These features remain subject to the evaluation gates below.
 
 ## Platform capabilities
 
@@ -261,7 +263,7 @@ Embedding model, chunking strategy, chunk size, and overlap are index-time setti
 
 - Supported files: PDF, DOCX, TXT, Markdown, CSV, JSON, and HTML.
 - Printed English PDFs can use local OCR through Poppler and Tesseract.
-- Named knowledge bases support FAISS, ChromaDB, Elasticsearch, and Pinecone adapters.
+- Named knowledge bases support FAISS, Elasticsearch, and Pinecone adapters. Chroma is disabled because the recorded advisories have no patched release; rebuild existing Chroma KBs with FAISS from their preserved original documents.
 - Similarity, keyword, hybrid, and RRF retrieval use one search contract.
 - Evidence labels are unique across a run, including evidence obtained through tool calls.
 - Response nodes reject unknown citation labels and distinguish cited passages from retrieved-only passages.
@@ -286,17 +288,23 @@ The current suite contains 50 questions: 20 verbatim, 20 paraphrased, 5 reasonin
 | Metric | Latest result |
 | --- | ---: |
 | Complete expected evidence retrieved | 44/45 answerable questions (97.8%) |
-| Required-answer match | 40/45 (88.9%) |
+| Answer substring match rate | 40/45 (88.9%) |
 | Unsupported questions safely rejected | 5/5 |
 | Citation rate on answerable questions | 93.3% |
-| Cited-document accuracy | 97.6% |
+| Citation document match | 97.6% |
 | Runtime errors | 0 |
 
 EmbeddingGemma and Qwen3 Embedding 0.6B were evaluated locally. Fixed-window RRF reached complete evidence coverage on this small corpus, but paragraph chunks produced stronger end-to-end generation. This is why the product does not treat retrieval coverage alone as proof of answer quality.
 
+These figures use automated heuristics: answer scoring checks expected substrings, not semantic correctness; citation scoring checks source documents, not claim entailment; this historical run detected abstentions using phrases, which can misclassify partial answers.
+
 ### Real-document corpus
 
-The second corpus uses IRS, NIST, OSHA, and federal transportation documents: 38 labelled questions over approximately 2,900 chunks. RRF retrieved the answer passage in the top four for 90.9% of answerable questions. Grounded generation reached 87.9% answer accuracy and was correct whenever the required answer passage was retrieved in that run.
+The second corpus uses IRS, NIST, OSHA, and federal transportation documents: 38 labelled questions over approximately 2,900 chunks. In the [September 18 baseline](evals/results/real-generation-recheck-2026-09-18.json), **87.9% of answers contained the expected answer substring**, 78.8% of answerable questions received citations, and 96.2% of answers with citations cited only expected documents (`citation_document_match`). The latter is an answer-level measure, not a percentage of individual passages. Hybrid retrieval contained the expected answer in its top four passages for 87.9% of answerable questions.
+
+Limitations alongside these numbers: **substring matching does not establish semantic correctness; matching a source document does not establish that it supports the claim; the baseline's phrase-based abstention detection can misclassify partial answers.** New evaluations use the runtime's machine-readable abstention flag when available; that flag still does not establish that abstention was warranted.
+
+The subsequent [F11 retrieval experiment](docs/f11-retrieval-calibration-report.md) adds opt-in section-aware chunking and local candidate reranking. Hybrid expected-answer retrieval improved from 87.9% to 90.9%, below the requested 95%; generation substring matches rose from 81.8% to 90.9%. However, unanswerable-question abstention fell from 3/5 to 2/5. **The strengthened safety gate rejects this candidate.** These are substring and abstention-decision measurements, not semantic accuracy or claim-entailment guarantees. Saved artifacts now include complete retrieved passages for offline review. The [answerability safety follow-up](docs/answerability-safety-report.md) expands the suite to 53 questions, persists actual retrieval and reranker scores, and evaluates separate local answerability and NLI classifiers. The experimental reader raises unanswerable abstention from 45% to 75% but reduces substring match from 90.9% to 84.8%; both candidates are rejected. The NLI adapter produces 24/24 valid classifications but agrees with only 8/24 assistant labels. Their measured limitations prevent production adoption; valid classification output alone does not establish factual support.
 
 Detailed methodology and limitations:
 
@@ -306,10 +314,10 @@ Detailed methodology and limitations:
 
 ## Verification
 
-The current repository passes:
+Local verification for this change passes:
 
-- **186 backend tests** covering graph execution, authentication, tenant isolation, recovery, grounding, providers, tools, knowledge ingestion, search modes, staged rebuilds, cleanup, and failure handling.
-- **19 frontend tests** covering model selection, workflow bindings, save races, import safety, execution state, source cards, and API proxy behavior.
+- Backend tests covering graph execution, authentication, tenant isolation, recovery, grounding, providers, tools, knowledge ingestion, search modes, staged rebuilds, cleanup, and failure handling.
+- Frontend tests covering model selection, workflow bindings, save conflicts, import safety, execution state, source cards, and API proxy behavior.
 - TypeScript type checking and frontend linting.
 
 Run the checks with:
@@ -321,7 +329,24 @@ cd frontend
 npm test
 npm run typecheck
 npm run lint
+npm run build
 ```
+
+[GitHub Actions](.github/workflows/ci.yml) runs these checks on pushes, pull requests, and a weekly schedule, including `pip-audit` and `npm audit --audit-level=high`. Its first hosted run is pending; local checks do not establish that hosted CI has passed. Real-model evaluation is a separate local gate because it requires the downloaded corpus and Ollama models:
+
+```bash
+.venv/bin/python -m scripts.eval_retrieval --corpus evals/real --questions evals/real/questions.json --modes hybrid --generate llama3.1:latest --generate-mode hybrid --out evals/results/real-generation-candidate.json
+.venv/bin/python -m scripts.check_grounding_eval evals/results/real-generation-candidate.json
+```
+
+The checker returns 0 for acceptance, 1 for a measured rejection, and 2 with `not a generation report` for unusable input. Use `--expected-count 53` for the expanded safety suite. It rejects if the full expected run, contract compliance, substring match, false abstention, **abstention on unanswerable questions (≥90%)**, citation coverage, uncited-row count, or error gate fails. The [September 18 candidate report](docs/grounding-integrity-verification-2026-09-18.md) fails both substring match (81.8% against 87.9%) and unanswerable abstention (60% against 90%), despite 94.7% first-attempt contract compliance and 100% citation coverage. Valid JSON and existing citation labels do not establish factual support. Saved generation rows now include complete retrieved passage text for offline review.
+
+### Compatibility and data integrity
+
+- Workflow updates must include the `updated_at` returned by the last GET or successful save alongside the workflow fields. Stale or missing tokens return HTTP 409 with `current: {id, workflow, updated_at}`. The editor preserves local edits and offers export and reload.
+- Exports containing retired VectorDB nodes or `store` edges receive an actionable migration error: create a named knowledge base and reconnect Retrieve. They are not silently converted or executed.
+- Active knowledge-base names are unique within each tenant after whitespace normalization and Unicode case folding. A database unique index enforces the rule. Create and rename conflicts return 409 with the submitted name; deleted names may be reused.
+- On startup, existing names are backfilled. If older data already contains duplicates, migration stops and lists the tenant, normalized name, and conflicting IDs. Back up the management database, rename the conflicting active records' `state.name` values to distinct names, and restart. No knowledge base or document is automatically deleted or renamed. There is currently no separate KB-import endpoint; restored legacy databases use this same migration.
 
 ## Run locally
 
@@ -371,6 +396,8 @@ python3 scripts/dev.py
 - Workflow Studio: `http://127.0.0.1:3000`
 - API documentation: `http://127.0.0.1:8000/docs`
 
+Registration defaults to `AUTH_REGISTRATION_MODE=closed`: the first account can claim the local workspace; later registrations receive 403. `invite` requires an expiring, single-use token, and `open` is available for deliberate local multi-user testing. Login budgets are stored per account and IP: escalating cooldown after five attempts, then a 15-minute lockout after ten. The cooldown applies to correct passwords too; existing sessions remain usable. See [security configuration, recovery, and verification](docs/security-hardening.md) for operator commands and proxy constraints.
+
 The launcher starts the editor, API, workflow worker, ingestion worker, management service, and search service. Create an account on first launch, enable an installed Ollama model in **Providers**, configure an Agent node, and run the starter workflow.
 
 Configuration can be supplied through a root `.env` file. See [.env.example](.env.example). The `.data` directory, credentials, local databases, index files, and environment files are excluded from Git.
@@ -379,8 +406,8 @@ Configuration can be supplied through a root `.env` file. See [.env.example](.en
 
 | Implemented | Next engineering work | Later platform work |
 | --- | --- | --- |
-| Visual workflow editor | Section-aware chunking | Durable human approval nodes |
-| Local and cloud model providers | Candidate reranking | Action ledger and reconciliation |
+| Visual workflow editor and section-aware chunking | Remaining regulatory retrieval misses | Durable human approval nodes |
+| Local/cloud providers and opt-in local reranking | Unanswerable-question safety regression | Action ledger and reconciliation |
 | Agent roles and specialist delegation | Structured numeric-policy verifier | Published workflow versions |
 | Named, versioned knowledge bases | Improved retrieval test lab | Webhooks and scheduled triggers |
 | Four retrieval techniques | Browser interaction and visual QA | Parallel joins and bounded loops |

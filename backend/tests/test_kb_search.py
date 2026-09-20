@@ -23,6 +23,62 @@ def service(tmp_path):
 def query(segment='seg1', **kwargs):
     return dict({'kb_id':'kb1','version':1,'segment_id':segment,'document_ids':['doc1','doc2'],'query':'apple','query_vector':[], 'options':{'mode':'keyword'}},**kwargs)
 
+@pytest.mark.asyncio
+async def test_heading_metadata_is_searchable_and_canonical(service):
+    payload=build();payload['chunks'][1]['heading_path']=['Apple handling','Storage']
+    await service.call('build','alice',payload)
+    results=await service.call('search','alice',query(document_ids=['doc2']))
+    assert results[0]['heading_path']==['Apple handling','Storage']
+    assert results[0]['text'].startswith('Apple handling > Storage\n')
+    assert await service.call('verify','alice',{'sources':results})==results
+
+@pytest.mark.asyncio
+async def test_retrieval_scores_survive_reranking_and_verification(service,monkeypatch):
+    from backend.app.kb import reranking
+    await service.call('build','alice',build())
+    monkeypatch.setattr(reranking,'score_pairs',lambda q,p:[2.75]*len(p))
+    results=await service.call('search','alice',query(options={'mode':'keyword','reranker':'local_cross_encoder'}))
+    assert results[0]['score']>0 and results[0]['rerank_score']==2.75
+    assert await service.call('verify','alice',{'sources':results})==results
+    results[0]['rerank_score']=float('nan')
+    with pytest.raises(ValueError):await service.call('verify','alice',{'sources':results})
+
+@pytest.mark.asyncio
+async def test_reranking_runs_before_top_k_and_cannot_escape_filter(service,monkeypatch):
+    from backend.app.kb import reranking
+    payload=build();payload['chunks'][1]['text']='apple banana'
+    await service.call('build','alice',payload)
+    seen=[]
+    async def rank(query,sources):
+        seen.append(len(sources));return list(reversed(sources))
+    monkeypatch.setattr(reranking,'rerank',rank)
+    options={'mode':'keyword','top_k':1,'candidate_k':50,'reranker':'local_cross_encoder'}
+    results=await service.call('search','alice',query(options=options))
+    assert seen==[2] and results[0]['document_id']=='doc2'
+    results=await service.call('search','alice',query(options={**options,'filter':{'document_id':'doc1'}}))
+    assert results[0]['document_id']=='doc1'
+
+@pytest.mark.asyncio
+async def test_existing_chunk_table_migrates_without_breaking_old_evidence(service):
+    from sqlalchemy import text
+    from backend.app.kb.search import Search
+    await service.call('build','alice',build())
+    old=await service.call('search','alice',query())
+    with service.engine.begin() as c:c.execute(text('ALTER TABLE kb_search_chunks DROP COLUMN heading_path'))
+    reopened=Search(str(service.engine.url),service.root,service.secret_key)
+    assert await reopened.call('verify','alice',{'sources':old})==old
+
+@pytest.mark.asyncio
+async def test_retirement_during_reranking_does_not_return_stale_sources(service,monkeypatch):
+    from backend.app.kb import reranking
+    await service.call('build','alice',build())
+    async def retire(query,sources):
+        await service.call('cleanup','alice',{'kb_id':'kb1','segment_id':'seg1'})
+        return sources
+    monkeypatch.setattr(reranking,'rerank',retire)
+    with pytest.raises((ValueError,KeyError)):
+        await service.call('search','alice',query(options={'mode':'keyword','reranker':'local_cross_encoder'}))
+
 
 @pytest.mark.asyncio
 async def test_keyword_persistent_idempotent_and_canonical(service):
@@ -87,7 +143,7 @@ async def test_cleanup_before_build_tombstones_and_tenant_protection(service):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('backend',['faiss','chroma'])
+@pytest.mark.parametrize('backend',['faiss'])
 async def test_real_vector_backend_global_ordinals_and_cleanup(service,backend):
     await service.call('build','alice',build(backend=backend,vectors=[[1.,0.],[0.,1.]]))
     rows=await service.call('search','alice',query(query_vector=[0.,1.],options={'mode':'similarity','top_k':1}))
@@ -249,9 +305,9 @@ async def test_provenance_purge_is_permanent_even_after_stale_retain_cleanup(ser
 
 
 @pytest.mark.asyncio
-async def test_chroma_rebuild_can_change_dimensions(service):
-    await service.call('build','alice',build(vectors=[[1.,0.],[0.,1.]],backend='chroma'))
-    replacement=build(segment='seg2',vectors=[[1.,0.,0.],[0.,1.,0.]],backend='chroma')
+async def test_faiss_rebuild_can_change_dimensions(service):
+    await service.call('build','alice',build(vectors=[[1.,0.],[0.,1.]],backend='faiss'))
+    replacement=build(segment='seg2',vectors=[[1.,0.,0.],[0.,1.,0.]],backend='faiss')
     replacement['version']=2
     await service.call('build','alice',replacement)
     rows=await service.call('search','alice',query(segment='seg2',version=2,query_vector=[0.,1.,0.],options={'mode':'similarity','top_k':1}))
@@ -313,3 +369,35 @@ async def test_query_overlapping_cleanup_fails_closed(service,monkeypatch,retain
     await service.call('cleanup','alice',{'kb_id':'kb1','segment_id':'seg1','retain_provenance':retain})
     release.set()
     with pytest.raises((KeyError,ValueError)):await pending
+
+@pytest.mark.asyncio
+async def test_retired_chroma_rejected_before_indexing(service):
+    from backend.app.vector_adapters import CAPABILITIES
+    assert 'chroma' not in CAPABILITIES
+    with pytest.raises(ValueError, match='Chroma.*FAISS'):
+        await service.call('build','alice',build(backend='chroma',vectors=[[1.,0.],[0.,1.]]))
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('symlink',[False,True])
+async def test_retired_chroma_cleanup_does_not_require_vulnerable_package(service,tmp_path,symlink):
+    import hashlib
+    from sqlalchemy.orm import Session
+    from backend.app.kb.search_models import Segment
+    await service.call('build','alice',build())
+    with Session(service.engine) as session:
+        segment=session.get(Segment,'seg1');segment.config={**segment.config,'backend':'chroma'};segment.dimensions=2;session.commit()
+    # Legacy namespace is generated from ownership and immutable segment ID.
+    path=service.root/hashlib.sha256(b'alice:kb1:seg1').hexdigest()[:32]
+    original=tmp_path/'original-documents';original.mkdir();(original/'keep.pdf').write_bytes(b'original')
+    if symlink:path.symlink_to(original,target_is_directory=True)
+    else:
+        path.mkdir();(path/'chroma.sqlite3').write_bytes(b'legacy-index')
+    unrelated=service.root/'unrelated';unrelated.mkdir();(unrelated/'keep').write_bytes(b'keep')
+    with pytest.raises(ValueError,match='Chroma.*FAISS'):
+        await service.call('search','alice',query())
+    await service.call('cleanup','alice',{'kb_id':'kb1','segment_id':'seg1'})
+    assert not path.exists()
+    assert (original/'keep.pdf').read_bytes()==b'original'
+    assert (unrelated/'keep').read_bytes()==b'keep'
+    with Session(service.engine) as session:
+        assert session.get(Segment,'seg1').cleanup_error==''

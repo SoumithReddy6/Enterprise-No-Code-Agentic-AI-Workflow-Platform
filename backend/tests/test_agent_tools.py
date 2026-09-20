@@ -49,7 +49,7 @@ async def test_exhausted_budget_after_repeated_tool_errors_fails_clearly(monkeyp
 
 @pytest.mark.asyncio
 async def test_retrieve_as_tool_is_rendered_and_citations_validated(monkeypatch):
-    seen=[];scripted(monkeypatch,['{"action":"call","target":"search","input":"codename"}','{"action":"final","text":"Bluebird [S1]. Also [S9]."}'],seen)
+    seen=[];scripted(monkeypatch,['{"action":"call","target":"search","input":"codename"}',json.dumps({'answer':'Bluebird [S1]. Also [S9].','citations':['S1'],'abstain':False,'reason':''})],seen)
     workflow=Workflow.model_validate({'version':1,'name':'Search','nodes':[
         {'id':'input','type':'chat_input'},
         {'id':'agent','type':'agent','inputs':{'input':'input.message'},'config':{'provider':'demo'}},
@@ -66,9 +66,25 @@ async def test_retrieve_as_tool_is_rendered_and_citations_validated(monkeypatch)
     assert result['values']['out']['text']==agent['text']
 
 @pytest.mark.asyncio
+async def test_retrieval_tool_returns_empty_mid_loop_and_forces_abstention(monkeypatch):
+    workflow=calc_flow()
+    workflow.nodes[2].type='retrieve'
+    workflow.nodes[2].config={'knowledge_base_id':'kb1','mode':'keyword'}
+    replies=[
+        '{"action":"call","target":"calc","input":"parental leave"}',
+        json.dumps({'answer':'12 weeks [S1]','citations':['S1'],'abstain':False,'reason':''}),
+        json.dumps({'answer':'','citations':[],'abstain':True,'reason':'No passages were returned.'}),
+    ]
+    seen=[];scripted(monkeypatch,replies,seen)
+    result=await compile_workflow(workflow,message='Leave?',platform_resolver=platform_with([],[])).graph.ainvoke({'values':{}})
+    assert len(seen)==3 and '12 weeks' not in result['values']['out']['text']
+    assert json.loads(result['values']['agent']['grounding'])['abstain'] is True
+    assert result['values']['out']['sources']=='[]'
+
+@pytest.mark.asyncio
 async def test_citation_labels_are_unique_across_the_run_and_validated_at_response(monkeypatch):
     # Retrieve twice, then a plain-text critic cites one real and one invented label.
-    scripted(monkeypatch,['Summary uses [S1].','Critique: fine [S1], but [S3] is weak and [S7] is missing.'])
+    scripted(monkeypatch,[json.dumps({'answer':'Summary uses [S3].','citations':['S3'],'abstain':False,'reason':''}),'Critique: fine [S1], but [S3] is weak and [S7] is missing.'])
     workflow=Workflow.model_validate({'version':1,'name':'Chain','nodes':[
         {'id':'input','type':'chat_input'},
         {'id':'r1','type':'retrieve','config':{'knowledge_base_id':'kb1','mode':'keyword'},'inputs':{'query':'input.message'}},

@@ -1,4 +1,5 @@
 """Evidence an agent used stays authorized across API resume, lease recovery and cached replay."""
+import json
 import pytest
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
@@ -25,9 +26,9 @@ def setup(tmp_path, monkeypatch, request, services):
             {'id':'out','type':'response','inputs':{'text':'agent.text'}}],
             'edges':[{'id':'a','source':'input','target':'agent'},{'id':'b','source':'agent','target':'out'},
                      {'id':'t','source':'search','target':'agent','kind':'tool'}]})
-    responses = iter(['{"action":"call","target":"search","input":"codename"}', '{"action":"final","text":"Verified answer"}'])
+    responses = iter(['{"action":"call","target":"search","input":"codename"}', json.dumps({'answer':'Verified answer [S1]','citations':['S1'],'abstain':False,'reason':''})])
     async def model(inputs,config,ctx):
-        return {'text':'Evidence answer [S1]' if isinstance(config,QueryConfig) else next(responses),'provider':'demo'}
+        return {'text':json.dumps({'answer':'Evidence answer [S1]','citations':['S1'],'abstain':False,'reason':''}) if isinstance(config,QueryConfig) else next(responses),'provider':'demo'}
     monkeypatch.setattr('backend.app.registry.llm_node',model)
     async def fail(*args):raise ValueError('Temporary downstream failure')
     monkeypatch.setattr(REGISTRY['response'],'handler',fail)
@@ -56,7 +57,7 @@ async def test_agent_evidence_checked_on_api_resume(setup, services, removed, mo
         async def finish(inputs,config,ctx):return {'text':inputs['text'],'sources':'[]'}
         monkeypatch.setattr(REGISTRY['response'],'handler',finish)
         await worker.execute(store.claim_next(worker.owner))
-        assert store.run(run['id'])['output']=='Verified answer'
+        assert store.run(run['id'])['output']=='Verified answer [S1]'
         assert store.run(run['id'])['status']=='success'
 
 
@@ -126,13 +127,14 @@ async def test_specialist_evidence_belongs_to_root_checkpoint(setup, services, m
     graph.edges.append(Edge(id='delegate',source='agent',target='helper',kind='agent'))
     responses=iter(['{"action":"call","target":"helper","input":"Question"}',
                     '{"action":"call","target":"search","input":"codename"}',
-                    'Specialist result','Final result'])
+                    json.dumps({'answer':'Specialist result [S1]','citations':['S1'],'abstain':False,'reason':''}),
+                    json.dumps({'answer':'Final result [S1]','citations':['S1'],'abstain':False,'reason':''})])
     async def model(inputs,config,ctx):
-        return {'text':'Evidence [S1]' if isinstance(config,QueryConfig) else next(responses),'provider':'demo'}
+        return {'text':json.dumps({'answer':'Evidence [S1]','citations':['S1'],'abstain':False,'reason':''}) if isinstance(config,QueryConfig) else next(responses),'provider':'demo'}
     monkeypatch.setattr('backend.app.registry.llm_node',model)
     run=store.create_run(graph.model_dump(),'Question')
     await worker.execute(store.claim_next(worker.owner))
     result=store.run(run['id'])
     assert set(result['vector_dependencies'])=={'agent'}
-    assert result['checkpoints']['agent']['text']=='Final result'
+    assert result['checkpoints']['agent']['text']=='Final result [S1]'
     assert 'helper' not in result['checkpoints'] and 'search' not in result['checkpoints']

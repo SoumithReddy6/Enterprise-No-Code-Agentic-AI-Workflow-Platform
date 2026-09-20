@@ -1,0 +1,53 @@
+{
+  "date": "2026-09-19",
+  "python_before": [
+    {
+      "name": "chromadb",
+      "version": "1.1.1",
+      "advisories": [
+        "PYSEC-2026-311",
+        "PYSEC-2026-3813",
+        "PYSEC-2026-3814",
+        "PYSEC-2026-3815"
+      ]
+    },
+    {
+      "name": "pip",
+      "version": "26.1.2",
+      "advisories": [
+        "PYSEC-2026-3721"
+      ]
+    }
+  ],
+  "python_after": {
+    "audited_packages": 129,
+    "vulnerable_packages": []
+  },
+  "npm_before": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 4,
+    "critical": 0,
+    "total": 4
+  },
+  "npm_after": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "changes": {
+    "chromadb": "removed; no patched version recorded",
+    "pip": "26.2.1",
+    "@cloudflare/vite-plugin": "1.56.0",
+    "wrangler": "4.135.0",
+    "@cloudflare/workers-types": "5.20260919.1"
+  },
+  "limitations": [
+    "Known advisories as of audit time, not proof of no vulnerabilities.",
+    "Hosted CI has not been executed on this branch."
+  ]
+}

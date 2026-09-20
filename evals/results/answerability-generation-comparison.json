@@ -1,0 +1,135 @@
+{
+  "answerability-scored-generation": {
+    "summary": {
+      "model": "llama3.1:latest",
+      "mode": "hybrid",
+      "n": 53,
+      "answer_substring_match_rate": 0.909,
+      "answer_retrieved": 0.909,
+      "substring_match_when_answer_retrieved": 0.967,
+      "false_abstention": 0.0,
+      "false_abstention_when_answer_retrieved": 0.0,
+      "heuristic_abstention_on_unanswerable": 0.45,
+      "citation_rate": 1.0,
+      "citation_document_match": 1.0,
+      "unsupported_references": 0,
+      "errors": 0,
+      "mean_seconds": 8.364,
+      "contract_compliance_rate": {
+        "first_attempt": 0.83,
+        "after_repair": 0.17,
+        "failed": 0.0,
+        "attempted": 53,
+        "not_called": 0,
+        "unavailable": 0,
+        "counts": {
+          "first_attempt": 44,
+          "after_repair": 9,
+          "failed": 0,
+          "not_called": 0,
+          "unavailable": 0
+        }
+      },
+      "uncited_answerable_rows": 0
+    },
+    "exit_code": 1,
+    "gate": {
+      "accepted": false,
+      "checks": {
+        "complete_real_corpus": true,
+        "first_attempt_compliance": false,
+        "answer_substring_match_rate": true,
+        "false_abstention": true,
+        "abstention_on_unanswerable": false,
+        "citation_rate": true,
+        "uncited_answerable_rows": true,
+        "no_generation_errors": true,
+        "compliance_measured": true
+      }
+    },
+    "stderr": ""
+  },
+  "answerability-guarded-generation": {
+    "summary": {
+      "model": "llama3.1:latest",
+      "mode": "hybrid",
+      "n": 53,
+      "answer_substring_match_rate": 0.848,
+      "answer_retrieved": 0.879,
+      "substring_match_when_answer_retrieved": 0.966,
+      "false_abstention": 0.061,
+      "false_abstention_when_answer_retrieved": 0.0,
+      "heuristic_abstention_on_unanswerable": 0.75,
+      "citation_rate": 0.939,
+      "citation_document_match": 1.0,
+      "unsupported_references": 0,
+      "errors": 0,
+      "mean_seconds": 6.0,
+      "contract_compliance_rate": {
+        "first_attempt": 0.947,
+        "after_repair": 0.053,
+        "failed": 0.0,
+        "attempted": 38,
+        "not_called": 15,
+        "unavailable": 0,
+        "counts": {
+          "first_attempt": 36,
+          "after_repair": 2,
+          "failed": 0,
+          "not_called": 15,
+          "unavailable": 0
+        }
+      },
+      "uncited_answerable_rows": 2,
+      "experimental_answerability": {
+        "enabled": true,
+        "threshold": 0.0,
+        "pre_generation_rejections": 15,
+        "production_enabled": false
+      }
+    },
+    "exit_code": 1,
+    "gate": {
+      "accepted": false,
+      "checks": {
+        "complete_real_corpus": true,
+        "first_attempt_compliance": true,
+        "answer_substring_match_rate": false,
+        "false_abstention": true,
+        "abstention_on_unanswerable": false,
+        "citation_rate": true,
+        "uncited_answerable_rows": true,
+        "no_generation_errors": true,
+        "compliance_measured": true
+      }
+    },
+    "stderr": "",
+    "verified_skipped_calls": 15,
+    "remaining_unanswerable_failures": [
+      {
+        "question": "What is the maximum load weight a forklift is allowed to lift?",
+        "answer": "2,400 pounds [S1]"
+      },
+      {
+        "question": "How many days of paid vacation do federal employees receive each year?",
+        "answer": "21/2 days [S2]"
+      },
+      {
+        "question": "What will the IRS standard mileage rate be in 2030?",
+        "answer": "The standard mileage rate for the cost of operating your car for business use is $0.70 per mile, as stated in all passages provided. [S1][S2][S3][S4]"
+      },
+      {
+        "question": "What is the IRS standard mileage rate for business driving in 2027?",
+        "answer": "70 cents ($0.70) per mile [S3]"
+      },
+      {
+        "question": "How many driving hours does driver Elena Ruiz have left today after her last eight days of work?",
+        "answer": "Driver Elena Ruiz has left 0 driving hours today after her last eight days of work. [S4]"
+      }
+    ],
+    "false_abstentions": [
+      "Am I allowed to force users to include a digit and a symbol in their passwords?",
+      "After how many hours of driving time is a consecutive 30-minute interruption of driving status required?"
+    ]
+  }
+}

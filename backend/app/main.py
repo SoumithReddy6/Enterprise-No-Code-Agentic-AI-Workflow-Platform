@@ -14,7 +14,7 @@ from pydantic import Field
 from .models import StrictModel, Workflow
 from .registry import REGISTRY
 from .compiler import validate_workflow
-from .storage import Store, local_key
+from .storage import Store, local_key, WorkflowConflict
 from .auth import install_auth
 from .worker import Worker
 from .providers import ollama_models,supports
@@ -26,6 +26,8 @@ from .kb_gateway import install_kb_routes
 class RunRequest(StrictModel):
     workflow:Workflow
     message:str=Field(default='',max_length=20000)
+class WorkflowUpdate(Workflow):
+    updated_at:str|None=Field(default=None,max_length=64)
 class ModelRequest(StrictModel):
     provider:Literal['openai','claude','ollama']
     model:str=Field(min_length=1,max_length=100,pattern=r'^\S+$')
@@ -65,6 +67,8 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
         return JSONResponse(status_code=422,content={'detail':[{'loc':list(e['loc']),'msg':e['msg'],'type':e['type']} for e in exc.errors()]})
 
     def safe_draft(workflow):
+        if any(edge.kind=='store' for edge in workflow.edges) or any(node.type.startswith('vector_') for node in workflow.nodes):
+            raise HTTPException(422,'This workflow used the retired VectorDB nodes. Create a named knowledge base and reconnect a Retrieve node before importing or replaying it.')
         for node in workflow.nodes:
             definition=REGISTRY.get(node.type)
             if not definition or set(node.config)-set(definition.config_model.model_fields):
@@ -97,9 +101,12 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
         try:return store.workflow(id,tenant_id)
         except KeyError:raise HTTPException(404,'Workflow not found') from None
     @app.put('/api/workflows/{id}')
-    async def update(id:str,workflow:Workflow,tenant_id:str=Depends(tenant)):
-        try:return store.save_workflow(safe_draft(workflow),id,tenant_id)
+    async def update(id:str,workflow:WorkflowUpdate,tenant_id:str=Depends(tenant)):
+        document=Workflow.model_validate(workflow.model_dump(exclude={'updated_at'}))
+        try:return store.save_workflow(safe_draft(document),id,tenant_id,workflow.updated_at)
         except KeyError:raise HTTPException(404,'Workflow not found') from None
+        except WorkflowConflict as exc:
+            return JSONResponse(status_code=409,content={'detail':str(exc),'current':exc.current})
     @app.get('/api/models')
     async def allowed_models(tenant_id:str=Depends(tenant)):return store.models(tenant_id)
     @app.post('/api/models',status_code=201)

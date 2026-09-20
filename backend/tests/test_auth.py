@@ -9,7 +9,8 @@ from backend.app.storage import Store, WorkflowRecord, RunRecord, CredentialReco
 
 
 @pytest.fixture
-def auth_app(tmp_path):
+def auth_app(tmp_path, monkeypatch):
+    monkeypatch.setenv('AUTH_REGISTRATION_MODE', 'open')
     from backend.app.auth import install_auth
     store = Store(f'sqlite:///{tmp_path}/auth.db', Fernet.generate_key())
     app = FastAPI()
@@ -30,7 +31,7 @@ def test_setup_claims_local_records_only_once(auth_app):
     with Session(store.engine) as session:
         session.add_all([WorkflowRecord(id='w', document={'name':'legacy'}, updated_at='now'), RunRecord(id='r', data={}), CredentialRecord(id='c', name='legacy', encrypted='encrypted')])
         session.commit()
-    assert client.get('/api/auth/status').json() == {'enabled': True, 'needs_setup': True}
+    assert client.get('/api/auth/status').json() == {'enabled': True, 'needs_setup': True, 'registration_mode':'open'}
     assert client.get('/protected').status_code == 401
     response = register(client)
     assert response.status_code == 201
@@ -92,7 +93,7 @@ def test_auth_disabled_retains_local_mode(tmp_path):
         return tenant
     client = TestClient(app)
     assert client.get('/protected').json() == 'local'
-    assert client.get('/api/auth/status').json() == {'enabled':False,'needs_setup':False}
+    assert client.get('/api/auth/status').json() == {'enabled':False,'needs_setup':False,'registration_mode':'closed'}
 
 
 def test_accounts_and_sessions_survive_app_restart(auth_app):

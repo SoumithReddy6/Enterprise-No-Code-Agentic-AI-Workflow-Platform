@@ -8,7 +8,7 @@ from fastapi import Depends,HTTPException,Request
 from fastapi.responses import Response
 from pydantic import Field
 from .models import StrictModel
-from .kb.rpc import Client,ServiceUnavailable
+from .kb.rpc import Client,ServiceUnavailable,KnowledgeConflict
 from .kb.embedding import Embeddings
 from .kb.options import RetrievalOptions,KBSettings
 from .providers import supports
@@ -87,6 +87,7 @@ def install_kb_routes(app,store,tenant_dependency,services=None):
         try:return await services.management.call(action,tenant,payload)
         except KeyError:raise HTTPException(404,'Knowledge base or document unavailable') from None
         except ServiceUnavailable as e:raise HTTPException(503,str(e)) from None
+        except KnowledgeConflict as e:raise HTTPException(409,e.detail) from None
         except ValueError as e:raise HTTPException(400,str(e)) from None
     async def settings(config,tenant):
         try:return await checked_config(config,store,tenant,services.embeddings)

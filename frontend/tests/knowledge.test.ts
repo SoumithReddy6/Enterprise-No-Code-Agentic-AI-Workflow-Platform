@@ -15,6 +15,13 @@ const source = {
   citation: 'S1',
   cited: true,
 };
+void test('120 run passages retain every source and citation in the run panel', () => {
+  const passages = Array.from({ length: 120 }, (_, i) => ({ ...source, id: `chunk${i}`, citation: `S${i + 1}` }));
+  const parsed = parseSources(JSON.stringify(passages));
+  assert.equal(parsed.length, 120);
+  assert.equal(parsed[119].citation, 'S120');
+  assert.equal(sourcesForRun({ workflow }, [{ seq: 1, status: 'success', timestamp: '', node_id: 'answer', outputs: { sources: JSON.stringify(passages) } }]).length, 120);
+});
 const node = (id: string, type: string) => ({
   id,
   type,
