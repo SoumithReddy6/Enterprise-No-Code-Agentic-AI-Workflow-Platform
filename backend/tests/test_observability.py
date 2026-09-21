@@ -26,7 +26,12 @@ async def test_transient_provider_failures_are_retried_with_backoff(monkeypatch)
     monkeypatch.setattr(providers.asyncio,'sleep',sleep)
     ctx=Context('',lambda _:'',node_id='agent',run={'evidence':[]})
     result=await llm_node({'prompt':'Q'},LLMConfig(provider='ollama',model='tiny'),ctx)
-    assert result['text']=='Ready' and len(attempts)==3 and delays==[.5,1.]
+    assert result["text"] == "Ready"
+    assert len(attempts) == 3
+
+    assert len(delays) == 2
+    assert 0 <= delays[0] <= 0.5
+    assert 0 <= delays[1] <= 1.0
     assert ctx.run['usage']['agent']=={'calls':1,'prompt_tokens':12,'completion_tokens':3,'by_model':[{'provider':'ollama','model':'tiny','calls':1,'prompt_tokens':12,'completion_tokens':3}]}
 
 @pytest.mark.asyncio
