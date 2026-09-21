@@ -7,7 +7,7 @@ import pytest
 SCRIPT=Path(__file__).resolve().parents[2]/'scripts/check_grounding_eval.py'
 
 def valid_report():
-    return {'generation':{'summary':{'n':38,'answer_substring_match_rate':.9,'false_abstention':0.,'heuristic_abstention_on_unanswerable':1.,'citation_rate':1.,'errors':0,'contract_compliance_rate':{'first_attempt':1.,'unavailable':0,'attempted':38}},'rows':[{'kind':'verbatim','cited':['S1']}]*33+[{'kind':'unanswerable','cited':[]}]*5}}
+    return {'generation':{'summary':{'n':53,'answer_substring_match_rate':.9,'false_abstention':0.,'heuristic_abstention_on_unanswerable':1.,'citation_rate':1.,'errors':0,'contract_compliance_rate':{'first_attempt':1.,'unavailable':0,'attempted':53}},'rows':[{'kind':'verbatim','cited':['S1']}]*33+[{'kind':'unanswerable','cited':[]}]*20}}
 
 def run(tmp_path,payload):
     path=tmp_path/'report.json';path.write_text(json.dumps(payload))
@@ -36,9 +36,25 @@ def test_missing_file_exits_two(tmp_path):
     result=subprocess.run([sys.executable,str(SCRIPT),str(tmp_path/'missing.json')],capture_output=True,text=True)
     assert result.returncode==2 and 'not a generation report' in result.stderr
 
-def test_extended_suite_requires_explicit_expected_count(tmp_path):
+def test_expanded_suite_is_default_and_old_suite_rejected(tmp_path):
     from scripts.check_grounding_eval import check
-    report=valid_report();report['generation']['rows'] += [{'kind':'unanswerable','cited':[]}]*15
-    report['generation']['summary']['n']=53
+    report=valid_report()
+    assert check(report)['accepted']
+    report['generation']['rows']=report['generation']['rows'][:38]
+    report['generation']['summary']['n']=38
     assert not check(report)['accepted']
-    assert check(report,expected_count=53)['accepted']
+    assert run(tmp_path,report).returncode==1
+
+@pytest.mark.parametrize('metric,accepted,rejected',[
+    ('answer_substring_match_rate',27/33,26/33),
+    ('heuristic_abstention_on_unanswerable',14/20,13/20),
+    ('citation_rate',30/33,29/33),
+    ('false_abstention',2/33,3/33),
+])
+def test_calibrated_integer_boundaries(metric,accepted,rejected):
+    from scripts.check_grounding_eval import check
+    report=valid_report()
+    report['generation']['summary'][metric]=round(accepted,3)
+    assert check(report)['accepted']
+    report['generation']['summary'][metric]=round(rejected,3)
+    assert not check(report)['accepted']

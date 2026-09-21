@@ -6,12 +6,12 @@ from scripts import eval_retrieval as evaluation
 from scripts.check_grounding_eval import check
 
 def test_adoption_gate_fails_on_regression_missing_compliance_or_incomplete_run():
-    rows=[{'kind':'verbatim','cited':['S1']}] * 33 + [{'kind':'unanswerable','cited':[]}] * 5
-    summary={'n':38,'answer_substring_match_rate':0.879,'false_abstention':0.091,'citation_rate':0.848,'errors':0,'heuristic_abstention_on_unanswerable':1.0,
+    rows=[{'kind':'verbatim','cited':['S1']}] * 33 + [{'kind':'unanswerable','cited':[]}] * 20
+    summary={'n':53,'answer_substring_match_rate':0.879,'false_abstention':0.061,'citation_rate':0.939,'errors':0,'heuristic_abstention_on_unanswerable':1.0,
              'contract_compliance_rate':{'first_attempt':0.921,'unavailable':0,'attempted':38}}
     report={'generation':{'summary':summary,'rows':rows}}
     assert check(report)['accepted']
-    for key,value in [('answer_substring_match_rate',0.848),('citation_rate',0.788),('false_abstention',0.1),('errors',1),('heuristic_abstention_on_unanswerable',0.6)]:
+    for key,value in [('answer_substring_match_rate',0.80),('citation_rate',0.788),('false_abstention',0.1),('errors',1),('heuristic_abstention_on_unanswerable',0.6)]:
         changed={'generation':{'summary':{**summary,key:value},'rows':rows}}
         assert not check(changed)['accepted']
     for compliance in [{},{'first_attempt':0.89,'unavailable':0,'attempted':38}]:
