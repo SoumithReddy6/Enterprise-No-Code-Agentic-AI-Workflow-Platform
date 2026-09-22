@@ -187,3 +187,25 @@ ANSWERABILITY_MODEL_DIR=/absolute/path/to/reader .venv/bin/python -m scripts.eva
 ```
 
 Verify the report's `product_answerability_guard.decisions`: a skipped or unmeasured reader is not evidence of enforcement, even if other generation metrics pass.
+
+## Agent action budgets
+
+Two separate limits bound agent work. They are often confused, so check which one a truncation names.
+
+| Limit | Scope | Where | Default |
+| --- | --- | --- | ---: |
+| `max_steps` | One agent's loop iterations | Agent node config | 6 (max 12) |
+| `AGENT_RUN_BUDGET` | Every action in the run, across the whole delegation tree | Environment | 40 (range 1–200) |
+
+An action is a tool call or a delegation to a specialist. Delegating counts, so a supervisor consulting three specialists that each run one tool spends six.
+
+`max_steps` is the per-agent allowance. `AGENT_RUN_BUDGET` is a backstop against a runaway delegation tree, not a per-agent allowance: set close to `max_steps` it will starve multi-agent workflows, which is why the default is well above it.
+
+A truncation names the limit that was hit:
+
+- `Run-wide agent action budget exhausted (40 actions; raise AGENT_RUN_BUDGET).`
+- `Agent step budget exhausted (6 steps for this agent).`
+
+The `agent_budget` run event carries `run_budget`, `actions_used` and `max_steps`, so operator metrics show whether the ceiling is set correctly rather than guessing. Raising it increases the maximum spend of a single run; on metered providers, size it against your cost limits.
+
+Changing `AGENT_RUN_BUDGET` requires a worker restart. It does not affect runs already in flight, and a run paused for approval resumes on the budget recorded in its saved frame.

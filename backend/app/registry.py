@@ -32,7 +32,7 @@ class LLMConfig(StrictModel):
 class AgentConfig(LLMConfig):
     role: Literal['planner','reasoner','reflection','critic','router','memory','summarizer','extraction','classification']='reasoner'
     user_prompt: str = Field(default='{input}',max_length=20000)
-    max_steps: int = Field(default=6,ge=1,le=6)
+    max_steps: int = Field(default=6,ge=1,le=12)
     memory_key: str = Field(default='default',min_length=1,max_length=120)
     description: str = Field(default='',max_length=500)  # Shown to a parent agent that may delegate here.
     output_schema: dict = Field(default_factory=dict,title='Output JSON schema',description='When set, the answer must be JSON matching this schema; extraction and classification roles always require a JSON object.')

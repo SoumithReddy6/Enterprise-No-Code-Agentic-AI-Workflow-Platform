@@ -1,5 +1,6 @@
 """Bounded, explicit tool selection and specialist delegation over text providers."""
 import json
+import os
 import re
 from dataclasses import replace
 from .tool_service import UncertainWriteError, is_write
@@ -164,6 +165,17 @@ def describe_target(id,node):
         elif kind.startswith('tool_'):description=f"{kind.removeprefix('tool_').capitalize()} {config.get('operation','')}".strip()
     return {'id':id,'name':node.label or node.type,'type':kind,'description':description,'input':INPUT_HINTS.get(kind,'the task text')}
 
+DEFAULT_RUN_BUDGET=40
+
+def run_budget():
+    """Run-wide ceiling on agent actions. Per-agent limits stay in each agent's max_steps;
+    this only stops a delegation tree from running away."""
+    raw=os.getenv('AGENT_RUN_BUDGET','').strip() or str(DEFAULT_RUN_BUDGET)
+    try:value=int(raw)
+    except ValueError:raise ValueError('AGENT_RUN_BUDGET must be an integer between 1 and 200') from None
+    if not 1<=value<=200:raise ValueError('AGENT_RUN_BUDGET must be an integer between 1 and 200')
+    return value
+
 async def execute_agent(node_id,input_text,workflow,ctx,emit,depth=0,budget=None,checkpoint_owner=None):
     held=set()
     ctx=replace(ctx,node_id=node_id,node_type='agent',checkpoint_owner=checkpoint_owner or node_id)
@@ -186,7 +198,7 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
     nodes={n.id:n for n in workflow.nodes};node=nodes[node_id]
     config=REGISTRY['agent'].config_model.model_validate(node.config)
     ctx.authorize_model(config)
-    budget=budget if budget is not None else {'remaining':6,'counter':0}
+    budget=budget if budget is not None else {'remaining':run_budget(),'counter':0,'ceiling':run_budget()}
     checkpoint_owner=checkpoint_owner or node_id
     frame_key=f'{checkpoint_owner}:{depth}:{node_id}'
     frame=(ctx.run or {}).get('agent_frames',{}).pop(frame_key,None)
@@ -229,9 +241,9 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
         replay=bool(frame and step==frame['step'])
         exhausted=not replay and (step>=config.max_steps or budget['remaining']<=0)
         if exhausted:
-            reason='Shared agent tool budget exhausted.' if budget['remaining']<=0 else 'Agent step budget exhausted.'
+            reason=f"Run-wide agent action budget exhausted ({budget.get('ceiling',DEFAULT_RUN_BUDGET)} actions; raise AGENT_RUN_BUDGET)." if budget['remaining']<=0 else f'Agent step budget exhausted ({config.max_steps} steps for this agent).'
             truncations.append({'node_id':node_id,'reason':reason})
-            await emit({'kind':'agent_budget','node_id':node_id,'status':'warning','transient':True,'truncated':True,'reason':reason})
+            await emit({'kind':'agent_budget','node_id':node_id,'status':'warning','transient':True,'truncated':True,'reason':reason,'run_budget':budget.get('ceiling',DEFAULT_RUN_BUDGET),'actions_used':budget['counter'],'max_steps':config.max_steps})
             if not evidence:
                 if depth:raise AgentBudgetExhausted('Nested agent budget exhausted without evidence.')
                 output=immediate_abstention()
