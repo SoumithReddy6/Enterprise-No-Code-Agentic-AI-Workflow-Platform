@@ -287,3 +287,52 @@ async def claude_chat(model, system, prompt, key, temperature=None, top_p=None,
         raise ValueError(f'Claude request failed (HTTP {exc.response.status_code}). Check the credential, model and quota.') from None
     except httpx.RequestError:
         raise ValueError('Claude request failed or returned an unsupported response.') from None
+
+
+async def openai_chat(model, system, prompt, key, temperature=None, top_p=None,
+                      max_tokens=2048, usage=None):
+    """OpenAI Chat Completions; system is the first message and tokens are max_completion_tokens."""
+    _validate_chat_args(model, system, prompt, max_tokens, temperature, top_p)
+    if not isinstance(key, str) or not key.strip():
+        raise ValueError('Choose an OpenAI credential in the LLM settings.')
+    params = {}
+    if temperature is not None:
+        params['temperature'] = temperature
+    if top_p is not None:
+        params['top_p'] = top_p
+    try:
+        async with client(60) as http:
+            response = await http.post(
+                'https://api.openai.com/v1/chat/completions',
+                headers={'Authorization': f'Bearer {key}'},
+                json={'model': model,
+                      'messages': [{'role': 'system', 'content': system},
+                                   {'role': 'user', 'content': prompt}],
+                      'max_completion_tokens': max_tokens, **params},
+            )
+            _raise_retryable(response, 'OpenAI')
+            response.raise_for_status()
+            body = _json_object(response, 'OpenAI')
+            choices = body.get('choices')
+            if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+                raise ProviderResponseError('OpenAI returned no supported text response.')
+            message = choices[0].get('message')
+            if not isinstance(message, dict):
+                raise ProviderResponseError('OpenAI returned an unsupported message payload.')
+            text = message.get('content')
+            if not isinstance(text, str):
+                raise ProviderResponseError('Model did not return text.')
+            if not text.strip():
+                raise ProviderResponseError('OpenAI returned no text.')
+            usage_data = body.get('usage')
+            if usage_data is not None and not isinstance(usage_data, dict):
+                raise ProviderResponseError('OpenAI returned invalid usage metadata.')
+            usage_data = usage_data or {}
+            record_usage(usage, usage_data.get('prompt_tokens'), usage_data.get('completion_tokens'))
+            return text
+    except httpx.TimeoutException:
+        raise ProviderBusy('OpenAI request timed out') from None
+    except httpx.HTTPStatusError as exc:
+        raise ValueError(f'OpenAI request failed (HTTP {exc.response.status_code}). Check the credential, model and quota.') from None
+    except httpx.RequestError:
+        raise ValueError('The model request failed or returned an unsupported response.') from None

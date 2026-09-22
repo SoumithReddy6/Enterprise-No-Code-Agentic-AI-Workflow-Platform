@@ -4,7 +4,6 @@ from typing import Awaitable, Callable, Literal
 import asyncio
 import json
 import string
-import httpx
 from pydantic import Field, model_validator
 from .models import StrictModel
 
@@ -111,7 +110,7 @@ async def llm_node(inputs, config, ctx):
     if config.provider == 'demo':
         await asyncio.sleep(0.15)
         return {'text': f'[Demo · no model called]\n\nReceived prompt:\n{inputs["prompt"]}', 'provider': 'demo'}
-    from .providers import with_retries,ProviderBusy,RETRYABLE_STATUS,record_usage
+    from .providers import with_retries
     params={}
     if config.temperature is not None:params['temperature']=config.temperature
     if config.top_p is not None:params['top_p']=config.top_p
@@ -125,31 +124,8 @@ async def llm_node(inputs, config, ctx):
         from .providers import claude_chat
         text=await with_retries(lambda: claude_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),usage=usage,**params),provider=config.provider,model=config.model)
         account_usage(ctx,usage,config);return {'text': text, 'provider': 'claude'}
-    if not config.credential_id:
-        raise ValueError('Choose an OpenAI credential in the LLM settings.')
-    key = ctx.resolve_credential(config.credential_id)
-    async def openai_call():
-        async with httpx.AsyncClient(timeout=60) as client:
-            try:
-                response = await client.post('https://api.openai.com/v1/chat/completions',
-                    headers={'Authorization': f'Bearer {key}'},
-                    json={'model': config.model, 'messages': [
-                        {'role': 'system', 'content': config.system},
-                        {'role': 'user', 'content': inputs['prompt']}], 'max_completion_tokens': config.max_tokens,**{k:v for k,v in params.items() if k!='max_tokens'}})
-                if response.status_code in RETRYABLE_STATUS:raise ProviderBusy(f'OpenAI returned HTTP {response.status_code}')
-                response.raise_for_status()
-                body=response.json();content = body['choices'][0]['message']['content']
-                if not isinstance(content, str):
-                    raise ValueError('Model did not return text.')
-                record_usage(usage,(body.get('usage') or {}).get('prompt_tokens'),(body.get('usage') or {}).get('completion_tokens'))
-                return content
-            except ProviderBusy:raise
-            except httpx.TimeoutException:raise ProviderBusy('OpenAI request timed out') from None
-            except httpx.HTTPStatusError as exc:
-                raise ValueError(f'OpenAI request failed (HTTP {exc.response.status_code}). Check the credential, model and quota.') from None
-            except (httpx.RequestError, KeyError, IndexError, TypeError):
-                raise ValueError('The model request failed or returned an unsupported response.') from None
-    text=await with_retries(openai_call,provider=config.provider,model=config.model)
+    from .providers import openai_chat
+    text=await with_retries(lambda: openai_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),usage=usage,**params),provider=config.provider,model=config.model)
     account_usage(ctx,usage,config);return {'text': text, 'provider': 'openai'}
 
 async def condition_node(inputs, config, ctx):
