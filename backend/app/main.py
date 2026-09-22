@@ -28,6 +28,10 @@ from .readiness import Readiness
 class RunRequest(StrictModel):
     workflow:Workflow
     message:str=Field(default='',max_length=20000)
+class ApprovalDecision(StrictModel):
+    approval_id:str=Field(min_length=1,max_length=64)
+    digest:str=Field(pattern=r'^[a-f0-9]{64}$')
+
 class WorkflowUpdate(Workflow):
     updated_at:str|None=Field(default=None,max_length=64)
 class ModelRequest(StrictModel):
@@ -144,11 +148,22 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     async def start(body:RunRequest,tenant_id:str=Depends(tenant)):
         errors=await submission_errors(body.workflow,tenant_id)
         if errors:raise HTTPException(422,detail=errors)
-        run=store.create_run(body.workflow.model_dump(mode='json'),body.message,tenant_id,request_id=request_id.get())
+        run=store.create_run(body.workflow.model_dump(mode='json'),body.message,tenant_id,request_id=request_id.get(),approval_required=auth_enabled)
         trace_run_id.set(run['id'])
         return {'id':run['id'],'status':'queued'}
     @app.get('/api/runs/{id}')
     async def run(id:str,tenant_id:str=Depends(tenant)):return fetch_run(id,tenant_id)
+    @app.post('/api/runs/{id}/approve')
+    def approve(id:str,body:ApprovalDecision,tenant_id:str=Depends(tenant)):
+        return approval_decision(id,body,tenant_id,'approve')
+    @app.post('/api/runs/{id}/reject')
+    def reject(id:str,body:ApprovalDecision,tenant_id:str=Depends(tenant)):
+        return approval_decision(id,body,tenant_id,'reject')
+    def approval_decision(id,body,tenant_id,action):
+        from .approvals import decide
+        try:return decide(store,id,tenant_id,body.approval_id,body.digest,action)
+        except KeyError:raise HTTPException(404,'Approval not found') from None
+        except ValueError as exc:raise HTTPException(409,str(exc)) from None
     @app.post('/api/runs/{id}/cancel')
     async def cancel(id:str,tenant_id:str=Depends(tenant)):
         fetch_run(id,tenant_id)

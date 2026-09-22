@@ -8,6 +8,7 @@ from langgraph.graph import StateGraph, START, END
 from pydantic import ValidationError
 from .models import Workflow
 from .registry import REGISTRY, Context, validate_template
+from .approvals import ApprovalPause
 
 
 class PersistedNodeCancellation(asyncio.CancelledError):
@@ -110,7 +111,7 @@ async def silent(event):
     pass
 
 
-def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0):
+def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None):
     errors = validate_workflow(workflow)
     if errors: raise ValueError('\n'.join(errors))
     from .platform_graph import split_graph
@@ -119,9 +120,9 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
     full_workflow=workflow
     workflow,_,_=split_graph(workflow)
     graph = StateGraph(State)
-    run_state={'evidence':[],'citation_counter':citation_counter}  # Every passage retrieved in this run, under a run-unique citation label.
+    run_state={'evidence':[],'citation_counter':citation_counter,'agent_frames':agent_frames or {}}  # Every passage retrieved in this run, under a run-unique citation label.
     prepare_checkpoint_labels(run_state,completed)
-    context = Context(message=message, resolve_credential=credential_resolver, authorize_model=authorize_model,knowledge=knowledge_resolver,platform=platform_resolver,run=run_state)
+    context = Context(message=message, resolve_credential=credential_resolver, authorize_model=authorize_model,knowledge=knowledge_resolver,platform=platform_resolver,run=run_state,emit=emit)
     async def invoke_agent(id,text):return await execute_agent(id,text,full_workflow,context,emit)
     context.invoke_agent=invoke_agent
     context.workflow=full_workflow
@@ -142,7 +143,21 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                 started = time.perf_counter()
                 await emit({'node_id': node.id, 'status': 'running', 'inputs': inputs})
                 try:
-                    outputs = await definition.handler(inputs, config, replace(context,node_id=node.id,node_type=node.type,checkpoint_owner=node.id))
+                    # Legacy prompt/LLM nodes must not bypass an upstream guard.
+                    def guarded_dependency(identifier,seen):
+                        if identifier in seen:return False
+                        seen.add(identifier)
+                        from .answerability_guard import from_outputs
+                        decision=from_outputs(state['values'].get(identifier,{}))
+                        if decision and decision['decision']=='abstain':return True
+                        upstream=next((n for n in workflow.nodes if n.id==identifier),None)
+                        return bool(upstream and any(guarded_dependency(ref.split('.')[0],seen) for ref in upstream.inputs.values()))
+                    if node.type in ('llm','agent','query') and any(guarded_dependency(ref.split('.')[0],set()) for ref in node.inputs.values()):
+                        from .agent_runtime import immediate_abstention
+                        refusal=immediate_abstention({'decision':'abstain'})
+                        outputs={'text':refusal['text'],'provider':'none'} if node.type=='llm' else refusal
+                    else:
+                        outputs = await definition.handler(inputs, config, replace(context,node_id=node.id,node_type=node.type,checkpoint_owner=node.id))
                     if set(outputs) != set(definition.outputs) or any(not isinstance(v, str) for v in outputs.values()):
                         raise ValueError('Node returned outputs that do not match its declared contract.')
                     evidence_from_outputs(run_state,outputs)
@@ -152,6 +167,10 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     if usage:event['usage']=usage  # Model calls made by this node (an agent's tool loop counts as one node).
                     await emit(event)
                     return {'values': {node.id: outputs}}
+                except ApprovalPause as exc:
+                    usage=run_state.get('usage',{}).get(node.id)
+                    if usage:await emit({'node_id':node.id,'status':'paused','transient':True,'usage':usage})
+                    raise
                 except asyncio.CancelledError as exc:
                     if isinstance(exc,PersistedNodeCancellation):
                         # Python 3.12 asyncio.timeout recognizes the exact base type.

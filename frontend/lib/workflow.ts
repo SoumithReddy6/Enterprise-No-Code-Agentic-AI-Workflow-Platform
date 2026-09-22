@@ -42,6 +42,8 @@ export type Definition = {
   config_schema: { properties: Record<string, ConfigProperty> };
 };
 export type RunEvent = {
+  answerability?: { decision: 'allow' | 'abstain' | 'skip'; reason?: string };
+  abstention_source?: string | null;
   seq: number;
   node_id?: string;
   status: string;
@@ -56,6 +58,8 @@ export type RunEvent = {
   truncated?: boolean;
 };
 export type Run = {
+  approvals?: import('./approvals').RunApproval[];
+  approval_terminal?: boolean;
   id: string;
   name?: string;
   status: string;
@@ -183,6 +187,7 @@ export const accent: Record<string, string> = {
   response: 'green',
 };
 export const friendlyStatus: Record<string, string> = {
+  awaiting_approval: 'Awaiting approval',
   queued: 'Queued',
   running: 'Running',
   success: 'Completed',

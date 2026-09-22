@@ -1,4 +1,6 @@
 'use client';
+import { approvalDecision, type RunApproval } from '@/lib/approvals';
+import ApprovalReview from './approval-review';
 
 import {
   useCallback,
@@ -350,6 +352,7 @@ function Editor() {
     return () => window.removeEventListener('beforeunload', fn);
   }, [dirty]);
 
+
   function snapshot() {
     setUndo((s) => [...s.slice(-39), structuredClone(current.current)]);
     setRedo([]);
@@ -580,6 +583,24 @@ function Editor() {
       );
       setRunning(false);
       activeRun.current = undefined;
+    }
+  }
+  async function decideApproval(approval: RunApproval, action: 'approve' | 'reject') {
+    if (!run) return;
+    const runId = run.id;
+    setBusy(true);
+    try {
+      const decision = await approvalDecision(approval);
+      await api(`/runs/${runId}/${action}`, 'POST', decision);
+      activeRun.current = runId;
+      setRunning(action === 'approve');
+      await recoverRun(runId);
+    } catch (e) {
+      setNotice((e as Error).message);
+      activeRun.current = runId;
+      await recoverRun(runId);
+    } finally {
+      setBusy(false);
     }
   }
   async function resumeRun() {
@@ -1258,7 +1279,7 @@ function Editor() {
                   <div className="response-output">
                     <div className="output-label">
                       <span>Response</span>
-                      {run && ['failed', 'cancelled'].includes(run.status) && (
+                      {run && !run.approval_terminal && ['failed', 'cancelled'].includes(run.status) && (
                         <button
                           className="text-button"
                           disabled={running || busy}
@@ -1286,6 +1307,8 @@ function Editor() {
                         </button>
                       )}
                     </div>
+                    {events.some((e) => e.answerability?.decision === 'skip') && <output className="helper">An answerability check was skipped. The run used ordinary generation; inspect the execution log and worker model installation.</output>}
+                    {events.some((e) => e.answerability?.decision === 'abstain') && <output className="helper">The answerability guard rejected retrieved evidence in this run.</output>}
                     {run?.truncated && <output className="helper">Incomplete answer: {run.truncation_reason || 'The agent reached its tool budget.'}</output>}
                     {/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Scroll regions need keyboard focus for arrow and page navigation. */}
                     <section
@@ -1293,6 +1316,11 @@ function Editor() {
                       aria-label="Response and sources"
                       tabIndex={0}
                     >
+                      {run?.status === 'awaiting_approval' && <button className="text-button" disabled={busy} onClick={() => void showRun(run.id)}>Refresh approval status</button>}
+                      {run?.approvals?.filter((a) => a.status === 'pending').map((approval) => (
+                        <ApprovalReview key={approval.id} approval={approval} disabled={busy || running}
+                          onDecision={(a, action) => void decideApproval(a, action)} />
+                      ))}
                       {run?.output ? (
                         <pre>{run.output}</pre>
                       ) : run?.error ? (

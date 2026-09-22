@@ -5,6 +5,13 @@ from sqlalchemy import Column,String,Integer,select,func,case
 from sqlalchemy.orm import Session
 from .storage import Base,RunRecord,RunEventRecord,SchemaMigrationRecord
 
+class GuardDecisionRecord(Base):
+    __tablename__='run_guard_decisions'
+    run_id=Column(String(64),primary_key=True)
+    seq=Column(Integer,primary_key=True)
+    decision=Column(String(16),nullable=False,index=True)
+    reason=Column(String(32),nullable=False)
+
 class RunTokenRecord(Base):
     __tablename__='run_token_usage'
     run_id=Column(String(64),primary_key=True)
@@ -59,6 +66,8 @@ def metrics(store,hours=168):
     end=datetime.now(timezone.utc);start=end-timedelta(hours=hours)
     window=(RunRecord.created_at>=start.isoformat(),RunRecord.created_at<end.isoformat())
     with Session(store.engine) as session:
+        guard_counts=dict(session.execute(select(GuardDecisionRecord.decision,func.count()).join(RunRecord,RunRecord.id==GuardDecisionRecord.run_id).where(*window).group_by(GuardDecisionRecord.decision)).all())
+        guard_skips=dict(session.execute(select(GuardDecisionRecord.reason,func.count()).join(RunRecord,RunRecord.id==GuardDecisionRecord.run_id).where(*window,GuardDecisionRecord.decision=='skip').group_by(GuardDecisionRecord.reason)).all())
         counts=dict(session.execute(select(RunRecord.status,func.count()).where(*window).group_by(RunRecord.status)).all())
         total,grounded,abstained,truncated=session.execute(select(func.count(),func.sum(case((RunRecord.grounded,1),else_=0)),func.sum(case((RunRecord.abstained,1),else_=0)),func.sum(case((RunRecord.truncated,1),else_=0))).where(*window,RunRecord.status=='success')).one()
         # SQL window ranks implement portable nearest-rank percentiles on SQLite/PostgreSQL.
@@ -67,7 +76,7 @@ def metrics(store,hours=168):
         for name,p in (('p50',.5),('p95',.95)):
             percentiles[name]=session.scalar(select(func.min(ranked.c.duration)).where(ranked.c.rank>=ranked.c.n*p))
         tokens=[dict(row._mapping) for row in session.execute(select(RunTokenRecord.provider,RunTokenRecord.model,func.sum(RunTokenRecord.prompt_tokens).label('prompt_tokens'),func.sum(RunTokenRecord.completion_tokens).label('completion_tokens'),func.sum(RunTokenRecord.calls).label('calls')).join(RunRecord,RunRecord.id==RunTokenRecord.run_id).where(*window).group_by(RunTokenRecord.provider,RunTokenRecord.model).order_by(RunTokenRecord.provider,RunTokenRecord.model))]
-    return {'window':{'start':start.isoformat(),'end':end.isoformat(),'basis':'run_created_at'},'runs_by_status':counts,'duration_seconds':percentiles,'tokens':tokens,
+    return {'answerability_guard':{'decisions':guard_counts,'skipped_by_reason':guard_skips,'basis':'Uncached retrieval/query decisions across runs created in the window; not unique runs or model refusals'},'window':{'start':start.isoformat(),'end':end.isoformat(),'basis':'run_created_at'},'runs_by_status':counts,'duration_seconds':percentiles,'tokens':tokens,
             'abstention_rate':abstained/grounded if grounded else None,'truncation_rate':truncated/total if total else None,
             'denominators':{'successful_runs':total,'successful_grounded_runs':grounded or 0},
-            'definitions':{'abstention':'Any grounded node abstained in a successful run','duration':'Creation to final completion, including queue and resumed attempts','tokens':'Provider-reported tokens; not monetary cost; missing usage is not estimated'}}
+            'definitions':{'scope':'deployment-wide','abstention':'Any grounded node abstained in a successful run','duration':'Creation to final completion, including queue and resumed attempts','tokens':'Provider-reported tokens; not monetary cost; missing usage is not estimated'}}

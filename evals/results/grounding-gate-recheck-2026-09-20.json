@@ -1,0 +1,149 @@
+{
+  "checked_at": "2026-09-21T03:25:10.682565+00:00",
+  "gate_commit": "e0efbdf537c684db697089da01639ee6b5b514e6",
+  "kind": "saved_generation_artifact_gate_recheck",
+  "fresh_model_evaluation": false,
+  "provenance": {
+    "scripts/check_grounding_eval.py": {
+      "sha256": "f2259ba02565ca0aabb27482f7d908ef4e936a77a9cf75368cdf8fb36a06ac17",
+      "matches_commit": true
+    },
+    "evals/results/f11-after-review.json": {
+      "sha256": "c36f2c53b6090ec814b821bff9878d0afc30c67c2a5c06857c6d4c479258d6e5",
+      "matches_commit": true
+    },
+    "evals/results/answerability-guarded-generation.json": {
+      "sha256": "292c62058ec73f0030f76283991073fcb88d498f7b57914f1a2640370c9ee2a8",
+      "matches_commit": true
+    }
+  },
+  "limitations": [
+    "Gate script and source reports match the recorded commit; this does not establish that historical model outputs were generated with that commit.",
+    "The current workspace also contains uncommitted approval and operations changes; this is not release certification of that working tree.",
+    "Substring and document-match heuristics do not establish semantic correctness or claim entailment."
+  ],
+  "runs": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "scripts.check_grounding_eval",
+        "evals/results/f11-after-review.json",
+        "--expected-count",
+        "38"
+      ],
+      "exit_code": 1,
+      "result": {
+        "accepted": false,
+        "checks": {
+          "complete_real_corpus": true,
+          "first_attempt_compliance": true,
+          "answer_substring_match_rate": true,
+          "false_abstention": true,
+          "abstention_on_unanswerable": false,
+          "citation_rate": true,
+          "uncited_answerable_rows": true,
+          "no_generation_errors": true,
+          "compliance_measured": true
+        }
+      },
+      "stderr": "",
+      "generation_summary": {
+        "model": "llama3.1:latest",
+        "mode": "hybrid",
+        "n": 38,
+        "answer_substring_match_rate": 0.909,
+        "answer_retrieved": 0.909,
+        "substring_match_when_answer_retrieved": 0.967,
+        "false_abstention": 0.0,
+        "false_abstention_when_answer_retrieved": 0.0,
+        "heuristic_abstention_on_unanswerable": 0.4,
+        "citation_rate": 1.0,
+        "citation_document_match": 1.0,
+        "unsupported_references": 0,
+        "errors": 0,
+        "mean_seconds": 6.834,
+        "contract_compliance_rate": {
+          "first_attempt": 0.947,
+          "after_repair": 0.053,
+          "failed": 0.0,
+          "attempted": 38,
+          "not_called": 0,
+          "unavailable": 0,
+          "counts": {
+            "first_attempt": 36,
+            "after_repair": 2,
+            "failed": 0,
+            "not_called": 0,
+            "unavailable": 0
+          }
+        },
+        "uncited_answerable_rows": 0
+      }
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "scripts.check_grounding_eval",
+        "evals/results/answerability-guarded-generation.json",
+        "--expected-count",
+        "53"
+      ],
+      "exit_code": 1,
+      "result": {
+        "accepted": false,
+        "checks": {
+          "complete_real_corpus": true,
+          "first_attempt_compliance": true,
+          "answer_substring_match_rate": false,
+          "false_abstention": true,
+          "abstention_on_unanswerable": false,
+          "citation_rate": true,
+          "uncited_answerable_rows": true,
+          "no_generation_errors": true,
+          "compliance_measured": true
+        }
+      },
+      "stderr": "",
+      "generation_summary": {
+        "model": "llama3.1:latest",
+        "mode": "hybrid",
+        "n": 53,
+        "answer_substring_match_rate": 0.848,
+        "answer_retrieved": 0.879,
+        "substring_match_when_answer_retrieved": 0.966,
+        "false_abstention": 0.061,
+        "false_abstention_when_answer_retrieved": 0.0,
+        "heuristic_abstention_on_unanswerable": 0.75,
+        "citation_rate": 0.939,
+        "citation_document_match": 1.0,
+        "unsupported_references": 0,
+        "errors": 0,
+        "mean_seconds": 6.0,
+        "contract_compliance_rate": {
+          "first_attempt": 0.947,
+          "after_repair": 0.053,
+          "failed": 0.0,
+          "attempted": 38,
+          "not_called": 15,
+          "unavailable": 0,
+          "counts": {
+            "first_attempt": 36,
+            "after_repair": 2,
+            "failed": 0,
+            "not_called": 15,
+            "unavailable": 0
+          }
+        },
+        "uncited_answerable_rows": 2,
+        "experimental_answerability": {
+          "enabled": true,
+          "threshold": 0.0,
+          "pre_generation_rejections": 15,
+          "production_enabled": false
+        }
+      }
+    }
+  ]
+}

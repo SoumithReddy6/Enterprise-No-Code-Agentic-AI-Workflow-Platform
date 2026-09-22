@@ -256,3 +256,17 @@ async def test_cancellation_during_event_commit_does_not_double_count_tokens(tmp
     saved=store.run(run['id'])
     assert saved['checkpoints']['prompt']['text']=='answer'
     if deadline:assert saved['status']=='failed' and 'timed out' in saved['error']
+
+
+@pytest.mark.asyncio
+async def test_readiness_tolerates_database_slower_than_one_second(app,monkeypatch):
+    import time
+    import backend.app.readiness as probes
+    assert probes.PROBE_SECONDS==3.0
+    def slow_database(store):
+        time.sleep(1.1)
+        return time.time()
+    monkeypatch.setattr(probes,'database_probe',slow_database)
+    report,status=await app.state.readiness.check()
+    assert report['checks']['database']['status']=='ok'
+    assert report['checks']['worker']['status']=='ok'

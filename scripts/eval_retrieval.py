@@ -37,10 +37,10 @@ class Local:
         return await result if inspect.isawaitable(result) else result
     def call_sync(self,action,tenant='local',payload=None):return self.domain.call(action,tenant,payload or {})
 
-def workflow(kb_id,mode,model,top_k,candidate_k=50,reranker='none'):
+def workflow(kb_id,mode,model,top_k,candidate_k=50,reranker='none',product_guard=False):
     return Workflow.model_validate({'version':1,'name':'Evaluation','nodes':[
         {'id':'input','type':'chat_input'},
-        {'id':'retrieve','type':'retrieve','config':{'knowledge_base_id':kb_id,'mode':mode,'top_k':top_k,'candidate_k':candidate_k,'reranker':reranker},'inputs':{'query':'input.message'}},
+        {'id':'retrieve','type':'retrieve','config':{'knowledge_base_id':kb_id,'mode':mode,'top_k':top_k,'candidate_k':candidate_k,'reranker':reranker,'answerability_guard':product_guard},'inputs':{'query':'input.message'}},
         {'id':'agent','type':'agent','config':{'provider':'ollama','model':model,'max_tokens':400,'temperature':0},'inputs':{'input':'retrieve.context'}},
         {'id':'out','type':'response','inputs':{'text':'agent.text'}}],
         'edges':[{'id':'a','source':'input','target':'retrieve'},{'id':'b','source':'retrieve','target':'agent'},{'id':'c','source':'agent','target':'out'}]})
@@ -163,9 +163,11 @@ async def evaluate_generation(services,kb_id,questions,args):
         started=time.perf_counter()
         grounding={};contract_status='unavailable';retrieved=[]
         async def capture(event):
-            if event.get('node_id')=='retrieve' and event.get('status')=='success':
+            if event.get('node_id')=='retrieve' and event.get('status')=='success' and 'outputs' in event:
                 retrieved.extend(json.loads(event['outputs']['sources']))
-        graph=compile_workflow(workflow(kb_id,args.generate_mode,args.generate,args.top_k,getattr(args,'candidate_k',50),getattr(args,'reranker','none')),message=q['question'],platform_resolver=platform,emit=capture).graph
+                envelope=json.loads(event['outputs']['context'])
+                if 'answerability' in envelope:trace['product_answerability']=envelope['answerability']
+        graph=compile_workflow(workflow(kb_id,args.generate_mode,args.generate,args.top_k,getattr(args,'candidate_k',50),getattr(args,'reranker','none'),getattr(args,'product_answerability_guard',False)),message=q['question'],platform_resolver=platform,emit=capture).graph
         try:
             result=await graph.ainvoke({'values':{}})
             text=result['values']['out']['text'];sources=json.loads(result['values']['agent']['sources']);error=''
@@ -183,7 +185,7 @@ async def evaluate_generation(services,kb_id,questions,args):
         row['passages']=[{key:s.get(key) for key in ('citation','filename','page','text','score','rerank_score')} for s in sources]
         row['grounding']=grounding
         row['split']=q.get('split','calibration')
-        if reader is not None:row.update(trace)
+        if reader is not None or getattr(args,'product_answerability_guard',False):row.update(trace)
         evidence=expected_evidence(q)
         if evidence:
             expected_documents={group['document'] for group in evidence}
@@ -216,6 +218,7 @@ async def evaluate_generation(services,kb_id,questions,args):
     summary['contract_compliance_rate']=contract_compliance(rows)
     summary['uncited_answerable_rows']=sum(not r['cited'] for r in answerable)
     if reader is not None:summary['experimental_answerability']={'enabled':True,'threshold':0.,'pre_generation_rejections':sum(r.get('answerability',{}).get('answerable') is False and r.get('answerability',{}).get('status')=='scored' for r in rows),'production_enabled':False}
+    if getattr(args,'product_answerability_guard',False):summary['product_answerability_guard']={'enabled':True,'decisions':{key:sum(r.get('product_answerability',{}).get('decision')==key for r in rows) for key in ('allow','abstain','skip')}}
     if getattr(args,'judge',''):
         judgments=[r['claim_evaluation'] for r in rows]
         summary['claim_judge']={'model':args.judge,'judged_answers':sum(j['status']=='judged' for j in judgments),'errors':sum(j['status']=='error' for j in judgments),'no_claims':sum(j['status']=='no_claims' for j in judgments),'skipped':sum(j['status']=='skipped_generation_error' for j in judgments),'mean_supported_fraction':mean([j['supported_fraction'] for j in judgments if j['supported_fraction'] is not None]),'limitation':'Model-estimated support; claim coverage and citation assignment are not independently verified. Human calibration required.'}
@@ -244,10 +247,12 @@ def main():
     parser.add_argument('--generate',default='',help='Ollama chat model for the grounded-generation pass; omit for retrieval only')
     parser.add_argument('--judge',default='',help='Optional installed Ollama model for claim/evidence judgments; requires --generate')
     parser.add_argument('--generate-mode',default='rrf')
+    parser.add_argument('--product-answerability-guard',action='store_true',help='Enable the actual Retrieve node guard; uses ANSWERABILITY_MODEL_DIR, no evaluation-side filtering')
     parser.add_argument('--answerability-reader',default='',help='Experimental local QA model directory; pre-generation evaluation only, never enables the product guard')
     parser.add_argument('--limit',type=int,default=0,help='Evaluate only the first N questions')
     parser.add_argument('--out',default=str(ROOT/'evals/results/latest.json'))
     args=parser.parse_args();args.modes=args.modes.split(',')
+    if args.product_answerability_guard and (args.answerability_reader or not args.generate):parser.error('Product guard requires generation and cannot be combined with the offline reader flag')
     if args.judge and not args.generate:parser.error('--judge requires --generate')
     if args.answerability_reader and not args.generate:parser.error('--answerability-reader requires --generate')
     if args.judge.split(':',1)[0]=='llama3.1':parser.error('llama3.1 claim judge is retired after failed calibration; use scripts.eval_nli for offline classifier evaluation.')

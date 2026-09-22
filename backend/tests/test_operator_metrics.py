@@ -22,6 +22,7 @@ def test_operator_metrics_permissions_and_known_aggregates(tmp_path,monkeypatch)
         result=client.get('/api/operator/metrics')
         assert result.status_code==200
         body=result.json();assert body['runs_by_status']=={'success':4}
+        assert body['definitions']['scope']=='deployment-wide'
         assert body['abstention_rate']==.25 and body['truncation_rate']==.5
         assert body['tokens']==[{'provider':'ollama','model':'llama3.1','prompt_tokens':40,'completion_tokens':20,'calls':4}]
         assert body['duration_seconds']['p95']>=body['duration_seconds']['p50']>=0
@@ -86,3 +87,21 @@ def test_metrics_backfill_is_idempotent_and_queries_avoid_payloads(tmp_path):
     assert report['tokens']==[{'provider':'ollama','model':'legacy','calls':1,'prompt_tokens':8,'completion_tokens':4}]
     assert all('runs.data' not in statement and 'payload' not in statement for statement in queries)
     second.engine.dispose()
+
+
+def test_startup_backfill_journals_success_and_failure(tmp_path,caplog,monkeypatch):
+    from backend.app.storage import Store
+    key=Fernet.generate_key()
+    caplog.set_level('INFO',logger='relay.journal')
+    store=Store(f'sqlite:///{tmp_path}/startup.db',key);store.engine.dispose()
+    records=[json.loads(r.message) for r in caplog.records if r.name=='relay.journal']
+    assert [r['event'] for r in records]==['storage.backfill.start','storage.backfill.finish']
+    assert records[-1]['status']=='success' and records[-1]['seconds']>=0
+    caplog.clear()
+    def fail(conn):raise ValueError('PRIVATE database detail')
+    monkeypatch.setattr(Store,'_migrate_run_events',staticmethod(fail))
+    with pytest.raises(ValueError):Store(f'sqlite:///{tmp_path}/failed.db',key)
+    records=[json.loads(r.message) for r in caplog.records if r.name=='relay.journal']
+    assert [r['event'] for r in records]==['storage.backfill.start','storage.backfill.finish']
+    assert records[-1]['status']=='failed' and records[-1]['error_type']=='ValueError'
+    assert 'PRIVATE' not in caplog.text

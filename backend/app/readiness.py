@@ -5,7 +5,7 @@ from sqlalchemy import Column,String,Float,select,text,func,delete
 from sqlalchemy.orm import Session
 from .storage import Base,JobRecord
 
-PROBE_SECONDS=1.0
+PROBE_SECONDS=3.0  # Tolerate brief database latency; still fail the first unhealthy probe.
 WORKER_MAX_AGE=30.0
 
 class WorkerHeartbeat(Base):

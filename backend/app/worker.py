@@ -12,6 +12,7 @@ from .tool_service import ToolService,CONFIGS,is_write,UncertainWriteError
 from .agent_memory import MemoryService
 from .platform_validation import platform_errors,kb_errors
 from .kb_gateway import KnowledgeServices
+from . import approvals
 
 RUN_TIMEOUT_SECONDS=120
 from .observability import journal,request_id,run_id,tenant_id
@@ -55,10 +56,30 @@ class Worker:
                 tenant=self.store.run_tenant(id,owner)
                 try:
                     if action=='tool':
-                        node_type,settings,input_text,checkpoint_owner=args
+                        node_type,settings,input_text,checkpoint_owner,*identity=args
                         config=CONFIGS[node_type].model_validate(settings)
                         self.tools.check(config,tenant)
                         write=is_write(node_type,config)
+                        invocation=identity[1] if len(identity)>1 else checkpoint_owner
+                        node_id=identity[0] if identity else checkpoint_owner
+                        required=write and (config.approval if config.approval is not None else run.get('approval_required',True))
+                        if required:
+                            saved=approvals.resolve(self.store,id,owner,invocation)
+                            if saved is None:
+                                prepared=self.tools.prepare(node_type,settings,input_text,tenant)
+                                raise approvals.ApprovalPause(node_id,checkpoint_owner,invocation,prepared)
+                            candidate=self.tools.prepare(node_type,settings,input_text,tenant)
+                            if candidate['payload']!=saved['prepared']['payload'] or candidate['connection_id']!=saved['prepared']['connection_id']:
+                                raise ValueError('The resumed action differs from the reviewed request. Start a new run.')
+                            if saved['status']=='completed':return saved['result']
+                            self.tools.validate_prepared(saved['prepared'],tenant)
+                            approvals.begin(self.store,id,owner,saved['id'])
+                            try:
+                                result=await self.tools.execute_prepared(saved['prepared'],tenant)
+                                approvals.complete(self.store,id,owner,saved['id'],result)
+                                return result
+                            except Exception:
+                                raise UncertainWriteError('Approved write outcome is uncertain; reconciliation is required before another attempt.') from None
                         if write:self.store.mark_write(id,owner,checkpoint_owner)
                         try:
                             return await self.tools.execute(node_type,settings,input_text,tenant)
@@ -78,7 +99,7 @@ class Worker:
             async def validate_cached(node,outputs):
                 issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'))
                 if issues:raise ValueError('; '.join(issues))
-            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0)).graph
+            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{})).graph
             result=await graph.ainvoke({'values':{}},{'recursion_limit':150})
             reasons=[]
             for outputs in result['values'].values():
@@ -100,6 +121,14 @@ class Worker:
             output=await task
             self.store.finish_run(id,owner,'success',**output)
             journal(event='run.finish',run_id=id,status='success',seconds=round(time.perf_counter()-started,3))
+        except approvals.ApprovalPause as exc:
+            try:
+                approvals.pause(self.store,id,owner,exc)
+                journal(event='run.awaiting_approval',run_id=id)
+            except Exception as pause_error:
+                cancelled=self.store.cancel_requested(id,owner)
+                self.store.finish_run(id,owner,'cancelled' if cancelled else 'failed',error='' if cancelled else 'Unable to persist approval request.')
+                journal(event='approval.pause_failure',run_id=id,error_type=type(pause_error).__name__)
         except asyncio.CancelledError:
             task.cancel();await asyncio.gather(task,return_exceptions=True)
             cancelled=self.store.cancel_requested(id,owner)
@@ -124,7 +153,9 @@ class Worker:
                         except Exception as exc:journal(event='worker.execution_failure',error_type=type(exc).__name__)
                 try:
                     if time.monotonic()-last_seen>=5:
-                        await asyncio.to_thread(self.store.worker_seen,self.owner);last_seen=time.monotonic()
+                        await asyncio.to_thread(self.store.worker_seen,self.owner)
+                        await asyncio.to_thread(approvals.expire_pending,self.store)
+                        last_seen=time.monotonic()
                     while len(active)<self.concurrency:
                         claim_owner=new_id()
                         job=await asyncio.to_thread(self.store.claim_next,claim_owner)

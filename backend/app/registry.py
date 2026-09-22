@@ -63,6 +63,7 @@ class Context:
     node_type: str = ''
     checkpoint_owner: str = ''
     workflow: object = None
+    emit: Callable | None = None
     run: dict | None = None  # Shared per run: {'evidence': [passages with unique citation labels]}
 
 @dataclass
@@ -194,10 +195,11 @@ for legacy in ('prompt','llm'):REGISTRY[legacy].hidden=True
 
 from .tool_service import CONFIGS
 for type,name in [('tool_http','HTTP / REST API'),('tool_email','Email'),('tool_jira','Jira'),('tool_confluence','Confluence'),('tool_github','GitHub'),('tool_python','Python')]:
-    register(NodeDefinition(type,name,'Tools','Execute a configured tool with explicit operation and connection.',{'input':'string'},{'text':'string'},CONFIGS[type],tool_node,('configured_tool_request',)))
+    register(NodeDefinition(type,name,'Tools','Execute a configured tool with explicit operation and connection.',{'input':'string'},{'text':'string'},CONFIGS[type],tool_node,side_effects=('external_write','configured_tool_request') if type!='tool_python' else ('sandbox_execution',)))
 
 from .kb.options import RetrievalOptions
 class SearchConfig(RetrievalOptions):
+    answerability_guard:bool=Field(default=False,description="Opt in to the local answerability reader before generation. Missing weights skip the check; inspect guard decisions in run events.")
     knowledge_base_id: str = Field(default='',max_length=64)
     description: str = Field(default='',max_length=500)  # Shown to an agent that may call this node as a tool.
     # Retired with the vector-resource stack; accepted and ignored so saved workflows keep loading.

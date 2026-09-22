@@ -2,7 +2,7 @@
 
 Relay is a full-stack visual platform for building, validating, and running AI-agent workflows with local or cloud models. It combines a node-based editor, durable LangGraph execution, external tools, versioned knowledge bases, grounded answers, and retrieval evaluation in one local development environment.
 
-> **Current status:** Functional local MVP under active development. Core workflow execution, knowledge ingestion, retrieval, tool calling, authentication, recovery, and evaluation are implemented. Deployment hardening, team administration, human approval workflows, and advanced control flow remain planned work.
+> **Current status:** Functional local MVP under active development. Core workflow execution, knowledge ingestion, retrieval, tool calling, authentication, durable write approvals, recovery, and evaluation are implemented. Deployment hardening, team administration, and advanced control flow remain planned work.
 
 ## Project at a glance
 
@@ -186,6 +186,15 @@ sequenceDiagram
 
 Workers renew 30-second leases. If a worker stops, another worker can claim the expired job and restore successful node results. Execution is intentionally **at least once**: a provider request interrupted before its result is committed may repeat. Workflows that begin an uncertain external write are stopped from automatic resume so the operator can reconcile the remote outcome.
 
+Write-capable HTTP, Email, Jira, Confluence, and GitHub actions pause **before delivery** in `awaiting_approval`. The worker checkpoints the pending action (including nested agent state), saves an immutable request in `run_approvals`, and releases its lease. Open the run in History to review its full method, URL including query parameters, and body—or email sender, recipient, subject, and body. Credentials are stored only in the encrypted execution snapshot and are not included in the review payload.
+
+Approve or reject through the run panel. The client hashes the exact displayed UTF-8 payload; tenant-scoped, rate-limited `POST /api/runs/{id}/approve` and `/reject` require `{approval_id, digest}`. A stale digest is rejected. Approval requeues the paused action without replanning it; completed actions have durable receipts so replaying a decision does not resend. Downstream workflow execution then continues. Changed connections require a new run and review. Rejected, cancelled pending, or expired approvals cannot be bypassed through Resume.
+
+`APPROVAL_TTL_SECONDS` controls expiry (default 86,400 seconds; supported range 1–604,800). Workers sweep pending approvals every five seconds, and both approval and dispatch enforce expiry immediately. The default node setting requires approval for authenticated writes; `approval: true` also enables it locally, and `approval: false` explicitly opts out. Read operations do not pause. This is a same-workspace approval mechanism, not a separate approver-role policy.
+
+Approval is not a remote exactly-once guarantee: a crash or lost response during delivery can leave the outcome unknown. Such writes retain the reconciliation barrier and must be checked in the remote system before starting another attempt. No automatic resend occurs after an uncertain write.
+
+
 ## Knowledge-base architecture
 
 The knowledge subsystem uses separate management, ingestion, and search responsibilities. Builds are staged under new identifiers, and the previous version remains searchable until the replacement is completely indexed and published.
@@ -278,7 +287,7 @@ The opt-in `section` strategy retains heading paths, inline section headings, an
 ### Tools and safety boundaries
 
 - Reusable HTTP, SMTP Email, Jira, Confluence, and GitHub connections.
-- External writes require explicit node-level enablement.
+- External writes require explicit node-level enablement. With authentication enabled, they also require human approval by default; each write tool has an explicit approval override.
 - HTTP adapters reject private, loopback, and metadata addresses and redirects.
 - Python executes in an unprivileged Docker container with no network, read-only root, and CPU, memory, process, output, and timeout limits.
 - Provider credentials are encrypted and never stored in workflow exports.
@@ -310,7 +319,7 @@ The second corpus uses IRS, NIST, OSHA, and federal transportation documents: 38
 
 Limitations alongside these numbers: **substring matching does not establish semantic correctness; matching a source document does not establish that it supports the claim; the baseline's phrase-based abstention detection can misclassify partial answers.** New evaluations use the runtime's machine-readable abstention flag when available; that flag still does not establish that abstention was warranted.
 
-The subsequent [F11 retrieval experiment](docs/f11-retrieval-calibration-report.md) adds opt-in section-aware chunking and local candidate reranking. Hybrid expected-answer retrieval improved from 87.9% to 90.9%, below the requested 95%; generation substring matches rose from 81.8% to 90.9%. However, unanswerable-question abstention fell from 3/5 to 2/5. **The strengthened safety gate rejects this candidate.** These are substring and abstention-decision measurements, not semantic accuracy or claim-entailment guarantees. Saved artifacts now include complete retrieved passages for offline review. The [answerability safety follow-up](docs/answerability-safety-report.md) expands the suite to 53 questions, persists actual retrieval and reranker scores, and evaluates separate local answerability and NLI classifiers. The experimental reader raises unanswerable abstention from 45% to 75% but reduces substring match from 90.9% to 84.8%; both candidates are rejected. The NLI adapter produces 24/24 valid classifications but agrees with only 8/24 assistant labels. Their measured limitations prevent production adoption; valid classification output alone does not establish factual support.
+The subsequent [F11 retrieval experiment](docs/f11-retrieval-calibration-report.md) adds opt-in section-aware chunking and local candidate reranking. Hybrid expected-answer retrieval improved from 87.9% to 90.9%, below the requested 95%; generation substring matches rose from 81.8% to 90.9%. However, unanswerable-question abstention fell from 3/5 to 2/5. **The strengthened safety gate rejects this candidate.** These are substring and abstention-decision measurements, not semantic accuracy or claim-entailment guarantees. Saved artifacts now include complete retrieved passages for offline review. The [answerability safety follow-up](docs/answerability-safety-report.md) expands the suite to 53 questions, persists actual retrieval and reranker scores, and evaluates separate local answerability and NLI classifiers. The experimental reader raises unanswerable abstention from 45% to 75% but reduces substring match from 90.9% to 84.8%; both candidates were rejected under the thresholds in effect for that experiment. The NLI adapter produces 24/24 valid classifications but agrees with only 8/24 assistant labels. The NLI adapter remains offline; valid classification output alone does not establish factual support. The reader is now available as an opt-in product guard under the subsequently calibrated operating point; see the fresh product-path result below.
 
 Detailed methodology and limitations:
 
@@ -412,7 +421,7 @@ Configuration can be supplied through a root `.env` file. See [.env.example](.en
 
 | Implemented | Next engineering work | Later platform work |
 | --- | --- | --- |
-| Visual workflow editor and section-aware chunking | Remaining regulatory retrieval misses | Durable human approval nodes |
+| Visual workflow editor, section-aware chunking, and durable write approvals | Remaining regulatory retrieval misses | Advanced control flow |
 | Local/cloud providers and opt-in local reranking | Unanswerable-question safety regression | Action ledger and reconciliation |
 | Agent roles and specialist delegation | Structured numeric-policy verifier | Published workflow versions |
 | Named, versioned knowledge bases | Improved retrieval test lab | Webhooks and scheduled triggers |
@@ -455,3 +464,10 @@ Relay is currently intended for local development and portfolio demonstration. I
 ## License
 
 No open-source license has been selected yet. All rights are reserved by the repository owner unless a license is added.
+
+
+### Opt-in answerability guard
+
+Retrieve and Query nodes now offer an **Answerability guard** setting, default off. Install the pinned local reader, configure `ANSWERABILITY_MODEL_DIR` on workers, and enable the setting per node. Missing or invalid weights skip with a visible reason; checksum-mismatched weights are never loaded. Decisions appear in run events and operator metrics.
+
+The [fresh product-path evaluation](docs/evaluations/2026-09-21-product-guard.md) passed the unchanged calibrated gate on 53 questions with zero skipped guard checks: 84.8% answer substring match, 75% abstention on unanswerable questions, 6.1% false abstention, and 93.9% citation rate. These are corpus-specific heuristics, not semantic correctness or guaranteed performance on other data. Five known unanswerable failures remain tagged. See the [operations runbook](docs/operations.md#opt-in-product-answerability-guard) for installation, failure behavior and metrics.

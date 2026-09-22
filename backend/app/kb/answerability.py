@@ -1,7 +1,7 @@
-"""Experimental deterministic extractive answerability reader; not wired to runtime.
+"""Deterministic extractive answerability reader for opt-in runtime and offline evaluation.
 
 Scores question + retrieved evidence before answer generation. No network, prompts,
-expected labels, or generated answers enter inference. Threshold 0 is diagnostic.
+expected labels, or generated answers enter inference. The runtime adapter applies the fixed threshold 0 only when explicitly enabled.
 """
 import hashlib
 import json

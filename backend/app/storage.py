@@ -98,37 +98,45 @@ class Store:
     def __init__(self,database_url,encryption_key):
         self.engine=create_engine(database_url,connect_args={'check_same_thread':False,'timeout':30} if database_url.startswith('sqlite') else {})
         self.cipher=Fernet(encryption_key)
-        from . import readiness, operator_metrics
+        from . import readiness, operator_metrics, approvals
         from . import tool_service, agent_memory  # Register feature tables before schema creation.
-        # Additive v1 -> v2 migration. Existing records stay in local until account setup.
-        with self.engine.begin() as conn:
-            if conn.dialect.name=='sqlite':conn.execute(text('BEGIN IMMEDIATE'))
-            if conn.dialect.name=='postgresql':conn.execute(text('SELECT pg_advisory_xact_lock(19482026)'))
-            tables=inspect(conn).get_table_names()
-            for table in ('workflows','runs','credentials'):
-                if table in tables and 'tenant_id' not in {c['name'] for c in inspect(conn).get_columns(table)}:
-                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN tenant_id VARCHAR(64) NOT NULL DEFAULT 'local'"))
-            if 'credentials' in tables and 'provider' not in {c['name'] for c in inspect(conn).get_columns('credentials')}:
-                conn.execute(text("ALTER TABLE credentials ADD COLUMN provider VARCHAR(24) NOT NULL DEFAULT 'openai'"))
-            if 'runs' in tables:
-                columns={c['name'] for c in inspect(conn).get_columns('runs')}
-                if 'citation_counter' not in columns:conn.execute(text('ALTER TABLE runs ADD COLUMN citation_counter INTEGER NOT NULL DEFAULT 0'))
-                for name,definition in (('duration_seconds','FLOAT'),('grounded','BOOLEAN NOT NULL DEFAULT FALSE'),('abstained','BOOLEAN NOT NULL DEFAULT FALSE'),('truncated','BOOLEAN NOT NULL DEFAULT FALSE')):
-                    if name not in columns:conn.execute(text(f'ALTER TABLE runs ADD COLUMN {name} {definition}'))
-                for name,size in (('created_at',64),('status',24),('name',240)):
-                    if name not in columns:conn.execute(text(f"ALTER TABLE runs ADD COLUMN {name} VARCHAR({size}) NOT NULL DEFAULT ''"))
-            Base.metadata.create_all(conn)
-            for name,columns in (('ix_runs_tenant_created_id','tenant_id, created_at, id'),('ix_runs_created_at','created_at'),('ix_runs_status','status')):
-                conn.execute(text(f'CREATE INDEX IF NOT EXISTS {name} ON runs ({columns})'))
-            self._migrate_run_events(conn)
-            operator_metrics.migrate(conn)
-        # Old in-flight runs did not have jobs; make them recoverable without losing history.
-        with Session(self.engine) as session:
-            for row in session.scalars(select(RunRecord).where(RunRecord.status.in_(('queued','running')),~select(JobRecord.run_id).where(JobRecord.run_id==RunRecord.id).exists())):
-                if session.get(JobRecord,row.id) is None:
-                    session.add(JobRecord(run_id=row.id,status='queued'))
-                    row.data={**row.data,'status':'queued','checkpoints':row.data.get('checkpoints',{})};row.status='queued'
-            session.commit()
+        from .observability import journal
+        started=time.perf_counter()
+        journal(event='storage.backfill.start',scope='startup')
+        try:
+            # Additive v1 -> v2 migration. Existing records stay in local until account setup.
+            with self.engine.begin() as conn:
+                if conn.dialect.name=='sqlite':conn.execute(text('BEGIN IMMEDIATE'))
+                if conn.dialect.name=='postgresql':conn.execute(text('SELECT pg_advisory_xact_lock(19482026)'))
+                tables=inspect(conn).get_table_names()
+                for table in ('workflows','runs','credentials'):
+                    if table in tables and 'tenant_id' not in {c['name'] for c in inspect(conn).get_columns(table)}:
+                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN tenant_id VARCHAR(64) NOT NULL DEFAULT 'local'"))
+                if 'credentials' in tables and 'provider' not in {c['name'] for c in inspect(conn).get_columns('credentials')}:
+                    conn.execute(text("ALTER TABLE credentials ADD COLUMN provider VARCHAR(24) NOT NULL DEFAULT 'openai'"))
+                if 'runs' in tables:
+                    columns={c['name'] for c in inspect(conn).get_columns('runs')}
+                    if 'citation_counter' not in columns:conn.execute(text('ALTER TABLE runs ADD COLUMN citation_counter INTEGER NOT NULL DEFAULT 0'))
+                    for name,definition in (('duration_seconds','FLOAT'),('grounded','BOOLEAN NOT NULL DEFAULT FALSE'),('abstained','BOOLEAN NOT NULL DEFAULT FALSE'),('truncated','BOOLEAN NOT NULL DEFAULT FALSE')):
+                        if name not in columns:conn.execute(text(f'ALTER TABLE runs ADD COLUMN {name} {definition}'))
+                    for name,size in (('created_at',64),('status',24),('name',240)):
+                        if name not in columns:conn.execute(text(f"ALTER TABLE runs ADD COLUMN {name} VARCHAR({size}) NOT NULL DEFAULT ''"))
+                Base.metadata.create_all(conn)
+                for name,columns in (('ix_runs_tenant_created_id','tenant_id, created_at, id'),('ix_runs_created_at','created_at'),('ix_runs_status','status')):
+                    conn.execute(text(f'CREATE INDEX IF NOT EXISTS {name} ON runs ({columns})'))
+                self._migrate_run_events(conn)
+                operator_metrics.migrate(conn)
+            # Old in-flight runs did not have jobs; make them recoverable without losing history.
+            with Session(self.engine) as session:
+                for row in session.scalars(select(RunRecord).where(RunRecord.status.in_(('queued','running')),~select(JobRecord.run_id).where(JobRecord.run_id==RunRecord.id).exists())):
+                    if session.get(JobRecord,row.id) is None:
+                        session.add(JobRecord(run_id=row.id,status='queued'))
+                        row.data={**row.data,'status':'queued','checkpoints':row.data.get('checkpoints',{})};row.status='queued'
+                session.commit()
+        except Exception as exc:
+            journal(event='storage.backfill.finish',scope='startup',status='failed',seconds=round(time.perf_counter()-started,3),error_type=type(exc).__name__)
+            raise
+        journal(event='storage.backfill.finish',scope='startup',status='success',seconds=round(time.perf_counter()-started,3))
 
     @staticmethod
     def _migrate_run_events(conn):
@@ -279,8 +287,8 @@ class Store:
             try:return self.cipher.decrypt(encrypted.encode()).decode()
             except InvalidToken:raise ValueError('Credential cannot be decrypted. Restore the original encryption key.') from None
 
-    def create_run(self,workflow,message,tenant_id='local',request_id=None):
-        data={'request_id':request_id,'id':new_id(),'workflow':workflow,'message':message,'status':'queued','created_at':now(),'output':'','error':'','checkpoints':{}}
+    def create_run(self,workflow,message,tenant_id='local',request_id=None,approval_required=False):
+        data={'approval_required':approval_required,'request_id':request_id,'id':new_id(),'workflow':workflow,'message':message,'status':'queued','created_at':now(),'output':'','error':'','checkpoints':{}}
         with Session(self.engine) as s:
             s.add(RunRecord(id=data['id'],tenant_id=tenant_id,data=data,created_at=data['created_at'],status='queued',name=workflow['name']))
             s.add(JobRecord(run_id=data['id'],status='queued'));s.commit()
@@ -296,7 +304,9 @@ class Store:
         with Session(self.engine) as s:
             row=s.get(RunRecord,id)
             if not row or row.tenant_id!=tenant_id:raise KeyError(id)
-            return {**row.data,'events':self._events(s,id,tenant_id)}
+            from .approvals import listing
+            approvals=listing(s,id,tenant_id)
+            return {**row.data,'events':self._events(s,id,tenant_id),**({'approvals':approvals} if approvals else {})}
 
     def run_status(self,id,tenant_id='local'):
         with Session(self.engine) as s:
@@ -336,11 +346,16 @@ class Store:
 
     @staticmethod
     def _event(s,row,event):
+        from .operator_metrics import GuardDecisionRecord
+        decision=event.get('answerability') if event.get('kind')=='answerability' and not event.get('cached') else None
+        if decision:event={**event,'answerability':decision,'abstention_source':decision.get('abstention_source')}
         # All callers hold the same job-row lock/fence. The composite PK lookup
         # allocates a sequence without loading prior payloads or rewriting state.
         last=s.scalar(select(RunEventRecord.seq).where(RunEventRecord.run_id==row.id).order_by(RunEventRecord.seq.desc()).limit(1))
         s.add(RunEventRecord(run_id=row.id,seq=0 if last is None else last+1,tenant_id=row.tenant_id,
             timestamp=now(),type=event.get('kind','node'),payload={k:v for k,v in event.items() if k not in ('seq','timestamp')}))
+        if decision:
+            s.add(GuardDecisionRecord(run_id=row.id,seq=0 if last is None else last+1,decision=decision['decision'],reason=decision.get('reason','')))
         from .operator_metrics import RunTokenRecord,usage_rows
         for usage in usage_rows(event,row.data.get('workflow',{})):
             s.add(RunTokenRecord(run_id=row.id,seq=0 if last is None else last+1,**usage))
@@ -392,7 +407,7 @@ class Store:
                 dependencies.pop(event['node_id'],None)
                 data={**data,'vector_dependencies':dependencies}
             if event.get('node_id') and event['status']=='success' and 'outputs' in event and not event.get('transient'):
-                data={**data,'checkpoints':{**data.get('checkpoints',{}),event['node_id']:event['outputs']}}
+                data={**data,'checkpoints':{**data.get('checkpoints',{}),event['node_id']:event['outputs']},'agent_frames':{k:v for k,v in data.get('agent_frames',{}).items() if v.get('checkpoint_owner')!=event['node_id']}}
             if data is not row.data:row.data=data
             s.commit();return True
 
@@ -433,9 +448,12 @@ class Store:
             job=s.get(JobRecord,id)
             row=s.get(RunRecord,id)
             if not row or row.tenant_id!=tenant_id:raise KeyError(id)
-            if not job or job.status not in ('queued','running'):return row.data['status']
+            if not job or job.status not in ('queued','running','awaiting_approval'):return row.data['status']
             job.cancel_requested=True
-            if job.status=='queued':
+            if job.status in ('queued','awaiting_approval'):
+                from .approvals import ApprovalRecord
+                changed=s.execute(update(ApprovalRecord).where(ApprovalRecord.run_id==id,ApprovalRecord.status.in_(('pending','approved'))).values(status='cancelled'))
+                if changed.rowcount:row.data={**row.data,'approval_terminal':True}
                 job.status='cancelled';row.status='cancelled';row.data={**row.data,'status':'cancelled','finished_at':now()}
                 from .operator_metrics import run_values
                 for key,value in run_values(row.data).items():setattr(row,key,value)
@@ -459,6 +477,7 @@ class Store:
             job=s.get(JobRecord,id)
             row=s.get(RunRecord,id)
             if not row or row.tenant_id!=tenant_id:raise KeyError(id)
+            if row.data.get('approval_terminal'):raise ValueError('Rejected or expired approvals cannot be resumed. Start a new run.')
             if row.data['status'] not in ('failed','cancelled'):raise ValueError('Only failed or cancelled runs can be resumed.')
             self.check_resume_writes(row.data)
             if not job:job=JobRecord(run_id=id);s.add(job)

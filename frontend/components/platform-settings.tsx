@@ -36,7 +36,14 @@ export function ConfigField({
   return (
     <label>
       {property.title || name.replaceAll('_', ' ')}
-      {options ? (
+      {name === 'approval' ? (
+        <select disabled={disabled} value={value == null ? 'default' : value === true ? 'true' : 'false'}
+          onChange={(e) => onChange(e.target.value === 'default' ? null : e.target.value === 'true')}>
+          <option value="default">Default: require approval when signed in</option>
+          <option value="true">Require approval</option>
+          <option value="false">Skip approval</option>
+        </select>
+      ) : options ? (
         <select
           disabled={disabled}
           value={scalar(value ?? property.default ?? '')}

@@ -15,7 +15,7 @@ log=logging.getLogger('relay.journal');log.setLevel(logging.INFO)
 # Raw access logs include query strings; the structured middleware replaces them.
 logging.getLogger('uvicorn.access').setLevel(logging.WARNING)
 logging.getLogger('httpx').setLevel(logging.WARNING)
-FIELDS={'event','request_id','run_id','tenant','method','path','status','duration_ms','seconds','node_id','transient','cached','nodes','resumed','provider','model','attempt','delay_seconds','error_type','worker_id','service','action','scope','reason_code','prompt_tokens','completion_tokens','calls'}
+FIELDS={'abstention_source','event','request_id','run_id','tenant','method','path','status','duration_ms','seconds','node_id','transient','cached','nodes','resumed','provider','model','attempt','delay_seconds','error_type','worker_id','service','action','scope','reason_code','prompt_tokens','completion_tokens','calls'}
 
 def valid_request_id(value):
     return value if isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9._:-]{1,128}',value) else uuid.uuid4().hex

@@ -39,6 +39,7 @@ class ConnectionConfig(StrictModel):
 class ToolConfig(StrictModel):
     connection_id:str=''
     enable_writes:bool=False
+    approval:bool|None=Field(default=None,description="Require human approval before sending. Unset defaults on for authenticated writes.")
     description:str=Field(default='',max_length=500)  # Shown to an agent that may call this tool.
 class HTTPConfig(ToolConfig):
     method:Literal['GET','POST','PUT','PATCH','DELETE']='GET'
@@ -157,13 +158,15 @@ class ToolService:
                     return output.decode('utf-8',errors='replace')
         except httpx.HTTPError:raise ValueError('Tool HTTP request failed; check connection and provider availability') from None
 
-    async def execute(self,node_type,config_dict,input_text,tenant_id='local'):
+    def prepare(self,node_type,config_dict,input_text,tenant_id='local'):
         if node_type not in CONFIGS:raise ValueError('Unknown tool type')
         config=CONFIGS[node_type].model_validate(config_dict);self.check(config,tenant_id)
         if len(input_text.encode())>64000:raise ValueError('Tool input exceeds 64000 bytes')
-        if node_type=='tool_python':return await self._python(config,input_text)
+        if node_type=='tool_python':raise ValueError('Python does not use external request preparation')
         c=self.resolve(config.connection_id,tenant_id)
-        if node_type=='tool_email':return await asyncio.to_thread(self._email,c,config,input_text)
+        if node_type=='tool_email':
+            payload={'transport':'smtp','method':'SEND','url':f"smtp://{c['endpoint']}:{c['port']}",'sender':c['sender'],'recipient':config.to,'subject':config.subject,'body':config.body.replace('{input}',input_text)}
+            return {'connection_id':config.connection_id,'connection':c,'payload':payload}
         method='GET';body=None;params=None
         if node_type=='tool_http':
             method=config.method;path=config.path
@@ -192,11 +195,29 @@ class ToolService:
             else:
                 from html import escape
                 method='POST';body={'type':'page','title':config.title or input_text[:100],'space':{'key':config.space},'body':{'storage':{'value':'<p>'+escape(input_text)+'</p>','representation':'storage'}}}
-        return await self._http(c,method,path,body,params)
+        payload={'transport':'http','method':method,'url':str(httpx.Request(method,c['endpoint'].rstrip('/')+path,params=params).url),'body':body}
+        return {'connection_id':config.connection_id,'connection':c,'payload':payload,'path':path,'params':params}
 
-    def _email(self,c,config,text):
+    def validate_prepared(self,prepared,tenant_id='local'):
+        if self.resolve(prepared['connection_id'],tenant_id)!=prepared['connection']:
+            raise ValueError('The connection changed after approval was requested. Start a new run to review the updated destination.')
+
+    async def execute_prepared(self,prepared,tenant_id='local'):
+        self.validate_prepared(prepared,tenant_id)
+        c=prepared['connection'];payload=prepared['payload']
+        if payload['transport']=='smtp':
+            config=EmailConfig(to=payload['recipient'],subject=payload['subject'],body=payload['body'])
+            return await asyncio.to_thread(self._email,c,config,'',True)
+        return await self._http(c,payload['method'],prepared['path'],payload['body'],prepared['params'])
+
+    async def execute(self,node_type,config_dict,input_text,tenant_id='local'):
+        if len(input_text.encode())>64000:raise ValueError('Tool input exceeds 64000 bytes')
+        if node_type=='tool_python':return await self._python(PythonConfig.model_validate(config_dict),input_text)
+        return await self.execute_prepared(self.prepare(node_type,config_dict,input_text,tenant_id),tenant_id)
+
+    def _email(self,c,config,text,prepared=False):
         addresses=public_addresses(c['endpoint'],c['port'])
-        message=EmailMessage();message['From']=c['sender'];message['To']=config.to;message['Subject']=config.subject;message.set_content(config.body.replace('{input}',text))
+        message=EmailMessage();message['From']=c['sender'];message['To']=config.to;message['Subject']=config.subject;message.set_content(config.body if prepared else config.body.replace('{input}',text))
         # Pin the socket while retaining the original hostname for TLS verification.
         class PinnedSMTP(smtplib.SMTP):
             def _get_socket(self,host,port,timeout):return socket.create_connection((addresses[0],port),timeout)

@@ -1,6 +1,6 @@
 # Section-aware retrieval
 
-This is an opt-in retrieval change. Generation prompts, answer contracts, model choice, and existing acceptance thresholds are unchanged. The unanswerable-abstention safety gate now also requires ≥0.9.
+This is an opt-in retrieval change. Generation prompts, answer contracts and model choice were unchanged by this experiment. Its original gate required unanswerable abstention ≥0.9; the subsequent [2026-09-21 calibration](evaluations/2026-09-21-grounding-calibration.md) documents the current guarded operating point and thresholds.
 
 ## Configuration
 
@@ -50,6 +50,6 @@ flowchart LR
 
 All generation artifacts now contain `passages` with citation, filename, page, text, retrieval `score`, and optional `rerank_score` for every retrieved source, including uncited distractors. Historical F11 files omitted scores; absence is not a zero measurement. New retrieval-only reports also preserve scored rows for unanswerable questions, without including them in answerable-recall denominators. Raw reranker logits are relevance scores, not calibrated probabilities of answer support.
 
-The real corpus has an explicit `corpus-manifest.json` containing only its four source documents. Adjacent questions and annotation files cannot enter the retrieval index through the evaluation harness. The expanded safety suite is `evals/real/questions-expanded.json`; use `check_grounding_eval --expected-count 53` for its generation report. Exit codes are 0 accepted, 1 rejected, and 2 unusable input. The original 38-question count remains the default; metric thresholds are unchanged.
+The real corpus has an explicit `corpus-manifest.json` containing only its four source documents. Adjacent questions and annotation files cannot enter the retrieval index through the evaluation harness. The expanded safety suite is `evals/real/questions-expanded.json`; use `check_grounding_eval --expected-count 53` for its generation report. Exit codes are 0 accepted, 1 rejected, and 2 unusable input. The default is now 53 questions. See the [2026-09-21 calibration](evaluations/2026-09-21-grounding-calibration.md) for current thresholds; the historical 38-question results below do not establish acceptance under the expanded suite.
 
 The 24-case calibration set contains assistant annotations with rationales and explicitly records that independent human review is pending. It includes the four prior batch failures and negative counterfactuals grounded in real excerpts. The old llama3.1 claim-judge CLI is retired. Its replacement [NLI experiment](nli-calibration.md) has valid classifications but poor semantic agreement, so it remains offline. Judge output remains outside the runtime and release gate.

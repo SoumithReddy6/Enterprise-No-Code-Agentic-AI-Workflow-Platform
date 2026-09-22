@@ -206,7 +206,8 @@ def install_auth(app, store, enabled=True):
                     session.flush()
                     from .tool_service import TENANT_MODELS as TOOL_MODELS
                     from .agent_memory import TENANT_MODELS as MEMORY_MODELS
-                    for model in (WorkflowRecord, RunRecord, RunEventRecord, CredentialRecord, ModelRecord, *TOOL_MODELS, *MEMORY_MODELS):
+                    from .approvals import TENANT_MODELS as APPROVAL_MODELS
+                    for model in (WorkflowRecord, RunRecord, RunEventRecord, CredentialRecord, ModelRecord, *TOOL_MODELS, *MEMORY_MODELS, *APPROVAL_MODELS):
                         session.execute(update(model).where(model.tenant_id == 'local').values(tenant_id=account.tenant_id))
                 session.add(account)
                 session.flush()

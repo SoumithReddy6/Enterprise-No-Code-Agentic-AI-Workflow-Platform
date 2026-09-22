@@ -1,0 +1,51 @@
+{
+  "baseline": "answerability-guarded-generation.json",
+  "fresh": "gate-fresh-2026-09-21.json",
+  "metric_changes": {
+    "mean_seconds": {
+      "before": 6.0,
+      "after": 5.534
+    }
+  },
+  "row_metric_changes": [],
+  "unanswerable_not_abstained": [
+    {
+      "question": "What is the maximum load weight a forklift is allowed to lift?",
+      "answer": "2,400 pounds [S1]",
+      "cited": [
+        "S1"
+      ]
+    },
+    {
+      "question": "How many days of paid vacation do federal employees receive each year?",
+      "answer": "21/2 days [S2]",
+      "cited": [
+        "S2"
+      ]
+    },
+    {
+      "question": "What will the IRS standard mileage rate be in 2030?",
+      "answer": "The standard mileage rate for the cost of operating your car for business use is $0.70 per mile, as stated in all passages provided. [S1][S2][S3][S4]",
+      "cited": [
+        "S1",
+        "S2",
+        "S3",
+        "S4"
+      ]
+    },
+    {
+      "question": "What is the IRS standard mileage rate for business driving in 2027?",
+      "answer": "70 cents ($0.70) per mile [S3]",
+      "cited": [
+        "S3"
+      ]
+    },
+    {
+      "question": "How many driving hours does driver Elena Ruiz have left today after her last eight days of work?",
+      "answer": "Driver Elena Ruiz has left 0 driving hours today after her last eight days of work. [S4]",
+      "cited": [
+        "S4"
+      ]
+    }
+  ]
+}

@@ -321,7 +321,13 @@
     "question": "What is the maximum load weight a forklift is allowed to lift?",
     "document": null,
     "answers": [],
-    "kind": "unanswerable"
+    "kind": "unanswerable",
+    "known_guard_failure": {
+      "reason": "example_as_universal_limit",
+      "analysis": "A specific load-center calculation is treated as a universal forklift capacity.",
+      "basis": "gate-fresh-2026-09-21.json",
+      "label_source": "assistant evidence review; not an independent human annotation"
+    }
   },
   {
     "question": "What is the federal minimum hourly wage for truck drivers?",
@@ -333,7 +339,13 @@
     "question": "How many days of paid vacation do federal employees receive each year?",
     "document": null,
     "answers": [],
-    "kind": "unanswerable"
+    "kind": "unanswerable",
+    "known_guard_failure": {
+      "reason": "cross_domain_numeric_distractor",
+      "analysis": "A travel meal-allowance example is treated as annual paid vacation entitlement.",
+      "basis": "gate-fresh-2026-09-21.json",
+      "label_source": "assistant evidence review; not an independent human annotation"
+    }
   },
   {
     "question": "What is the application fee for a commercial driver's license?",
@@ -345,7 +357,13 @@
     "question": "What will the IRS standard mileage rate be in 2030?",
     "document": null,
     "answers": [],
-    "kind": "unanswerable"
+    "kind": "unanswerable",
+    "known_guard_failure": {
+      "reason": "temporal_scope_mismatch",
+      "analysis": "A rate explicitly applicable to 2025 is projected onto an unsupported future year.",
+      "basis": "gate-fresh-2026-09-21.json",
+      "label_source": "assistant evidence review; not an independent human annotation"
+    }
   },
   {
     "question": "What is the IRS standard mileage rate for business driving in 2027?",
@@ -354,7 +372,13 @@
     "kind": "unanswerable",
     "split": "calibration",
     "category": "unsupported_date",
-    "rationale": "IRS p1 states the 2025 rate; the only 2027 occurrence is p33 in a lease inclusion example, not a mileage-rate schedule."
+    "rationale": "IRS p1 states the 2025 rate; the only 2027 occurrence is p33 in a lease inclusion example, not a mileage-rate schedule.",
+    "known_guard_failure": {
+      "reason": "temporal_scope_mismatch",
+      "analysis": "A rate explicitly applicable to 2025 is projected onto an unsupported future year.",
+      "basis": "gate-fresh-2026-09-21.json",
+      "label_source": "assistant evidence review; not an independent human annotation"
+    }
   },
   {
     "question": "What exact bcrypt work-factor number does NIST SP 800-63B-4 require every password verifier to use?",
@@ -444,7 +468,13 @@
     "kind": "unanswerable",
     "split": "holdout",
     "category": "missing_individual_records",
-    "rationale": "Part 395 supplies duty limits and section 395.8 record requirements, but no duty log for Elena Ruiz; her name is absent from the corpus."
+    "rationale": "Part 395 supplies duty limits and section 395.8 record requirements, but no duty log for Elena Ruiz; her name is absent from the corpus.",
+    "known_guard_failure": {
+      "reason": "missing_instance_state",
+      "analysis": "A generic hours-of-service limit cannot establish remaining hours without the named driver duty records.",
+      "basis": "gate-fresh-2026-09-21.json",
+      "label_source": "assistant evidence review; not an independent human annotation"
+    }
   },
   {
     "question": "What battery charging voltage should be selected for the forklift with serial number FL-2048?",
