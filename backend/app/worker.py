@@ -60,6 +60,11 @@ class Worker:
                         config=CONFIGS[node_type].model_validate(settings)
                         self.tools.check(config,tenant)
                         write=is_write(node_type,config)
+                        if node_type=='tool_jira' and not write:
+                            from .tool_service import jira_items
+                            prepared=self.tools.prepare(node_type,settings,input_text,tenant)
+                            text=await self.tools.execute_prepared(prepared,tenant)
+                            return {'text':text,**jira_items(text,config.operation,prepared['connection']['endpoint'])}
                         invocation=identity[1] if len(identity)>1 else checkpoint_owner
                         node_id=identity[0] if identity else checkpoint_owner
                         required=write and (config.approval if config.approval is not None else run.get('approval_required',True))
@@ -99,7 +104,7 @@ class Worker:
             async def validate_cached(node,outputs):
                 issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'))
                 if issues:raise ValueError('; '.join(issues))
-            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{})).graph
+            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{})).graph
             result=await graph.ainvoke({'values':{}},{'recursion_limit':150})
             reasons=[]
             for outputs in result['values'].values():

@@ -24,6 +24,13 @@ def split_graph(workflow):
             if source.type not in TOOL_TYPES or target.type!='agent':errors.append('Tool connections must run from a tool or retrieval node to an Agent.')
             if edge.sourceHandle not in (None,'output') or edge.targetHandle not in (None,'tools'):errors.append('Tool connections must enter the left tools port.')
             owner,dependency=target.id,source.id
+        elif edge.kind=='loop':
+            # A loop body is an attached callable, exactly like a tool on an agent.
+            if source.type!='for_each':errors.append('Loop connections must start at a For each node.')
+            if target.type not in TOOL_TYPES and target.type!='agent':errors.append('A loop body must be a tool, retrieval or Agent node.')
+            if target.type=='for_each':errors.append('Nested loops are not supported yet.')
+            if edge.sourceHandle not in (None,'body') or edge.targetHandle not in (None,'input'):errors.append('Loop connections must leave the body port.')
+            owner,dependency=source.id,target.id
         else:
             if source.type!='agent' or target.type!='agent':errors.append('Specialist connections require two Agent nodes.')
             if edge.sourceHandle not in (None,'agents') or edge.targetHandle not in (None,'input'):errors.append('Specialist connections must start at the right agents port.')
@@ -32,6 +39,11 @@ def split_graph(workflow):
         if dependency in deps[owner]:errors.append(f'{edge.id}: duplicate resource attachment.')
         deps[owner].append(dependency);attached.add(dependency)
     for node in workflow.nodes:
+        if node.type=='for_each':
+            bodies=[e.target for e in workflow.edges if e.kind=='loop' and e.source==node.id]
+            if len(bodies)!=1:errors.append(f'{node.id}: For each needs exactly one attached body.')
+            elif not node.config.get('body'):errors.append(f'{node.id}: select the attached node as the loop body.')
+            elif node.config['body']!=bodies[0]:errors.append(f'{node.id}: the configured body must match the attached node.')
         if node.type in ('retrieve','query') and not node.config.get('knowledge_base_id'):errors.append(f'{node.id}: select a knowledge base.')
         if node.id in attached and node.id in flow_ids:errors.append(f'{node.id}: an attached callable cannot also be a flow step.')
         if node.id in attached and node.inputs:errors.append(f'{node.id}: attached callables receive input from their caller; clear flow bindings.')

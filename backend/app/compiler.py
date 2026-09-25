@@ -72,6 +72,16 @@ def _validate_flow(workflow: Workflow) -> list[str]:
             errors.append(f"{node.id}: an error edge requires on_error 'route'.")
         if node.retry.attempts and definition and is_write_node(node, definition):
             errors.append(f'{node.id}: a node that writes externally cannot be retried; a repeated attempt may duplicate a completed write.')
+        if node.type == 'for_each':
+            # Body attachment is validated in split_graph, which sees non-flow edges.
+            # A list input is structural, not a conversion: text has nothing to iterate over.
+            for name, ref in node.inputs.items():
+                source, separator, port = ref.partition('.')
+                source_def = REGISTRY.get(nodes[source].type) if source in nodes else None
+                if separator and source_def and port in source_def.outputs:
+                    provided = source_def.outputs[port]
+                    if not provided.startswith('array'):
+                        errors.append(f'{node.id}: items must come from a list; {ref} provides {provided}.')
         if node.on_error == 'continue':
             readers=[other.id for other in workflow.nodes
                      for ref in other.inputs.values() if ref.partition('.')[0] == node.id]
@@ -162,7 +172,7 @@ async def silent(event):
     pass
 
 
-def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None):
+def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None):
     errors = validate_workflow(workflow)
     if errors: raise ValueError('\n'.join(errors))
     from .platform_graph import split_graph
@@ -174,6 +184,7 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
     graph = StateGraph(State)
     run_state={'evidence':[],'citation_counter':citation_counter,'agent_frames':agent_frames or {}}  # Every passage retrieved in this run, under a run-unique citation label.
     prepare_checkpoint_labels(run_state,completed)
+    run_state['loop_progress']=dict(loop_progress or {})
     context = Context(message=message, resolve_credential=credential_resolver, authorize_model=authorize_model,knowledge=knowledge_resolver,platform=platform_resolver,run=run_state,emit=emit)
     async def invoke_agent(id,text):return await execute_agent(id,text,full_workflow,context,emit)
     context.invoke_agent=invoke_agent

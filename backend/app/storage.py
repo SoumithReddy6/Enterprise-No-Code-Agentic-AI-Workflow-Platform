@@ -406,6 +406,14 @@ class Store:
                 dependencies=dict(data.get('vector_dependencies',{}))
                 dependencies.pop(event['node_id'],None)
                 data={**data,'vector_dependencies':dependencies}
+            if event.get('kind')=='loop_item' and event.get('node_id') and isinstance(event.get('item_result'),dict):
+                # Per-item progress is durable so a resumed run skips finished items
+                # instead of repeating paid work or an external write.
+                progress=dict(data.get('loop_progress',{}))
+                entries=dict(progress.get(event['node_id'],{}))
+                entries[str(event['item_index'])]=event['item_result']
+                progress[event['node_id']]=entries
+                data={**data,'loop_progress':progress}
             if event.get('node_id') and event['status']=='success' and 'outputs' in event and not event.get('transient'):
                 data={**data,'checkpoints':{**data.get('checkpoints',{}),event['node_id']:event['outputs']},'agent_frames':{k:v for k,v in data.get('agent_frames',{}).items() if v.get('checkpoint_owner')!=event['node_id']}}
             if data is not row.data:row.data=data

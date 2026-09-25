@@ -146,6 +146,11 @@ async def response_node(inputs, config, ctx):
 
 REGISTRY: dict[str, NodeDefinition] = {}
 
+class ForEachConfig(StrictModel):
+    body: str = Field(default='', max_length=64)
+    max_items: int = Field(default=100, ge=1, le=1000)
+    on_item_error: Literal['continue','stop'] = 'continue'
+
 def register(definition: NodeDefinition):
     if definition.type in REGISTRY:
         raise ValueError(f'Duplicate node type: {definition.type}')
@@ -168,6 +173,8 @@ def validate_template(template: str):
             raise ValueError('Templates support only {message}; use {{ and }} for literal braces.')
 
 from .agent_runtime import agent_node,tool_node
+from .iteration import for_each_node as for_each_handler
+register(NodeDefinition('for_each','For each','Control','Run one attached callable once per element of a list.',{'items':'array'},{'results':'array<object>','failed':'string'},ForEachConfig,for_each_handler))
 register(NodeDefinition('agent','Agent node','Agent','Configure a role, attach tools and delegate to specialist agents.',{'input':'string'},{'text':'string','provider':'string','sources':'string','grounding':'string'},AgentConfig,agent_node))
 # Prompt template and Language model stay loadable for saved workflows and the LLM-free example, but off the palette.
 for legacy in ('prompt','llm'):REGISTRY[legacy].hidden=True
