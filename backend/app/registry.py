@@ -111,6 +111,9 @@ async def llm_node(inputs, config, ctx):
         await asyncio.sleep(0.15)
         return {'text': f'[Demo · no model called]\n\nReceived prompt:\n{inputs["prompt"]}', 'provider': 'demo'}
     from .providers import with_retries
+    from .token_budget import exhausted as tokens_exhausted,reason as token_reason
+    # A plain model node has no partial-answer contract; refuse before spending more.
+    if tokens_exhausted(ctx.run):raise ValueError(token_reason(ctx.run))
     params={}
     if config.temperature is not None:params['temperature']=config.temperature
     if config.top_p is not None:params['top_p']=config.top_p
@@ -171,7 +174,7 @@ for legacy in ('prompt','llm'):REGISTRY[legacy].hidden=True
 
 from .tool_service import CONFIGS
 for type,name in [('tool_http','HTTP / REST API'),('tool_email','Email'),('tool_jira','Jira'),('tool_confluence','Confluence'),('tool_github','GitHub'),('tool_python','Python')]:
-    register(NodeDefinition(type,name,'Tools','Execute a configured tool with explicit operation and connection.',{'input':'string'},{'text':'string'},CONFIGS[type],tool_node,side_effects=('external_write','configured_tool_request') if type!='tool_python' else ('sandbox_execution',)))
+    register(NodeDefinition(type,name,'Tools','Execute a configured tool with explicit operation and connection.',{'input':'string'},({'text':'string','items':'array<object>'} if type=='tool_jira' else {'text':'string'}),CONFIGS[type],tool_node,side_effects=('external_write','configured_tool_request') if type!='tool_python' else ('sandbox_execution',)))
 
 from .kb.options import RetrievalOptions
 class SearchConfig(RetrievalOptions):

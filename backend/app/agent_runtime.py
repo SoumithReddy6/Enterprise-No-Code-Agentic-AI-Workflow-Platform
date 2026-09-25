@@ -5,6 +5,7 @@ import re
 from dataclasses import replace
 from .tool_service import UncertainWriteError, is_write
 from .approvals import ApprovalPause
+from . import token_budget
 
 ROLES={
  'planner':'Create an actionable ordered plan with dependencies and concrete completion criteria.',
@@ -28,6 +29,15 @@ async def agent_node(inputs,config,ctx):
 async def tool_node(inputs,config,ctx):
     if ctx.platform is None:raise ValueError('Tool execution is unavailable.')
     text=await ctx.platform('tool',ctx.node_type,config.model_dump(),inputs['input'],ctx.node_id)
+    return await tool_outputs(ctx,ctx.node_type,config,text,ctx.node_id)
+
+async def tool_outputs(ctx,node_type,config,text,node_id):
+    if node_type=='tool_jira':
+        # Reads carry their projection from the exact request snapshot; writes
+        # retain the legacy string path (including approval replay) and no items.
+        result=text if isinstance(text,dict) else {'text':text,'items':[],'truncated':False,'warnings':[]}
+        ctx.run.setdefault('tool_output_metadata',{})[node_id]={'items_truncated':result['truncated'],'items_warnings':result['warnings']}
+        return {'text':result['text'],'items':result['items']}
     return {'text':text}
 
 def strip_fences(text):
@@ -239,11 +249,14 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
         transcript=frame['transcript'];collect(frame['evidence']);grounded=frame['grounded'];truncations=frame['truncations'];provider=frame['provider']
     for step in range(frame['step'] if frame else 0,config.max_steps+1):
         replay=bool(frame and step==frame['step'])
-        exhausted=not replay and (step>=config.max_steps or budget['remaining']<=0)
+        out_of_tokens=not replay and token_budget.exhausted(ctx.run)
+        exhausted=not replay and (step>=config.max_steps or budget['remaining']<=0 or out_of_tokens)
         if exhausted:
-            reason=f"Run-wide agent action budget exhausted ({budget.get('ceiling',DEFAULT_RUN_BUDGET)} actions; raise AGENT_RUN_BUDGET)." if budget['remaining']<=0 else f'Agent step budget exhausted ({config.max_steps} steps for this agent).'
+            if out_of_tokens:reason=token_budget.reason(ctx.run)
+            elif budget['remaining']<=0:reason=f"Run-wide agent action budget exhausted ({budget.get('ceiling',DEFAULT_RUN_BUDGET)} actions; raise AGENT_RUN_BUDGET)."
+            else:reason=f'Agent step budget exhausted ({config.max_steps} steps for this agent).'
             truncations.append({'node_id':node_id,'reason':reason})
-            await emit({'kind':'agent_budget','node_id':node_id,'status':'warning','transient':True,'truncated':True,'reason':reason,'run_budget':budget.get('ceiling',DEFAULT_RUN_BUDGET),'actions_used':budget['counter'],'max_steps':config.max_steps})
+            await emit({'kind':'agent_budget','node_id':node_id,'status':'warning','transient':True,'truncated':True,'reason':reason,'run_budget':budget.get('ceiling',DEFAULT_RUN_BUDGET),'actions_used':budget['counter'],'max_steps':config.max_steps,'tokens_used':token_budget.tokens_spent(ctx.run)})
             if not evidence:
                 if depth:raise AgentBudgetExhausted('Nested agent budget exhausted without evidence.')
                 output=immediate_abstention()
@@ -281,12 +294,13 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
                 if tool.type.startswith('tool_'):
                     if ctx.platform is None:raise ValueError('Tool execution unavailable.')
                     write_attempt=is_write(tool.type,tool_config)
-                    output={'text':await ctx.platform('tool',tool.type,tool_config.model_dump(),task,checkpoint_owner,target,invocation)}
+                    text=await ctx.platform('tool',tool.type,tool_config.model_dump(),task,checkpoint_owner,target,invocation)
+                    output=await tool_outputs(ctx,tool.type,tool_config,text,target)
                 else:output=await definition.handler({'query':task},tool_config,child)
             child_grounding=json.loads(output.get('grounding','{}'))
             if child_grounding.get('truncated'):
                 truncations.append({'node_id':target,'reason':child_grounding.get('truncation_reason','Specialist returned an incomplete answer.')})
-            await emit({**common,'status':'success','outputs':output})
+            await emit({**common,'status':'success','outputs':output,**ctx.run.get('tool_output_metadata',{}).get(target,{})})
         except ApprovalPause as exc:
             exc.frames[frame_key]={'checkpoint_owner':checkpoint_owner,'step':step,'action':action,'invocation':invocation,'budget':dict(budget),'transcript':transcript,'evidence':evidence,'grounded':grounded,'truncations':truncations,'provider':provider,'memory':memory}
             raise

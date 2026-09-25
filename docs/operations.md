@@ -196,6 +196,7 @@ Two separate limits bound agent work. They are often confused, so check which on
 | --- | --- | --- | ---: |
 | `max_steps` | One agent's loop iterations | Agent node config | 6 (max 12) |
 | `AGENT_RUN_BUDGET` | Every action in the run, across the whole delegation tree | Environment | 40 (range 1–200) |
+| `RELAY_RUN_TOKEN_LIMIT` | Provider-reported tokens consumed by the run | Environment | 2,000,000 (0 disables) |
 
 An action is a tool call or a delegation to a specialist. Delegating counts, so a supervisor consulting three specialists that each run one tool spends six.
 
@@ -209,3 +210,21 @@ A truncation names the limit that was hit:
 The `agent_budget` run event carries `run_budget`, `actions_used` and `max_steps`, so operator metrics show whether the ceiling is set correctly rather than guessing. Raising it increases the maximum spend of a single run; on metered providers, size it against your cost limits.
 
 Changing `AGENT_RUN_BUDGET` requires a worker restart. It does not affect runs already in flight, and a run paused for approval resumes on the budget recorded in its saved frame.
+
+### Token ceiling
+
+`AGENT_RUN_BUDGET` counts *actions*; `RELAY_RUN_TOKEN_LIMIT` counts *tokens*. A run can be well inside its action budget and still be expensive, because one action over a large document costs far more than one over a sentence. The token ceiling is the cost backstop.
+
+It is checked before each model call, using counts the provider itself reported (`prompt_eval_count`/`eval_count` on Ollama, `usage` on OpenAI and Claude). Missing usage counts as zero, so a provider that reports nothing cannot be capped — check that model usage appears in operator metrics before relying on this.
+
+Behaviour on exhaustion matches the action budget: an agent stops, answers from the evidence it already has, and the run is flagged `truncated` with
+
+```
+Run token budget exhausted (101,430 of 100,000 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+```
+
+A plain LLM node has no partial-answer contract, so it refuses with the same message rather than spending more. When both the token and action ceilings are hit, the token reason is reported, because that is the one with a bill attached.
+
+**Tokens are not money.** Prices differ by model by more than an order of magnitude, so convert with your provider's current price list rather than treating this number as a cost. The limit is denominated in tokens precisely because that is the only figure a provider states exactly.
+
+Sizing: a single multi-agent run over a large knowledge base typically consumes tens of thousands of tokens, so the 2,000,000 default is a runaway guard rather than a working limit. Lower it deliberately when moving to a metered provider, and set it per deployment rather than per workflow. Changing it requires a worker restart and does not affect runs already in flight.
