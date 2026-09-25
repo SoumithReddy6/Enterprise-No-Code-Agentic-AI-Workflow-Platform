@@ -9,6 +9,11 @@ class Position(StrictModel):
     x: float = 0
     y: float = 0
 
+class RetryPolicy(StrictModel):
+    """Transient-failure retries. Writes are refused at validation, never retried."""
+    attempts: int = Field(default=0, ge=0, le=5)
+    base_delay: float = Field(default=0.5, ge=0, le=30)
+
 class Node(StrictModel):
     id: str = Field(pattern=r'^[a-zA-Z][a-zA-Z0-9_-]{0,63}$')
     type: str
@@ -17,6 +22,10 @@ class Node(StrictModel):
     position: Position = Field(default_factory=Position)
     inputs: dict[str, str] = Field(default_factory=dict)
     config: dict = Field(default_factory=dict)
+    # Execution policy is orthogonal to node configuration, so it lives here rather
+    # than in fifteen config models the compiler already checks for unknown keys.
+    on_error: Literal['fail','continue','route'] = 'fail'
+    retry: RetryPolicy = Field(default_factory=RetryPolicy)
 
 class Edge(StrictModel):
     id: str = Field(min_length=1, max_length=128)

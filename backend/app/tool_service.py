@@ -17,8 +17,18 @@ from sqlalchemy.orm import Session
 from .models import StrictModel
 from .storage import Base, new_id
 
+# 408/425/429 and 5xx are the provider asking for another attempt.
+RETRYABLE_TOOL_STATUS=frozenset({408,425,429,500,502,503,504,529})
+
 class UncertainWriteError(ValueError):
     """An external mutation may have completed; automatic retries must stop."""
+
+class TransientToolError(ValueError):
+    """Infrastructure failed, not the request. Only this class is eligible for node retries.
+
+    A syntax error, a permission denial or a contract violation would fail identically on
+    a second attempt, so they stay plain ValueErrors and surface immediately.
+    """
 
 class ConnectionRecord(Base):
     __tablename__='tool_connections'
@@ -82,6 +92,48 @@ def public_addresses(host,port):
 def is_write(node_type,config):
     c=config.model_dump() if hasattr(config,'model_dump') else config
     return node_type=='tool_email' or (node_type=='tool_http' and c.get('method','GET')!='GET') or c.get('operation') in ('create_issue','comment','create_page')
+
+def jira_items(text,operation,endpoint):
+    """Add a bounded projection without changing the legacy response text.
+
+    Text plus nonempty serialized items share 64 KB. Empty collections and
+    fixed diagnostic metadata add only constant framing overhead.
+    """
+    result={'items':[],'truncated':False,'warnings':[]}
+    if operation not in ('search','get_issue'):return result
+    try:data=json.loads(text)
+    except (ValueError,TypeError,RecursionError):
+        result['warnings']=['Jira response was not valid JSON; items is empty.'];return result
+    rows=data.get('issues') if operation=='search' and isinstance(data,dict) else [data] if operation=='get_issue' else None
+    if not isinstance(rows,list):
+        result['warnings']=['Jira response has no issues array; items is empty.'];return result
+    budget=max(0,64000-len(text.encode('utf-8')))
+    size=2
+    def usable_string(value):
+        if not isinstance(value,str):return False
+        try:value.encode('utf-8');return True
+        except UnicodeEncodeError:return False
+    for row in rows:
+        if not isinstance(row,dict) or not usable_string(row.get('key')) or not row['key']:
+            if not result['warnings']:result['warnings'].append('Jira response contains malformed issues; invalid entries were skipped.')
+            continue
+        if len(result['items'])>=100:result['truncated']=True;break
+        fields=row.get('fields') if isinstance(row.get('fields'),dict) else {}
+        def field(name,nested=None):
+            value=fields.get(name)
+            if nested:value=value.get(nested) if isinstance(value,dict) else None
+            return value if usable_string(value) else None
+        item={'key':row['key'],'summary':field('summary'),'status':field('status','name'),
+              'assignee':field('assignee','displayName'),'updated':field('updated'),
+              'url':endpoint.rstrip('/')+'/browse/'+quote(row['key'],safe='')}
+        added=len(json.dumps(item,ensure_ascii=False).encode('utf-8'))+(2 if result['items'] else 0)
+        if size+added>budget:result['truncated']=True;break
+        result['items'].append(item);size+=added
+    if operation=='search' and isinstance(data,dict):
+        total=data.get('total');start=data.get('startAt',0)
+        if data.get('nextPageToken') or data.get('isLast') is False or (isinstance(total,int) and isinstance(start,int) and total>start+len(rows)):
+            result['truncated']=True
+    return result
 
 class ToolService:
     max_output=64000
@@ -150,12 +202,15 @@ class ToolService:
         try:
             async with httpx.AsyncClient(timeout=15,follow_redirects=False,trust_env=False,transport=self.transport) as client:
                 async with client.stream(method,pinned,headers=headers,json=body,params=params,extensions={'sni_hostname':u.host}) as response:
+                    if response.status_code in RETRYABLE_TOOL_STATUS:raise TransientToolError(f'Tool provider returned HTTP {response.status_code}')
                     if response.status_code>=300:raise ValueError(f'Tool provider returned HTTP {response.status_code}')
                     output=bytearray()
                     async for block in response.aiter_bytes():
                         output.extend(block)
                         if len(output)>self.max_output:raise ValueError('Tool response exceeds 64000 bytes; narrow the request')
                     return output.decode('utf-8',errors='replace')
+        except (httpx.TimeoutException,httpx.ConnectError,httpx.ReadError,httpx.WriteError,httpx.PoolTimeout):
+            raise TransientToolError('Tool request did not complete; the provider was unreachable or timed out') from None
         except httpx.HTTPError:raise ValueError('Tool HTTP request failed; check connection and provider availability') from None
 
     def prepare(self,node_type,config_dict,input_text,tenant_id='local'):
