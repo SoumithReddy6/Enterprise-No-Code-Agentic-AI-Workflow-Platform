@@ -132,9 +132,10 @@ async def test_uncertain_write_is_not_recovered_by_on_error_route(store, worker,
 # --------------------------------------------------------------------------- F12
 
 @pytest.mark.asyncio
-async def test_write_identity_is_per_item_not_per_loop(store, worker, monkeypatch):
-    """A finished item settles on its own. Only the item whose outcome is genuinely
-    unknown blocks resume - previously the whole batch was held by one loop checkpoint."""
+async def test_write_identity_is_per_action_not_per_loop(store, worker, monkeypatch):
+    """A finished write settles the moment it returns. Only the action whose outcome is
+    genuinely unknown blocks resume - previously the whole batch was held by one
+    loop checkpoint, and then by one item."""
     async def prepared(_p, tenant_id='local'): return jira_payload(3)
     monkeypatch.setattr(worker.tools, 'execute_prepared', prepared)
     calls = {'n': 0}
@@ -148,17 +149,18 @@ async def test_write_identity_is_per_item_not_per_loop(store, worker, monkeypatc
     await worker.execute(store.claim_next(worker.owner))
 
     saved = store.run(row['id'])
-    assert saved['write_nodes'] == ['each:0', 'each:1'], saved['write_nodes']
+    # Item 0's write returned, so its marker is gone. Item 1's was interrupted after
+    # mark_write, so it is the only thing left in doubt.
+    assert set(saved['write_nodes']) == {'each:1:send'}, saved['write_nodes']
     assert saved['loop_progress']['each']['0']['status'] == 'success'
     assert 'each' not in saved['checkpoints'], 'the loop itself never completed'
-
-    assert Store._write_settled(saved, 'each:0'), 'a finished item must settle on its own'
-    assert not Store._write_settled(saved, 'each:1'), 'an interrupted write must stay uncertain'
+    with pytest.raises(ValueError, match='external write'):
+        Store.check_resume_writes(saved)
 
 
 @pytest.mark.asyncio
-async def test_batch_resumes_once_every_write_item_has_settled(store, worker, monkeypatch):
-    """With no item left in doubt, a partially-written batch is resumable."""
+async def test_batch_is_resumable_once_every_write_has_settled(store, worker, monkeypatch):
+    """With no action left in doubt, nothing blocks resume."""
     async def prepared(_p, tenant_id='local'): return jira_payload(2)
     monkeypatch.setattr(worker.tools, 'execute_prepared', prepared)
     calls = {'n': 0, 'stop_after': 1}
@@ -172,6 +174,128 @@ async def test_batch_resumes_once_every_write_item_has_settled(store, worker, mo
 
     saved = store.run(row['id'])
     assert saved['status'] == 'success'
-    assert saved['write_nodes'] == ['each:0', 'each:1']
-    # Both items produced durable results, so nothing is in doubt.
+    assert not saved.get('write_nodes'), f"every completed write must settle: {saved['write_nodes']}"
     Store.check_resume_writes(saved)
+
+
+# --------------------------------------------------------------------------- B1-01
+
+def agent_loop_flow(jira_id):
+    return Workflow.model_validate({'version': 1, 'name': 'Agent batch', 'nodes': [
+        {'id': 'input', 'type': 'chat_input'},
+        {'id': 'tickets', 'type': 'tool_jira', 'inputs': {'input': 'input.message'},
+         'config': {'connection_id': jira_id, 'operation': 'search', 'jql': 'a=b'}},
+        {'id': 'each', 'type': 'for_each', 'inputs': {'items': 'tickets.items'},
+         'config': {'body': 'worker', 'max_items': 10}},
+        {'id': 'worker', 'type': 'agent',
+         'config': {'provider': 'ollama', 'model': 'llama3.1:latest', 'role': 'summarizer'}},
+        {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+        'edges': [{'id': 'a', 'source': 'input', 'target': 'tickets'},
+                  {'id': 'b', 'source': 'tickets', 'target': 'each'},
+                  {'id': 'c', 'source': 'each', 'target': 'out'},
+                  {'id': 'd', 'source': 'each', 'target': 'worker', 'kind': 'loop',
+                   'sourceHandle': 'body', 'targetHandle': 'input'}]})
+
+
+@pytest.mark.asyncio
+async def test_loop_item_model_usage_reaches_durable_events(store, worker, monkeypatch):
+    """Usage is keyed by checkpoint_owner, which is now per item. Without per-item
+    reporting the loop node's event carries none and token accounting loses every call."""
+    from backend.app import registry
+    async def prepared(_p, tenant_id='local'): return jira_payload(2)
+    monkeypatch.setattr(worker.tools, 'execute_prepared', prepared)
+
+    async def model(inputs, config, ctx):
+        registry.account_usage(ctx, {'prompt_tokens': 11, 'completion_tokens': 7}, config)
+        return {'text': json.dumps({'action': 'final', 'text': 'summary'}), 'provider': 'ollama'}
+    monkeypatch.setattr(registry, 'llm_node', model)
+
+    store.allow_model('ollama', 'llama3.1:latest', '', 'local')
+    workflow = agent_loop_flow(jira_connection(store))
+    row = store.create_run(workflow.model_dump(mode='json'), 'go')
+    await worker.execute(store.claim_next(worker.owner))
+
+    saved = store.run(row['id'])
+    assert saved['status'] == 'success', saved.get('error')
+    reported = [e for e in saved['events'] if e.get('usage')]
+    assert reported, 'no durable event carried model usage'
+    total = sum(e['usage']['prompt_tokens'] + e['usage']['completion_tokens'] for e in reported)
+    assert total == 2 * 18, f'expected both items accounted once, got {total}'
+    assert {e.get('item_index') for e in reported} == {0, 1}, 'usage must be attributed per item'
+
+
+# --------------------------------------------------------------------------- B1-02
+
+def two_write_agent_flow(jira_id, http_id):
+    """One agent with two write tools: the first pre-authorised, the second gated."""
+    return Workflow.model_validate({'version': 1, 'name': 'Mixed approval', 'nodes': [
+        {'id': 'input', 'type': 'chat_input'},
+        {'id': 'tickets', 'type': 'tool_jira', 'inputs': {'input': 'input.message'},
+         'config': {'connection_id': jira_id, 'operation': 'search', 'jql': 'a=b'}},
+        {'id': 'each', 'type': 'for_each', 'inputs': {'items': 'tickets.items'},
+         'config': {'body': 'worker', 'max_items': 5}},
+        {'id': 'worker', 'type': 'agent',
+         'config': {'provider': 'ollama', 'model': 'llama3.1:latest', 'max_steps': 4}},
+        {'id': 'ack', 'type': 'tool_http',
+         'config': {'connection_id': http_id, 'method': 'POST', 'enable_writes': True,
+                    'approval': False, 'path': '/ack', 'description': 'Acknowledges receipt.'}},
+        {'id': 'reply', 'type': 'tool_http',
+         'config': {'connection_id': http_id, 'method': 'POST', 'enable_writes': True,
+                    'approval': True, 'path': '/reply', 'description': 'Sends the customer reply.'}},
+        {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+        'edges': [{'id': 'a', 'source': 'input', 'target': 'tickets'},
+                  {'id': 'b', 'source': 'tickets', 'target': 'each'},
+                  {'id': 'c', 'source': 'each', 'target': 'out'},
+                  {'id': 'd', 'source': 'each', 'target': 'worker', 'kind': 'loop',
+                   'sourceHandle': 'body', 'targetHandle': 'input'},
+                  {'id': 'e', 'source': 'ack', 'target': 'worker', 'kind': 'tool',
+                   'targetHandle': 'tools'},
+                  {'id': 'f', 'source': 'reply', 'target': 'worker', 'kind': 'tool',
+                   'targetHandle': 'tools'}]})
+
+
+@pytest.mark.asyncio
+async def test_completed_write_settles_so_a_gated_second_write_can_resume(store, worker, monkeypatch):
+    """A finished write must settle on completion. Otherwise its stale marker makes the
+    approved continuation look like an unresolved external outcome and the run cannot finish."""
+    from backend.app import registry
+    sent = []
+    async def execute(node_type, settings, text, tenant_id='local'):
+        sent.append(settings.get('path')); return 'ok'
+    monkeypatch.setattr(worker.tools, 'execute', execute)
+    async def execute_prepared(prep, tenant_id='local'):
+        # Jira reads are GET and take the prepared path too; only POSTs are the writes.
+        payload = prep.get('payload', {}) if isinstance(prep, dict) else {}
+        if payload.get('method') == 'POST':
+            sent.append(payload.get('path', '/reply')); return 'ok'
+        return jira_payload(1)
+    monkeypatch.setattr(worker.tools, 'execute_prepared', execute_prepared)
+
+    steps = iter([json.dumps({'action': 'call', 'target': 'ack', 'input': 'received'}),
+                  json.dumps({'action': 'call', 'target': 'reply', 'input': 'here is your answer'}),
+                  json.dumps({'action': 'final', 'text': 'handled'})])
+    async def model(inputs, config, ctx):
+        return {'text': next(steps), 'provider': 'ollama'}
+    monkeypatch.setattr(registry, 'llm_node', model)
+    store.allow_model('ollama', 'llama3.1:latest', '', 'local')
+
+    workflow = two_write_agent_flow(jira_connection(store), http_connection(store))
+    row = store.create_run(workflow.model_dump(mode='json'), 'go', approval_required=True)
+    await worker.execute(store.claim_next(worker.owner))
+
+    paused = store.run(row['id'])
+    assert paused['status'] == 'awaiting_approval', paused.get('error')
+    assert '/ack' in sent, 'the pre-authorised write should have been sent'
+    assert '/reply' not in sent, 'the gated write must wait'
+    # The completed first write must not leave the item looking uncertain.
+    assert not paused.get('write_nodes'), f"stale write marker: {paused['write_nodes']}"
+
+    approval = paused['approvals'][0]
+    from backend.app import approvals as approvals_module
+    approvals_module.decide(store, row['id'], 'local', approval['id'], approval['digest'], 'approve')
+    await worker.execute(store.claim_next(worker.owner))
+
+    finished = store.run(row['id'])
+    assert finished['status'] == 'success', finished.get('error')
+    assert sent.count('/ack') == 1, f'the settled write must not repeat: {sent}'
+    assert '/reply' in sent

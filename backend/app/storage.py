@@ -474,6 +474,20 @@ class Store:
             row=s.get(RunRecord,id)
             row.data={**row.data,'write_nodes':list(set(row.data.get('write_nodes',[]))|{node_id})};s.commit()
 
+    def settle_write(self,id,owner,identifier):
+        """Clear a write marker once the external call returned.
+
+        mark_write records intent; this records the resolved outcome. Without it a
+        completed write stays marked until its owner checkpoints, so an agent that
+        finished one write and paused for approval on a second looks unresolved.
+        """
+        with Session(self.engine) as s:
+            if not self._fence(s,id,owner):raise ValueError('Execution lease is no longer owned.')
+            row=s.get(RunRecord,id)
+            remaining=[n for n in row.data.get('write_nodes',[]) if n!=identifier]
+            if len(remaining)!=len(row.data.get('write_nodes',[])):
+                row.data={**row.data,'write_nodes':remaining};s.commit()
+
     @staticmethod
     def _write_settled(data,identifier):
         """A write is settled when its owner produced a durable result.

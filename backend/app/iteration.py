@@ -42,6 +42,18 @@ def within_budget(results):
     return len(json.dumps(results,ensure_ascii=False,default=str).encode())<=MAX_RESULT_BYTES
 
 
+def item_usage(ctx,index):
+    """Model usage recorded under this item's owner key.
+
+    registry.account_usage keys usage by checkpoint_owner, which is per item, while the
+    compiler reads the enclosing node id. Without this the loop node's event carries no
+    usage and durable token accounting silently loses every call an item made.
+    """
+    owner=f'{ctx.node_id}:{index}'
+    usage=(ctx.run or {}).get('usage',{}).get(owner)
+    return {'usage':usage} if usage else {}
+
+
 async def run_body(ctx,body,index,text,invocation):
     # Write intent is tracked per item: a completed item must not be held hostage
     # by the enclosing loop's checkpoint, which only appears when every item is done.
@@ -90,10 +102,15 @@ async def for_each_node(inputs,config,ctx):
             output=await run_body(ctx,body,index,text,invocation)
             entry={'index':index,'status':'success','value':output.get('text',''),'error':''}
             await emit({'node_id':body.id,'invocation_id':invocation,'parent_node_id':ctx.node_id,
-                        'transient':True,'status':'success','outputs':output,'item_index':index})
+                        'transient':True,'status':'success','outputs':output,'item_index':index,
+                        **item_usage(ctx,index)})
         except ApprovalPause:
             # A pause is not an item failure: swallowing it would disable the approval
-            # gate for every write inside a loop.
+            # gate for every write inside a loop. Usage already spent is still reported.
+            spent=item_usage(ctx,index)
+            if spent:
+                await emit({'node_id':body.id,'invocation_id':invocation,'parent_node_id':ctx.node_id,
+                            'transient':True,'status':'paused','item_index':index,**spent})
             raise
         except UncertainWriteError:
             # The external outcome is unknown; iterating past it could duplicate a write.
@@ -103,7 +120,8 @@ async def for_each_node(inputs,config,ctx):
             entry={'index':index,'status':'failed','value':'','error':error}
             failed+=1
             await emit({'node_id':body.id,'invocation_id':invocation,'parent_node_id':ctx.node_id,
-                        'transient':True,'status':'failed','error':error,'item_index':index})
+                        'transient':True,'status':'failed','error':error,'item_index':index,
+                        **item_usage(ctx,index)})
             journal(event='loop.item_failed',node_id=ctx.node_id,reason_code='item_error')
             if config.on_item_error=='stop':
                 remember(ctx.run,ctx.node_id,index,entry)

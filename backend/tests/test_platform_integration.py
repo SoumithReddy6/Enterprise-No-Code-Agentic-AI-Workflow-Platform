@@ -89,6 +89,9 @@ async def test_agent_write_failure_stops_and_keeps_resume_blocked(client,monkeyp
     await worker.execute(store.claim_next(worker.owner))
     run=store.run(id)
     assert attempts==[1] and run['status']=='failed'
-    assert 'reconciliation' in run['error'] and run['write_nodes']==['agent']
+    # Write intent is recorded per action, so the marker names the failing tool call
+    # rather than the node. What must hold is that the run stays unresumable.
+    assert 'reconciliation' in run['error']
+    assert run['write_nodes'] and all(n.startswith('agent') for n in run['write_nodes']),run['write_nodes']
     assert 'agent' not in run['checkpoints']
     assert client.post(f'/api/runs/{id}/resume').status_code==409
