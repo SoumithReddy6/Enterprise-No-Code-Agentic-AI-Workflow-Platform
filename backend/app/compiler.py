@@ -260,7 +260,9 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                           continue
                       failure={'node_id': node.id, 'status': 'failed', 'error': error,**usage_fields}
                       if attempts>1:failure['attempt']=attempt+1
-                      if node.on_error=='fail':
+                      # An unresolved external outcome is never recoverable: continuing or
+                      # routing past it would run later steps on an unknown world state.
+                      if node.on_error=='fail' or isinstance(exc,UncertainWriteError):
                           await emit(failure)
                           raise ValueError(error) from None
                       # continue and route both keep the run alive; the graph decides where it goes.

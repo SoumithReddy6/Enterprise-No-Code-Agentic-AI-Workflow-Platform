@@ -12,6 +12,11 @@ MAX_ITEMS_CEILING=1000
 MAX_RESULT_BYTES=1_000_000
 
 
+def item_owner(ctx,index):
+    """Per-item checkpoint owner: '<loop node>:<index>'."""
+    return f'{ctx.node_id}:{index}'
+
+
 def progress_key(node_id):
     return node_id
 
@@ -38,6 +43,8 @@ def within_budget(results):
 
 
 async def run_body(ctx,body,index,text,invocation):
+    # Write intent is tracked per item: a completed item must not be held hostage
+    # by the enclosing loop's checkpoint, which only appears when every item is done.
     """Invoke one attached callable, mirroring the agent's target-invocation contract."""
     from .registry import REGISTRY
     from .agent_runtime import tool_outputs, execute_agent
@@ -45,8 +52,8 @@ async def run_body(ctx,body,index,text,invocation):
     definition=REGISTRY[body.type]
     config=definition.config_model.model_validate(body.config)
     if body.type=='agent':
-        return await execute_agent(body.id,text,ctx.workflow,ctx,ctx.emit,0,None,ctx.checkpoint_owner or ctx.node_id)
-    child=replace(ctx,node_id=body.id,node_type=body.type,checkpoint_owner=ctx.checkpoint_owner or ctx.node_id)
+        return await execute_agent(body.id,text,ctx.workflow,ctx,ctx.emit,0,None,item_owner(ctx,index))
+    child=replace(ctx,node_id=body.id,node_type=body.type,checkpoint_owner=item_owner(ctx,index))
     if body.type.startswith('tool_'):
         if ctx.platform is None:raise ValueError('Tool execution unavailable.')
         raw=await ctx.platform('tool',body.type,config.model_dump(),text,child.checkpoint_owner,body.id,invocation)
@@ -56,6 +63,7 @@ async def run_body(ctx,body,index,text,invocation):
 
 async def for_each_node(inputs,config,ctx):
     from .tool_service import UncertainWriteError
+    from .approvals import ApprovalPause
     from .observability import journal
     items=inputs['items']
     if not isinstance(items,list):raise ValueError('for_each expects a list; connect an array output to items.')
@@ -83,6 +91,10 @@ async def for_each_node(inputs,config,ctx):
             entry={'index':index,'status':'success','value':output.get('text',''),'error':''}
             await emit({'node_id':body.id,'invocation_id':invocation,'parent_node_id':ctx.node_id,
                         'transient':True,'status':'success','outputs':output,'item_index':index})
+        except ApprovalPause:
+            # A pause is not an item failure: swallowing it would disable the approval
+            # gate for every write inside a loop.
+            raise
         except UncertainWriteError:
             # The external outcome is unknown; iterating past it could duplicate a write.
             raise

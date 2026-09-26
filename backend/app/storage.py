@@ -475,8 +475,21 @@ class Store:
             row.data={**row.data,'write_nodes':list(set(row.data.get('write_nodes',[]))|{node_id})};s.commit()
 
     @staticmethod
+    def _write_settled(data,identifier):
+        """A write is settled when its owner produced a durable result.
+
+        For a plain node that is its checkpoint. For a loop item ('<node>:<index>') it is
+        the persisted item result: the enclosing loop has no checkpoint until every item
+        finishes, so requiring one would make a completed item block the whole batch.
+        """
+        if identifier in data.get('checkpoints',{}):return True
+        node,separator,index=identifier.rpartition(':')
+        if not separator:return False
+        return index in data.get('loop_progress',{}).get(node,{})
+
+    @staticmethod
     def check_resume_writes(data):
-        if any(id not in data.get('checkpoints',{}) for id in data.get('write_nodes',[])):
+        if any(not Store._write_settled(data,id) for id in data.get('write_nodes',[])):
             raise ValueError('This run may have performed an external write before its step completed. Check the external result, then start a new run instead of resuming.')
 
     def resume_run(self,id,tenant_id='local'):
