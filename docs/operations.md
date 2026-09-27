@@ -228,3 +228,41 @@ A plain LLM node has no partial-answer contract, so it refuses with the same mes
 **Tokens are not money.** Prices differ by model by more than an order of magnitude, so convert with your provider's current price list rather than treating this number as a cost. The limit is denominated in tokens precisely because that is the only figure a provider states exactly.
 
 Sizing: a single multi-agent run over a large knowledge base typically consumes tens of thousands of tokens, so the 2,000,000 default is a runaway guard rather than a working limit. Lower it deliberately when moving to a metered provider, and set it per deployment rather than per workflow. Changing it requires a worker restart and does not affect runs already in flight.
+
+## Database schema
+
+Alembic is the single authority for DDL. `alembic_version` records schema state;
+`schema_migrations` records application data transformations. They answer different
+questions and are kept separate.
+
+| Database | What startup does |
+| --- | --- |
+| Empty | Upgrades to head, creating the whole schema |
+| Existing, pre-Alembic | Brings it to the baseline shape, verifies it structurally, stamps the baseline, then upgrades |
+| At head | Starts normally |
+| Behind head | Upgrades, or with `auto_upgrade=False` refuses and names the command |
+| Unknown or newer revision | Refuses to start |
+
+A database is never stamped because a table happens to exist. It is compared against the
+declared baseline, and any unexpected object or column the adoption step cannot add is an
+actionable startup failure naming exactly what differs. A table that is simply absent is
+created — that is lossless and is what the pre-Alembic startup always did.
+
+```bash
+# Apply pending migrations explicitly.
+.venv/bin/python -m alembic upgrade head
+
+# Create a revision after changing a model.
+.venv/bin/python -m alembic revision --autogenerate -m "what changed"
+```
+
+CI asserts that models and migrations agree: an autogenerate diff against a freshly
+migrated database must be empty. That is what catches a table added to the models without
+a revision, which happened twice before migrations existed.
+
+**Downgrades are tested, not promised to be lossless.** A revision that adds a table
+drops it on the way down, and the data with it. For production, restoring a backup and
+redeploying is usually safer than reversing a populated migration.
+
+SQLite is exercised in CI as a development compatibility check. PostgreSQL is the
+authoritative target and needs its own profile before production claims.

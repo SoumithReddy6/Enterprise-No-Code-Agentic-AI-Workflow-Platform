@@ -24,6 +24,9 @@ jobs:
       - run: python -m pip install -r backend/requirements.txt pip-audit==2.10.1
       - run: python -m pip_audit
       - run: python -m pytest backend/tests -q
+      # Hash randomisation catches assertions that depend on set iteration order.
+      - run: PYTHONHASHSEED=1 python -m pytest backend/tests -q
+      - run: python -m pytest backend/tests/test_schema_migrations.py -q
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -169,7 +169,12 @@ class AuthController:
 
 def install_auth(app, store, enabled=True):
     controller = AuthController(store, enabled)
-    Base.metadata.create_all(store.engine)
+    # Auth tables are part of the migrated schema; Store's startup has already brought
+    # the database to head. Creating them here would be a second, competing authority.
+    from .schema import current_revision, head_revision
+    with store.engine.begin() as conn:
+        if current_revision(conn) != head_revision():
+            raise RuntimeError('The database schema is not at head. Run: .venv/bin/python -m alembic upgrade head')
     router = APIRouter(prefix='/api/auth')
 
     @router.get('/status')

@@ -95,13 +95,19 @@ def test_startup_backfill_journals_success_and_failure(tmp_path,caplog,monkeypat
     caplog.set_level('INFO',logger='relay.journal')
     store=Store(f'sqlite:///{tmp_path}/startup.db',key);store.engine.dispose()
     records=[json.loads(r.message) for r in caplog.records if r.name=='relay.journal']
-    assert [r['event'] for r in records]==['storage.backfill.start','storage.backfill.finish']
+    events=[r['event'] for r in records]
+    assert events[0]=='storage.backfill.start' and events[-1]=='storage.backfill.finish'
+    # Schema state is reported between them: which action was taken, and at which revision.
+    schema_event=next(r for r in records if r['event']=='storage.schema')
+    assert schema_event['status'] in ('created','adopted','upgraded','current')
+    assert schema_event['reason_code']
     assert records[-1]['status']=='success' and records[-1]['seconds']>=0
     caplog.clear()
     def fail(conn):raise ValueError('PRIVATE database detail')
     monkeypatch.setattr(Store,'_migrate_run_events',staticmethod(fail))
     with pytest.raises(ValueError):Store(f'sqlite:///{tmp_path}/failed.db',key)
     records=[json.loads(r.message) for r in caplog.records if r.name=='relay.journal']
-    assert [r['event'] for r in records]==['storage.backfill.start','storage.backfill.finish']
+    events=[r['event'] for r in records]
+    assert events[0]=='storage.backfill.start' and events[-1]=='storage.backfill.finish'
     assert records[-1]['status']=='failed' and records[-1]['error_type']=='ValueError'
     assert 'PRIVATE' not in caplog.text

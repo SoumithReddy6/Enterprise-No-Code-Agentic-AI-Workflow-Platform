@@ -108,37 +108,30 @@ def local_key(data_dir:Path):
     return key
 
 class Store:
-    def __init__(self,database_url,encryption_key):
+    def __init__(self,database_url,encryption_key,auto_upgrade=True):
         self.engine=create_engine(database_url,connect_args={'check_same_thread':False,'timeout':30} if database_url.startswith('sqlite') else {})
         self.cipher=Fernet(encryption_key)
         from . import readiness, operator_metrics, approvals
         from . import tool_service, agent_memory  # Register feature tables before schema creation.
+        from . import schema
         from .observability import journal
         started=time.perf_counter()
         journal(event='storage.backfill.start',scope='startup')
         try:
-            # Additive v1 -> v2 migration. Existing records stay in local until account setup.
             with self.engine.begin() as conn:
                 if conn.dialect.name=='sqlite':conn.execute(text('BEGIN IMMEDIATE'))
                 if conn.dialect.name=='postgresql':conn.execute(text('SELECT pg_advisory_xact_lock(19482026)'))
-                tables=inspect(conn).get_table_names()
-                for table in ('workflows','runs','credentials'):
-                    if table in tables and 'tenant_id' not in {c['name'] for c in inspect(conn).get_columns(table)}:
-                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN tenant_id VARCHAR(64) NOT NULL DEFAULT 'local'"))
-                if 'credentials' in tables and 'provider' not in {c['name'] for c in inspect(conn).get_columns('credentials')}:
-                    conn.execute(text("ALTER TABLE credentials ADD COLUMN provider VARCHAR(24) NOT NULL DEFAULT 'openai'"))
-                if 'runs' in tables:
-                    columns={c['name'] for c in inspect(conn).get_columns('runs')}
-                    if 'citation_counter' not in columns:conn.execute(text('ALTER TABLE runs ADD COLUMN citation_counter INTEGER NOT NULL DEFAULT 0'))
-                    for name,definition in (('duration_seconds','FLOAT'),('grounded','BOOLEAN NOT NULL DEFAULT FALSE'),('abstained','BOOLEAN NOT NULL DEFAULT FALSE'),('truncated','BOOLEAN NOT NULL DEFAULT FALSE')):
-                        if name not in columns:conn.execute(text(f'ALTER TABLE runs ADD COLUMN {name} {definition}'))
-                    for name,size in (('created_at',64),('status',24),('name',240)):
-                        if name not in columns:conn.execute(text(f"ALTER TABLE runs ADD COLUMN {name} VARCHAR({size}) NOT NULL DEFAULT ''"))
-                Base.metadata.create_all(conn)
-                for name,columns in (('ix_runs_tenant_created_id','tenant_id, created_at, id'),('ix_runs_created_at','created_at'),('ix_runs_status','status')):
-                    conn.execute(text(f'CREATE INDEX IF NOT EXISTS {name} ON runs ({columns})'))
+                # Pre-adoption only: bring a database written before Alembic up to the
+                # baseline shape so it can be verified and stamped. Skipped once
+                # alembic_version exists, which is every run after the first.
+                if schema.current_revision(conn) is None and not schema.is_empty(conn):
+                    self._legacy_columns(conn)
+                action=schema.prepare(conn,allow_upgrade=auto_upgrade)
+                # Data transformations keep their own schema_migrations records; Alembic
+                # owns schema state only. The two answer different questions.
                 self._migrate_run_events(conn)
                 operator_metrics.migrate(conn)
+            journal(event='storage.schema',scope='startup',status=action,reason_code=schema.head_revision())
             # Old in-flight runs did not have jobs; make them recoverable without losing history.
             with Session(self.engine) as session:
                 for row in session.scalars(select(RunRecord).where(RunRecord.status.in_(('queued','running')),~select(JobRecord.run_id).where(JobRecord.run_id==RunRecord.id).exists())):
@@ -150,6 +143,31 @@ class Store:
             journal(event='storage.backfill.finish',scope='startup',status='failed',seconds=round(time.perf_counter()-started,3),error_type=type(exc).__name__)
             raise
         journal(event='storage.backfill.finish',scope='startup',status='success',seconds=round(time.perf_counter()-started,3))
+
+    @staticmethod
+    def _legacy_columns(conn):
+        """Bring a pre-Alembic database up to the baseline shape so it can be adopted.
+
+        This was the old startup migration. It runs once, only when no alembic_version
+        exists, and only so structural verification has something to match. Every schema
+        change after the baseline belongs in a revision instead.
+        """
+        tables=inspect(conn).get_table_names()
+        for table in ('workflows','runs','credentials'):
+            if table in tables and 'tenant_id' not in {c['name'] for c in inspect(conn).get_columns(table)}:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN tenant_id VARCHAR(64) NOT NULL DEFAULT 'local'"))
+        if 'credentials' in tables and 'provider' not in {c['name'] for c in inspect(conn).get_columns('credentials')}:
+            conn.execute(text("ALTER TABLE credentials ADD COLUMN provider VARCHAR(24) NOT NULL DEFAULT 'openai'"))
+        if 'runs' in tables:
+            columns={c['name'] for c in inspect(conn).get_columns('runs')}
+            if 'citation_counter' not in columns:conn.execute(text('ALTER TABLE runs ADD COLUMN citation_counter INTEGER NOT NULL DEFAULT 0'))
+            for name,definition in (('duration_seconds','FLOAT'),('grounded','BOOLEAN NOT NULL DEFAULT FALSE'),('abstained','BOOLEAN NOT NULL DEFAULT FALSE'),('truncated','BOOLEAN NOT NULL DEFAULT FALSE')):
+                if name not in columns:conn.execute(text(f'ALTER TABLE runs ADD COLUMN {name} {definition}'))
+            for name,size in (('created_at',64),('status',24),('name',240)):
+                if name not in columns:conn.execute(text(f"ALTER TABLE runs ADD COLUMN {name} VARCHAR({size}) NOT NULL DEFAULT ''"))
+        Base.metadata.create_all(conn)
+        for name,columns in (('ix_runs_tenant_created_id','tenant_id, created_at, id'),('ix_runs_created_at','created_at'),('ix_runs_status','status')):
+            conn.execute(text(f'CREATE INDEX IF NOT EXISTS {name} ON runs ({columns})'))
 
     @staticmethod
     def _migrate_run_events(conn):
