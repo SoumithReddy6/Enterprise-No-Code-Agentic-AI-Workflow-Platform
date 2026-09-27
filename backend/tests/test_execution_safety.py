@@ -340,3 +340,11 @@ async def test_settled_write_is_not_replayed_when_the_worker_dies_before_checkpo
 
     assert store.run(row['id'])['status'] == 'success'
     assert len(delivered) == 1, f'the settled write was sent again: {delivered}'
+
+
+def test_settlement_requires_a_recorded_outcome(store):
+    """A marker must never clear without an outcome beside it, by construction."""
+    row = store.create_run({'version': 1, 'name': 'x', 'nodes': [], 'edges': []}, 'go')
+    for bad in (None, 0, b'ok', {'text': 'ok'}):
+        with pytest.raises(ValueError, match='outcome as text'):
+            store.settle_write(row['id'], 'anyone', 'n:0:send', bad)

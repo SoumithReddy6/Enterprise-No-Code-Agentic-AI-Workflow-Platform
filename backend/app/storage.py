@@ -493,17 +493,21 @@ class Store:
             row=s.get(ActionResultRecord,(id,identifier))
             return row.result if row else None
 
-    def settle_write(self,id,owner,identifier,result=None):
-        """Clear a write marker once the external call returned.
+    def settle_write(self,id,owner,identifier,result):
+        """Record a completed external write and clear its marker in one transaction.
 
-        mark_write records intent; this records the resolved outcome. Without it a
-        completed write stays marked until its owner checkpoints, so an agent that
-        finished one write and paused for approval on a second looks unresolved.
+        mark_write records intent; this records the resolved outcome, so a finished write
+        stops looking unresolved once its owner has not yet checkpointed. The outcome is
+        required rather than optional: a marker cleared without a stored result reopens
+        the replay window this record exists to close. A tool that genuinely returns
+        nothing passes the empty string, which is still a recorded outcome.
         """
+        if not isinstance(result,str):
+            raise ValueError('A settled write must record its outcome as text.')
         with Session(self.engine) as s:
             if not self._fence(s,id,owner):raise ValueError('Execution lease is no longer owned.')
             row=s.get(RunRecord,id)
-            if result is not None and s.get(ActionResultRecord,(id,identifier)) is None:
+            if s.get(ActionResultRecord,(id,identifier)) is None:
                 s.add(ActionResultRecord(run_id=id,invocation=identifier,result=result,created_at=now()))
             remaining=[n for n in row.data.get('write_nodes',[]) if n!=identifier]
             if len(remaining)!=len(row.data.get('write_nodes',[])):
