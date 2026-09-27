@@ -195,14 +195,23 @@ def downgrade():
 
 
 @pytest.fixture
-def with_second_revision(tmp_path):
+def with_second_revision(tmp_path, monkeypatch):
     """Simulates a real 0002: both the migration and the model change it describes.
 
     Adding only the migration would be a toothless test - live metadata and the frozen
     baseline would still agree, so repairing from the wrong one would go unnoticed.
+
+    The migration environment is copied into tmp_path first. Writing a revision into the
+    repository's own versions directory would make a second pytest process, a scenario
+    run or a live API briefly observe a 0002 that does not exist.
     """
+    import shutil
     import sqlalchemy as sa
-    target = schema.MIGRATIONS / 'versions' / '0002_later.py'
+    sandbox = tmp_path / 'migrations'
+    shutil.copytree(schema.MIGRATIONS, sandbox,
+                    ignore=shutil.ignore_patterns('__pycache__'))
+    monkeypatch.setattr(schema, 'MIGRATIONS', sandbox)
+    target = sandbox / 'versions' / '0002_later.py'
     write_revision_0002(target)
     live = Base.metadata
     table = sa.Table('run_budgets', live,
@@ -216,9 +225,6 @@ def with_second_revision(tmp_path):
     finally:
         live.remove(table)
         runs._columns.remove(note)
-        target.unlink(missing_ok=True)
-        import shutil
-        shutil.rmtree(schema.MIGRATIONS / 'versions' / '__pycache__', ignore_errors=True)
 
 
 def test_legacy_adoption_survives_a_later_revision(tmp_path, with_second_revision):
@@ -286,3 +292,59 @@ def test_a_missing_index_is_repaired_during_adoption(tmp_path):
     engine.dispose()
     store = Store(url, Fernet.generate_key())
     assert 'ix_runs_status' in {i['name'] for i in inspect(store.engine).get_indexes('runs')}
+
+
+# --------------------------------------------------------------------------- parity
+
+def test_the_frozen_snapshot_matches_revision_0001_itself(tmp_path):
+    """Without this, the snapshot and the fixtures built from it could drift together.
+
+    Build a database by running 0001, then compare its real structure against the frozen
+    metadata. Anything that differs means the snapshot no longer describes the revision
+    it claims to, and every adoption decision made from it would be wrong.
+    """
+    engine = create_engine(f'sqlite:///{tmp_path}/rev0001.db')
+    with engine.begin() as conn:
+        schema.upgrade(conn, '0001_baseline')
+    with engine.connect() as conn:
+        assert schema.current_revision(conn) == '0001_baseline'
+        assert schema.schema_differences(conn) == []
+
+
+def test_a_wrong_index_column_is_refused(tmp_path):
+    """The right name over the wrong column indexes nothing useful."""
+    url = legacy_database(tmp_path / 'badindex.db')
+    engine = create_engine(url)
+    with engine.begin() as conn:
+        conn.execute(text('DROP INDEX ix_runs_status'))
+        conn.execute(text('CREATE INDEX ix_runs_status ON runs (name)'))
+    engine.dispose()
+    with pytest.raises(schema.SchemaStateError) as exc:
+        Store(url, Fernet.generate_key())
+    assert "index ix_runs_status on runs covers ['name']" in str(exc.value)
+
+
+def test_an_unexpected_unique_constraint_is_refused(tmp_path):
+    """An extra uniqueness rule changes what the application may store."""
+    url = legacy_database(tmp_path / 'extrauniq.db')
+    engine = create_engine(url)
+    with engine.begin() as conn:
+        conn.execute(text('CREATE UNIQUE INDEX ux_runs_name ON runs (name)'))
+    engine.dispose()
+    with pytest.raises(schema.SchemaStateError) as exc:
+        Store(url, Fernet.generate_key())
+    assert 'unexpected unique constraint on runs(name)' in str(exc.value)
+
+
+def test_a_shorter_column_is_refused(tmp_path):
+    """Declared length is part of the contract: a narrower column silently truncates."""
+    url = legacy_database(tmp_path / 'short.db')
+    engine = create_engine(url)
+    with engine.begin() as conn:
+        conn.execute(text('DROP TABLE agent_memories'))
+        conn.execute(text('CREATE TABLE agent_memories (tenant_id VARCHAR(8), '
+                          'key VARCHAR(120), messages JSON NOT NULL)'))
+    engine.dispose()
+    with pytest.raises(schema.SchemaStateError) as exc:
+        Store(url, Fernet.generate_key())
+    assert 'agent_memories.tenant_id type is VARCHAR(8)' in str(exc.value)

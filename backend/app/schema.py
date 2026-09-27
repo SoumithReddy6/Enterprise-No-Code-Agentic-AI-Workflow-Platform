@@ -69,11 +69,17 @@ def baseline_metadata():
 
 
 def _column_signature(column):
-    return {'type':type(column['type']).__name__.upper(),'nullable':bool(column['nullable'])}
+    return {'type':type(column['type']).__name__.upper(),'nullable':bool(column['nullable']),
+            'length':getattr(column['type'],'length',None)}
 
 
 def _declared_column_signature(column):
-    return {'type':type(column.type).__name__.upper(),'nullable':bool(column.nullable)}
+    return {'type':type(column.type).__name__.upper(),'nullable':bool(column.nullable),
+            'length':getattr(column.type,'length',None)}
+
+
+def _describe(signature):
+    return signature['type']+(f"({signature['length']})" if signature['length'] else '')
 
 
 def schema_differences(connection,metadata=None):
@@ -104,8 +110,8 @@ def schema_differences(connection,metadata=None):
             # by definition, so the key comparison below covers it instead.
             if column not in primary and want['nullable']!=have['nullable']:
                 differences.append(f"{name}.{column} nullability is {have['nullable']}, expected {want['nullable']}")
-            if not _types_match(want['type'],have['type']):
-                differences.append(f"{name}.{column} type is {have['type']}, expected {want['type']}")
+            if not _types_match(want,have,connection.dialect.name):
+                differences.append(f"{name}.{column} type is {_describe(have)}, expected {_describe(want)}")
         want_pk=[c.name for c in table.primary_key]
         have_pk=list(inspector.get_pk_constraint(name).get('constrained_columns') or [])
         if want_pk!=have_pk:differences.append(f'{name} primary key is {have_pk or "none"}, expected {want_pk}')
@@ -115,20 +121,40 @@ def schema_differences(connection,metadata=None):
         have_unique|={tuple(sorted(i['column_names'])) for i in inspector.get_indexes(name) if i.get('unique')}
         for columns in sorted(want_unique-have_unique):
             differences.append(f'missing unique constraint on {name}({", ".join(columns)})')
-        want_index={index.name for index in table.indexes}
-        have_index={index['name'] for index in inspector.get_indexes(name)}
-        for index in sorted(want_index-have_index):differences.append(f'missing index {index} on {name}')
+        # An unexpected uniqueness rule changes what the application may store, so it is
+        # reported. An unexpected ordinary index only costs write time and is tolerated.
+        for columns in sorted(have_unique-want_unique):
+            differences.append(f'unexpected unique constraint on {name}({", ".join(columns)})')
+        # Compare signatures, not names: an index with the right name over the wrong
+        # column satisfies a name check while indexing nothing useful.
+        want_index={(index.name,tuple(c.name for c in index.columns),bool(index.unique)) for index in table.indexes}
+        have_index={(index['name'],tuple(index['column_names']),bool(index.get('unique'))) for index in inspector.get_indexes(name)}
+        for signature in sorted(want_index-have_index):
+            actual=next((h for h in have_index if h[0]==signature[0]),None)
+            if actual is None:differences.append(f'missing index {signature[0]} on {name}')
+            else:differences.append(f'index {signature[0]} on {name} covers {list(actual[1])} unique={actual[2]}, '
+                                    f'expected {list(signature[1])} unique={signature[2]}')
     return differences
 
 
-# SQLite reports a narrow set of affinities; treat the known equivalents as a match.
-_TYPE_ALIASES={'STRING':{'VARCHAR','TEXT','STRING'},'TEXT':{'TEXT','VARCHAR','STRING'},
-               'INTEGER':{'INTEGER','BIGINT','SMALLINT'},'FLOAT':{'FLOAT','REAL','NUMERIC','DOUBLE'},
-               'BOOLEAN':{'BOOLEAN','INTEGER'},'JSON':{'JSON','TEXT','VARCHAR'}}
+# SQLite stores by affinity and reports a narrow set of names, so JSON and Boolean
+# columns come back as TEXT and INTEGER. PostgreSQL reports precisely, so it gets no
+# such latitude: accepting TEXT where JSON is declared would hide a real mismatch.
+_SQLITE_ALIASES={'STRING':{'VARCHAR','TEXT'},'TEXT':{'TEXT','VARCHAR'},
+                 'INTEGER':{'INTEGER','BIGINT','SMALLINT'},'FLOAT':{'FLOAT','REAL','NUMERIC'},
+                 'BOOLEAN':{'BOOLEAN','INTEGER'},'JSON':{'JSON','TEXT'}}
+_ANSI_ALIASES={'STRING':{'VARCHAR','CHARACTER VARYING'},'TEXT':{'TEXT'},
+               'INTEGER':{'INTEGER'},'FLOAT':{'FLOAT','DOUBLE PRECISION'},
+               'BOOLEAN':{'BOOLEAN'},'JSON':{'JSON','JSONB'}}
 
 
-def _types_match(want,have):
-    return have in _TYPE_ALIASES.get(want,{want})
+def _types_match(want,have,dialect):
+    aliases=_SQLITE_ALIASES if dialect=='sqlite' else _ANSI_ALIASES
+    if have['type'] not in aliases.get(want['type'],{want['type']}):return False
+    # A declared length is part of the contract; SQLite often reports none, which is
+    # not a mismatch, but a different reported length is.
+    if want['length'] and have['length'] and want['length']!=have['length']:return False
+    return True
 
 
 def is_empty(connection):
