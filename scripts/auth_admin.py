@@ -23,7 +23,12 @@ def main():
     args=parser.parse_args()
     engine=create_engine(args.database_url,connect_args={'timeout':30} if args.database_url.startswith('sqlite') else {})
     try:
-        Base.metadata.create_all(engine)
+        # Administration never creates schema: it verifies the database is at head and
+        # refuses otherwise, so a typo in --database-url cannot silently build a new one.
+        from backend.app.schema import current_revision, head_revision
+        with engine.begin() as conn:
+            if current_revision(conn)!=head_revision():
+                parser.error('The database schema is not at head. Run: .venv/bin/python -m alembic upgrade head')
         if args.command=='invite':print(issue_invite(engine,email=args.email,hours=args.hours))
         else:print(f'Cleared {unlock_login(engine,email=args.email,address=args.ip)} login budgets.')
     except ValueError as exc:parser.error(str(exc))

@@ -165,9 +165,21 @@ class Store:
                 if name not in columns:conn.execute(text(f'ALTER TABLE runs ADD COLUMN {name} {definition}'))
             for name,size in (('created_at',64),('status',24),('name',240)):
                 if name not in columns:conn.execute(text(f"ALTER TABLE runs ADD COLUMN {name} VARCHAR({size}) NOT NULL DEFAULT ''"))
-        Base.metadata.create_all(conn)
-        for name,columns in (('ix_runs_tenant_created_id','tenant_id, created_at, id'),('ix_runs_created_at','created_at'),('ix_runs_status','status')):
-            conn.execute(text(f'CREATE INDEX IF NOT EXISTS {name} ON runs ({columns})'))
+        # Create only what the frozen 0001 baseline declares. Using live metadata here
+        # would build tables at a later revision's shape and then stamp them as 0001,
+        # so the migration that introduced them would collide on the next upgrade.
+        from .schema import baseline_metadata
+        baseline=baseline_metadata()
+        baseline.create_all(conn)
+        # Indexes are additive and lossless, so an older database that predates one gets
+        # it here. Unique constraints are deliberately excluded: adding one to data that
+        # already violates it is a decision for an operator, not for startup.
+        inspector=inspect(conn)
+        for table in baseline.tables.values():
+            if table.name not in inspector.get_table_names():continue
+            existing={index['name'] for index in inspector.get_indexes(table.name)}
+            for index in table.indexes:
+                if index.name not in existing and not index.unique:index.create(conn)
 
     @staticmethod
     def _migrate_run_events(conn):

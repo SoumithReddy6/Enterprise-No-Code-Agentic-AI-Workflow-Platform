@@ -57,24 +57,78 @@ def known_revisions():
     return {revision.revision for revision in ScriptDirectory.from_config(config).walk_revisions()}
 
 
-def schema_differences(connection):
-    """Structural differences between the live database and the declared baseline.
+def baseline_metadata():
+    """The frozen 0001 schema, never the live models.
 
-    Compares table and column names only. Type comparison belongs to alembic's
-    autogenerate check in CI, which has the full dialect context this does not.
+    A database being adopted is stamped as 0001, so it must be compared and repaired
+    against 0001. Comparing against current metadata would create tables at a later
+    shape and then claim they are 0001, and the next migration would collide with them.
     """
+    from backend.migrations.baseline_schema import metadata
+    return metadata
+
+
+def _column_signature(column):
+    return {'type':type(column['type']).__name__.upper(),'nullable':bool(column['nullable'])}
+
+
+def _declared_column_signature(column):
+    return {'type':type(column.type).__name__.upper(),'nullable':bool(column.nullable)}
+
+
+def schema_differences(connection,metadata=None):
+    """Structural differences between the live database and the frozen baseline.
+
+    Covers tables, columns, types, nullability, primary keys, unique constraints and
+    indexes. A missing unique constraint is a correctness problem, not a performance
+    one, so it is reported like any other mismatch rather than tolerated.
+    """
+    metadata=metadata or baseline_metadata()
     inspector=inspect(connection)
     live={name for name in inspector.get_table_names() if name!='alembic_version'}
-    declared=set(target_metadata.tables)
+    declared=set(metadata.tables)
     differences=[]
     for table in sorted(declared-live):differences.append(f'missing table {table}')
     for table in sorted(live-declared):differences.append(f'unexpected table {table}')
-    for table in sorted(declared&live):
-        live_columns={column['name'] for column in inspector.get_columns(table)}
-        declared_columns=set(target_metadata.tables[table].columns.keys())
-        for column in sorted(declared_columns-live_columns):differences.append(f'missing column {table}.{column}')
-        for column in sorted(live_columns-declared_columns):differences.append(f'unexpected column {table}.{column}')
+    for name in sorted(declared&live):
+        table=metadata.tables[name]
+        live_columns={column['name']:column for column in inspector.get_columns(name)}
+        declared_columns=dict(table.columns.items())
+        for column in sorted(set(declared_columns)-set(live_columns)):differences.append(f'missing column {name}.{column}')
+        for column in sorted(set(live_columns)-set(declared_columns)):differences.append(f'unexpected column {name}.{column}')
+        primary=[c.name for c in table.primary_key]
+        for column in sorted(set(declared_columns)&set(live_columns)):
+            want=_declared_column_signature(declared_columns[column])
+            have=_column_signature(live_columns[column])
+            # SQLite reports primary-key columns as nullable; a primary key is NOT NULL
+            # by definition, so the key comparison below covers it instead.
+            if column not in primary and want['nullable']!=have['nullable']:
+                differences.append(f"{name}.{column} nullability is {have['nullable']}, expected {want['nullable']}")
+            if not _types_match(want['type'],have['type']):
+                differences.append(f"{name}.{column} type is {have['type']}, expected {want['type']}")
+        want_pk=[c.name for c in table.primary_key]
+        have_pk=list(inspector.get_pk_constraint(name).get('constrained_columns') or [])
+        if want_pk!=have_pk:differences.append(f'{name} primary key is {have_pk or "none"}, expected {want_pk}')
+        want_unique={tuple(sorted(c.name for c in constraint.columns))
+                     for constraint in table.constraints if type(constraint).__name__=='UniqueConstraint'}
+        have_unique={tuple(sorted(u['column_names'])) for u in inspector.get_unique_constraints(name)}
+        have_unique|={tuple(sorted(i['column_names'])) for i in inspector.get_indexes(name) if i.get('unique')}
+        for columns in sorted(want_unique-have_unique):
+            differences.append(f'missing unique constraint on {name}({", ".join(columns)})')
+        want_index={index.name for index in table.indexes}
+        have_index={index['name'] for index in inspector.get_indexes(name)}
+        for index in sorted(want_index-have_index):differences.append(f'missing index {index} on {name}')
     return differences
+
+
+# SQLite reports a narrow set of affinities; treat the known equivalents as a match.
+_TYPE_ALIASES={'STRING':{'VARCHAR','TEXT','STRING'},'TEXT':{'TEXT','VARCHAR','STRING'},
+               'INTEGER':{'INTEGER','BIGINT','SMALLINT'},'FLOAT':{'FLOAT','REAL','NUMERIC','DOUBLE'},
+               'BOOLEAN':{'BOOLEAN','INTEGER'},'JSON':{'JSON','TEXT','VARCHAR'}}
+
+
+def _types_match(want,have):
+    return have in _TYPE_ALIASES.get(want,{want})
 
 
 def is_empty(connection):
@@ -106,7 +160,7 @@ def prepare(connection,allow_upgrade=True):
         if is_empty(connection):
             upgrade(connection)
             return 'created'
-        differences=schema_differences(connection)
+        differences=schema_differences(connection)  # against the frozen 0001 baseline
         if differences:
             raise SchemaStateError(
                 'This database does not match the expected baseline, so it cannot be adopted '

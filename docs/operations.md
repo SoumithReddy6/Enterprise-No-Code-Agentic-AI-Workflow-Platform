@@ -264,5 +264,23 @@ a revision, which happened twice before migrations existed.
 drops it on the way down, and the data with it. For production, restoring a backup and
 redeploying is usually safer than reversing a populated migration.
 
+Adoption compares against a **frozen snapshot of 0001**, not the live models
+(`backend/migrations/baseline_schema.py`). That file is generated once and never edited
+when a model changes: a model change gets a new revision instead. Comparing against live
+metadata would repair a legacy database to a later revision's shape and then stamp it as
+0001, so the migration that introduced those objects would collide on the next upgrade.
+
+The comparison covers tables, columns, types, nullability, primary keys, unique
+constraints and indexes. Missing non-unique indexes are created during adoption, since
+that is additive and lossless. Missing unique constraints are refused: adding one to data
+that already violates it is an operator decision, not a startup decision.
+
+No component creates schema. `Store`, `install_auth` and `scripts/auth_admin.py` all
+verify the database is at head and refuse otherwise.
+
+**Scope.** This covers the main application database only. The knowledge management and
+search services keep separate databases with their own metadata and still use
+`create_all`; they need their own migration strategy before production claims.
+
 SQLite is exercised in CI as a development compatibility check. PostgreSQL is the
 authoritative target and needs its own profile before production claims.
