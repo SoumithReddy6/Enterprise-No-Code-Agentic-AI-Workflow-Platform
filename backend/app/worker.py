@@ -13,6 +13,7 @@ from .agent_memory import MemoryService
 from .platform_validation import platform_errors,kb_errors
 from .kb_gateway import KnowledgeServices
 from . import approvals
+from .execution_policy import ExecutionIdentity
 
 RUN_TIMEOUT_SECONDS=120
 from .observability import journal,request_id,run_id,tenant_id
@@ -56,7 +57,10 @@ class Worker:
                 tenant=self.store.run_tenant(id,owner)
                 try:
                     if action=='tool':
-                        node_type,settings,input_text,checkpoint_owner,*identity=args
+                        node_type,settings,input_text,identity=args
+                        if not isinstance(identity,ExecutionIdentity):
+                            raise ValueError('Tool execution requires a typed execution identity.')
+                        checkpoint_owner=identity.checkpoint_owner
                         config=CONFIGS[node_type].model_validate(settings)
                         self.tools.check(config,tenant)
                         write=is_write(node_type,config)
@@ -65,8 +69,8 @@ class Worker:
                             prepared=self.tools.prepare(node_type,settings,input_text,tenant)
                             text=await self.tools.execute_prepared(prepared,tenant)
                             return {'text':text,**jira_items(text,config.operation,prepared['connection']['endpoint'])}
-                        invocation=identity[1] if len(identity)>1 else checkpoint_owner
-                        node_id=identity[0] if identity else checkpoint_owner
+                        invocation=identity.invocation_id
+                        node_id=identity.node_id
                         required=write and (config.approval if config.approval is not None else run.get('approval_required',True))
                         if required:
                             saved=approvals.resolve(self.store,id,owner,invocation)
@@ -87,7 +91,7 @@ class Worker:
                                 raise UncertainWriteError('Approved write outcome is uncertain; reconciliation is required before another attempt.') from None
                         # Intent is recorded per action, not per node, so one completed
                         # write does not leave a sibling action looking unresolved.
-                        marker=invocation if write and identity else checkpoint_owner
+                        marker=invocation if write else checkpoint_owner
                         if write:
                             done=self.store.completed_action(id,marker)
                             if done is not None:return done  # Already sent; never send again.

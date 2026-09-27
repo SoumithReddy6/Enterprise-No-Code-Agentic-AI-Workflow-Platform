@@ -6,7 +6,8 @@ path. Progress is recorded as it happens, so a resumed run skips completed indic
 instead of repeating paid work or external writes.
 """
 import json
-from dataclasses import replace
+
+from .execution_policy import ExecutionIdentity,execute_with_policy,invoke_attached
 
 MAX_ITEMS_CEILING=1000
 MAX_RESULT_BYTES=1_000_000
@@ -42,37 +43,6 @@ def within_budget(results):
     return len(json.dumps(results,ensure_ascii=False,default=str).encode())<=MAX_RESULT_BYTES
 
 
-def item_usage(ctx,index):
-    """Model usage recorded under this item's owner key.
-
-    registry.account_usage keys usage by checkpoint_owner, which is per item, while the
-    compiler reads the enclosing node id. Without this the loop node's event carries no
-    usage and durable token accounting silently loses every call an item made.
-    """
-    owner=f'{ctx.node_id}:{index}'
-    usage=(ctx.run or {}).get('usage',{}).get(owner)
-    return {'usage':usage} if usage else {}
-
-
-async def run_body(ctx,body,index,text,invocation):
-    # Write intent is tracked per item: a completed item must not be held hostage
-    # by the enclosing loop's checkpoint, which only appears when every item is done.
-    """Invoke one attached callable, mirroring the agent's target-invocation contract."""
-    from .registry import REGISTRY
-    from .agent_runtime import tool_outputs, execute_agent
-    from .tool_service import is_write
-    definition=REGISTRY[body.type]
-    config=definition.config_model.model_validate(body.config)
-    if body.type=='agent':
-        return await execute_agent(body.id,text,ctx.workflow,ctx,ctx.emit,0,None,item_owner(ctx,index))
-    child=replace(ctx,node_id=body.id,node_type=body.type,checkpoint_owner=item_owner(ctx,index))
-    if body.type.startswith('tool_'):
-        if ctx.platform is None:raise ValueError('Tool execution unavailable.')
-        raw=await ctx.platform('tool',body.type,config.model_dump(),text,child.checkpoint_owner,body.id,invocation)
-        return await tool_outputs(ctx,body.type,config,raw,body.id)
-    return await definition.handler({'query':text},config,child)
-
-
 async def for_each_node(inputs,config,ctx):
     from .tool_service import UncertainWriteError
     from .approvals import ApprovalPause
@@ -95,39 +65,48 @@ async def for_each_node(inputs,config,ctx):
             if done[index].get('status')=='failed':failed+=1
             continue
         invocation=f'{ctx.node_id}:{index}:{body.id}'
+        identity=ExecutionIdentity(body.id,item_owner(ctx,index),invocation,ctx.node_id,index)
         text=item_input(value)
-        await emit({'node_id':body.id,'invocation_id':invocation,'parent_node_id':ctx.node_id,
-                    'transient':True,'status':'running','inputs':{'input':text[:2000]},'item_index':index})
+        common={**identity.event_fields(),'transient':True}
+        await emit({**common,'status':'running','inputs':{'input':text[:2000]}})
         try:
-            output=await run_body(ctx,body,index,text,invocation)
-            entry={'index':index,'status':'success','value':output.get('text',''),'error':''}
-            await emit({'node_id':body.id,'invocation_id':invocation,'parent_node_id':ctx.node_id,
-                        'transient':True,'status':'success','outputs':output,'item_index':index,
-                        **item_usage(ctx,index)})
+            async def invoke():
+                return await invoke_attached(body,text,ctx,identity,emit,
+                                             action_budget=(ctx.run or {}).get('action_budget'))
+            outcome=await execute_with_policy(
+                invoke,identity,body.retry,ctx.run,emit,generic_error='Item execution failed.',
+                action_budget=(ctx.run or {}).get('action_budget'),charge_first_attempt=False,
+                check_tokens=body.type in ('agent','query'))
+            if outcome.status=='failed':
+                entry={'index':index,'status':'failed','value':'','error':outcome.error}
+                failed+=1
+                event={**common,'status':'failed','error':outcome.error}
+                if outcome.usage:event['usage']=outcome.usage
+                if body.retry.attempts:event['attempt']=outcome.attempts
+                await emit(event)
+                journal(event='loop.item_failed',node_id=ctx.node_id,reason_code='item_error')
+                if config.on_item_error=='stop':
+                    remember(ctx.run,ctx.node_id,index,entry)
+                    await emit({'kind':'loop_item','status':'info','node_id':ctx.node_id,'item_index':index,'item_result':entry,'transient':True})
+                    results.append(entry)
+                    break
+            else:
+                output=outcome.outputs
+                entry={'index':index,'status':'success','value':output.get('text',''),'error':''}
+                event={**common,'status':'success','outputs':output}
+                if outcome.usage:event['usage']=outcome.usage
+                await emit(event)
         except ApprovalPause:
             # A pause is not an item failure: swallowing it would disable the approval
             # gate for every write inside a loop. Usage already spent is still reported.
-            spent=item_usage(ctx,index)
-            if spent:
-                await emit({'node_id':body.id,'invocation_id':invocation,'parent_node_id':ctx.node_id,
-                            'transient':True,'status':'paused','item_index':index,**spent})
+            from .execution_policy import usage_for
+            paused={**common,'status':'paused'};usage=usage_for(ctx.run,identity)
+            if usage:paused['usage']=usage
+            await emit(paused)
             raise
         except UncertainWriteError:
             # The external outcome is unknown; iterating past it could duplicate a write.
             raise
-        except Exception as exc:
-            error=str(exc) if isinstance(exc,ValueError) else 'Item execution failed.'
-            entry={'index':index,'status':'failed','value':'','error':error}
-            failed+=1
-            await emit({'node_id':body.id,'invocation_id':invocation,'parent_node_id':ctx.node_id,
-                        'transient':True,'status':'failed','error':error,'item_index':index,
-                        **item_usage(ctx,index)})
-            journal(event='loop.item_failed',node_id=ctx.node_id,reason_code='item_error')
-            if config.on_item_error=='stop':
-                remember(ctx.run,ctx.node_id,index,entry)
-                await emit({'kind':'loop_item','status':'info','node_id':ctx.node_id,'item_index':index,'item_result':entry,'transient':True})
-                results.append(entry)
-                break
         remember(ctx.run,ctx.node_id,index,entry)
         await emit({'kind':'loop_item','status':'info','node_id':ctx.node_id,'item_index':index,'item_result':entry,'transient':True})
         results.append(entry)

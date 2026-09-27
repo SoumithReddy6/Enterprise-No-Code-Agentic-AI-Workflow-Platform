@@ -24,11 +24,15 @@ INPUT_HINTS={'tool_http':'text that replaces {input} in the configured request',
 
 async def agent_node(inputs,config,ctx):
     if ctx.invoke_agent is None:raise ValueError('Agent execution is unavailable.')
-    return await ctx.invoke_agent(ctx.node_id,inputs['input'])
+    return await ctx.invoke_agent(ctx.node_id,inputs['input'],ctx.execution_identity)
 
 async def tool_node(inputs,config,ctx):
     if ctx.platform is None:raise ValueError('Tool execution is unavailable.')
-    text=await ctx.platform('tool',ctx.node_type,config.model_dump(),inputs['input'],ctx.node_id)
+    from .execution_policy import ExecutionIdentity
+    identity=ctx.execution_identity or ExecutionIdentity(
+        node_id=ctx.node_id,checkpoint_owner=ctx.checkpoint_owner or ctx.node_id,
+        invocation_id=ctx.node_id)
+    text=await ctx.platform('tool',ctx.node_type,config.model_dump(),inputs['input'],identity)
     return await tool_outputs(ctx,ctx.node_type,config,text,ctx.node_id)
 
 async def tool_outputs(ctx,node_type,config,text,node_id):
@@ -188,7 +192,11 @@ def run_budget():
 
 async def execute_agent(node_id,input_text,workflow,ctx,emit,depth=0,budget=None,checkpoint_owner=None):
     held=set()
-    ctx=replace(ctx,node_id=node_id,node_type='agent',checkpoint_owner=checkpoint_owner or node_id)
+    from .execution_policy import ExecutionIdentity
+    owner=checkpoint_owner or node_id
+    ctx=replace(ctx,node_id=node_id,node_type='agent',checkpoint_owner=checkpoint_owner or node_id,
+                workflow=workflow,execution_identity=ctx.execution_identity or
+                ExecutionIdentity(node_id,owner,node_id))
     try:
         output=await _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,checkpoint_owner,held)
         evidence_from_outputs(ctx.run,output)
@@ -280,33 +288,70 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
         if target not in targets:raise ValueError('Agent requested an unattached target.')
         if not isinstance(task,str) or not task.strip() or len(task)>20000:
             transcript.extend([{'agent_action':action},{'tool_error':'Provide a non-empty text input of at most 20,000 characters for this target.'}]);continue
-        if not replay:budget['remaining']-=1;budget['counter']+=1
-        invocation=frame['invocation'] if replay else f'{checkpoint_owner}:{budget["counter"]}:{target}'
-        common={'node_id':target,'invocation_id':invocation,'parent_node_id':node_id,'transient':True}
+        from .execution_policy import ExecutionIdentity,execute_with_policy,invoke_attached
+        invocation=frame['invocation'] if replay else f'{checkpoint_owner}:{budget["counter"]+1}:{target}'
+        identity=ExecutionIdentity(target,checkpoint_owner,invocation,node_id)
+        common={**identity.event_fields(),'transient':True}
         await emit({**common,'status':'running','inputs':{'input':task}})
+        target_node=targets[target]
         write_attempt=False
         try:
-            if target in specialists:
-                output=await execute_agent(target,task,workflow,ctx,emit,depth+1,budget,checkpoint_owner)
-            else:
-                tool=targets[target];definition=REGISTRY[tool.type];tool_config=definition.config_model.model_validate(tool.config)
-                child=replace(ctx,node_id=target,node_type=tool.type,checkpoint_owner=checkpoint_owner)
-                if tool.type.startswith('tool_'):
-                    if ctx.platform is None:raise ValueError('Tool execution unavailable.')
-                    write_attempt=is_write(tool.type,tool_config)
-                    text=await ctx.platform('tool',tool.type,tool_config.model_dump(),task,checkpoint_owner,target,invocation)
-                    output=await tool_outputs(ctx,tool.type,tool_config,text,target)
-                else:output=await definition.handler({'query':task},tool_config,child)
+            if target_node.type.startswith('tool_'):
+                target_config=REGISTRY[target_node.type].config_model.model_validate(target_node.config)
+                write_attempt=is_write(target_node.type,target_config)
+            async def invoke():
+                try:
+                    return await invoke_attached(target_node,task,ctx,identity,emit,
+                                                 depth+1 if target in specialists else depth,budget)
+                except (ApprovalPause,UncertainWriteError):
+                    raise
+                except Exception:
+                    if write_attempt:
+                        raise UncertainWriteError(
+                            'External write outcome is uncertain; reconciliation is required before trying again. Check the remote system.') from None
+                    raise
+            outcome=await execute_with_policy(
+                invoke,identity,target_node.retry,ctx.run,emit,
+                generic_error='Attached node execution failed.',action_budget=budget,
+                charge_first_attempt=not replay,
+                check_tokens=target_node.type in ('agent','query'))
+            if outcome.status=='failed':
+                failure={**common,'status':'failed','error':outcome.error,
+                         **({'attempt':outcome.attempts} if target_node.retry.attempts else {})}
+                if outcome.usage:failure['usage']=outcome.usage
+                await emit(failure)
+                if target_node.type=='agent' and 'budget exhausted' in outcome.error.lower():
+                    truncations.append({'node_id':target,'reason':outcome.error})
+                transcript.extend([{'agent_action':action},{'tool_error':outcome.error}])
+                continue
+            output=outcome.outputs
             child_grounding=json.loads(output.get('grounding','{}'))
             if child_grounding.get('truncated'):
                 truncations.append({'node_id':target,'reason':child_grounding.get('truncation_reason','Specialist returned an incomplete answer.')})
-            await emit({**common,'status':'success','outputs':output,**ctx.run.get('tool_output_metadata',{}).get(target,{})})
+            success={**common,'status':'success','outputs':output,
+                     **ctx.run.get('tool_output_metadata',{}).get(target,{})}
+            if outcome.usage:success['usage']=outcome.usage
+            await emit(success)
         except ApprovalPause as exc:
             exc.frames[frame_key]={'checkpoint_owner':checkpoint_owner,'step':step,'action':action,'invocation':invocation,'budget':dict(budget),'transcript':transcript,'evidence':evidence,'grounded':grounded,'truncations':truncations,'provider':provider,'memory':memory}
+            from .execution_policy import usage_for
+            paused={**common,'status':'paused'};usage=usage_for(ctx.run,identity)
+            if usage:paused['usage']=usage
+            await emit(paused)
+            raise
+        except UncertainWriteError as exc:
+            message=str(exc) if isinstance(exc,ValueError) else 'Attached node execution failed.'
+            from .execution_policy import usage_for
+            failure={**common,'status':'failed','error':message};usage=usage_for(ctx.run,identity)
+            if usage:failure['usage']=usage
+            await emit(failure)
             raise
         except Exception as exc:
             message=str(exc) if isinstance(exc,ValueError) else 'Attached node execution failed.'
-            await emit({**common,'status':'failed','error':message})
+            from .execution_policy import usage_for
+            failure={**common,'status':'failed','error':message};usage=usage_for(ctx.run,identity)
+            if usage:failure['usage']=usage
+            await emit(failure)
             if isinstance(exc,AgentBudgetExhausted):truncations.append({'node_id':target,'reason':message})
             if isinstance(exc,UncertainWriteError):raise
             if write_attempt:

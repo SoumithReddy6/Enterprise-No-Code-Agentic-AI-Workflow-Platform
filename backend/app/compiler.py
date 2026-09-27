@@ -9,6 +9,8 @@ from pydantic import ValidationError
 from .models import Workflow
 from .registry import REGISTRY, Context, validate_template
 from .approvals import ApprovalPause
+from .execution_policy import (ExecutionIdentity, execute_with_policy,
+                               retry_delay, MAX_NODE_RETRY_DELAY)
 
 
 class PersistedNodeCancellation(asyncio.CancelledError):
@@ -149,14 +151,6 @@ def type_warnings(workflow: Workflow) -> list[str]:
     return warnings
 
 
-MAX_NODE_RETRY_DELAY=30.0
-
-def retry_delay(attempt,base_delay):
-    """Full jitter, matching providers.with_retries: synchronized clients must not retry together."""
-    import random
-    return random.uniform(0,min(MAX_NODE_RETRY_DELAY,base_delay*2**min(attempt,30)))
-
-
 def merge_values(left: dict, right: dict):
     return {**left, **right}
 
@@ -176,17 +170,23 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
     errors = validate_workflow(workflow)
     if errors: raise ValueError('\n'.join(errors))
     from .platform_graph import split_graph
-    from .agent_runtime import execute_agent,evidence_from_outputs
+    from .agent_runtime import execute_agent,evidence_from_outputs,run_budget
     from .evidence_registry import prepare_checkpoint_labels,emit_evidence_notice
     from .observability import journal
     full_workflow=workflow
     workflow,_,_=split_graph(workflow)
     graph = StateGraph(State)
-    run_state={'evidence':[],'citation_counter':citation_counter,'agent_frames':agent_frames or {}}  # Every passage retrieved in this run, under a run-unique citation label.
+    ceiling=run_budget()
+    run_state={'evidence':[],'citation_counter':citation_counter,'agent_frames':agent_frames or {},
+               'action_budget':{'remaining':ceiling,'counter':0,'ceiling':ceiling}}  # Every passage retrieved in this run, under a run-unique citation label.
     prepare_checkpoint_labels(run_state,completed)
     run_state['loop_progress']=dict(loop_progress or {})
     context = Context(message=message, resolve_credential=credential_resolver, authorize_model=authorize_model,knowledge=knowledge_resolver,platform=platform_resolver,run=run_state,emit=emit)
-    async def invoke_agent(id,text):return await execute_agent(id,text,full_workflow,context,emit)
+    async def invoke_agent(id,text,identity=None):
+        child=replace(context,node_id=id,node_type='agent',checkpoint_owner=id,
+                      execution_identity=identity)
+        return await execute_agent(id,text,full_workflow,child,emit,
+                                   budget=run_state['action_budget'])
     context.invoke_agent=invoke_agent
     context.workflow=full_workflow
     for node in sorted(workflow.nodes, key=lambda n: n.id):
@@ -205,9 +205,8 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                 inputs = {key: state['values'][ref.split('.')[0]][ref.split('.')[1]] for key, ref in node.inputs.items()}
                 started = time.perf_counter()
                 await emit({'node_id': node.id, 'status': 'running', 'inputs': inputs})
-                attempts=node.retry.attempts+1
-                for attempt in range(attempts):
-                  try:
+                identity=ExecutionIdentity(node.id,node.id,node.id)
+                async def invoke():
                       # Legacy prompt/LLM nodes must not bypass an upstream guard.
                       def guarded_dependency(identifier,seen):
                           if identifier in seen:return False
@@ -222,54 +221,61 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                           refusal=immediate_abstention({'decision':'abstain'})
                           outputs={'text':refusal['text'],'provider':'none'} if node.type=='llm' else refusal
                       else:
-                          outputs = await definition.handler(inputs, config, replace(context,node_id=node.id,node_type=node.type,checkpoint_owner=node.id))
+                          outputs = await definition.handler(
+                              inputs,config,replace(context,node_id=node.id,node_type=node.type,
+                                                    checkpoint_owner=node.id,execution_identity=identity))
                       if set(outputs) != set(definition.outputs) or any(not (isinstance(value,list) and all(isinstance(item,dict) for item in value)) if definition.outputs[name]=='array<object>' else not isinstance(value,str) for name,value in outputs.items()):
                           raise ValueError('Node returned outputs that do not match its declared contract.')
+                      return outputs
+                try:
+                      outcome=await execute_with_policy(
+                          invoke,identity,node.retry,run_state,emit,
+                          action_budget=run_state.get('action_budget'),
+                          charge_first_attempt=False,
+                          check_tokens=node.type in ('llm','agent','query'),
+                          include_invocation_in_retry=False,
+                          delay_for=retry_delay)
+                      if outcome.status=='failed':
+                          failure={'node_id':node.id,'status':'failed','error':outcome.error}
+                          if outcome.usage:failure['usage']=outcome.usage
+                          if node.retry.attempts:failure['attempt']=outcome.attempts
+                          if node.on_error=='fail':
+                              await emit(failure)
+                              raise ValueError(outcome.error) from None
+                          run_state.setdefault('failed_nodes',set()).add(node.id)
+                          await emit({**failure,'recovered':True})
+                          journal(event='node.recovered',node_id=node.id,reason_code=node.on_error)
+                          return {'values':{node.id:{}}}
+                      outputs=outcome.outputs
                       evidence_from_outputs(run_state,outputs)
                       await emit_evidence_notice(run_state,emit,node.id)
                       event={'node_id': node.id, 'status': 'success', 'outputs': outputs,'duration_ms': round((time.perf_counter()-started)*1000)}
                       event.update(run_state.get('tool_output_metadata',{}).get(node.id,{}))
-                      usage=run_state.get('usage',{}).get(node.id)
-                      if usage:event['usage']=usage  # Model calls made by this node (an agent's tool loop counts as one node).
+                      if outcome.usage:event['usage']=outcome.usage
                       await emit(event)
                       return {'values': {node.id: outputs}}
-                  except ApprovalPause as exc:
-                      usage=run_state.get('usage',{}).get(node.id)
-                      if usage:await emit({'node_id':node.id,'status':'paused','transient':True,'usage':usage})
+                except ApprovalPause as exc:
+                      from .execution_policy import usage_for
+                      paused={'node_id':node.id,'status':'paused','transient':True}
+                      usage=usage_for(run_state,identity)
+                      if usage:paused['usage']=usage
+                      await emit(paused)
                       raise
-                  except asyncio.CancelledError as exc:
+                except asyncio.CancelledError as exc:
                       if isinstance(exc,PersistedNodeCancellation):
                           # Python 3.12 asyncio.timeout recognizes the exact base type.
                           raise asyncio.CancelledError() from None
                       await emit({'node_id': node.id, 'status': 'cancelled',**({'usage':run_state['usage'][node.id]} if run_state.get('usage',{}).get(node.id) else {})})
                       raise
-                  except Exception as exc:
-                      from .tool_service import TransientToolError, UncertainWriteError
+                except Exception as exc:
+                      from .tool_service import UncertainWriteError
                       error = str(exc) if isinstance(exc, ValueError) else 'Node execution failed.'
                       usage_fields={'usage':run_state['usage'][node.id]} if run_state.get('usage',{}).get(node.id) else {}
-                      # An uncertain write is never retried: the outcome is unknown, so a second
-                      # attempt could duplicate a completed external mutation.
-                      transient=isinstance(exc,TransientToolError) and not isinstance(exc,UncertainWriteError)
-                      if transient and attempt<attempts-1:
-                          delay=retry_delay(attempt,node.retry.base_delay)
-                          await emit({'node_id':node.id,'status':'retrying','transient':True,'error':error,
-                                      'attempt':attempt+1,'delay_seconds':round(delay,3),**usage_fields})
-                          journal(event='node.retry',node_id=node.id,attempt=attempt+1,
-                                  delay_seconds=delay,error_type=type(exc).__name__)
-                          await asyncio.sleep(delay)
-                          continue
-                      failure={'node_id': node.id, 'status': 'failed', 'error': error,**usage_fields}
-                      if attempts>1:failure['attempt']=attempt+1
-                      # An unresolved external outcome is never recoverable: continuing or
-                      # routing past it would run later steps on an unknown world state.
-                      if node.on_error=='fail' or isinstance(exc,UncertainWriteError):
+                      if isinstance(exc,UncertainWriteError):
+                          failure={'node_id':node.id,'status':'failed','error':error,**usage_fields}
                           await emit(failure)
                           raise ValueError(error) from None
-                      # continue and route both keep the run alive; the graph decides where it goes.
-                      run_state.setdefault('failed_nodes',set()).add(node.id)
-                      await emit({**failure,'recovered':True})
-                      journal(event='node.recovered',node_id=node.id,reason_code=node.on_error)
-                      return {'values': {node.id: {}}}
+                      raise
             return handler
         graph.add_node(node.id, handler_factory(node, definition, config))
     trigger = next(n.id for n in workflow.nodes if n.type in ('chat_input','manual_input'))

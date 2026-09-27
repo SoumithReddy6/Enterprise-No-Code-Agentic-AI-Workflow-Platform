@@ -61,6 +61,7 @@ class Context:
     node_id: str = ''
     node_type: str = ''
     checkpoint_owner: str = ''
+    execution_identity: object | None = None
     workflow: object = None
     emit: Callable | None = None
     run: dict | None = None  # Shared per run: {'evidence': [passages with unique citation labels]}
@@ -94,13 +95,20 @@ async def prompt_node(inputs, config, ctx):
 def account_usage(ctx,usage,config):
     """Accumulate per-node model usage on the shared run state; the compiler reports it on the node event."""
     if ctx.run is None or not usage:return
-    totals=ctx.run.setdefault('usage',{}).setdefault(ctx.checkpoint_owner or ctx.node_id or '?',{'calls':0,'prompt_tokens':0,'completion_tokens':0})
-    totals['calls']+=1;totals['prompt_tokens']+=usage.get('prompt_tokens',0);totals['completion_tokens']+=usage.get('completion_tokens',0)
-    groups=totals.setdefault('by_model',[])
-    row=next((r for r in groups if r['provider']==config.provider and r['model']==config.model),None)
-    if row is None:
-        row={'provider':config.provider,'model':config.model,'calls':0,'prompt_tokens':0,'completion_tokens':0};groups.append(row)
-    row['calls']+=1;row['prompt_tokens']+=usage.get('prompt_tokens',0);row['completion_tokens']+=usage.get('completion_tokens',0)
+    def accumulate(totals):
+        totals['calls']+=1;totals['prompt_tokens']+=usage.get('prompt_tokens',0);totals['completion_tokens']+=usage.get('completion_tokens',0)
+        groups=totals.setdefault('by_model',[])
+        row=next((r for r in groups if r['provider']==config.provider and r['model']==config.model),None)
+        if row is None:
+            row={'provider':config.provider,'model':config.model,'calls':0,'prompt_tokens':0,'completion_tokens':0};groups.append(row)
+        row['calls']+=1;row['prompt_tokens']+=usage.get('prompt_tokens',0);row['completion_tokens']+=usage.get('completion_tokens',0)
+    empty=lambda:{'calls':0,'prompt_tokens':0,'completion_tokens':0}
+    totals=ctx.run.setdefault('usage',{}).setdefault(ctx.checkpoint_owner or ctx.node_id or '?',empty())
+    accumulate(totals)
+    invocation=getattr(ctx.execution_identity,'invocation_id',None)
+    if invocation:
+        invocation_totals=ctx.run.setdefault('usage_by_invocation',{}).setdefault(invocation,empty())
+        accumulate(invocation_totals)
     from .observability import journal
     journal(event='model.usage',node_id=ctx.node_id,provider=config.provider,model=config.model,prompt_tokens=usage.get('prompt_tokens'),completion_tokens=usage.get('completion_tokens'))
 
