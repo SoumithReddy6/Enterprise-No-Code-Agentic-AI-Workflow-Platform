@@ -299,3 +299,44 @@ async def test_completed_write_settles_so_a_gated_second_write_can_resume(store,
     assert finished['status'] == 'success', finished.get('error')
     assert sent.count('/ack') == 1, f'the settled write must not repeat: {sent}'
     assert '/reply' in sent
+
+
+# --------------------------------------------------------------------------- B1-04
+
+@pytest.mark.asyncio
+async def test_settled_write_is_not_replayed_when_the_worker_dies_before_checkpoint(store, worker, monkeypatch):
+    """Clearing a write marker must durably record the completed action's result.
+
+    Otherwise there is a window between settlement and the item checkpoint where resume
+    is permitted but nothing records that the call already happened - and it is sent twice.
+    """
+    async def execute_prepared(prep, tenant_id='local'): return jira_payload(1)
+    monkeypatch.setattr(worker.tools, 'execute_prepared', execute_prepared)
+    delivered = []
+    async def execute(node_type, settings, text, tenant_id='local'):
+        delivered.append(text); return 'ok'
+    monkeypatch.setattr(worker.tools, 'execute', execute)
+
+    # Die in the window: after settlement commits, before the item result persists.
+    original = store.settle_write
+    def settle_then_die(run_id, owner, identifier, result=None):
+        original(run_id, owner, identifier, result)   # commits settlement
+        raise asyncio.CancelledError()                # ...then the worker dies
+    monkeypatch.setattr(store, 'settle_write', settle_then_die)
+
+    workflow = batch_write_flow(jira_connection(store), http_connection(store))
+    row = store.create_run(workflow.model_dump(mode='json'), 'go')
+    await worker.execute(store.claim_next(worker.owner))
+
+    interrupted = store.run(row['id'])
+    assert len(delivered) == 1, 'setup: exactly one delivery before the interruption'
+    assert not interrupted.get('write_nodes'), 'the write settled'
+    assert store.completed_action(row['id'], 'each:0:send') == 'ok', \
+        'settlement must record the outcome in the same transaction'
+
+    monkeypatch.setattr(store, 'settle_write', original)
+    store.resume_run(row['id'])
+    await worker.execute(store.claim_next(worker.owner))
+
+    assert store.run(row['id'])['status'] == 'success'
+    assert len(delivered) == 1, f'the settled write was sent again: {delivered}'

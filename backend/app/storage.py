@@ -66,6 +66,19 @@ class ModelRecord(Base):
     credential_id=Column(String(128),nullable=False,default='')
     enabled=Column(Boolean,nullable=False,default=True)
 
+class ActionResultRecord(Base):
+    """A completed external write, keyed by the invocation that performed it.
+
+    Clearing a write marker and recording its outcome must be one transaction. Without
+    that, a worker dying between them leaves resume permitted with nothing to show the
+    call already happened, and the write is sent twice.
+    """
+    __tablename__='run_action_results'
+    run_id=Column(String(64),primary_key=True)
+    invocation=Column(String(300),primary_key=True)
+    result=Column(Text,nullable=False)
+    created_at=Column(String(64),nullable=False)
+
 class JobRecord(Base):
     __tablename__='execution_jobs'
     run_id=Column(String(64),primary_key=True)
@@ -474,7 +487,13 @@ class Store:
             row=s.get(RunRecord,id)
             row.data={**row.data,'write_nodes':list(set(row.data.get('write_nodes',[]))|{node_id})};s.commit()
 
-    def settle_write(self,id,owner,identifier):
+    def completed_action(self,id,identifier):
+        """The stored result of an external write that already ran, or None."""
+        with Session(self.engine) as s:
+            row=s.get(ActionResultRecord,(id,identifier))
+            return row.result if row else None
+
+    def settle_write(self,id,owner,identifier,result=None):
         """Clear a write marker once the external call returned.
 
         mark_write records intent; this records the resolved outcome. Without it a
@@ -484,9 +503,13 @@ class Store:
         with Session(self.engine) as s:
             if not self._fence(s,id,owner):raise ValueError('Execution lease is no longer owned.')
             row=s.get(RunRecord,id)
+            if result is not None and s.get(ActionResultRecord,(id,identifier)) is None:
+                s.add(ActionResultRecord(run_id=id,invocation=identifier,result=result,created_at=now()))
             remaining=[n for n in row.data.get('write_nodes',[]) if n!=identifier]
             if len(remaining)!=len(row.data.get('write_nodes',[])):
-                row.data={**row.data,'write_nodes':remaining};s.commit()
+                row.data={**row.data,'write_nodes':remaining}
+            # One commit: the marker never clears without the outcome beside it.
+            s.commit()
 
     @staticmethod
     def _write_settled(data,identifier):

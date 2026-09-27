@@ -88,14 +88,17 @@ class Worker:
                         # Intent is recorded per action, not per node, so one completed
                         # write does not leave a sibling action looking unresolved.
                         marker=invocation if write and identity else checkpoint_owner
-                        if write:self.store.mark_write(id,owner,marker)
+                        if write:
+                            done=self.store.completed_action(id,marker)
+                            if done is not None:return done  # Already sent; never send again.
+                            self.store.mark_write(id,owner,marker)
                         try:
                             result=await self.tools.execute(node_type,settings,input_text,tenant)
                         except Exception:
                             if write:
                                 raise UncertainWriteError('External write outcome is uncertain; reconciliation is required before trying again. Check the remote system.') from None
                             raise
-                        if write:self.store.settle_write(id,owner,marker)
+                        if write:self.store.settle_write(id,owner,marker,result)
                         return result
                     if action=='kb_retrieve':return await self.kbs.retrieve(*args,tenant)
                     if action=='verify_vector_sources':return await self.kbs.verify(args[0],tenant)
