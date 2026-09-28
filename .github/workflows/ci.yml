@@ -27,6 +27,22 @@ jobs:
       # Hash randomisation catches assertions that depend on set iteration order.
       - run: PYTHONHASHSEED=1 python -m pytest backend/tests -q
       - run: python -m pytest backend/tests/test_schema_migrations.py -q
+  # onnxruntime's embedded telemetry worker is only observable on macOS wheels, where it
+  # aborted test processes at exit. Ubuntu skips the native check, so it runs here: the
+  # test identifies the worker thread by symbol in a control process and requires it to
+  # be absent once the package switch is set.
+  native-macos:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: python -m pip install -r backend/requirements.txt
+      - run: python -m pytest backend/tests/test_onnxruntime_telemetry.py -q -rs
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15
