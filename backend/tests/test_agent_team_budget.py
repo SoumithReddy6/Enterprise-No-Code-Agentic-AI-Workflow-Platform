@@ -71,8 +71,13 @@ async def test_per_agent_steps_still_bind_with_plenty_of_run_budget(monkeypatch)
 
 
 @pytest.mark.asyncio
-async def test_invocation_ids_stay_unique_and_monotonic(monkeypatch):
-    """budget['counter'] is the approval idempotency key. Raising the ceiling must not disturb it."""
+async def test_invocation_ids_are_unique_and_derived_from_position(monkeypatch):
+    """The invocation id keys approval idempotency and write settlement, so it must be
+    unique within a run and identical when the same work is replayed.
+
+    It derives from position - a root agent's Nth step, or a specialist's Nth step under
+    the delegation that called it - rather than from a counter. A counter shifts under
+    resume and a shifted id misses its settled result, sending the write twice."""
     replies=[]
     for i in range(3):
         replies.append(json.dumps({'action':'call','target':f'spec{i}','input':'x'}))
@@ -85,10 +90,12 @@ async def test_invocation_ids_stay_unique_and_monotonic(monkeypatch):
         if event.get('invocation_id'):ids.append(event['invocation_id'])
     await compile_workflow(team_flow(),message='facts',platform_resolver=platform_with([source(1)],[]),emit=emit).graph.ainvoke({'values':{}})
     unique=list(dict.fromkeys(ids))
-    assert len(unique)==6, f'expected six invocations, got {unique}'
-    counters=[int(i.split(':')[1]) for i in unique]
-    assert counters==sorted(counters) and len(set(counters))==len(counters)
-    assert counters[0]==1 and counters[-1]==6
+    assert unique==['agent:1:spec0','agent:1:spec0>1:kb0',
+                    'agent:2:spec1','agent:2:spec1>1:kb1',
+                    'agent:3:spec2','agent:3:spec2>1:kb2'], unique
+    # Each specialist's first step sits under the delegation that called it, so the three
+    # identical-looking retrievals stay distinct.
+    assert len(set(unique))==6
 
 
 @pytest.mark.asyncio

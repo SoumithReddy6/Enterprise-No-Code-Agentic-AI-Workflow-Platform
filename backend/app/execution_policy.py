@@ -13,6 +13,12 @@ from .models import RetryPolicy
 from .approvals import ApprovalPause
 from .tool_service import TransientToolError, UncertainWriteError
 from .storage import LeaseLost
+
+# Outcomes that are not failures of the attempted work, and so must never be retried,
+# recovered, or turned into an observation an agent can plan around. Every handler near
+# the policy seam re-raises these before any generic clause. It is one exported tuple
+# because four defects so far came from a hand-maintained list missing a member.
+CONTROL_FLOW=(ApprovalPause,UncertainWriteError,asyncio.CancelledError,LeaseLost)
 from . import token_budget
 
 
@@ -56,7 +62,9 @@ def accounting_snapshot(run):
     its budget already consumed instead of silently replenished.
     """
     state=run or {}
+    from .token_budget import tokens_spent
     return {'action_budget':deepcopy(state.get('action_budget') or {}),
+            'tokens_spent':tokens_spent(state),
             'usage':deepcopy(state.get('usage') or {}),
             'usage_by_invocation':deepcopy(state.get('usage_by_invocation') or {})}
 
@@ -102,24 +110,20 @@ def charges_action(node_type):
 
 
 def _debit_action(budget,key=None):
-    """Charge one action, once.
+    """Charge one action. Always charges: whether an attempt is free is decided by the
+    caller from what actually happens, not from whether its key was seen before.
 
-    key identifies the attempt ('<invocation>#<attempt>'). A resumed run replays attempts
-    it already paid for - an approval continuing, a settled write returning its stored
-    result - and those must not be charged a second time. A retry is a new attempt and a
-    new key, so it is still charged.
-
-    Returns True when this call actually debited, so the caller knows whether there is a
-    new reservation to make durable.
+    A key already seen does not mean the attempt is free. A read that ran, then crashed
+    before its result was recorded, executes again for real on resume and must be charged
+    again. Only an attempt served from a stored result, or one whose reservation was
+    deferred by an approval pause, is free - and execute_with_policy decides that.
     """
     if budget is None:return False
-    charged=budget.setdefault('charged',[])
-    if key is not None and key in charged:return False
     if budget['remaining']<=0:
         ceiling=budget.get('ceiling',budget.get('counter',0))
         raise ValueError(f'Run-wide agent action budget exhausted ({ceiling} actions; raise AGENT_RUN_BUDGET).')
     budget['remaining']-=1;budget['counter']+=1
-    if key is not None:charged.append(key)
+    if key is not None:budget.setdefault('charged',[]).append(key)
     return True
 
 
@@ -149,7 +153,18 @@ async def execute_with_policy(operation,identity:ExecutionIdentity,retry:RetryPo
     for attempt in range(attempts):
         try:
             if charge_first_attempt or attempt>0:
-                debited=_debit_action(action_budget,f'{identity.invocation_id}#{attempt}')
+                key=f'{identity.invocation_id}#{attempt}'
+                settled=(run or {}).get('action_settled')
+                deferred=(action_budget or {}).get('deferred',[])
+                if settled is not None and await settled(identity.invocation_id):
+                    # Served from its stored result: nothing executes, nothing is charged.
+                    debited=False
+                elif key in deferred:
+                    # Reserved before an approval pause and never executed; the approved
+                    # execution uses that reservation rather than taking a second one.
+                    deferred.remove(key);debited=False
+                else:
+                    debited=_debit_action(action_budget,key)
                 # Reserve before spending: the debit is durable before the external call
                 # runs, so a crash in between leaves the budget consumed rather than
                 # letting a resumed run spend it again. The same discipline as login
@@ -158,7 +173,7 @@ async def execute_with_policy(operation,identity:ExecutionIdentity,retry:RetryPo
                 if debited and persist is not None:await persist(accounting_snapshot(run))
             outputs=await operation()
             return ExecutionOutcome('success',outputs,None,attempt+1,usage_for(run,identity))
-        except (ApprovalPause,UncertainWriteError,asyncio.CancelledError,LeaseLost):
+        except CONTROL_FLOW:
             raise
         except Exception as exc:
             error=_error(exc,generic_error)

@@ -35,6 +35,8 @@ class Worker:
         async def persist_accounting(snapshot):
             accounting.update(snapshot)
             await asyncio.to_thread(self.store.reserve_accounting,id,owner,snapshot)
+        async def action_settled(invocation):
+            return await asyncio.to_thread(self.store.completed_action,id,invocation) is not None
         async def persist_spend(snapshot):
             accounting.update(snapshot)
             await asyncio.to_thread(self.store.record_accounting,id,owner,snapshot)
@@ -48,7 +50,14 @@ class Worker:
                     cancelled=True
             if not persisted:raise asyncio.CancelledError()
             if accounting and event.get('node_id') and event['status'] in ('success','failed','info'):
-                await asyncio.to_thread(self.store.record_accounting,id,owner,dict(accounting))
+                try:
+                    await asyncio.to_thread(self.store.record_accounting,id,owner,dict(accounting))
+                except Exception as exc:
+                    # The node's result is already checkpointed by the event write above, so
+                    # a resume reuses it; an accounting write failing here must not turn a
+                    # completed node into a failed run.
+                    journal(event='accounting.persist_failed',node_id=event.get('node_id'),
+                            reason_code='post_event',error_type=type(exc).__name__)
             if event.get('node_id') and event['status']!='running':
                 journal(event='node.'+event['status'],run_id=id,node_id=event['node_id'],transient=event.get('transient',False),cached=event.get('cached',False),duration_ms=event.get('duration_ms'),usage=event.get('usage'),error=event.get('error'))
             if cancelled:
@@ -125,7 +134,7 @@ class Worker:
             async def validate_cached(node,outputs):
                 issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'))
                 if issues:raise ValueError('; '.join(issues))
-            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend).graph
+            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend,action_settled=action_settled).graph
             result=await graph.ainvoke({'values':{}},{'recursion_limit':150})
             reasons=[]
             for outputs in result['values'].values():

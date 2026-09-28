@@ -220,7 +220,18 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
     checkpoint_owner=checkpoint_owner or node_id
     frame_key=f'{checkpoint_owner}:{depth}:{node_id}'
     frame=(ctx.run or {}).get('agent_frames',{}).pop(frame_key,None)
-    if frame:budget.update(frame['budget'])
+    # Frames no longer restore the budget. Run-wide accounting is reserved in the database
+    # before every action and restored at compile time against the *current* ceiling; a
+    # frame's copy is older by definition and would override a lowered limit.
+    # Invocation identity derives from logical position, not from any counter: a root
+    # agent's Nth step under its owner, or a specialist's Nth step under the delegation that
+    # called it, is the same step on every run. A counter shifts under resume - persisted it
+    # skips ahead, reset it renumbers a loop item whose predecessors were skipped - and a
+    # shifted identity misses its settled result and sends the write again.
+    parent=getattr(ctx,'execution_identity',None)
+    nested=bool(depth) and parent is not None
+    identity_base=parent.invocation_id if nested else checkpoint_owner
+    identity_join='>' if nested else ':'
     tools={e.source:nodes[e.source] for e in workflow.edges if e.kind=='tool' and e.target==node_id}
     specialists={e.target:nodes[e.target] for e in workflow.edges if e.kind=='agent' and e.source==node_id}
     targets={**tools,**specialists}
@@ -288,8 +299,9 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
         if target not in targets:raise ValueError('Agent requested an unattached target.')
         if not isinstance(task,str) or not task.strip() or len(task)>20000:
             transcript.extend([{'agent_action':action},{'tool_error':'Provide a non-empty text input of at most 20,000 characters for this target.'}]);continue
-        from .execution_policy import ExecutionIdentity,execute_with_policy,invoke_attached
-        invocation=frame['invocation'] if replay else f'{checkpoint_owner}:{budget["counter"]+1}:{target}'
+        from .execution_policy import ExecutionIdentity,execute_with_policy,invoke_attached,CONTROL_FLOW
+        from .storage import LeaseLost
+        invocation=frame['invocation'] if replay else f'{identity_base}{identity_join}{step+1}:{target}'
         identity=ExecutionIdentity(target,checkpoint_owner,invocation,node_id)
         common={**identity.event_fields(),'transient':True}
         await emit({**common,'status':'running','inputs':{'input':task}})
@@ -303,7 +315,7 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
                 try:
                     return await invoke_attached(target_node,task,ctx,identity,emit,
                                                  depth+1 if target in specialists else depth,budget)
-                except (ApprovalPause,UncertainWriteError):
+                except CONTROL_FLOW:
                     raise
                 except Exception:
                     if write_attempt:
@@ -313,8 +325,7 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
             outcome=await execute_with_policy(
                 invoke,identity,target_node.retry,ctx.run,emit,
                 generic_error='Attached node execution failed.',action_budget=budget,
-                charge_first_attempt=not replay,
-                check_tokens=target_node.type in ('agent','query'))
+                charge_first_attempt=not replay)
             if outcome.status=='failed':
                 failure={**common,'status':'failed','error':outcome.error,
                          **({'attempt':outcome.attempts} if target_node.retry.attempts else {})}
@@ -333,7 +344,7 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
             if outcome.usage:success['usage']=outcome.usage
             await emit(success)
         except ApprovalPause as exc:
-            exc.frames[frame_key]={'checkpoint_owner':checkpoint_owner,'step':step,'action':action,'invocation':invocation,'budget':dict(budget),'transcript':transcript,'evidence':evidence,'grounded':grounded,'truncations':truncations,'provider':provider,'memory':memory}
+            exc.frames[frame_key]={'checkpoint_owner':checkpoint_owner,'step':step,'action':action,'invocation':invocation,'transcript':transcript,'evidence':evidence,'grounded':grounded,'truncations':truncations,'provider':provider,'memory':memory}
             from .execution_policy import usage_for
             paused={**common,'status':'paused'};usage=usage_for(ctx.run,identity)
             if usage:paused['usage']=usage
@@ -345,6 +356,10 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
             failure={**common,'status':'failed','error':message};usage=usage_for(ctx.run,identity)
             if usage:failure['usage']=usage
             await emit(failure)
+            raise
+        except LeaseLost:
+            # The worker no longer owns this run: nothing may be spent or planned on its
+            # behalf, so this is not an observation for the model.
             raise
         except Exception as exc:
             message=str(exc) if isinstance(exc,ValueError) else 'Attached node execution failed.'

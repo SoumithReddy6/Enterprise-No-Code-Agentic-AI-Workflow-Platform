@@ -20,9 +20,17 @@ def run_token_limit():
 
 
 def tokens_spent(run):
-    """Provider-reported tokens accumulated so far this run. Missing usage counts as zero."""
+    """Provider-reported tokens spent by the whole run, across every attempt.
+
+    token_baseline carries what earlier attempts spent, restored on resume; the usage
+    dicts hold only this attempt's spend. They are kept apart because they serve different
+    readers: the ceiling needs the cumulative figure, while node events must report only
+    what this attempt spent, or a resumed node would re-report tokens already reported on
+    the event that paused it. Missing usage counts as zero.
+    """
     if not isinstance(run,dict):return 0
-    total=0
+    baseline=run.get('token_baseline')
+    total=baseline if type(baseline) is int and baseline>0 else 0
     for node in (run.get('usage') or {}).values():
         if not isinstance(node,dict):continue
         for field in ('prompt_tokens','completion_tokens'):

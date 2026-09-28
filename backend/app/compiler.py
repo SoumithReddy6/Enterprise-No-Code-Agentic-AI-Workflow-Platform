@@ -167,7 +167,16 @@ async def silent(event):
     pass
 
 
-def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None,accounting=None,accounting_sink=None,persist_accounting=None,persist_spend=None):
+def restored_tokens(accounting):
+    """Tokens spent by earlier attempts. Older snapshots predate tokens_spent, so fall back
+    to summing their usage totals rather than restarting the ceiling at zero."""
+    value=(accounting or {}).get('tokens_spent')
+    if type(value) is int and value>=0:return value
+    from .token_budget import tokens_spent
+    return tokens_spent({'usage':(accounting or {}).get('usage') or {}})
+
+
+def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None,accounting=None,accounting_sink=None,persist_accounting=None,persist_spend=None,action_settled=None):
     errors = validate_workflow(workflow)
     if errors: raise ValueError('\n'.join(errors))
     from .platform_graph import split_graph
@@ -187,11 +196,14 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
     budget['remaining']=min(budget.get('remaining',ceiling),max(0,ceiling-budget.get('counter',0)))
     run_state={'evidence':[],'citation_counter':citation_counter,'agent_frames':agent_frames or {},
                'action_budget':budget,
-               'usage':dict(spent.get('usage') or {}),
-               'usage_by_invocation':dict(spent.get('usage_by_invocation') or {}),
+               # Reporting starts empty each attempt; the ceiling carries the cumulative total.
+               'usage':{},
+               'usage_by_invocation':{},
+               'token_baseline':restored_tokens(spent),
                'accounting_sink':accounting_sink,
                'persist_accounting':persist_accounting,
-               'persist_spend':persist_spend}  # Every passage retrieved in this run, under a run-unique citation label.
+               'persist_spend':persist_spend,
+               'action_settled':action_settled}  # Every passage retrieved in this run, under a run-unique citation label.
     prepare_checkpoint_labels(run_state,completed)
     run_state['loop_progress']=dict(loop_progress or {})
     context = Context(message=message, resolve_credential=credential_resolver, authorize_model=authorize_model,knowledge=knowledge_resolver,platform=platform_resolver,run=run_state,emit=emit)

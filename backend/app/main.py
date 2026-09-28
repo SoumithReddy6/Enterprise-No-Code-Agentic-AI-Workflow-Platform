@@ -13,7 +13,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import Field
 from .models import StrictModel, Workflow
 from .registry import REGISTRY
-from .compiler import validate_workflow
+from .compiler import validate_workflow,type_warnings
 from .storage import Store, local_key, WorkflowConflict
 from .auth import install_auth
 from .worker import Worker
@@ -107,7 +107,7 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     @app.post('/api/validate')
     async def validate(workflow:Workflow,tenant_id:str=Depends(tenant)):
         errors=await submission_errors(workflow,tenant_id)
-        return {'valid':not errors,'errors':errors,'workflow':workflow.model_dump(mode='json')}
+        return {'valid':not errors,'errors':errors,'warnings':type_warnings(workflow),'workflow':workflow.model_dump(mode='json')}
     @app.get('/api/workflows')
     async def workflows(tenant_id:str=Depends(tenant)):return store.workflows(tenant_id)
     @app.post('/api/workflows',status_code=201)

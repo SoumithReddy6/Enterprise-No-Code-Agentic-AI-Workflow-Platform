@@ -101,9 +101,18 @@ async def record_spend(ctx):
     been paid for, and failing the node here would only cause it to be paid for again.
     """
     persist=(ctx.run or {}).get('persist_spend')
-    if persist is not None:
-        from .execution_policy import accounting_snapshot
+    if persist is None:return
+    from .execution_policy import accounting_snapshot
+    try:
         await persist(accounting_snapshot(ctx.run))
+    except Exception as exc:
+        # Keep the paid response. The spend stays in memory and is written by the next
+        # successful persistence point; losing the answer would only mean paying again.
+        # Cancellation and a lost lease are BaseException or re-raised elsewhere and are
+        # deliberately not caught here.
+        from .observability import journal
+        journal(event='accounting.persist_failed',node_id=ctx.node_id,
+                reason_code='post_spend',error_type=exc.__class__.__name__)
 
 
 def account_usage(ctx,usage,config):
@@ -202,8 +211,10 @@ register(NodeDefinition('agent','Agent node','Agent','Configure a role, attach t
 for legacy in ('prompt','llm'):REGISTRY[legacy].hidden=True
 
 from .tool_service import CONFIGS
-for type,name in [('tool_http','HTTP / REST API'),('tool_email','Email'),('tool_jira','Jira'),('tool_confluence','Confluence'),('tool_github','GitHub'),('tool_python','Python')]:
-    register(NodeDefinition(type,name,'Tools','Execute a configured tool with explicit operation and connection.',{'input':'string'},({'text':'string','items':'array<object>'} if type=='tool_jira' else {'text':'string'}),CONFIGS[type],tool_node,side_effects=('external_write','configured_tool_request') if type!='tool_python' else ('sandbox_execution',)))
+# tool_type, not type: a module-level loop variable named `type` shadows the builtin for the
+# rest of this module, and a later type(exc) in an error handler would itself raise.
+for tool_type,name in [('tool_http','HTTP / REST API'),('tool_email','Email'),('tool_jira','Jira'),('tool_confluence','Confluence'),('tool_github','GitHub'),('tool_python','Python')]:
+    register(NodeDefinition(tool_type,name,'Tools','Execute a configured tool with explicit operation and connection.',{'input':'string'},({'text':'string','items':'array<object>'} if tool_type=='tool_jira' else {'text':'string'}),CONFIGS[tool_type],tool_node,side_effects=('external_write','configured_tool_request') if tool_type!='tool_python' else ('sandbox_execution',)))
 
 from .kb.options import RetrievalOptions
 class SearchConfig(RetrievalOptions):
