@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import time
 from scripts.install_nli import MODEL, REVISION, FILES, LABELS, SHA256
+import backend.app  # noqa: F401  Disables onnxruntime telemetry before it is imported below.
 
 VERDICTS=('contradicted','supported','insufficient_evidence')
 
