@@ -284,3 +284,29 @@ search services keep separate databases with their own metadata and still use
 
 SQLite is exercised in CI as a development compatibility check. PostgreSQL is the
 authoritative target and needs its own profile before production claims.
+
+### What each budget counts
+
+Two budgets govern two kinds of spend, and every paid call belongs to exactly one.
+
+| Budget | Counts | Charged |
+| --- | --- | --- |
+| `AGENT_RUN_BUDGET` | Tool calls, knowledge-base retrieval and query, specialist delegation | First attempt and every retry. Replaying an attempt already paid for — an approval continuing, a settled write returning its stored result — is not charged again. |
+| `RELAY_RUN_TOKEN_LIMIT` | Every model call: a standalone LLM node, an agent's planning step, a structured-output repair, query generation | Provider-reported tokens, recorded as soon as the call returns |
+
+An LLM node is not an action, and neither is an agent in itself: the agent is a
+container whose tool calls and delegations are charged individually and whose planning
+calls are model spend. Charging model calls as actions too would bill one call twice.
+
+**Durability.** An action is reserved in the database *before* the external call starts,
+and if that reservation cannot be written — the lease has been lost, or the database is
+unavailable — the call never starts. Tokens cannot be reserved in advance, because the
+count is only known once the provider responds, so they are written the moment the call
+returns. The remaining gap is the interval between a response arriving and that write; a
+worker that dies inside it leaves at most one call's tokens unrecorded. A resumed run
+restores both budgets from the database, so it continues spending rather than starting
+over.
+
+Provider-level retries inside a single model call are covered by the token ceiling
+checked before that call, not re-checked per retry; a call already in flight is allowed
+to complete.

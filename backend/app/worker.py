@@ -31,6 +31,13 @@ class Worker:
     async def _execute(self,run):
         id=run['id'];owner=run.get('_claim_owner',self.owner);started=time.perf_counter()
         journal(event='run.start',run_id=id,tenant=run.get('tenant_id'),workflow=run['workflow'].get('name'),nodes=len(run['workflow'].get('nodes',[])),resumed=bool(run.get('checkpoints')))
+        accounting={}
+        async def persist_accounting(snapshot):
+            accounting.update(snapshot)
+            await asyncio.to_thread(self.store.reserve_accounting,id,owner,snapshot)
+        async def persist_spend(snapshot):
+            accounting.update(snapshot)
+            await asyncio.to_thread(self.store.record_accounting,id,owner,snapshot)
         async def emit(event):
             write=asyncio.create_task(asyncio.to_thread(self.store.worker_event,id,owner,event));cancelled=False
             while True:
@@ -40,6 +47,8 @@ class Worker:
                     if write.cancelled():raise
                     cancelled=True
             if not persisted:raise asyncio.CancelledError()
+            if accounting and event.get('node_id') and event['status'] in ('success','failed','info'):
+                await asyncio.to_thread(self.store.record_accounting,id,owner,dict(accounting))
             if event.get('node_id') and event['status']!='running':
                 journal(event='node.'+event['status'],run_id=id,node_id=event['node_id'],transient=event.get('transient',False),cached=event.get('cached',False),duration_ms=event.get('duration_ms'),usage=event.get('usage'),error=event.get('error'))
             if cancelled:
@@ -116,7 +125,7 @@ class Worker:
             async def validate_cached(node,outputs):
                 issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'))
                 if issues:raise ValueError('; '.join(issues))
-            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{})).graph
+            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend).graph
             result=await graph.ainvoke({'values':{}},{'recursion_limit':150})
             reasons=[]
             for outputs in result['values'].values():

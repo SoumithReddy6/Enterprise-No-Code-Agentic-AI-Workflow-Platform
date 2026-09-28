@@ -12,6 +12,7 @@ import random
 from .models import RetryPolicy
 from .approvals import ApprovalPause
 from .tool_service import TransientToolError, UncertainWriteError
+from .storage import LeaseLost
 from . import token_budget
 
 
@@ -48,10 +49,27 @@ class ExecutionOutcome:
     usage: dict | None
 
 
-def usage_for(run,identity):
+def accounting_snapshot(run):
+    """Run-wide spend, for durable persistence beside checkpoints and loop progress.
+
+    Recorded as it is spent rather than at the end, so an interrupted run resumes with
+    its budget already consumed instead of silently replenished.
+    """
     state=run or {}
-    usage=state.get('usage_by_invocation',{}).get(identity.invocation_id)
-    if usage is None:usage=state.get('usage',{}).get(identity.checkpoint_owner)
+    return {'action_budget':deepcopy(state.get('action_budget') or {}),
+            'usage':deepcopy(state.get('usage') or {}),
+            'usage_by_invocation':deepcopy(state.get('usage_by_invocation') or {})}
+
+
+def usage_for(run,identity):
+    """Tokens this invocation spent, or None.
+
+    There is deliberately no fallback to the checkpoint owner's total. Absent usage is
+    the normal case for a tool that calls no model, and inheriting the parent's running
+    total would report the parent's spend twice: once on the tool event and again on
+    the parent's own outcome.
+    """
+    usage=(run or {}).get('usage_by_invocation',{}).get(identity.invocation_id)
     return deepcopy(usage) if usage else None
 
 
@@ -59,43 +77,99 @@ def _error(exc,generic):
     return str(exc) if isinstance(exc,ValueError) else generic
 
 
-def _debit_action(budget):
-    if budget is None:return
+ACTION_BEARING={'tool_http','tool_email','tool_jira','tool_confluence','tool_github',
+                'tool_python','retrieve','query'}
+
+
+def charges_action(node_type):
+    """Whether running this node costs the run-wide action budget.
+
+    Two budgets, two kinds of spend, no overlap:
+
+    * AGENT_RUN_BUDGET counts actions - tool calls, knowledge-base retrieval and query,
+      and specialist delegation. First attempts and retries are both charged; replaying
+      an attempt already paid for is not.
+    * RELAY_RUN_TOKEN_LIMIT counts model spend - every model call, wherever it comes
+      from: a standalone LLM node, an agent's planning step, a structured-output repair,
+      query generation.
+
+    So an LLM node is not an action, and neither is an agent: the agent is a container
+    whose tool calls and delegations are charged individually, and whose planning calls
+    are model spend. Charging model calls as actions as well would bill the same call
+    twice and make a standalone LLM node cost something an agent's identical call did not.
+    """
+    return node_type in ACTION_BEARING
+
+
+def _debit_action(budget,key=None):
+    """Charge one action, once.
+
+    key identifies the attempt ('<invocation>#<attempt>'). A resumed run replays attempts
+    it already paid for - an approval continuing, a settled write returning its stored
+    result - and those must not be charged a second time. A retry is a new attempt and a
+    new key, so it is still charged.
+
+    Returns True when this call actually debited, so the caller knows whether there is a
+    new reservation to make durable.
+    """
+    if budget is None:return False
+    charged=budget.setdefault('charged',[])
+    if key is not None and key in charged:return False
     if budget['remaining']<=0:
         ceiling=budget.get('ceiling',budget.get('counter',0))
         raise ValueError(f'Run-wide agent action budget exhausted ({ceiling} actions; raise AGENT_RUN_BUDGET).')
     budget['remaining']-=1;budget['counter']+=1
+    if key is not None:charged.append(key)
+    return True
 
 
 async def execute_with_policy(operation,identity:ExecutionIdentity,retry:RetryPolicy,run,emit,
                               generic_error='Node execution failed.',action_budget=None,
-                              charge_first_attempt=False,check_tokens=False,
-                              include_invocation_in_retry=True,delay_for=None):
+                              charge_first_attempt=False,
+                              include_invocation_in_retry=True,delay_for=None,free_outcome=None):
     """Invoke a resolved callable with common retry and budget rules.
 
     Only retrying events are emitted here. The caller receives a structured terminal
     outcome and is the sole owner of success/failed/paused events.
+
+    free_outcome resolves results that cost nothing - a guard refusal, an abstention with
+    no evidence - before any budget check. Refusing to answer must not require budget the
+    run has already spent, or an exhausted run could not even decline.
+
+    The token ceiling is deliberately not enforced here. It is checked where spending
+    happens - before a provider call in llm_node, and before each agent step - which is
+    after every free path has had its chance to resolve. Checking it at this seam would
+    block an abstention that needs no model call at all.
     """
+    if free_outcome is not None:
+        free=await free_outcome()
+        if free is not None:return ExecutionOutcome('success',free,None,0,usage_for(run,identity))
     attempts=retry.attempts+1
     delay_for=delay_for or retry_delay
     for attempt in range(attempts):
         try:
-            if check_tokens and token_budget.exhausted(run):raise ValueError(token_budget.reason(run))
-            if charge_first_attempt or attempt>0:_debit_action(action_budget)
+            if charge_first_attempt or attempt>0:
+                debited=_debit_action(action_budget,f'{identity.invocation_id}#{attempt}')
+                # Reserve before spending: the debit is durable before the external call
+                # runs, so a crash in between leaves the budget consumed rather than
+                # letting a resumed run spend it again. The same discipline as login
+                # budgets, which reserve a slot before the expensive hash.
+                persist=(run or {}).get('persist_accounting')
+                if debited and persist is not None:await persist(accounting_snapshot(run))
             outputs=await operation()
             return ExecutionOutcome('success',outputs,None,attempt+1,usage_for(run,identity))
-        except (ApprovalPause,UncertainWriteError,asyncio.CancelledError):
+        except (ApprovalPause,UncertainWriteError,asyncio.CancelledError,LeaseLost):
             raise
         except Exception as exc:
             error=_error(exc,generic_error)
             transient=isinstance(exc,TransientToolError)
             if transient and attempt<attempts-1:
                 delay=delay_for(attempt,retry.base_delay)
+                # Attempt metadata only. Spend is reported once, on the terminal
+                # outcome; repeating a cumulative total here counts it twice.
                 event={**identity.event_fields(include_invocation_in_retry),'status':'retrying',
                        'transient':True,'error':error,'attempt':attempt+1,
                        'delay_seconds':round(delay,3)}
-                usage=usage_for(run,identity)
-                if usage:event['usage']=usage
                 await emit(event)
                 from .observability import journal
                 journal(event='node.retry',node_id=identity.node_id,attempt=attempt+1,

@@ -96,6 +96,43 @@ async def test_transient_failure_retries_and_succeeds():
 
 
 @pytest.mark.asyncio
+async def test_graph_retry_event_contract_is_stable_across_the_policy_seam(monkeypatch):
+    from backend.app import compiler
+    resolver,_=platform(fail_times=1,error=TransientToolError('busy'))
+    events=[]
+    clock={'calls':0}
+    def perf_counter():
+        clock['calls']+=1
+        return 10.0 if clock['calls']==1 else 10.25
+    monkeypatch.setattr(compiler.time,'perf_counter',perf_counter)
+    monkeypatch.setattr(compiler,'retry_delay',lambda *_:0.125)
+    async def no_sleep(_):pass
+    monkeypatch.setattr(compiler.asyncio,'sleep',no_sleep)
+    await run(flow(**retrying(2,base_delay=1)),resolver,events)
+    work=[event for event in events if event.get('node_id')=='work']
+    assert work==[
+        {'node_id':'work','status':'running','inputs':{'input':'hello'}},
+        {'node_id':'work','status':'retrying','transient':True,'error':'busy',
+         'attempt':1,'delay_seconds':0.125},
+        {'node_id':'work','status':'success','outputs':{'text':'ok'},'duration_ms':0},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_graph_retries_debit_the_same_run_action_budget(monkeypatch):
+    from backend.app import execution_policy
+    # Every attempt that leaves the process is charged, the first included, so a ceiling
+    # of two admits exactly two tool calls however they are split between try and retry.
+    monkeypatch.setenv('AGENT_RUN_BUDGET','2')
+    resolver,state=platform(fail_times=9,error=TransientToolError('busy'))
+    async def no_sleep(_):pass
+    monkeypatch.setattr(execution_policy.asyncio,'sleep',no_sleep)
+    with pytest.raises(ValueError,match='Run-wide agent action budget exhausted'):
+        await run(flow(**retrying(2,base_delay=0)),resolver,[])
+    assert state['calls']==2, 'the ceiling admits two calls; the third is blocked'
+
+
+@pytest.mark.asyncio
 async def test_transient_failure_exhausts_attempts_then_fails():
     resolver,state=platform(fail_times=9,error=TransientToolError('provider unreachable'))
     events=[]

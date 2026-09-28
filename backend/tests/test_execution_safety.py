@@ -348,3 +348,38 @@ def test_settlement_requires_a_recorded_outcome(store):
     for bad in (None, 0, b'ok', {'text': 'ok'}):
         with pytest.raises(ValueError, match='outcome as text'):
             store.settle_write(row['id'], 'anyone', 'n:0:send', bad)
+
+
+# --------------------------------------------------------------------------- replay accounting
+
+@pytest.mark.asyncio
+async def test_replaying_a_settled_write_does_not_charge_it_again(store, worker, monkeypatch):
+    """The write ran once and was settled. A resume that replays its stored result must
+    neither send it again nor debit the budget for an action already reserved."""
+    monkeypatch.setenv('AGENT_RUN_BUDGET', '5')
+    async def execute_prepared(prep, tenant_id='local'): return jira_payload(1)
+    monkeypatch.setattr(worker.tools, 'execute_prepared', execute_prepared)
+    delivered = []
+    async def execute(node_type, settings, text, tenant_id='local'):
+        delivered.append(text); return 'ok'
+    monkeypatch.setattr(worker.tools, 'execute', execute)
+    original = store.settle_write
+    def settle_then_die(run_id, owner, identifier, result):
+        original(run_id, owner, identifier, result)
+        raise asyncio.CancelledError()
+    monkeypatch.setattr(store, 'settle_write', settle_then_die)
+
+    workflow = batch_write_flow(jira_connection(store), http_connection(store))
+    row = store.create_run(workflow.model_dump(mode='json'), 'go')
+    await worker.execute(store.claim_next(worker.owner))
+    before = store.run(row['id'])['accounting']['action_budget']['counter']
+
+    monkeypatch.setattr(store, 'settle_write', original)
+    store.resume_run(row['id'])
+    await worker.execute(store.claim_next(worker.owner))
+    after = store.run(row['id'])
+
+    assert after['status'] == 'success'
+    assert len(delivered) == 1, 'the settled write was sent again'
+    assert after['accounting']['action_budget']['counter'] == before, \
+        f"replay charged an already-reserved action: {before} -> {after['accounting']['action_budget']['counter']}"

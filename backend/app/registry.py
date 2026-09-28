@@ -92,6 +92,20 @@ async def input_node(inputs, config, ctx):
 async def prompt_node(inputs, config, ctx):
     return {'text': config.template.format_map(inputs)}
 
+async def record_spend(ctx):
+    """Make model spend durable the moment the provider returns.
+
+    Tokens are only known after the response, so unlike actions they cannot be reserved
+    first. Recording them immediately shrinks the unaccounted window to the gap between
+    the response arriving and this write. The write is best-effort: the call has already
+    been paid for, and failing the node here would only cause it to be paid for again.
+    """
+    persist=(ctx.run or {}).get('persist_spend')
+    if persist is not None:
+        from .execution_policy import accounting_snapshot
+        await persist(accounting_snapshot(ctx.run))
+
+
 def account_usage(ctx,usage,config):
     """Accumulate per-node model usage on the shared run state; the compiler reports it on the node event."""
     if ctx.run is None or not usage:return
@@ -130,14 +144,14 @@ async def llm_node(inputs, config, ctx):
     if config.provider == 'ollama':
         from .providers import ollama_chat
         text=await with_retries(lambda: ollama_chat(config.model, config.system, inputs['prompt'],usage=usage,**params),provider=config.provider,model=config.model)
-        account_usage(ctx,usage,config);return {'text': text, 'provider': 'ollama'}
+        account_usage(ctx,usage,config);await record_spend(ctx);return {'text': text, 'provider': 'ollama'}
     if config.provider == 'claude':
         from .providers import claude_chat
         text=await with_retries(lambda: claude_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),usage=usage,**params),provider=config.provider,model=config.model)
-        account_usage(ctx,usage,config);return {'text': text, 'provider': 'claude'}
+        account_usage(ctx,usage,config);await record_spend(ctx);return {'text': text, 'provider': 'claude'}
     from .providers import openai_chat
     text=await with_retries(lambda: openai_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),usage=usage,**params),provider=config.provider,model=config.model)
-    account_usage(ctx,usage,config);return {'text': text, 'provider': 'openai'}
+    account_usage(ctx,usage,config);await record_spend(ctx);return {'text': text, 'provider': 'openai'}
 
 async def condition_node(inputs, config, ctx):
     value, needle = inputs['value'], config.contains

@@ -9,7 +9,8 @@ from pydantic import ValidationError
 from .models import Workflow
 from .registry import REGISTRY, Context, validate_template
 from .approvals import ApprovalPause
-from .execution_policy import (ExecutionIdentity, execute_with_policy,
+from .execution_policy import (ExecutionIdentity, execute_with_policy, charges_action,
+                               accounting_snapshot,
                                retry_delay, MAX_NODE_RETRY_DELAY)
 
 
@@ -166,7 +167,7 @@ async def silent(event):
     pass
 
 
-def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None):
+def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None,accounting=None,accounting_sink=None,persist_accounting=None,persist_spend=None):
     errors = validate_workflow(workflow)
     if errors: raise ValueError('\n'.join(errors))
     from .platform_graph import split_graph
@@ -177,8 +178,20 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
     workflow,_,_=split_graph(workflow)
     graph = StateGraph(State)
     ceiling=run_budget()
+    # Budgets are run-wide, so a resumed run continues spending where it stopped. A fresh
+    # counter here would let an interrupted run replenish its ceiling by being resumed,
+    # and would restart the invocation counters that key approval idempotency.
+    spent=dict(accounting or {})
+    budget=dict(spent.get('action_budget') or {'remaining':ceiling,'counter':0,'ceiling':ceiling})
+    budget['ceiling']=ceiling
+    budget['remaining']=min(budget.get('remaining',ceiling),max(0,ceiling-budget.get('counter',0)))
     run_state={'evidence':[],'citation_counter':citation_counter,'agent_frames':agent_frames or {},
-               'action_budget':{'remaining':ceiling,'counter':0,'ceiling':ceiling}}  # Every passage retrieved in this run, under a run-unique citation label.
+               'action_budget':budget,
+               'usage':dict(spent.get('usage') or {}),
+               'usage_by_invocation':dict(spent.get('usage_by_invocation') or {}),
+               'accounting_sink':accounting_sink,
+               'persist_accounting':persist_accounting,
+               'persist_spend':persist_spend}  # Every passage retrieved in this run, under a run-unique citation label.
     prepare_checkpoint_labels(run_state,completed)
     run_state['loop_progress']=dict(loop_progress or {})
     context = Context(message=message, resolve_credential=credential_resolver, authorize_model=authorize_model,knowledge=knowledge_resolver,platform=platform_resolver,run=run_state,emit=emit)
@@ -206,35 +219,41 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                 started = time.perf_counter()
                 await emit({'node_id': node.id, 'status': 'running', 'inputs': inputs})
                 identity=ExecutionIdentity(node.id,node.id,node.id)
+                # Legacy prompt/LLM nodes must not bypass an upstream guard.
+                def guarded_dependency(identifier,seen):
+                    if identifier in seen:return False
+                    seen.add(identifier)
+                    from .answerability_guard import from_outputs
+                    decision=from_outputs(state['values'].get(identifier,{}))
+                    if decision and decision['decision']=='abstain':return True
+                    upstream=next((n for n in workflow.nodes if n.id==identifier),None)
+                    return bool(upstream and any(guarded_dependency(ref.split('.')[0],seen) for ref in upstream.inputs.values()))
                 async def invoke():
-                      # Legacy prompt/LLM nodes must not bypass an upstream guard.
-                      def guarded_dependency(identifier,seen):
-                          if identifier in seen:return False
-                          seen.add(identifier)
-                          from .answerability_guard import from_outputs
-                          decision=from_outputs(state['values'].get(identifier,{}))
-                          if decision and decision['decision']=='abstain':return True
-                          upstream=next((n for n in workflow.nodes if n.id==identifier),None)
-                          return bool(upstream and any(guarded_dependency(ref.split('.')[0],seen) for ref in upstream.inputs.values()))
-                      if node.type in ('llm','agent','query') and any(guarded_dependency(ref.split('.')[0],set()) for ref in node.inputs.values()):
-                          from .agent_runtime import immediate_abstention
-                          refusal=immediate_abstention({'decision':'abstain'})
-                          outputs={'text':refusal['text'],'provider':'none'} if node.type=='llm' else refusal
-                      else:
-                          outputs = await definition.handler(
-                              inputs,config,replace(context,node_id=node.id,node_type=node.type,
-                                                    checkpoint_owner=node.id,execution_identity=identity))
+                      outputs = await definition.handler(
+                          inputs,config,replace(context,node_id=node.id,node_type=node.type,
+                                                checkpoint_owner=node.id,execution_identity=identity))
                       if set(outputs) != set(definition.outputs) or any(not (isinstance(value,list) and all(isinstance(item,dict) for item in value)) if definition.outputs[name]=='array<object>' else not isinstance(value,str) for name,value in outputs.items()):
                           raise ValueError('Node returned outputs that do not match its declared contract.')
                       return outputs
+                async def guard_refusal():
+                    """A guarded dependency refuses without a model call, so it must resolve
+                    before the token check: an exhausted run must still be able to decline."""
+                    if node.type not in ('llm','agent','query'):return None
+                    if not any(guarded_dependency(ref.split('.')[0],set()) for ref in node.inputs.values()):return None
+                    from .agent_runtime import immediate_abstention
+                    refusal=immediate_abstention({'decision':'abstain'})
+                    return {'text':refusal['text'],'provider':'none'} if node.type=='llm' else refusal
                 try:
                       outcome=await execute_with_policy(
                           invoke,identity,node.retry,run_state,emit,
+                          free_outcome=guard_refusal,
                           action_budget=run_state.get('action_budget'),
-                          charge_first_attempt=False,
-                          check_tokens=node.type in ('llm','agent','query'),
+                          charge_first_attempt=charges_action(node.type),
                           include_invocation_in_retry=False,
                           delay_for=retry_delay)
+                      # Spend is published into the caller's sink rather than the event
+                      # stream: it is bookkeeping, not part of the node event contract.
+                      if accounting_sink is not None:accounting_sink.update(accounting_snapshot(run_state))
                       if outcome.status=='failed':
                           failure={'node_id':node.id,'status':'failed','error':outcome.error}
                           if outcome.usage:failure['usage']=outcome.usage

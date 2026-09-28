@@ -66,6 +66,14 @@ class ModelRecord(Base):
     credential_id=Column(String(128),nullable=False,default='')
     enabled=Column(Boolean,nullable=False,default=True)
 
+class LeaseLost(RuntimeError):
+    """This worker no longer owns the run. Nothing may be spent or sent on its behalf.
+
+    Deliberately not a ValueError: it must escape retry and recovery the way cancellation
+    does, rather than becoming a node failure that on_error could route past.
+    """
+
+
 class ActionResultRecord(Base):
     """A completed external write, keyed by the invocation that performed it.
 
@@ -510,6 +518,31 @@ class Store:
                 for key,value in run_values(row.data).items():setattr(row,key,value)
                 self._event(s,row,{'kind':'run','status':'cancelled'})
             s.commit();return row.data['status']
+
+    def reserve_accounting(self,id,owner,snapshot):
+        """Durably reserve spend before an external call. Raises if it cannot.
+
+        Unlike record_accounting this never degrades silently: a reservation that quietly
+        does nothing would let the call run on a lease this worker no longer holds.
+        """
+        with Session(self.engine) as s:
+            if not self._fence(s,id,owner):
+                raise LeaseLost('Execution lease is no longer owned; the action was not started.')
+            row=s.get(RunRecord,id)
+            row.data={**row.data,'accounting':snapshot};s.commit()
+
+    def record_accounting(self,id,owner,snapshot):
+        """Persist run-wide spend so a resumed run continues from it.
+
+        Budgets and token totals are run-wide, so an interrupted run that came back with
+        a fresh ceiling could spend it again simply by being resumed.
+        """
+        if not isinstance(snapshot,dict) or not snapshot:return
+        with Session(self.engine) as s:
+            if not self._fence(s,id,owner):return
+            row=s.get(RunRecord,id)
+            if row.data.get('accounting')!=snapshot:
+                row.data={**row.data,'accounting':snapshot};s.commit()
 
     def mark_write(self,id,owner,node_id):
         with Session(self.engine) as s:

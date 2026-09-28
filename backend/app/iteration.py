@@ -7,7 +7,7 @@ instead of repeating paid work or external writes.
 """
 import json
 
-from .execution_policy import ExecutionIdentity,execute_with_policy,invoke_attached
+from .execution_policy import ExecutionIdentity,execute_with_policy,invoke_attached,charges_action,accounting_snapshot
 
 MAX_ITEMS_CEILING=1000
 MAX_RESULT_BYTES=1_000_000
@@ -43,6 +43,17 @@ def within_budget(results):
     return len(json.dumps(results,ensure_ascii=False,default=str).encode())<=MAX_RESULT_BYTES
 
 
+def record_progress(ctx,index,entry):
+    """Persist this item's result and publish run-wide spend to the caller's sink.
+
+    Both happen per item rather than per loop, so an interruption mid-collection resumes
+    with its completed items skipped and its budget already consumed.
+    """
+    remember(ctx.run,ctx.node_id,index,entry)
+    sink=(ctx.run or {}).get('accounting_sink')
+    if sink is not None:sink.update(accounting_snapshot(ctx.run))
+
+
 async def for_each_node(inputs,config,ctx):
     from .tool_service import UncertainWriteError
     from .approvals import ApprovalPause
@@ -75,8 +86,7 @@ async def for_each_node(inputs,config,ctx):
                                              action_budget=(ctx.run or {}).get('action_budget'))
             outcome=await execute_with_policy(
                 invoke,identity,body.retry,ctx.run,emit,generic_error='Item execution failed.',
-                action_budget=(ctx.run or {}).get('action_budget'),charge_first_attempt=False,
-                check_tokens=body.type in ('agent','query'))
+                action_budget=(ctx.run or {}).get('action_budget'),charge_first_attempt=charges_action(body.type))
             if outcome.status=='failed':
                 entry={'index':index,'status':'failed','value':'','error':outcome.error}
                 failed+=1
@@ -86,7 +96,7 @@ async def for_each_node(inputs,config,ctx):
                 await emit(event)
                 journal(event='loop.item_failed',node_id=ctx.node_id,reason_code='item_error')
                 if config.on_item_error=='stop':
-                    remember(ctx.run,ctx.node_id,index,entry)
+                    record_progress(ctx,index,entry)
                     await emit({'kind':'loop_item','status':'info','node_id':ctx.node_id,'item_index':index,'item_result':entry,'transient':True})
                     results.append(entry)
                     break
@@ -107,7 +117,7 @@ async def for_each_node(inputs,config,ctx):
         except UncertainWriteError:
             # The external outcome is unknown; iterating past it could duplicate a write.
             raise
-        remember(ctx.run,ctx.node_id,index,entry)
+        record_progress(ctx,index,entry)
         await emit({'kind':'loop_item','status':'info','node_id':ctx.node_id,'item_index':index,'item_result':entry,'transient':True})
         results.append(entry)
         if not within_budget(results):
