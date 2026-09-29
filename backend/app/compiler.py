@@ -35,11 +35,13 @@ def _validate_flow(workflow: Workflow) -> list[str]:
     if len({e.id for e in workflow.edges}) != len(workflow.edges): errors.append('Edge IDs must be unique.')
     incoming = {id: [] for id in nodes}
     outgoing = {id: [] for id in nodes}
+    arrivals = {id: [] for id in nodes}
     for edge in workflow.edges:
         if edge.source not in nodes or edge.target not in nodes:
             errors.append(f'Edge {edge.id} references a missing node.'); continue
         incoming[edge.target].append(edge.source)
         outgoing[edge.source].append(edge)
+        arrivals[edge.target].append(edge)
     triggers = [n.id for n in workflow.nodes if n.type in ('chat_input', 'manual_input')]
     if len(triggers) != 1: errors.append('Use exactly one chat input or manual trigger.')
     for node in workflow.nodes:
@@ -64,6 +66,9 @@ def _validate_flow(workflow: Workflow) -> list[str]:
         elif node.type == 'condition':
             if len(links) != 2 or {e.sourceHandle for e in links} != {'true', 'false'}:
                 errors.append(f'{node.id}: condition needs one true and one false edge.')
+            # Routing reads the branch, so recovering without one leaves no path to take.
+            if node.on_error != 'fail':
+                errors.append(f"{node.id}: a condition cannot use on_error '{node.on_error}'; its branch is required to choose the next node.")
         elif node.on_error == 'route':
             if len(links) != 2 or {e.sourceHandle for e in links} != {None, 'error'} and {e.sourceHandle for e in links} != {'output', 'error'}:
                 errors.append(f'{node.id}: on_error route needs exactly one normal edge and one error edge.')
@@ -108,16 +113,31 @@ def _validate_flow(workflow: Workflow) -> list[str]:
     if len(triggers) == 1: visit(triggers[0])
     for id in nodes:
         if id not in reachable: errors.append(f'{id}: node is unreachable from the trigger.')
-    # A binding must be available along every possible path to the consumer.
-    dominators = {}
+    # A binding must be available along every possible path to the consumer. Two guarantees
+    # are tracked per node because they differ: `executed` holds the nodes that ran on every
+    # path here, `available` the nodes whose outputs exist on every path. An error edge leaves
+    # a node that ran but failed and recovered with no outputs, so it passes on the first set
+    # but not the second. Propagation is per edge, not per parent, because a routed node's
+    # normal and error edges may both reach the same consumer.
+    def yields(edge):
+        return edge.sourceHandle != 'error' and nodes[edge.source].on_error != 'continue'
+    executed, available = {}, {}
     for id in order:
-        parents = incoming[id]
-        common = set.intersection(*(dominators.get(p, set()) | {p} for p in parents)) if parents else set()
-        dominators[id] = common
+        edges = arrivals[id]
+        ran = set.intersection(*(executed.get(e.source, set()) | {e.source} for e in edges)) if edges else set()
+        has = set.intersection(*(available.get(e.source, set()) | ({e.source} if yields(e) else set()) for e in edges)) if edges else set()
+        executed[id], available[id] = ran, has
         for name, ref in nodes[id].inputs.items():
             source, sep, port = ref.partition('.')
             source_def = REGISTRY.get(nodes[source].type) if source in nodes else None
-            if not sep or source not in common or not source_def or port not in source_def.outputs:
+            if sep and source in has and source_def and port in source_def.outputs:
+                continue
+            if sep and source in ran and source_def and port in source_def.outputs:
+                if nodes[source].on_error == 'continue':
+                    continue  # Reported above with the fix: use 'route'.
+                errors.append(f'{id}: invalid binding {name} = {ref}; {ref} is unavailable on a possible error path, '
+                              f'where {source} fails and is routed on without outputs. Bind a value that exists on every path to {id}.')
+            else:
                 errors.append(f'{id}: invalid binding {name} = {ref}; use a declared output from a guaranteed upstream node.')
     if not any(n.type == 'response' for n in workflow.nodes): errors.append('Add a response output node.')
     return errors
