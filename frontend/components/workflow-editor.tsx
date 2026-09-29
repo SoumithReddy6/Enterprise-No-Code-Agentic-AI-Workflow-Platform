@@ -227,6 +227,7 @@ function Editor() {
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [running, setRunning] = useState(false);
   const [message, setMessage] = useState('How do AI workflows work?');
@@ -358,6 +359,7 @@ function Editor() {
     setRedo([]);
     setDirty(true);
     setErrors([]);
+    setWarnings([]);
   }
   function apply(w: Workflow) {
     setNodes(toCanvas(w));
@@ -368,6 +370,7 @@ function Editor() {
       w.nodes.find((n) => n.type === 'agent')?.id || w.nodes[0]?.id || '',
     );
     setErrors([]);
+    setWarnings([]);
   }
   function undo() {
     if (!undoStack.length || running) return;
@@ -484,15 +487,16 @@ function Editor() {
   }
   async function validate() {
     try {
-      const result = await api<{ valid: boolean; errors: string[] }>(
+      const result = await api<{ valid: boolean; errors: string[]; warnings?: string[] }>(
         '/validate',
         'POST',
         current.current,
       );
       setErrors(result.errors);
+      setWarnings(result.warnings ?? []);
       setNotice(
         result.valid
-          ? 'Workflow is valid and ready to run.'
+          ? (result.warnings?.length ? 'Workflow is valid. Review the advisory warnings below.' : 'Workflow is valid and ready to run.')
           : 'Fix the validation issues below.',
       );
       return result.valid;
@@ -759,7 +763,7 @@ function Editor() {
       if (file.size > 1000000)
         throw new Error('Workflow files must be smaller than 1 MB.');
       const value = JSON.parse(await file.text());
-      const normalized = await api<{ workflow: Workflow; errors: string[] }>(
+      const normalized = await api<{ workflow: Workflow; errors: string[]; warnings?: string[] }>(
         '/validate',
         'POST',
         value,
@@ -771,6 +775,7 @@ function Editor() {
       if (discardAllowed()) {
         loadDocument(imported);
         setErrors(normalized.errors);
+        setWarnings(normalized.warnings ?? []);
       }
     } catch (e) {
       setNotice(`Import failed: ${(e as Error).message}`);
@@ -1192,6 +1197,13 @@ function Editor() {
                 <span>·</span> {edges.length} connections
               </div>
             </div>
+            {warnings.length > 0 && (
+              <div className="validation-errors validation-warnings" aria-live="polite" aria-label="Validation warnings">
+                <button className="icon-button" aria-label="Dismiss validation warnings" onClick={() => setWarnings([])}><X size={16} /></button>
+                <strong>Advisory warnings — running is still allowed</strong>
+                <ul>{warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul>
+              </div>
+            )}
             {errors.length > 0 && (
               <div className="validation-errors" role="alert">
                 <strong>Workflow needs attention</strong>
@@ -1376,6 +1388,12 @@ function Editor() {
                           </span>
                           <ChevronDown size={13} />
                         </summary>
+                        {(e.items_truncated || e.items_warnings?.length) && (
+                          <p className="helper">
+                            {e.items_truncated ? 'Jira items are incomplete (result limit or additional pages). ' : ''}
+                            {e.items_warnings?.join(' ')}
+                          </p>
+                        )}
                         <pre>
                           {JSON.stringify(
                             e.inputs ||

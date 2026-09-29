@@ -42,6 +42,8 @@ export type Definition = {
   config_schema: { properties: Record<string, ConfigProperty> };
 };
 export type RunEvent = {
+  items_truncated?: boolean;
+  items_warnings?: string[];
   answerability?: { decision: 'allow' | 'abstain' | 'skip'; reason?: string };
   abstention_source?: string | null;
   seq: number;
