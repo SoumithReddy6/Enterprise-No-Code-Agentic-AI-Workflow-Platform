@@ -101,18 +101,53 @@ def test_database_failure_does_not_break_liveness(app,monkeypatch):
 
 @pytest.mark.asyncio
 async def test_hung_probes_have_deadlines_and_no_unbounded_db_tasks(app,monkeypatch):
+    """A hung database driver must not hang readiness, and must not pile up threads.
+
+    The fake probe blocks on an event the test controls, so every assertion is about
+    what happened - readiness answered while the probe was still blocked, one probe task
+    for many requests - rather than about how fast the machine was. The watchdog only
+    turns a hang into a failure; nothing is asserted about elapsed time.
+    """
+    import threading
     import backend.app.readiness as probes
-    calls=[]
-    def slow(store):calls.append(1);time.sleep(.15);return time.time()
-    async def slow_service():await asyncio.sleep(1)
-    monkeypatch.setattr(probes,'PROBE_SECONDS',.02)
-    monkeypatch.setattr(probes,'database_probe',slow)
-    app.state.knowledge_services.management.health=slow_service
-    started=time.perf_counter()
-    results=await asyncio.gather(*(app.state.readiness.check() for _ in range(10)))
-    assert time.perf_counter()-started<.12 and len(calls)==1
-    assert all(status==503 and body['checks']['management']['status']=='unavailable' for body,status in results)
-    await app.state.readiness.pending
+    calls=[];entered=threading.Event();release=threading.Event()
+    def blocked(store):
+        calls.append(1);entered.set()
+        release.wait(10)  # Bounded, so a failing test cannot strand the thread.
+        return time.time()
+    never=asyncio.Event()
+    async def hung_service():await never.wait()
+    monkeypatch.setattr(probes,'PROBE_SECONDS',.05)
+    monkeypatch.setattr(probes,'database_probe',blocked)
+    healthy=app.state.knowledge_services.management.health
+    app.state.knowledge_services.management.health=hung_service
+    readiness=app.state.readiness
+    watchdog=lambda awaitable:asyncio.wait_for(awaitable,5)
+    try:
+        results=await watchdog(asyncio.gather(*(readiness.check() for _ in range(10))))
+        assert entered.is_set() and not release.is_set(), 'readiness answered while the probe was still blocked'
+        assert len(calls)==1, f'{len(calls)} database probes started for one hung driver'
+        assert all(status==503 for _,status in results)
+        assert all(body['checks']['database']['status']=='unavailable' and body['checks']['management']['status']=='unavailable'
+                   for body,_ in results)
+        # Requests while the driver is still blocked reuse the in-flight probe.
+        pending=readiness.pending
+        assert not pending.done()
+        await watchdog(asyncio.gather(*(readiness.check() for _ in range(5))))
+        assert len(calls)==1 and readiness.pending is pending
+    finally:
+        release.set()
+    # Released, the probe completes and is cleaned up; the next check starts a fresh one.
+    await watchdog(asyncio.shield(pending))
+    assert pending.done() and not pending.cancelled() and pending.exception() is None
+    # This step checks that a new probe starts and succeeds, not how fast: the short
+    # deadline above would make its outcome depend on scheduling again.
+    monkeypatch.setattr(probes,'PROBE_SECONDS',5)
+    monkeypatch.setattr(probes,'database_probe',lambda store:time.time())
+    app.state.knowledge_services.management.health=healthy
+    body,_=await watchdog(readiness.check())
+    assert readiness.pending is not pending and body['checks']['database']['status']=='ok'
+
 
 def test_stale_worker_and_management_failure_are_named(app):
     from backend.app.readiness import WorkerHeartbeat
