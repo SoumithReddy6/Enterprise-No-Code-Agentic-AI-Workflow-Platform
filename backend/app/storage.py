@@ -36,6 +36,10 @@ class RunRecord(Base):
     truncated=Column(Boolean,nullable=False,default=False)
     # 'confirmed', 'legacy_checkpoint_unverified' or '' when not truncated.
     truncation_source=Column(String(40),nullable=False,default='',server_default='')
+    # Run-wide spend, reserved before every action. Kept out of data so a reservation
+    # updates this small value instead of rewriting the whole document and every
+    # checkpoint in it. None for runs whose accounting still lives in data.
+    accounting=Column(JSON,nullable=True)
 
 class RunEventRecord(Base):
     __tablename__='run_events'
@@ -45,6 +49,21 @@ class RunEventRecord(Base):
     timestamp=Column(String(64),nullable=False)
     type=Column(String(64),nullable=False)
     payload=Column(JSON,nullable=False)
+
+class RunLoopItemRecord(Base):
+    """One loop item's durable result, keyed by position.
+
+    Items are written as rows rather than into the run's JSON document, which every event
+    rewrites in full: a batch then costs one insert per item instead of rewriting all
+    earlier progress each time. The row and its loop_item event commit in one fenced
+    transaction. Runs checkpointed before this table still have progress in the run
+    document; readers merge both, and a row takes precedence for the same index.
+    """
+    __tablename__='run_loop_items'
+    run_id=Column(String(64),primary_key=True)
+    node_id=Column(String(64),primary_key=True)
+    item_index=Column(Integer,primary_key=True)
+    entry=Column(JSON,nullable=False)
 
 class SchemaMigrationRecord(Base):
     __tablename__='schema_migrations'
@@ -116,6 +135,30 @@ def local_key(data_dir:Path):
     with os.fdopen(fd,'wb') as stream:
         key=Fernet.generate_key();stream.write(key)
     return key
+
+def observed(event):
+    """The copy of an event kept for observability, with loop item values as previews.
+
+    A loop item's value is otherwise stored three times: in its durable item row, in the
+    body's success event and in the loop_item event. The row is the only copy resume and
+    write settlement read, so the two events keep previews. Checkpoints, approvals and
+    write results are recorded elsewhere and are never shortened.
+    """
+    from .iteration import PREVIEW_CHARS
+    def shorten(value):
+        text=value if isinstance(value,str) else json.dumps(value,ensure_ascii=False,default=str)
+        return (text[:PREVIEW_CHARS],True) if len(text)>PREVIEW_CHARS else (value,False)
+    if event.get('item_index') is not None and isinstance(event.get('outputs'),dict):
+        outputs={};cut=[]
+        for key,value in event['outputs'].items():
+            outputs[key],shortened=shorten(value)
+            if shortened:cut.append(key)
+        if cut:return {**event,'outputs':outputs,'preview_of':cut}
+    if event.get('kind')=='loop_item' and isinstance(event.get('item_result'),dict):
+        value,shortened=shorten(event['item_result'].get('value',''))
+        if shortened:return {**event,'item_result':{**event['item_result'],'value':value},'preview_of':['value']}
+    return event
+
 
 class Store:
     def __init__(self,database_url,encryption_key,auto_upgrade=True):
@@ -359,7 +402,7 @@ class Store:
             if not row or row.tenant_id!=tenant_id:raise KeyError(id)
             from .approvals import listing
             approvals=listing(s,id,tenant_id)
-            return {**row.data,'events':self._events(s,id,tenant_id),**({'approvals':approvals} if approvals else {})}
+            return {**self._document(s,row),'events':self._events(s,id,tenant_id),**({'approvals':approvals} if approvals else {})}
 
     def run_status(self,id,tenant_id='local'):
         with Session(self.engine) as s:
@@ -413,6 +456,30 @@ class Store:
         for usage in usage_rows(event,row.data.get('workflow',{})):
             s.add(RunTokenRecord(run_id=row.id,seq=0 if last is None else last+1,**usage))
 
+    @staticmethod
+    def _accounting(row):
+        """Run-wide spend: the column, or the document copy for runs from before it."""
+        return row.accounting if row.accounting is not None else row.data.get('accounting')
+
+    @staticmethod
+    def _document(s,row):
+        """The run document with state kept outside it merged back in.
+
+        Loop progress: legacy progress lives in the document, new progress in
+        run_loop_items, and for the same item the row wins. Accounting: the column wins
+        over a legacy document copy. Every reader that decides what to skip, whether a
+        write settled or what budget remains goes through here, so no store is consulted
+        alone.
+        """
+        document=dict(row.data)
+        progress={node:dict(entries) for node,entries in row.data.get('loop_progress',{}).items()}
+        for item in s.scalars(select(RunLoopItemRecord).where(RunLoopItemRecord.run_id==row.id)):
+            progress.setdefault(item.node_id,{})[str(item.item_index)]=item.entry
+        if progress:document['loop_progress']=progress
+        accounting=Store._accounting(row)
+        if accounting is not None:document['accounting']=accounting
+        return document
+
     def claim_next(self,owner,lease_seconds=30):
         timestamp=time.time()
         eligible=or_(JobRecord.status=='queued',and_(JobRecord.status=='running',JobRecord.lease_until<timestamp))
@@ -429,7 +496,7 @@ class Store:
                 from .observability import journal
                 if expired:journal(event='job.lease_expired',run_id=id,tenant=row.tenant_id,request_id=row.data.get('request_id'))
                 journal(event='job.lease_acquired',run_id=id,tenant=row.tenant_id,request_id=row.data.get('request_id'),worker_id=owner)
-                return {**row.data,'tenant_id':row.tenant_id,'citation_counter':row.citation_counter}
+                return {**self._document(s,row),'tenant_id':row.tenant_id,'citation_counter':row.citation_counter}
         return None
 
     def _fence(self,s,id,owner):
@@ -451,7 +518,7 @@ class Store:
         with Session(self.engine) as s:
             if not self._fence(s,id,owner):return False
             row=s.get(RunRecord,id);data=row.data
-            self._event(s,row,event)
+            self._event(s,row,observed(event))
             from .evidence_registry import source_high_water
             high=source_high_water(event.get('outputs',{}))
             if high>row.citation_counter:row.citation_counter=high
@@ -461,12 +528,9 @@ class Store:
                 data={**data,'vector_dependencies':dependencies}
             if event.get('kind')=='loop_item' and event.get('node_id') and isinstance(event.get('item_result'),dict):
                 # Per-item progress is durable so a resumed run skips finished items
-                # instead of repeating paid work or an external write.
-                progress=dict(data.get('loop_progress',{}))
-                entries=dict(progress.get(event['node_id'],{}))
-                entries[str(event['item_index'])]=event['item_result']
-                progress[event['node_id']]=entries
-                data={**data,'loop_progress':progress}
+                # instead of repeating paid work or an external write. merge makes a
+                # repeated event for the same item an update, not a duplicate.
+                s.merge(RunLoopItemRecord(run_id=id,node_id=event['node_id'],item_index=int(event['item_index']),entry=event['item_result']))
             if event.get('node_id') and event['status']=='success' and 'outputs' in event and not event.get('transient'):
                 data={**data,'checkpoints':{**data.get('checkpoints',{}),event['node_id']:event['outputs']},'agent_frames':{k:v for k,v in data.get('agent_frames',{}).items() if v.get('checkpoint_owner')!=event['node_id']}}
             if data is not row.data:row.data=data
@@ -531,7 +595,7 @@ class Store:
             if not self._fence(s,id,owner):
                 raise LeaseLost('Execution lease is no longer owned; the action was not started.')
             row=s.get(RunRecord,id)
-            row.data={**row.data,'accounting':snapshot};s.commit()
+            row.accounting=snapshot;s.commit()
 
     def record_accounting(self,id,owner,snapshot):
         """Persist run-wide spend so a resumed run continues from it.
@@ -543,8 +607,8 @@ class Store:
         with Session(self.engine) as s:
             if not self._fence(s,id,owner):return
             row=s.get(RunRecord,id)
-            if row.data.get('accounting')!=snapshot:
-                row.data={**row.data,'accounting':snapshot};s.commit()
+            if self._accounting(row)!=snapshot:
+                row.accounting=snapshot;s.commit()
 
     def mark_write(self,id,owner,node_id):
         with Session(self.engine) as s:
@@ -606,7 +670,7 @@ class Store:
             if not row or row.tenant_id!=tenant_id:raise KeyError(id)
             if row.data.get('approval_terminal'):raise ValueError('Rejected or expired approvals cannot be resumed. Start a new run.')
             if row.data['status'] not in ('failed','cancelled'):raise ValueError('Only failed or cancelled runs can be resumed.')
-            self.check_resume_writes(row.data)
+            self.check_resume_writes(self._document(s,row))
             if not job:job=JobRecord(run_id=id);s.add(job)
             job.status='queued';job.owner='';job.lease_until=0;job.cancel_requested=False
             row.data={**row.data,'status':'queued','error':'','output':'','finished_at':None,'truncated':False,'truncation_reason':'','truncation_source':''};row.status='queued'

@@ -11,6 +11,8 @@ from .execution_policy import ExecutionIdentity,execute_with_policy,invoke_attac
 
 MAX_ITEMS_CEILING=1000
 MAX_RESULT_BYTES=1_000_000
+# Observability events carry previews; the durable item result holds the full value.
+PREVIEW_CHARS=2000
 
 
 def item_owner(ctx,index):
@@ -39,8 +41,37 @@ def item_input(value):
     return json.dumps(value,ensure_ascii=False,separators=(',',':'),default=str)
 
 
-def within_budget(results):
-    return len(json.dumps(results,ensure_ascii=False,default=str).encode())<=MAX_RESULT_BYTES
+def serialized_bytes(value):
+    """UTF-8 bytes of the JSON the results output is stored and returned as."""
+    return len(json.dumps(value,ensure_ascii=False,default=str).encode('utf-8'))
+
+
+class ResultBudget:
+    """Admit item entries in order while the serialized results list fits MAX_RESULT_BYTES.
+
+    The earliest values are kept. The first value that does not fit, and every value after
+    it, is replaced by '' and marked value_dropped: a value is never cut part way, and the
+    retained values always form a prefix. Outcome metadata is always kept. The size counts
+    the whole list as serialized - brackets, separators and entry structure, not just the
+    value text - so the bound is on what is actually stored.
+
+    Restored entries pass through the same admission, so a replay reaches the same
+    decisions: fresh entries are admitted before they are persisted, and an entry that
+    was dropped is stored already marked.
+    """
+    def __init__(self):
+        self.size=2  # '[]'
+        self.count=0
+        self.dropping=False
+
+    def admit(self,entry):
+        separator=2 if self.count else 0  # json.dumps separates list items with ', '
+        if entry.get('value_dropped'):self.dropping=True
+        elif entry.get('value'):
+            if self.dropping or self.size+separator+serialized_bytes(entry)>MAX_RESULT_BYTES:
+                entry={**entry,'value':'','value_dropped':True};self.dropping=True
+        self.size+=separator+serialized_bytes(entry);self.count+=1
+        return entry
 
 
 def body_truncation(output):
@@ -51,25 +82,34 @@ def body_truncation(output):
     return str(metadata.get('truncation_reason') or 'Agent work was incomplete.')
 
 
-def completeness(node_id,total,accepted,results,failed,dropped):
+def completeness(node_id,total,accepted,results,failed,halt=None):
     """Whether the loop delivered every item it was given, and if not, why.
 
     This is part of the node's output rather than only an event, so it is checkpointed
     with the results and a resumed run reports the same incompleteness at run level.
+    halt names why iteration ended early: ('stop', index) after a failed item under
+    on_item_error stop, or ('budget', index, reason) when the run-wide action budget
+    refused an item before it made any call.
     """
-    reasons=[]
+    reasons=[];unrun=accepted-len(results)
     if total>accepted:
         reasons.append(f'{node_id} accepted {accepted} of {total} items (max_items {accepted}); {total-accepted} did not run.')
-    if len(results)<accepted:
-        reasons.append(f'{node_id} stopped after item {results[-1]["index"]} failed; {accepted-len(results)} accepted items did not run.')
+    stopped=bool(halt and halt[0]=='stop' and unrun>0)
+    budget=bool(halt and halt[0]=='budget')
+    if stopped:
+        reasons.append(f'{node_id} stopped after item {halt[1]} failed; {unrun} accepted items did not run.')
+    if budget:
+        reasons.append(f'{node_id} stopped at item {halt[1]}: {halt[2]} {unrun} accepted items did not run.')
     partial=[r for r in results if r.get('truncation_reason')]
     if partial:
         reasons.append(f'{node_id}: {len(partial)} item(s) returned incomplete agent work ({partial[0]["truncation_reason"]}).')
+    dropped=sum(bool(r.get('value_dropped')) for r in results)
     if dropped:
-        reasons.append(f'{node_id} results exceeded {MAX_RESULT_BYTES} bytes; item values were dropped and only outcomes kept.')
+        reasons.append(f'{node_id} kept item values up to {MAX_RESULT_BYTES} bytes; {dropped} later value(s) were dropped and only their outcomes kept.')
     return {'total':total,'accepted':accepted,'processed':len(results),'failed':failed,
-            'limited':total>accepted,'stopped':len(results)<accepted,'incomplete_items':len(partial),
-            'values_dropped':dropped,'truncated':bool(reasons),'truncation_reason':' '.join(reasons),
+            'limited':total>accepted,'stopped':stopped,'budget_exhausted':budget,'incomplete_items':len(partial),
+            'values_dropped':bool(dropped),'dropped_value_count':dropped,
+            'truncated':bool(reasons),'truncation_reason':' '.join(reasons),
             'truncation_source':'confirmed' if reasons else ''}
 
 
@@ -94,11 +134,13 @@ def reconstructed_summary(node_id,items,config,outputs,body_type):
     results=outputs.get('results') or []
     failed=sum(r.get('status')=='failed' for r in results)
     unverified=[]
+    # A legacy stop is visible as a final failed item with accepted items left over.
+    halt=('stop',results[-1].get('index')) if config.on_item_error=='stop' and results and results[-1].get('status')=='failed' else None
     if isinstance(items,list):
         accepted=len(items[:min(config.max_items,MAX_ITEMS_CEILING)])
-        summary=completeness(node_id,len(items),accepted,results,failed,False)
+        summary=completeness(node_id,len(items),accepted,results,failed,halt)
     else:
-        summary=completeness(node_id,len(results),len(results),results,failed,False)
+        summary=completeness(node_id,len(results),len(results),results,failed,halt)
         unverified+=['limited','stopped']
     first=next((r for r in results if r.get('status')=='success'),None)
     if first is not None and first.get('value')=='':unverified.append('values_dropped')
@@ -133,32 +175,45 @@ async def for_each_node(inputs,config,ctx):
     limit=min(config.max_items,MAX_ITEMS_CEILING)
     selected=items[:limit]
     done=completed_indices(ctx.run,ctx.node_id)
-    results=[];failed=0;dropped=False
+    results=[];failed=0;halt=None;budget=ResultBudget()
 
     for index,value in enumerate(selected):
         if index in done:
-            # Restored from an earlier attempt: it passes through the same aggregation
-            # below as a fresh item, so replay reapplies the stop policy and the result
-            # bound instead of skipping them.
-            entry=done[index]
+            # Restored from an earlier attempt: it passes through the same admission and
+            # policy checks as a fresh item, so replay reaches the same decisions.
+            entry=budget.admit(done[index])
         else:
-            entry=await _run_item(ctx,body,emit,index,value)
+            entry,exhausted=await _run_item(ctx,body,emit,index,value)
+            if entry is None:
+                # The action budget refused the item before any call: nothing ran, so
+                # there is no item result to record, and every later item would be
+                # refused the same way.
+                halt=('budget',index,exhausted);break
+            # Admit before persisting, so progress never holds a value the output drops.
+            entry=budget.admit(entry)
+            record_progress(ctx,index,entry)
+            await emit({'kind':'loop_item','status':'info','node_id':ctx.node_id,'item_index':index,'item_result':entry,'transient':True})
+            if exhausted:
+                # An earlier attempt ran and failed; the budget then refused its retry.
+                results.append(entry);failed+=1
+                halt=('budget',index+1,exhausted);break
         results.append(entry)
         if entry.get('status')=='failed':failed+=1
-        if not within_budget(results):
-            # Keep every outcome; shed only the payloads, so the caller still sees what ran.
-            # Progress keeps full values, so replaying the same entries sheds identically.
-            results=[{**r,'value':''} for r in results];dropped=True
-        if entry.get('status')=='failed' and config.on_item_error=='stop':break
+        if entry.get('status')=='failed' and config.on_item_error=='stop':
+            halt=('stop',index);break
 
-    summary=completeness(ctx.node_id,len(items),len(selected),results,failed,dropped)
+    summary=completeness(ctx.node_id,len(items),len(selected),results,failed,halt)
     await emit({'kind':'loop_summary','node_id':ctx.node_id,'status':'warning' if summary['truncated'] else 'info',
                 'transient':True,**summary})
     return {'results':results,'failed':str(failed),'summary':json.dumps(summary)}
 
 
 async def _run_item(ctx,body,emit,index,value):
-    """Execute one fresh item, record it durably, and return its result entry."""
+    """Execute one fresh item. Returns (entry, exhaustion reason or '').
+
+    entry is None when the run-wide action budget refused the item before it made any
+    call. The caller admits, persists and publishes the entry.
+    """
     from .tool_service import UncertainWriteError
     from .approvals import ApprovalPause
     from .observability import journal
@@ -166,7 +221,7 @@ async def _run_item(ctx,body,emit,index,value):
     identity=ExecutionIdentity(body.id,item_owner(ctx,index),invocation,ctx.node_id,index)
     text=item_input(value)
     common={**identity.event_fields(),'transient':True}
-    await emit({**common,'status':'running','inputs':{'input':text[:2000]}})
+    await emit({**common,'status':'running','inputs':{'input':text[:PREVIEW_CHARS]}})
     try:
         async def invoke():
             return await invoke_attached(body,text,ctx,identity,emit,
@@ -174,6 +229,10 @@ async def _run_item(ctx,body,emit,index,value):
         outcome=await execute_with_policy(
             invoke,identity,body.retry,ctx.run,emit,generic_error='Item execution failed.',
             action_budget=(ctx.run or {}).get('action_budget'),charge_first_attempt=charges_action(body.type))
+        if outcome.budget_exhausted and not outcome.attempts:
+            await emit({**common,'status':'not_run','reason':outcome.error})
+            journal(event='loop.budget_exhausted',node_id=ctx.node_id,reason_code='action_budget')
+            return None,outcome.error
         if outcome.status=='failed':
             entry={'index':index,'status':'failed','value':'','error':outcome.error}
             event={**common,'status':'failed','error':outcome.error}
@@ -200,6 +259,4 @@ async def _run_item(ctx,body,emit,index,value):
     except UncertainWriteError:
         # The external outcome is unknown; iterating past it could duplicate a write.
         raise
-    record_progress(ctx,index,entry)
-    await emit({'kind':'loop_item','status':'info','node_id':ctx.node_id,'item_index':index,'item_result':entry,'transient':True})
-    return entry
+    return entry,(outcome.error if outcome.budget_exhausted else '')

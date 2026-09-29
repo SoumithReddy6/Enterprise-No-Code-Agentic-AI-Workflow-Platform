@@ -59,13 +59,13 @@ def pause(store,run_id,owner,exc):
         # in the transaction that releases the lease, so the approved execution reuses the
         # reservation instead of being charged twice. The seam cannot do it: by the time
         # the pause reaches it, this worker no longer holds the lease.
-        accounting=dict(run.data.get('accounting') or {})
+        accounting=dict(store._accounting(run) or {})
         budget=dict(accounting.get('action_budget') or {})
         if budget:
             budget['deferred']=[*budget.get('deferred',[]),f'{exc.invocation}#0']
             accounting['action_budget']=budget
-        run.data={**run.data,'status':'awaiting_approval','agent_frames':exc.frames,
-                  **({'accounting':accounting} if budget else {})};run.status='awaiting_approval'
+        run.data={**run.data,'status':'awaiting_approval','agent_frames':exc.frames};run.status='awaiting_approval'
+        if budget:run.accounting=accounting
         job.status='awaiting_approval';job.owner='';job.lease_until=0
         store._event(s,run,{'kind':'approval','node_id':exc.node_id,'status':'awaiting_approval','approval_id':row.id})
         s.commit();journal(event='approval.pending',run_id=run_id,tenant=run.tenant_id,node_id=exc.node_id)

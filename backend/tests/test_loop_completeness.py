@@ -71,15 +71,116 @@ async def test_failed_items_under_continue_are_failures_not_truncation():
 
 
 @pytest.mark.asyncio
-async def test_dropped_values_make_the_loop_incomplete(monkeypatch):
+async def test_the_earliest_values_are_kept_and_later_ones_dropped(monkeypatch):
+    """Each entry serializes to 63 bytes: '[' + two entries + ', ' + ']' is 130 and fits 150; a
+    third does not. Dropped values are empty and marked; outcomes are always kept."""
     from backend.app import iteration
     monkeypatch.setattr(iteration, 'MAX_RESULT_BYTES', 150)
-    resolver, _ = platform(issues(3))
+    resolver, _ = platform(issues(4), lambda index, text: 'done')
     result = await run(loop_flow(), resolver)
-    summary = summary_of(result)
-    assert summary['values_dropped'] is True and summary['truncated'] is True
-    assert 'item values were dropped' in summary['truncation_reason']
-    assert all(r['value'] == '' for r in result['values']['each']['results'])
+    results, summary = result['values']['each']['results'], summary_of(result)
+    assert iteration.serialized_bytes(results[0]) == 63
+    assert [bool(r['value']) for r in results] == [True, True, False, False]
+    assert [r.get('value_dropped', False) for r in results] == [False, False, True, True]
+    assert [r['status'] for r in results] == ['success'] * 4
+    assert summary['values_dropped'] is True and summary['dropped_value_count'] == 2 and summary['truncated'] is True
+    assert '2 later value(s) were dropped' in summary['truncation_reason']
+    assert iteration.serialized_bytes(results[:2]) <= 150 < iteration.serialized_bytes(results[:2] + [{**results[2], 'value': 'done'}])
+
+
+def test_the_bound_counts_serialized_utf8_bytes_not_characters(monkeypatch):
+    """300 'é' are 300 characters but 600 UTF-8 bytes; the list must be measured as stored."""
+    from backend.app import iteration
+    monkeypatch.setattr(iteration, 'MAX_RESULT_BYTES', 500)
+    budget = iteration.ResultBudget()
+    entry = budget.admit({'index': 0, 'status': 'success', 'value': 'é' * 300, 'error': ''})
+    assert entry['value'] == '' and entry['value_dropped'] is True
+    ascii_budget = iteration.ResultBudget()
+    assert ascii_budget.admit({'index': 0, 'status': 'success', 'value': 'e' * 300, 'error': ''})['value'] == 'e' * 300
+
+
+def test_the_running_size_matches_the_serialized_list_exactly():
+    from backend.app import iteration
+    budget, results = iteration.ResultBudget(), []
+    for i, value in enumerate(['a', 'bé', '', '{"k": [1, 2]}', 'ü' * 40]):
+        results.append(budget.admit({'index': i, 'status': 'success' if value else 'failed', 'value': value, 'error': ''}))
+        assert budget.size == iteration.serialized_bytes(results)
+
+
+def test_a_value_is_never_cut_part_way(monkeypatch):
+    """A value either survives whole or becomes '' - including JSON text, which a cut would corrupt."""
+    from backend.app import iteration
+    monkeypatch.setattr(iteration, 'MAX_RESULT_BYTES', 120)
+    budget = iteration.ResultBudget()
+    document = json.dumps({'rows': list(range(20))})
+    for i in range(3):
+        entry = budget.admit({'index': i, 'status': 'success', 'value': document, 'error': ''})
+        assert entry['value'] in (document, '')
+        if entry['value']: json.loads(entry['value'])
+
+
+def test_once_a_value_is_dropped_later_small_values_are_dropped_too(monkeypatch):
+    """Retained values always form a prefix, so a consumer never sees a gap in the middle."""
+    from backend.app import iteration
+    monkeypatch.setattr(iteration, 'MAX_RESULT_BYTES', 300)
+    budget = iteration.ResultBudget()
+    small = {'index': 2, 'status': 'success', 'value': 'z', 'error': ''}
+    kept = [budget.admit({'index': i, 'status': 'success', 'value': v, 'error': ''})['value'] != ''
+            for i, v in enumerate(['x' * 50, 'y' * 200])]
+    # The small value would fit on its own, so only the prefix rule can drop it.
+    assert budget.size + 2 + iteration.serialized_bytes(small) <= iteration.MAX_RESULT_BYTES
+    kept.append(budget.admit(small)['value'] != '')
+    assert kept == [True, False, False]
+
+
+# --------------------------------------------------------------------------- action budget
+
+@pytest.mark.asyncio
+async def test_an_exhausted_action_budget_stops_the_loop_without_failed_items(monkeypatch):
+    """Budget exhaustion is not an item failure: nothing was called, so nothing failed.
+    The jira read takes one action, items 0 and 1 the next two, and item 2 is refused."""
+    monkeypatch.setenv('AGENT_RUN_BUDGET', '3')
+    resolver, calls = platform(issues(10))
+    events = []
+    result = await run(loop_flow(), resolver, events)
+    results, summary = result['values']['each']['results'], summary_of(result)
+    assert len(calls) == 2 and [r['status'] for r in results] == ['success', 'success']
+    assert result['values']['each']['failed'] == '0'
+    assert summary['budget_exhausted'] is True and summary['truncated'] is True and summary['stopped'] is False
+    assert 'stopped at item 2' in summary['truncation_reason'] and 'AGENT_RUN_BUDGET' in summary['truncation_reason']
+    assert '8 accepted items did not run' in summary['truncation_reason']
+    assert not [e for e in events if e.get('status') == 'failed']
+    assert [e['item_index'] for e in events if e.get('status') == 'not_run'] == [2]
+
+
+@pytest.mark.asyncio
+async def test_an_attempted_item_whose_retry_is_refused_is_a_real_failure_and_stops(monkeypatch):
+    """The first attempt called the tool and failed; the budget then refused the retry.
+    That item did fail - it is recorded - and iteration stops because the budget is gone."""
+    from backend.app.tool_service import TransientToolError
+    monkeypatch.setenv('AGENT_RUN_BUDGET', '2')
+    def flaky(index, text): raise TransientToolError('unreachable')
+    from backend.app.models import RetryPolicy
+    resolver, calls = platform(issues(5), flaky)
+    workflow = loop_flow()
+    next(n for n in workflow.nodes if n.id == 'work').retry = RetryPolicy(attempts=2, base_delay=0)
+    result = await run(workflow, resolver)
+    results, summary = result['values']['each']['results'], summary_of(result)
+    assert len(calls) == 1
+    assert [r['status'] for r in results] == ['failed'] and result['values']['each']['failed'] == '1'
+    assert summary['budget_exhausted'] is True and 'stopped at item 1' in summary['truncation_reason']
+    assert '4 accepted items did not run' in summary['truncation_reason']
+
+
+@pytest.mark.asyncio
+async def test_an_attempted_failure_under_continue_still_continues(monkeypatch):
+    def flaky(index, text):
+        if index == 1: raise ValueError('bad input')
+        return 'done'
+    resolver, calls = platform(issues(4), flaky)
+    result = await run(loop_flow(), resolver)
+    assert len(calls) == 4 and summary_of(result)['budget_exhausted'] is False
+    assert result['values']['each']['failed'] == '1'
 
 
 @pytest.mark.asyncio
@@ -215,19 +316,21 @@ def crash_after_item(store, monkeypatch, index):
 
 
 CASES = {
-    # name: (loop options, failing item index or None, byte bound or None)
-    'stop after a failure': ({'on_item_error': 'stop'}, 1, None),
-    'stop on the first item': ({'on_item_error': 'stop'}, 0, None),
-    'continue past a failure': ({}, 1, None),
-    'values shed for size': ({}, None, 150),
-    'limited and shed': ({'max_items': 3}, None, 150),
+    # name: (loop options, failing item index or None, byte bound or None, action budget or None)
+    'stop after a failure': ({'on_item_error': 'stop'}, 1, None, None),
+    'stop on the first item': ({'on_item_error': 'stop'}, 0, None, None),
+    'continue past a failure': ({}, 1, None, None),
+    'values shed for size': ({}, None, 150, None),
+    'limited and shed': ({'max_items': 3}, None, 150, None),
+    'action budget runs out': ({}, None, None, 3),
 }
 
 
 async def execute_case(tmp_path, monkeypatch, case, crash_at=None, items=4):
     from backend.app import iteration
-    options, failing, bound = CASES[case]
+    options, failing, bound, actions = CASES[case]
     if bound is not None: monkeypatch.setattr(iteration, 'MAX_RESULT_BYTES', bound)
+    if actions is not None: monkeypatch.setenv('AGENT_RUN_BUDGET', str(actions))
     tmp_path.mkdir()
     store, worker, _, _ = durable_setup(tmp_path, monkeypatch, items=items)
     calls = []
@@ -267,7 +370,7 @@ async def test_the_equivalence_cases_cover_each_cause(tmp_path, monkeypatch):
     """Pins what the baselines demonstrate, so the equivalence test compares real outcomes."""
     expected = {'stop after a failure': ('stopped', 2), 'stop on the first item': ('stopped', 1),
                 'continue past a failure': (None, 4), 'values shed for size': ('values_dropped', 4),
-                'limited and shed': ('limited', 3)}
+                'limited and shed': ('limited', 3), 'action budget runs out': ('budget_exhausted', 2)}
     for case, (cause, ran) in expected.items():
         run, calls = await execute_case(tmp_path / case.replace(' ', '-'), monkeypatch, case)
         summary = json.loads(run['checkpoints']['each']['summary'])

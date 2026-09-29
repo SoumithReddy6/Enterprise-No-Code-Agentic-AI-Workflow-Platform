@@ -53,6 +53,13 @@ class ExecutionOutcome:
     error: str | None
     attempts: int
     usage: dict | None
+    # The run-wide action budget refused an attempt, so that attempt made no call.
+    # attempts counts only the attempts that actually executed before the refusal.
+    budget_exhausted: bool = False
+
+
+class ActionBudgetExhausted(ValueError):
+    """The run-wide action budget refused an attempt before it could execute."""
 
 
 def accounting_snapshot(run):
@@ -121,7 +128,7 @@ def _debit_action(budget,key=None):
     if budget is None:return False
     if budget['remaining']<=0:
         ceiling=budget.get('ceiling',budget.get('counter',0))
-        raise ValueError(f'Run-wide agent action budget exhausted ({ceiling} actions; raise AGENT_RUN_BUDGET).')
+        raise ActionBudgetExhausted(f'Run-wide agent action budget exhausted ({ceiling} actions; raise AGENT_RUN_BUDGET).')
     budget['remaining']-=1;budget['counter']+=1
     if key is not None:budget.setdefault('charged',[]).append(key)
     return True
@@ -175,6 +182,8 @@ async def execute_with_policy(operation,identity:ExecutionIdentity,retry:RetryPo
             return ExecutionOutcome('success',outputs,None,attempt+1,usage_for(run,identity))
         except CONTROL_FLOW:
             raise
+        except ActionBudgetExhausted as exc:
+            return ExecutionOutcome('failed',None,str(exc),attempt,usage_for(run,identity),budget_exhausted=True)
         except Exception as exc:
             error=_error(exc,generic_error)
             transient=isinstance(exc,TransientToolError)
