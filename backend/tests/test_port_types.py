@@ -52,7 +52,7 @@ def test_every_registry_port_is_known_and_structured_ports_are_declared():
     assert found==STRUCTURED,found.symmetric_difference(STRUCTURED)
     assert REGISTRY['tool_jira'].outputs=={'text':'string','items':'array<object>'}
     assert REGISTRY['for_each'].inputs=={'items':'array'}
-    assert REGISTRY['for_each'].outputs=={'results':'array<object>','failed':'string'}
+    assert REGISTRY['for_each'].outputs=={'results':'array<object>','failed':'string','summary':'string'}
 
 def test_examples_are_silent():
     paths=list(Path('examples').glob('*.json'));assert paths

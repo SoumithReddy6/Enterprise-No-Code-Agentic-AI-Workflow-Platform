@@ -43,6 +43,35 @@ def within_budget(results):
     return len(json.dumps(results,ensure_ascii=False,default=str).encode())<=MAX_RESULT_BYTES
 
 
+def body_truncation(output):
+    """An agent body that stopped early says so in its grounding metadata; '' otherwise."""
+    try:metadata=json.loads(output.get('grounding') or '{}')
+    except (TypeError,ValueError):return ''
+    if not isinstance(metadata,dict) or not metadata.get('truncated'):return ''
+    return str(metadata.get('truncation_reason') or 'Agent work was incomplete.')
+
+
+def completeness(node_id,total,accepted,results,failed,dropped):
+    """Whether the loop delivered every item it was given, and if not, why.
+
+    This is part of the node's output rather than only an event, so it is checkpointed
+    with the results and a resumed run reports the same incompleteness at run level.
+    """
+    reasons=[]
+    if total>accepted:
+        reasons.append(f'{node_id} accepted {accepted} of {total} items (max_items {accepted}); {total-accepted} did not run.')
+    if len(results)<accepted:
+        reasons.append(f'{node_id} stopped after item {results[-1]["index"]} failed; {accepted-len(results)} accepted items did not run.')
+    partial=[r for r in results if r.get('truncation_reason')]
+    if partial:
+        reasons.append(f'{node_id}: {len(partial)} item(s) returned incomplete agent work ({partial[0]["truncation_reason"]}).')
+    if dropped:
+        reasons.append(f'{node_id} results exceeded {MAX_RESULT_BYTES} bytes; item values were dropped and only outcomes kept.')
+    return {'total':total,'accepted':accepted,'processed':len(results),'failed':failed,
+            'limited':total>accepted,'stopped':len(results)<accepted,'incomplete_items':len(partial),
+            'values_dropped':dropped,'truncated':bool(reasons),'truncation_reason':' '.join(reasons)}
+
+
 def record_progress(ctx,index,entry):
     """Persist this item's result and publish run-wide spend to the caller's sink.
 
@@ -65,7 +94,6 @@ async def for_each_node(inputs,config,ctx):
     emit=ctx.emit or (lambda event: None)
 
     limit=min(config.max_items,MAX_ITEMS_CEILING)
-    truncated=len(items)>limit
     selected=items[:limit]
     done=completed_indices(ctx.run,ctx.node_id)
     results=[];failed=0;dropped=False
@@ -103,6 +131,8 @@ async def for_each_node(inputs,config,ctx):
             else:
                 output=outcome.outputs
                 entry={'index':index,'status':'success','value':output.get('text',''),'error':''}
+                reason=body_truncation(output)
+                if reason:entry['truncation_reason']=reason
                 event={**common,'status':'success','outputs':output}
                 if outcome.usage:event['usage']=outcome.usage
                 await emit(event)
@@ -124,7 +154,7 @@ async def for_each_node(inputs,config,ctx):
             # Keep every outcome; shed only the payloads, so the caller still sees what ran.
             results=[{**r,'value':''} for r in results];dropped=True
 
-    await emit({'kind':'loop_summary','node_id':ctx.node_id,'status':'warning' if (truncated or dropped) else 'info',
-                'transient':True,'total':len(items),'processed':len(results),'failed':failed,
-                'truncated':truncated,'values_dropped':dropped})
-    return {'results':results,'failed':str(failed)}
+    summary=completeness(ctx.node_id,len(items),len(selected),results,failed,dropped)
+    await emit({'kind':'loop_summary','node_id':ctx.node_id,'status':'warning' if summary['truncated'] else 'info',
+                'transient':True,**summary})
+    return {'results':results,'failed':str(failed),'summary':json.dumps(summary)}

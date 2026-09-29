@@ -137,9 +137,13 @@ class Worker:
             graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend,action_settled=action_settled).graph
             result=await graph.ainvoke({'values':{}},{'recursion_limit':150})
             reasons=[]
-            for outputs in result['values'].values():
-                metadata=json.loads(outputs.get('grounding','{}'))
-                if metadata.get('truncated'):reasons.append(metadata.get('truncation_reason','Agent work was incomplete.'))
+            # Agents report incompleteness in grounding, loops in summary. Both are node
+            # outputs, so values restored from checkpoints on resume report it too.
+            loops={n.id for n in workflow.nodes if n.type=='for_each'}
+            for node_id,outputs in result['values'].items():
+                field,default=('summary','A loop did not run every item.') if node_id in loops else ('grounding','Agent work was incomplete.')
+                metadata=json.loads(outputs.get(field) or '{}')
+                if metadata.get('truncated'):reasons.append(metadata.get('truncation_reason') or default)
             return {'output':'\n\n'.join(result['values'][n.id]['text'] for n in workflow.nodes if n.type=='response' and n.id in result['values']),
                     'truncated':bool(reasons),'truncation_reason':'; '.join(dict.fromkeys(reasons))}
         async def bounded_run():
