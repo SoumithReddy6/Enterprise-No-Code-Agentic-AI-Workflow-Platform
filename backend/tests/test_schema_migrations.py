@@ -112,9 +112,11 @@ def test_an_unknown_revision_refuses_startup(tmp_path):
 def test_behind_head_without_auto_upgrade_names_the_command(tmp_path, monkeypatch):
     """A deployment that does not migrate on boot must say exactly what to run."""
     key = Fernet.generate_key()
-    Store(f'sqlite:///{tmp_path}/behind.db', key)
-    monkeypatch.setattr(schema, 'head_revision', lambda: '0002_later')
-    monkeypatch.setattr(schema, 'known_revisions', lambda: {'0001_baseline', '0002_later'})
+    engine = create_engine(f'sqlite:///{tmp_path}/behind.db')
+    with engine.begin() as conn:
+        schema.upgrade(conn, '0001_baseline')
+    engine.dispose()
+    assert schema.head_revision() != '0001_baseline'
     with pytest.raises(schema.SchemaStateError) as exc:
         Store(f'sqlite:///{tmp_path}/behind.db', key, auto_upgrade=False)
     assert 'alembic upgrade head' in str(exc.value)
@@ -163,18 +165,18 @@ def test_every_declared_table_is_created_by_a_migration(tmp_path):
 
 # --------------------------------------------------------------------------- frozen baseline
 
-def write_revision_0002(path):
-    """A realistic second revision: one new table and one new column."""
-    path.write_text('''"""later
+def write_later_revision(path, down_revision):
+    """A realistic later revision on the current head: one new table and one new column."""
+    path.write_text(f'''"""later
 
-Revision ID: 0002_later
-Revises: 0001_baseline
+Revision ID: 9999_later
+Revises: {down_revision}
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = '0002_later'
-down_revision = '0001_baseline'
+revision = '9999_later'
+down_revision = '{down_revision}'
 branch_labels = None
 depends_on = None
 
@@ -196,14 +198,14 @@ def downgrade():
 
 @pytest.fixture
 def with_second_revision(tmp_path, monkeypatch):
-    """Simulates a real 0002: both the migration and the model change it describes.
+    """Simulates a later revision: both the migration and the model change it describes.
 
     Adding only the migration would be a toothless test - live metadata and the frozen
     baseline would still agree, so repairing from the wrong one would go unnoticed.
 
     The migration environment is copied into tmp_path first. Writing a revision into the
     repository's own versions directory would make a second pytest process, a scenario
-    run or a live API briefly observe a 0002 that does not exist.
+    run or a live API briefly observe a revision that does not exist.
     """
     import shutil
     import sqlalchemy as sa
@@ -211,8 +213,8 @@ def with_second_revision(tmp_path, monkeypatch):
     shutil.copytree(schema.MIGRATIONS, sandbox,
                     ignore=shutil.ignore_patterns('__pycache__'))
     monkeypatch.setattr(schema, 'MIGRATIONS', sandbox)
-    target = sandbox / 'versions' / '0002_later.py'
-    write_revision_0002(target)
+    # Chain from the real head, so the simulated revision never forks the history.
+    write_later_revision(sandbox / 'versions' / '9999_later.py', schema.head_revision())
     live = Base.metadata
     table = sa.Table('run_budgets', live,
                      sa.Column('run_id', sa.String(length=64), primary_key=True),
@@ -234,11 +236,11 @@ def test_legacy_adoption_survives_a_later_revision(tmp_path, with_second_revisio
     applies cleanly. Repairing with live metadata would create 0002's table early and
     the migration would collide on it.
     """
-    assert schema.head_revision() == '0002_later', 'fixture did not take effect'
+    assert schema.head_revision() == '9999_later', 'fixture did not take effect'
     url = legacy_database(tmp_path / 'v1.db')
     store = Store(url, Fernet.generate_key())
     with store.engine.begin() as conn:
-        assert schema.current_revision(conn) == '0002_later'
+        assert schema.current_revision(conn) == '9999_later'
     names = inspect(store.engine).get_table_names()
     assert 'run_budgets' in names, '0002 did not apply'
     assert 'budget_note' in {c['name'] for c in inspect(store.engine).get_columns('runs')}
@@ -348,3 +350,23 @@ def test_a_shorter_column_is_refused(tmp_path):
     with pytest.raises(schema.SchemaStateError) as exc:
         Store(url, Fernet.generate_key())
     assert 'agent_memories.tenant_id type is VARCHAR(8)' in str(exc.value)
+
+
+# --------------------------------------------------------------------------- 0002
+
+def test_0002_backfills_the_source_of_existing_truncated_runs(tmp_path):
+    """Every run truncated before 0002 had a confirmed cause; the rest have none."""
+    engine = create_engine(f'sqlite:///{tmp_path}/0002.db')
+    with engine.begin() as conn:
+        schema.upgrade(conn, '0001_baseline')
+        for id, truncated in (('cut', True), ('whole', False)):
+            conn.execute(text("INSERT INTO runs (id,tenant_id,data,created_at,status,name,citation_counter,grounded,abstained,truncated) "
+                              "VALUES (:id,'local','{}','2026-09-01','success','r',0,0,0,:t)"), {'id': id, 't': truncated})
+    with engine.begin() as conn:
+        schema.upgrade(conn, '0002_truncation_source')
+        rows = dict(conn.execute(text('SELECT id, truncation_source FROM runs')).all())
+    assert rows == {'cut': 'confirmed', 'whole': ''}
+    with engine.begin() as conn:
+        from alembic import command
+        command.downgrade(schema._config(conn), '0001_baseline')
+        assert 'truncation_source' not in {c['name'] for c in inspect(conn).get_columns('runs')}

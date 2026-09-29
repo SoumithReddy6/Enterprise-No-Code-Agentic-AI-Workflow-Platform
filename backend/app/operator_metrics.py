@@ -49,7 +49,9 @@ def run_values(data):
         try:value=json.loads(output.get('grounding','{}'))
         except (ValueError,TypeError):continue
         if isinstance(value,dict) and isinstance(value.get('abstain'),bool):grounding.append(value['abstain'])
-    return {'duration_seconds':duration,'grounded':bool(grounding),'abstained':any(grounding),'truncated':bool(data.get('truncated'))}
+    truncated=bool(data.get('truncated'))
+    return {'duration_seconds':duration,'grounded':bool(grounding),'abstained':any(grounding),'truncated':truncated,
+            'truncation_source':(data.get('truncation_source') or 'confirmed') if truncated else ''}
 
 def migrate(conn):
     version='20260920_operator_metrics'
@@ -70,6 +72,7 @@ def metrics(store,hours=168):
         guard_skips=dict(session.execute(select(GuardDecisionRecord.reason,func.count()).join(RunRecord,RunRecord.id==GuardDecisionRecord.run_id).where(*window,GuardDecisionRecord.decision=='skip').group_by(GuardDecisionRecord.reason)).all())
         counts=dict(session.execute(select(RunRecord.status,func.count()).where(*window).group_by(RunRecord.status)).all())
         total,grounded,abstained,truncated=session.execute(select(func.count(),func.sum(case((RunRecord.grounded,1),else_=0)),func.sum(case((RunRecord.abstained,1),else_=0)),func.sum(case((RunRecord.truncated,1),else_=0))).where(*window,RunRecord.status=='success')).one()
+        unverified=session.scalar(select(func.count()).where(*window,RunRecord.status=='success',RunRecord.truncation_source=='legacy_checkpoint_unverified'))
         # SQL window ranks implement portable nearest-rank percentiles on SQLite/PostgreSQL.
         ranked=select(RunRecord.duration_seconds.label('duration'),func.row_number().over(order_by=RunRecord.duration_seconds).label('rank'),func.count().over().label('n')).where(*window,RunRecord.duration_seconds.is_not(None),RunRecord.status.in_(('success','failed','cancelled'))).subquery()
         percentiles={}
@@ -78,5 +81,6 @@ def metrics(store,hours=168):
         tokens=[dict(row._mapping) for row in session.execute(select(RunTokenRecord.provider,RunTokenRecord.model,func.sum(RunTokenRecord.prompt_tokens).label('prompt_tokens'),func.sum(RunTokenRecord.completion_tokens).label('completion_tokens'),func.sum(RunTokenRecord.calls).label('calls')).join(RunRecord,RunRecord.id==RunTokenRecord.run_id).where(*window).group_by(RunTokenRecord.provider,RunTokenRecord.model).order_by(RunTokenRecord.provider,RunTokenRecord.model))]
     return {'answerability_guard':{'decisions':guard_counts,'skipped_by_reason':guard_skips,'basis':'Uncached retrieval/query decisions across runs created in the window; not unique runs or model refusals'},'window':{'start':start.isoformat(),'end':end.isoformat(),'basis':'run_created_at'},'runs_by_status':counts,'duration_seconds':percentiles,'tokens':tokens,
             'abstention_rate':abstained/grounded if grounded else None,'truncation_rate':truncated/total if total else None,
+            'truncated_runs_by_source':{'confirmed':(truncated or 0)-unverified,'legacy_checkpoint_unverified':unverified},
             'denominators':{'successful_runs':total,'successful_grounded_runs':grounded or 0},
-            'definitions':{'scope':'deployment-wide','abstention':'Any grounded node abstained in a successful run','duration':'Creation to final completion, including queue and resumed attempts','tokens':'Provider-reported tokens; not monetary cost; missing usage is not estimated'}}
+            'definitions':{'scope':'deployment-wide','abstention':'Any grounded node abstained in a successful run','duration':'Creation to final completion, including queue and resumed attempts','tokens':'Provider-reported tokens; not monetary cost; missing usage is not estimated','truncation':'Successful runs that did not deliver all intended work; legacy_checkpoint_unverified counts runs whose loop completeness an older checkpoint cannot prove, and is included in truncation_rate'}}

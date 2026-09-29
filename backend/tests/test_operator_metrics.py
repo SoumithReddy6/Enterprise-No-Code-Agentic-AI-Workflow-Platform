@@ -111,3 +111,38 @@ def test_startup_backfill_journals_success_and_failure(tmp_path,caplog,monkeypat
     assert events[0]=='storage.backfill.start' and events[-1]=='storage.backfill.finish'
     assert records[-1]['status']=='failed' and records[-1]['error_type']=='ValueError'
     assert 'PRIVATE' not in caplog.text
+
+
+def test_truncated_runs_are_split_by_confirmed_and_unverifiable_source(tmp_path):
+    """Legacy loops whose completeness cannot be proven count as truncated, but operators
+    must be able to tell them from confirmed incomplete work - from columns, not payloads."""
+    from sqlalchemy import event
+    from backend.app.storage import Store
+    from backend.app.operator_metrics import metrics
+    store=Store(f'sqlite:///{tmp_path}/sources.db',Fernet.generate_key())
+    outcomes=[{'truncated':True},  # agent or loop truncation: confirmed by default
+              {'truncated':True,'truncation_source':'legacy_checkpoint_unverified'},
+              {'truncated':True,'truncation_source':'legacy_checkpoint_unverified'},
+              {'truncated':False}]
+    for updates in outcomes:
+        run=store.create_run(sample(),'go');store.claim_next('worker')
+        store.finish_run(run['id'],'worker','success',output='ok',**updates)
+    queries=[]
+    event.listen(store.engine,'before_cursor_execute',lambda conn,cursor,statement,*args:queries.append(statement))
+    report=metrics(store)
+    assert report['truncation_rate']==.75
+    assert report['truncated_runs_by_source']=={'confirmed':1,'legacy_checkpoint_unverified':2}
+    assert all('runs.data' not in statement for statement in queries)
+
+
+def test_a_resumed_run_clears_its_truncation_source(tmp_path):
+    from sqlalchemy.orm import Session
+    from backend.app.storage import Store,RunRecord
+    store=Store(f'sqlite:///{tmp_path}/reset.db',Fernet.generate_key())
+    run=store.create_run(sample(),'go');store.claim_next('worker')
+    store.finish_run(run['id'],'worker','failed',truncated=True,truncation_source='legacy_checkpoint_unverified')
+    store.resume_run(run['id'])
+    with Session(store.engine) as session:
+        row=session.get(RunRecord,run['id'])
+        assert (row.truncated,row.truncation_source)==(False,'')
+        assert row.data['truncation_source']==''

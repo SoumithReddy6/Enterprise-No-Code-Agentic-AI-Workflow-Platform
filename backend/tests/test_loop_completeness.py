@@ -277,12 +277,20 @@ async def test_the_equivalence_cases_cover_each_cause(tmp_path, monkeypatch):
 
 # --------------------------------------------------------------------------- legacy checkpoints
 
-async def legacy_resume(tmp_path, monkeypatch, max_items, items=3):
+async def legacy_resume(tmp_path, monkeypatch, max_items, items=3, agent_body=False):
     from sqlalchemy.orm import Session
     from backend.app.storage import RunRecord
+    from backend.app import iteration
     store, worker, execute, _ = durable_setup(tmp_path, monkeypatch, items=items)
     execute.interrupt = True
-    row = store.create_run(loop_then_step(jira_connection(store), max_items=max_items).model_dump(mode='json'), 'go')
+    document = loop_then_step(jira_connection(store), max_items=max_items).model_dump(mode='json')
+    if agent_body:
+        body = next(n for n in document['nodes'] if n['id'] == 'work')
+        body.update(type='agent', config={'provider': 'demo', 'role': 'reasoner'})
+        async def agent(node, text, ctx, identity, emit, **_):
+            return {'text': 'answer', 'provider': 'demo', 'sources': '[]', 'grounding': json.dumps({'truncated': False})}
+        monkeypatch.setattr(iteration, 'invoke_attached', agent)
+    row = store.create_run(document, 'go')
     await worker.execute(store.claim_next(worker.owner))
     with Session(store.engine) as s:
         record = s.get(RunRecord, row['id'])
@@ -291,28 +299,91 @@ async def legacy_resume(tmp_path, monkeypatch, max_items, items=3):
         record.data = {**record.data, 'checkpoints': checkpoints}; s.commit()
     store.resume_run(row['id'])
     await worker.execute(store.claim_next(worker.owner))
-    return store.run(row['id'])
+    run = store.run(row['id'])
+    assert run['status'] == 'success', run.get('error')
+    cached = next(e for e in run['events'] if e.get('node_id') == 'each' and e.get('cached'))
+    return run, json.loads(cached['outputs']['summary'])
 
 
 @pytest.mark.asyncio
 async def test_a_legacy_limited_checkpoint_is_reconstructed_as_incomplete(tmp_path, monkeypatch):
     """Missing metadata is not evidence of completeness: the 2-of-3 limit is provable."""
-    run = await legacy_resume(tmp_path, monkeypatch, max_items=2)
-    assert run['status'] == 'success' and run['truncated'] is True
+    run, _ = await legacy_resume(tmp_path, monkeypatch, max_items=2)
+    assert run['truncated'] is True and run['truncation_source'] == 'confirmed'
     assert 'each accepted 2 of 3 items' in run['truncation_reason']
 
 
 @pytest.mark.asyncio
-async def test_a_legacy_checkpoint_names_what_it_cannot_verify(tmp_path, monkeypatch):
-    run = await legacy_resume(tmp_path, monkeypatch, max_items=100)
-    summary = json.loads(next(e for e in run['events'] if e.get('node_id') == 'each' and e.get('cached'))['outputs']['summary'])
-    assert run['truncated'] is False and summary['truncated'] is False
-    assert summary['reconstructed'] is True
-    assert set(summary['unverified']) == {'values_dropped', 'incomplete_items'}
+async def test_a_fully_provable_legacy_checkpoint_remains_complete(tmp_path, monkeypatch):
+    """A tool body cannot report agent truncation, and its non-empty values prove nothing
+    was dropped, so every property is provable and the loop is not truncated."""
+    run, summary = await legacy_resume(tmp_path, monkeypatch, max_items=100)
+    assert summary['reconstructed'] is True and summary['unverified'] == []
+    assert run['truncated'] is False and run['truncation_source'] == ''
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('max_items,source', [(100, 'legacy_checkpoint_unverified'), (2, 'confirmed')])
+async def test_unverifiable_legacy_completeness_counts_as_incomplete(tmp_path, monkeypatch, max_items, source):
+    """An agent body may have stopped early, and an older checkpoint never recorded it.
+    With a provable limit as well, the confirmed cause outranks the unverifiable one."""
+    from backend.app.iteration import LEGACY_UNVERIFIED
+    run, summary = await legacy_resume(tmp_path, monkeypatch, max_items=max_items, agent_body=True)
+    assert summary['unverified'] == ['agent_item_truncation']
+    assert summary['truncation_source'] == source
+    assert run['truncated'] is True and run['truncation_source'] == source
+    assert LEGACY_UNVERIFIED in run['truncation_reason']
+    assert ('accepted 2 of 3' in run['truncation_reason']) is (source == 'confirmed')
+
+
+def reconstruct(results, items=('a', 'b'), body='tool_python'):
+    from backend.app.iteration import reconstructed_summary
+    from backend.app.registry import ForEachConfig
+    return reconstructed_summary('each', list(items) if items is not None else None,
+                                 ForEachConfig(body='work'), {'results': results}, body)
+
+
+def test_a_blank_first_success_leaves_dropped_values_unverifiable():
+    """A size drop blanks the first success and nothing refills it; an empty output
+    looks the same, so the drop cannot be ruled out."""
+    blank = reconstruct([{'index': 0, 'status': 'success', 'value': ''}, {'index': 1, 'status': 'success', 'value': 'x'}])
+    assert blank['unverified'] == ['values_dropped'] and blank['truncated'] is True
+    kept = reconstruct([{'index': 0, 'status': 'success', 'value': 'x'}, {'index': 1, 'status': 'success', 'value': ''}])
+    assert kept['unverified'] == [] and kept['truncated'] is False
+
+
+def test_no_successful_items_means_no_payload_could_be_lost():
+    summary = reconstruct([{'index': 0, 'status': 'failed', 'value': '', 'error': 'e'},
+                           {'index': 1, 'status': 'failed', 'value': '', 'error': 'e'}])
+    assert 'values_dropped' not in summary['unverified']
+
+
+@pytest.mark.parametrize('body,unverifiable', [('tool_python', False), ('tool_http', False), ('retrieve', False),
+                                               ('agent', True), ('query', True)])
+def test_only_bodies_that_report_grounding_leave_agent_truncation_unverifiable(body, unverifiable):
+    summary = reconstruct([{'index': 0, 'status': 'success', 'value': 'x'}, {'index': 1, 'status': 'success', 'value': 'y'}], body=body)
+    assert ('agent_item_truncation' in summary['unverified']) is unverifiable
 
 
 def test_reconstruction_without_the_input_list_leaves_limit_and_stop_unverified():
-    from backend.app.iteration import reconstructed_summary
-    from backend.app.registry import ForEachConfig
-    summary = reconstructed_summary('each', None, ForEachConfig(body='work'), {'results': [{'index': 0, 'status': 'success'}]})
-    assert {'limited', 'stopped'} <= set(summary['unverified'])
+    summary = reconstruct([{'index': 0, 'status': 'success', 'value': 'x'}], items=None)
+    assert summary['unverified'] == ['limited', 'stopped']
+    assert summary['truncated'] is True and summary['truncation_source'] == 'legacy_checkpoint_unverified'
+
+
+@pytest.mark.parametrize('order', [('legacy', 'agent'), ('agent', 'legacy')])
+def test_a_confirmed_cause_elsewhere_outranks_legacy_uncertainty(order):
+    """One node's unverifiable completeness must not hide another node's confirmed cut."""
+    from backend.app.worker import run_truncation
+    workflow = loop_flow()
+    legacy = {'results': [], 'failed': '0', 'summary': json.dumps(
+        {'truncated': True, 'truncation_reason': 'unverified', 'truncation_source': 'legacy_checkpoint_unverified'})}
+    agent = {'text': 't', 'grounding': json.dumps({'truncated': True, 'truncation_reason': 'budget'})}
+    outputs = {'legacy': ('each', legacy), 'agent': ('tickets', agent)}
+    values = dict(outputs[name] for name in order)
+    result = run_truncation(workflow, values)
+    assert result['truncation_source'] == 'confirmed'
+    assert set(result['truncation_reason'].split('; ')) == {'unverified', 'budget'}
+    only_legacy = run_truncation(workflow, {'each': legacy})
+    assert only_legacy['truncation_source'] == 'legacy_checkpoint_unverified'
+    assert run_truncation(workflow, {})['truncation_source'] == ''

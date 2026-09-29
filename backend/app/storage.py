@@ -34,6 +34,8 @@ class RunRecord(Base):
     grounded=Column(Boolean,nullable=False,default=False)
     abstained=Column(Boolean,nullable=False,default=False)
     truncated=Column(Boolean,nullable=False,default=False)
+    # 'confirmed', 'legacy_checkpoint_unverified' or '' when not truncated.
+    truncation_source=Column(String(40),nullable=False,default='',server_default='')
 
 class RunEventRecord(Base):
     __tablename__='run_events'
@@ -607,7 +609,7 @@ class Store:
             self.check_resume_writes(row.data)
             if not job:job=JobRecord(run_id=id);s.add(job)
             job.status='queued';job.owner='';job.lease_until=0;job.cancel_requested=False
-            row.data={**row.data,'status':'queued','error':'','output':'','finished_at':None,'truncated':False,'truncation_reason':''};row.status='queued'
-            row.duration_seconds=None;row.grounded=False;row.abstained=False;row.truncated=False
+            row.data={**row.data,'status':'queued','error':'','output':'','finished_at':None,'truncated':False,'truncation_reason':'','truncation_source':''};row.status='queued'
+            row.duration_seconds=None;row.grounded=False;row.abstained=False;row.truncated=False;row.truncation_source=''
             self._event(s,row,{'kind':'run','status':'queued','resumed':True})
             s.commit();return {**row.data,'events':self._events(s,id,tenant_id)}

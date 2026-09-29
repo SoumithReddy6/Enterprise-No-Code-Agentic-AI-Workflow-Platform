@@ -247,7 +247,8 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                         from .iteration import reconstructed_summary
                         source,_,port=node.inputs['items'].partition('.')
                         items=state['values'].get(source,{}).get(port)
-                        outputs={**outputs,'summary':json.dumps(reconstructed_summary(node.id,items,config,outputs))}
+                        body=next((n.type for n in full_workflow.nodes if n.id==config.body),None)
+                        outputs={**outputs,'summary':json.dumps(reconstructed_summary(node.id,items,config,outputs,body))}
                     validation=validate_cached(node,outputs)
                     if inspect.isawaitable(validation):await validation
                     evidence_from_outputs(run_state,outputs)  # Restored evidence keeps its original labels.

@@ -69,28 +69,47 @@ def completeness(node_id,total,accepted,results,failed,dropped):
         reasons.append(f'{node_id} results exceeded {MAX_RESULT_BYTES} bytes; item values were dropped and only outcomes kept.')
     return {'total':total,'accepted':accepted,'processed':len(results),'failed':failed,
             'limited':total>accepted,'stopped':len(results)<accepted,'incomplete_items':len(partial),
-            'values_dropped':dropped,'truncated':bool(reasons),'truncation_reason':' '.join(reasons)}
+            'values_dropped':dropped,'truncated':bool(reasons),'truncation_reason':' '.join(reasons),
+            'truncation_source':'confirmed' if reasons else ''}
 
 
-def reconstructed_summary(node_id,items,config,outputs):
+LEGACY_UNVERIFIED='Loop completeness could not be fully verified because this run was checkpointed by an older Relay version'
+
+
+def reconstructed_summary(node_id,items,config,outputs,body_type):
     """Rebuild the summary of a loop checkpointed before the summary output existed.
 
-    Missing metadata is not evidence of completeness. The limit and stop decisions are
-    provable from the restored input list, the configuration and the results. Whether
-    values were shed for size, or an agent item stopped early, was never recorded, so
-    those are named as unverifiable rather than assumed absent.
+    Missing metadata is not evidence of completeness. What is provable is reconstructed;
+    anything that is not makes the loop count as incomplete, with truncation_source
+    'legacy_checkpoint_unverified' so operators can separate it from confirmed cases.
+
+    * limit and stop: provable from the restored input list, configuration and results.
+    * dropped values: a size drop blanks every value present at that moment, including
+      the first success, and nothing refills it, so a non-empty first success proves no
+      drop happened. With no successes there were no payloads to lose.
+    * agent item truncation: never recorded, but only bodies that report grounding can
+      produce it.
     """
+    from .registry import REGISTRY
     results=outputs.get('results') or []
     failed=sum(r.get('status')=='failed' for r in results)
-    unverified=['values_dropped','incomplete_items']
+    unverified=[]
     if isinstance(items,list):
         accepted=len(items[:min(config.max_items,MAX_ITEMS_CEILING)])
         summary=completeness(node_id,len(items),accepted,results,failed,False)
     else:
-        # Without the input list neither the limit nor the stop decision can be checked.
         summary=completeness(node_id,len(results),len(results),results,failed,False)
-        unverified=['limited','stopped',*unverified]
-    return {**summary,'reconstructed':True,'unverified':unverified}
+        unverified+=['limited','stopped']
+    first=next((r for r in results if r.get('status')=='success'),None)
+    if first is not None and first.get('value')=='':unverified.append('values_dropped')
+    definition=REGISTRY.get(body_type)
+    if definition is None or 'grounding' in definition.outputs:unverified.append('agent_item_truncation')
+    summary={**summary,'reconstructed':True,'unverified':unverified}
+    if unverified:
+        note=f"{LEGACY_UNVERIFIED} ({node_id}; unverified: {', '.join(unverified)})."
+        summary.update(truncated=True,truncation_reason=' '.join(filter(None,[summary['truncation_reason'],note])),
+                       truncation_source=summary['truncation_source'] or 'legacy_checkpoint_unverified')
+    return summary
 
 
 def record_progress(ctx,index,entry):
