@@ -194,3 +194,125 @@ async def test_a_checkpoint_from_before_the_summary_port_still_resumes(tmp_path,
     store.resume_run(row['id'])
     await worker.execute(store.claim_next(worker.owner))
     assert store.run(row['id'])['status'] == 'success'
+
+
+# --------------------------------------------------------------------------- replay equivalence
+# A run interrupted after any item's durable progress commit, then resumed, must end
+# exactly where an uninterrupted run ends: same results, same summary, same run-level
+# verdict, and no item executed twice. Restored items go through the same aggregation as
+# fresh ones, so the stop policy and the result bound apply to them too.
+
+def crash_after_item(store, monkeypatch, index):
+    """Stop the worker right after the progress event for `index` is committed."""
+    original = store.worker_event
+    def record(id, owner, event):
+        result = original(id, owner, event)
+        if event.get('kind') == 'loop_item' and event.get('item_index') == index:
+            raise asyncio.CancelledError()
+        return result
+    monkeypatch.setattr(store, 'worker_event', record)
+    return lambda: monkeypatch.setattr(store, 'worker_event', original)
+
+
+CASES = {
+    # name: (loop options, failing item index or None, byte bound or None)
+    'stop after a failure': ({'on_item_error': 'stop'}, 1, None),
+    'stop on the first item': ({'on_item_error': 'stop'}, 0, None),
+    'continue past a failure': ({}, 1, None),
+    'values shed for size': ({}, None, 150),
+    'limited and shed': ({'max_items': 3}, None, 150),
+}
+
+
+async def execute_case(tmp_path, monkeypatch, case, crash_at=None, items=4):
+    from backend.app import iteration
+    options, failing, bound = CASES[case]
+    if bound is not None: monkeypatch.setattr(iteration, 'MAX_RESULT_BYTES', bound)
+    tmp_path.mkdir()
+    store, worker, _, _ = durable_setup(tmp_path, monkeypatch, items=items)
+    calls = []
+    async def execute(node_type, settings, text, tenant_id='local'):
+        calls.append(json.loads(text)['key'])
+        if failing is not None and len(calls) - 1 == failing and calls.count(calls[-1]) == 1:
+            raise ValueError('item failed')
+        return 'done'
+    monkeypatch.setattr(worker.tools, 'execute', execute)
+    row = store.create_run(loop_flow(connection_id=jira_connection(store), **options).model_dump(mode='json'), 'go')
+    if crash_at is not None:
+        restore = crash_after_item(store, monkeypatch, crash_at)
+        await worker.execute(store.claim_next(worker.owner))
+        assert store.run(row['id'])['status'] != 'success'
+        restore()
+        store.resume_run(row['id'])
+    await worker.execute(store.claim_next(worker.owner))
+    run = store.run(row['id'])
+    assert run['status'] == 'success', run.get('error')
+    return run, calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('case', sorted(CASES))
+async def test_resume_at_every_item_ends_exactly_like_an_uninterrupted_run(tmp_path, monkeypatch, case):
+    baseline, baseline_calls = await execute_case(tmp_path / 'baseline', monkeypatch, case)
+    for crash_at in range(len(baseline_calls)):
+        resumed, calls = await execute_case(tmp_path / f'crash{crash_at}', monkeypatch, case, crash_at)
+        where = f'{case}, interrupted after item {crash_at}'
+        assert calls == baseline_calls, f'{where}: items ran {calls}, expected {baseline_calls}'
+        assert resumed['checkpoints']['each'] == baseline['checkpoints']['each'], where
+        assert (resumed['truncated'], resumed['truncation_reason']) == (baseline['truncated'], baseline['truncation_reason']), where
+
+
+@pytest.mark.asyncio
+async def test_the_equivalence_cases_cover_each_cause(tmp_path, monkeypatch):
+    """Pins what the baselines demonstrate, so the equivalence test compares real outcomes."""
+    expected = {'stop after a failure': ('stopped', 2), 'stop on the first item': ('stopped', 1),
+                'continue past a failure': (None, 4), 'values shed for size': ('values_dropped', 4),
+                'limited and shed': ('limited', 3)}
+    for case, (cause, ran) in expected.items():
+        run, calls = await execute_case(tmp_path / case.replace(' ', '-'), monkeypatch, case)
+        summary = json.loads(run['checkpoints']['each']['summary'])
+        assert len(calls) == ran, case
+        assert run['truncated'] is (cause is not None) and (cause is None or summary[cause] is True), (case, summary)
+
+
+# --------------------------------------------------------------------------- legacy checkpoints
+
+async def legacy_resume(tmp_path, monkeypatch, max_items, items=3):
+    from sqlalchemy.orm import Session
+    from backend.app.storage import RunRecord
+    store, worker, execute, _ = durable_setup(tmp_path, monkeypatch, items=items)
+    execute.interrupt = True
+    row = store.create_run(loop_then_step(jira_connection(store), max_items=max_items).model_dump(mode='json'), 'go')
+    await worker.execute(store.claim_next(worker.owner))
+    with Session(store.engine) as s:
+        record = s.get(RunRecord, row['id'])
+        checkpoints = {**record.data['checkpoints']}
+        checkpoints['each'] = {k: v for k, v in checkpoints['each'].items() if k != 'summary'}
+        record.data = {**record.data, 'checkpoints': checkpoints}; s.commit()
+    store.resume_run(row['id'])
+    await worker.execute(store.claim_next(worker.owner))
+    return store.run(row['id'])
+
+
+@pytest.mark.asyncio
+async def test_a_legacy_limited_checkpoint_is_reconstructed_as_incomplete(tmp_path, monkeypatch):
+    """Missing metadata is not evidence of completeness: the 2-of-3 limit is provable."""
+    run = await legacy_resume(tmp_path, monkeypatch, max_items=2)
+    assert run['status'] == 'success' and run['truncated'] is True
+    assert 'each accepted 2 of 3 items' in run['truncation_reason']
+
+
+@pytest.mark.asyncio
+async def test_a_legacy_checkpoint_names_what_it_cannot_verify(tmp_path, monkeypatch):
+    run = await legacy_resume(tmp_path, monkeypatch, max_items=100)
+    summary = json.loads(next(e for e in run['events'] if e.get('node_id') == 'each' and e.get('cached'))['outputs']['summary'])
+    assert run['truncated'] is False and summary['truncated'] is False
+    assert summary['reconstructed'] is True
+    assert set(summary['unverified']) == {'values_dropped', 'incomplete_items'}
+
+
+def test_reconstruction_without_the_input_list_leaves_limit_and_stop_unverified():
+    from backend.app.iteration import reconstructed_summary
+    from backend.app.registry import ForEachConfig
+    summary = reconstructed_summary('each', None, ForEachConfig(body='work'), {'results': [{'index': 0, 'status': 'success'}]})
+    assert {'limited', 'stopped'} <= set(summary['unverified'])

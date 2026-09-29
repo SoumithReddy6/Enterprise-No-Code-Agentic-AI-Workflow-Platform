@@ -3,6 +3,7 @@ from dataclasses import dataclass,replace
 from typing import Annotated, TypedDict
 import asyncio
 import inspect
+import json
 import time
 from langgraph.graph import StateGraph, START, END
 from pydantic import ValidationError
@@ -241,6 +242,12 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
             async def handler(state):
                 if completed and node.id in completed:
                     outputs=completed[node.id]
+                    if node.type=='for_each' and 'summary' not in outputs:
+                        # Checkpointed by a release without the summary output.
+                        from .iteration import reconstructed_summary
+                        source,_,port=node.inputs['items'].partition('.')
+                        items=state['values'].get(source,{}).get(port)
+                        outputs={**outputs,'summary':json.dumps(reconstructed_summary(node.id,items,config,outputs))}
                     validation=validate_cached(node,outputs)
                     if inspect.isawaitable(validation):await validation
                     evidence_from_outputs(run_state,outputs)  # Restored evidence keeps its original labels.

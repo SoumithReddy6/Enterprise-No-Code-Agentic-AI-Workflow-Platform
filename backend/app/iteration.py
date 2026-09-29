@@ -72,6 +72,27 @@ def completeness(node_id,total,accepted,results,failed,dropped):
             'values_dropped':dropped,'truncated':bool(reasons),'truncation_reason':' '.join(reasons)}
 
 
+def reconstructed_summary(node_id,items,config,outputs):
+    """Rebuild the summary of a loop checkpointed before the summary output existed.
+
+    Missing metadata is not evidence of completeness. The limit and stop decisions are
+    provable from the restored input list, the configuration and the results. Whether
+    values were shed for size, or an agent item stopped early, was never recorded, so
+    those are named as unverifiable rather than assumed absent.
+    """
+    results=outputs.get('results') or []
+    failed=sum(r.get('status')=='failed' for r in results)
+    unverified=['values_dropped','incomplete_items']
+    if isinstance(items,list):
+        accepted=len(items[:min(config.max_items,MAX_ITEMS_CEILING)])
+        summary=completeness(node_id,len(items),accepted,results,failed,False)
+    else:
+        # Without the input list neither the limit nor the stop decision can be checked.
+        summary=completeness(node_id,len(results),len(results),results,failed,False)
+        unverified=['limited','stopped',*unverified]
+    return {**summary,'reconstructed':True,'unverified':unverified}
+
+
 def record_progress(ctx,index,entry):
     """Persist this item's result and publish run-wide spend to the caller's sink.
 
@@ -84,9 +105,6 @@ def record_progress(ctx,index,entry):
 
 
 async def for_each_node(inputs,config,ctx):
-    from .tool_service import UncertainWriteError
-    from .approvals import ApprovalPause
-    from .observability import journal
     items=inputs['items']
     if not isinstance(items,list):raise ValueError('for_each expects a list; connect an array output to items.')
     body=next((n for n in (ctx.workflow.nodes if ctx.workflow else []) if n.id==config.body), None)
@@ -100,61 +118,69 @@ async def for_each_node(inputs,config,ctx):
 
     for index,value in enumerate(selected):
         if index in done:
-            results.append(done[index])
-            if done[index].get('status')=='failed':failed+=1
-            continue
-        invocation=f'{ctx.node_id}:{index}:{body.id}'
-        identity=ExecutionIdentity(body.id,item_owner(ctx,index),invocation,ctx.node_id,index)
-        text=item_input(value)
-        common={**identity.event_fields(),'transient':True}
-        await emit({**common,'status':'running','inputs':{'input':text[:2000]}})
-        try:
-            async def invoke():
-                return await invoke_attached(body,text,ctx,identity,emit,
-                                             action_budget=(ctx.run or {}).get('action_budget'))
-            outcome=await execute_with_policy(
-                invoke,identity,body.retry,ctx.run,emit,generic_error='Item execution failed.',
-                action_budget=(ctx.run or {}).get('action_budget'),charge_first_attempt=charges_action(body.type))
-            if outcome.status=='failed':
-                entry={'index':index,'status':'failed','value':'','error':outcome.error}
-                failed+=1
-                event={**common,'status':'failed','error':outcome.error}
-                if outcome.usage:event['usage']=outcome.usage
-                if body.retry.attempts:event['attempt']=outcome.attempts
-                await emit(event)
-                journal(event='loop.item_failed',node_id=ctx.node_id,reason_code='item_error')
-                if config.on_item_error=='stop':
-                    record_progress(ctx,index,entry)
-                    await emit({'kind':'loop_item','status':'info','node_id':ctx.node_id,'item_index':index,'item_result':entry,'transient':True})
-                    results.append(entry)
-                    break
-            else:
-                output=outcome.outputs
-                entry={'index':index,'status':'success','value':output.get('text',''),'error':''}
-                reason=body_truncation(output)
-                if reason:entry['truncation_reason']=reason
-                event={**common,'status':'success','outputs':output}
-                if outcome.usage:event['usage']=outcome.usage
-                await emit(event)
-        except ApprovalPause:
-            # A pause is not an item failure: swallowing it would disable the approval
-            # gate for every write inside a loop. Usage already spent is still reported.
-            from .execution_policy import usage_for
-            paused={**common,'status':'paused'};usage=usage_for(ctx.run,identity)
-            if usage:paused['usage']=usage
-            await emit(paused)
-            raise
-        except UncertainWriteError:
-            # The external outcome is unknown; iterating past it could duplicate a write.
-            raise
-        record_progress(ctx,index,entry)
-        await emit({'kind':'loop_item','status':'info','node_id':ctx.node_id,'item_index':index,'item_result':entry,'transient':True})
+            # Restored from an earlier attempt: it passes through the same aggregation
+            # below as a fresh item, so replay reapplies the stop policy and the result
+            # bound instead of skipping them.
+            entry=done[index]
+        else:
+            entry=await _run_item(ctx,body,emit,index,value)
         results.append(entry)
+        if entry.get('status')=='failed':failed+=1
         if not within_budget(results):
             # Keep every outcome; shed only the payloads, so the caller still sees what ran.
+            # Progress keeps full values, so replaying the same entries sheds identically.
             results=[{**r,'value':''} for r in results];dropped=True
+        if entry.get('status')=='failed' and config.on_item_error=='stop':break
 
     summary=completeness(ctx.node_id,len(items),len(selected),results,failed,dropped)
     await emit({'kind':'loop_summary','node_id':ctx.node_id,'status':'warning' if summary['truncated'] else 'info',
                 'transient':True,**summary})
     return {'results':results,'failed':str(failed),'summary':json.dumps(summary)}
+
+
+async def _run_item(ctx,body,emit,index,value):
+    """Execute one fresh item, record it durably, and return its result entry."""
+    from .tool_service import UncertainWriteError
+    from .approvals import ApprovalPause
+    from .observability import journal
+    invocation=f'{ctx.node_id}:{index}:{body.id}'
+    identity=ExecutionIdentity(body.id,item_owner(ctx,index),invocation,ctx.node_id,index)
+    text=item_input(value)
+    common={**identity.event_fields(),'transient':True}
+    await emit({**common,'status':'running','inputs':{'input':text[:2000]}})
+    try:
+        async def invoke():
+            return await invoke_attached(body,text,ctx,identity,emit,
+                                         action_budget=(ctx.run or {}).get('action_budget'))
+        outcome=await execute_with_policy(
+            invoke,identity,body.retry,ctx.run,emit,generic_error='Item execution failed.',
+            action_budget=(ctx.run or {}).get('action_budget'),charge_first_attempt=charges_action(body.type))
+        if outcome.status=='failed':
+            entry={'index':index,'status':'failed','value':'','error':outcome.error}
+            event={**common,'status':'failed','error':outcome.error}
+            if outcome.usage:event['usage']=outcome.usage
+            if body.retry.attempts:event['attempt']=outcome.attempts
+            await emit(event)
+            journal(event='loop.item_failed',node_id=ctx.node_id,reason_code='item_error')
+        else:
+            output=outcome.outputs
+            entry={'index':index,'status':'success','value':output.get('text',''),'error':''}
+            reason=body_truncation(output)
+            if reason:entry['truncation_reason']=reason
+            event={**common,'status':'success','outputs':output}
+            if outcome.usage:event['usage']=outcome.usage
+            await emit(event)
+    except ApprovalPause:
+        # A pause is not an item failure: swallowing it would disable the approval
+        # gate for every write inside a loop. Usage already spent is still reported.
+        from .execution_policy import usage_for
+        paused={**common,'status':'paused'};usage=usage_for(ctx.run,identity)
+        if usage:paused['usage']=usage
+        await emit(paused)
+        raise
+    except UncertainWriteError:
+        # The external outcome is unknown; iterating past it could duplicate a write.
+        raise
+    record_progress(ctx,index,entry)
+    await emit({'kind':'loop_item','status':'info','node_id':ctx.node_id,'item_index':index,'item_result':entry,'transient':True})
+    return entry
