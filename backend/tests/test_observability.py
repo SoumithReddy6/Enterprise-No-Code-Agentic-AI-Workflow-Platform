@@ -10,6 +10,24 @@ from backend.app.storage import Store
 from backend.app.worker import Worker
 from backend.tests.test_compiler import sample
 
+
+def test_usage_keeps_run_totals_and_separates_invocation_outcomes():
+    from backend.app import registry
+    from backend.app.execution_policy import ExecutionIdentity,usage_for
+
+    run={};config=LLMConfig(provider='ollama',model='tiny')
+    first=ExecutionIdentity('child','agent','agent:1:child','agent')
+    second=ExecutionIdentity('child','agent','agent:2:child','agent')
+    for identity,tokens in ((first,3),(second,5)):
+        registry.account_usage(
+            Context('',lambda _:'',node_id='child',checkpoint_owner='agent',
+                    execution_identity=identity,run=run),
+            {'prompt_tokens':tokens,'completion_tokens':1},config)
+
+    assert run['usage']['agent']['prompt_tokens']==8
+    assert usage_for(run,first)['prompt_tokens']==3
+    assert usage_for(run,second)['prompt_tokens']==5
+
 def transport(monkeypatch,handler):
     real=httpx.AsyncClient
     monkeypatch.setattr(providers,'client',lambda timeout:real(transport=httpx.MockTransport(handler)))

@@ -40,6 +40,34 @@ async def test_tool_error_is_an_observation_not_a_run_failure(monkeypatch):
     assert 'tool_error' in seen[1] and 'SyntaxError' in seen[1]
     assert 'Evaluates one Python arithmetic expression' in seen[0] and '"input": "text the configured code receives as input_text"' in seen[0]
 
+
+@pytest.mark.asyncio
+async def test_attached_tool_uses_shared_retry_policy_and_one_typed_identity(monkeypatch):
+    from backend.app import execution_policy
+    from backend.app.execution_policy import ExecutionIdentity
+    from backend.app.models import RetryPolicy
+    workflow=calc_flow();workflow.nodes[2].retry=RetryPolicy(attempts=1,base_delay=0)
+    scripted(monkeypatch,['{"action":"call","target":"calc","input":"6*7"}',
+                          '{"action":"final","text":"42"}'])
+    attempts=[];events=[]
+    async def platform(action,*args):
+        assert action=='tool'
+        attempts.append(args[3])
+        if len(attempts)==1:raise __import__('backend.app.tool_service',fromlist=['TransientToolError']).TransientToolError('busy')
+        return '42'
+    async def emit(event):events.append(event)
+    async def no_sleep(_):pass
+    monkeypatch.setattr(execution_policy.asyncio,'sleep',no_sleep)
+    result=await compile_workflow(workflow,platform_resolver=platform,emit=emit,message='Compute').graph.ainvoke({'values':{}})
+    assert result['values']['out']['text']=='42'
+    assert len(attempts)==2 and all(isinstance(value,ExecutionIdentity) for value in attempts)
+    assert attempts[0] is attempts[1], 'approval, retry and settlement receive one constructed identity'
+    retry=next(event for event in events if event.get('status')=='retrying')
+    assert retry['invocation_id']==attempts[0].invocation_id
+    outcomes=[event for event in events if event.get('invocation_id')==attempts[0].invocation_id
+              and event.get('status') in ('success','failed','paused')]
+    assert len(outcomes)==1
+
 @pytest.mark.asyncio
 async def test_exhausted_budget_after_repeated_tool_errors_abstains(monkeypatch):
     scripted(monkeypatch,['{"action":"call","target":"calc","input":"x"}']*8)

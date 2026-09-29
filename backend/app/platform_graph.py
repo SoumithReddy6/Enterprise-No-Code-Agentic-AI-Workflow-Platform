@@ -47,6 +47,13 @@ def split_graph(workflow):
         if node.type in ('retrieve','query') and not node.config.get('knowledge_base_id'):errors.append(f'{node.id}: select a knowledge base.')
         if node.id in attached and node.id in flow_ids:errors.append(f'{node.id}: an attached callable cannot also be a flow step.')
         if node.id in attached and node.inputs:errors.append(f'{node.id}: attached callables receive input from their caller; clear flow bindings.')
+        if node.id in attached and node.retry.attempts and node.type.startswith('tool_'):
+            from .tool_service import CONFIGS,is_write
+            model=CONFIGS.get(node.type)
+            try:write=bool(model and is_write(node.type,model.model_validate(node.config)))
+            except ValueError:write=False  # The configuration error below is the actionable message.
+            if write:
+                errors.append(f'{node.id}: a node that writes externally cannot be retried; a repeated attempt may duplicate a completed write.')
         if node.id not in flow_ids:
             definition=REGISTRY.get(node.type)
             if not definition:errors.append(f'Unknown node type: {node.type}.');continue

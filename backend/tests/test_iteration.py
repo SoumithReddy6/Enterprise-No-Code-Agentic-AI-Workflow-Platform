@@ -15,7 +15,7 @@ def jira_connection(store):
          'username':'bot','secret':'token'},'local')['id']
 
 
-def loop_flow(max_items=100, on_item_error='continue', connection_id='c1'):
+def loop_flow(max_items=100, on_item_error='continue', connection_id='c1', body_retry=None):
     """jira search -> for each issue -> python tool -> response."""
     return Workflow.model_validate({'version':1,'name':'Batch','nodes':[
         {'id':'input','type':'chat_input'},
@@ -23,7 +23,8 @@ def loop_flow(max_items=100, on_item_error='continue', connection_id='c1'):
          'config':{'connection_id':connection_id,'operation':'search','jql':'assignee=me'}},
         {'id':'each','type':'for_each','inputs':{'items':'tickets.items'},
          'config':{'body':'work','max_items':max_items,'on_item_error':on_item_error}},
-        {'id':'work','type':'tool_python','config':{'code':'print(input_text)','description':'Handles one item.'}},
+        {'id':'work','type':'tool_python','config':{'code':'print(input_text)','description':'Handles one item.'},
+         **({'retry':body_retry} if body_retry is not None else {})},
         {'id':'out','type':'response','inputs':{'text':'input.message'}}],
         'edges':[{'id':'a','source':'input','target':'tickets'},
                  {'id':'b','source':'tickets','target':'each'},
@@ -90,6 +91,49 @@ async def test_one_failing_item_does_not_discard_the_others():
     assert [r['status'] for r in results]==['success','success','failed','success','success','success']
     assert results[2]['error']=='provider unreachable'
     assert result['values']['each']['failed']=='1'
+
+
+@pytest.mark.asyncio
+async def test_transient_loop_body_uses_the_same_retry_policy_as_a_graph_node(monkeypatch):
+    from backend.app import execution_policy
+    attempts=0;events=[]
+    def flaky(_index,_text):
+        nonlocal attempts
+        attempts+=1
+        if attempts==1:raise TransientToolError('provider unavailable')
+        return 'done'
+    async def no_sleep(_):pass
+    monkeypatch.setattr(execution_policy.asyncio,'sleep',no_sleep)
+    resolver,_=platform(issues(1),flaky)
+    result=await run(loop_flow(body_retry={'attempts':2,'base_delay':0}),resolver,events)
+    assert result['values']['each']['results'][0]['status']=='success'
+    assert attempts==2
+    retries=[event for event in events if event.get('status')=='retrying']
+    assert len(retries)==1 and retries[0]['invocation_id']=='each:0:work'
+    outcomes=[event for event in events if event.get('invocation_id')=='each:0:work'
+              and event.get('status') in ('success','failed','paused')]
+    assert len(outcomes)==1, 'the caller owns exactly one outcome event'
+
+
+@pytest.mark.asyncio
+async def test_loop_constructs_one_typed_identity_for_dispatch_and_events():
+    from backend.app.execution_policy import ExecutionIdentity
+
+    dispatched=[];events=[]
+    async def resolver(action,*args):
+        assert action=='tool'
+        node_type,settings,text=args[:3]
+        if node_type=='tool_jira':
+            return {'text':'{}','items':issues(1),'truncated':False,'warnings':[]}
+        dispatched.append(args[3])
+        return 'done'
+
+    await run(loop_flow(),resolver,events)
+    assert dispatched==[ExecutionIdentity('work','each:0','each:0:work','each',0)]
+    outcome=next(event for event in events
+                 if event.get('invocation_id')=='each:0:work' and event.get('status')=='success')
+    assert {key:outcome[key] for key in ('node_id','invocation_id','parent_node_id','item_index')} \
+           == dispatched[0].event_fields()
 
 
 @pytest.mark.asyncio
@@ -204,6 +248,15 @@ def test_nested_loops_are_rejected():
 
 def test_valid_loop_workflow_passes():
     assert validate_workflow(loop_flow())==[]
+
+
+def test_attached_write_body_cannot_enable_retries():
+    workflow=loop_flow()
+    body=next(node for node in workflow.nodes if node.id=='work')
+    body.type='tool_http';body.config={'connection_id':'c1','method':'POST','enable_writes':True}
+    from backend.app.models import RetryPolicy
+    body.retry=RetryPolicy(attempts=1)
+    assert any('writes externally cannot be retried' in error for error in validate_workflow(workflow))
 
 
 def test_max_items_bounds_are_enforced():
