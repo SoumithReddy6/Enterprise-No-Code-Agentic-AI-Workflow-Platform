@@ -1,0 +1,6 @@
+{
+  "commit": "7c76d4e80c706e03ca91fbe11b2d2a34e1eeb40e",
+  "source_export": "/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/relay-s09-audit-n0msg9gj",
+  "exit_code": 1,
+  "method": "git archive HEAD, external audit tests only; existing dependency environment"
+}
