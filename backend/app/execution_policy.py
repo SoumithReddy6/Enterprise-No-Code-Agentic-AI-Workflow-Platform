@@ -63,8 +63,9 @@ class ActionBudgetExhausted(ValueError):
 
 
 # A node reports that the run did not deliver all its work under this key in its graph
-# value. It is not an output: no port can be named with a leading underscore, so it can
-# never be bound, and it is read only when the run's completeness is decided.
+# value. It is not an output: registry.check_port_names rejects any port starting with
+# registry.RESERVED_PORT_PREFIX, and binding validation refuses one, so it can never be
+# declared or bound. It is read only when the run's completeness is decided.
 TRUNCATION_KEY='_truncation'
 
 

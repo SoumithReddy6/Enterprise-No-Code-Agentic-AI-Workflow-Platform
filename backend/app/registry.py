@@ -66,6 +66,19 @@ class Context:
     emit: Callable | None = None
     run: dict | None = None  # Shared per run: {'evidence': [passages with unique citation labels]}
 
+# Ports named with this prefix would collide with run metadata carried in a node's graph
+# value (execution_policy.TRUNCATION_KEY), which must never be declared or bound.
+RESERVED_PORT_PREFIX='_'
+
+
+def check_port_names(definition):
+    for kind,ports in (('input',definition.inputs),('output',definition.outputs)):
+        reserved=sorted(str(name) for name in ports if not isinstance(name,str) or name.startswith(RESERVED_PORT_PREFIX))
+        if reserved:
+            raise ValueError(f"{definition.type}: {kind} port names cannot start with '{RESERVED_PORT_PREFIX}' "
+                             f"({', '.join(reserved)}); that prefix is reserved for run metadata.")
+
+
 @dataclass
 class NodeDefinition:
     type: str
@@ -78,6 +91,9 @@ class NodeDefinition:
     handler: Callable[..., Awaitable[dict]]
     side_effects: tuple[str, ...] = ()
     hidden: bool = False
+
+    def __post_init__(self):
+        check_port_names(self)
 
     def public(self):
         return {'type': self.type, 'name': self.name, 'version': 1,
@@ -183,6 +199,7 @@ class ForEachConfig(StrictModel):
     on_item_error: Literal['continue','stop'] = 'continue'
 
 def register(definition: NodeDefinition):
+    check_port_names(definition)  # Again: a definition's dicts can change after construction.
     if definition.type in REGISTRY:
         raise ValueError(f'Duplicate node type: {definition.type}')
     REGISTRY[definition.type] = definition

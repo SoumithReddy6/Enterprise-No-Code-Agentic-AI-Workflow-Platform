@@ -8,7 +8,7 @@ import time
 from langgraph.graph import StateGraph, START, END
 from pydantic import ValidationError
 from .models import Workflow
-from .registry import REGISTRY, Context, validate_template
+from .registry import REGISTRY, RESERVED_PORT_PREFIX, Context, validate_template
 from .approvals import ApprovalPause
 from .execution_policy import (ExecutionIdentity, execute_with_policy, charges_action,
                                accounting_snapshot,
@@ -131,9 +131,11 @@ def _validate_flow(workflow: Workflow) -> list[str]:
         for name, ref in nodes[id].inputs.items():
             source, sep, port = ref.partition('.')
             source_def = REGISTRY.get(nodes[source].type) if source in nodes else None
-            if sep and source in has and source_def and port in source_def.outputs:
+            # A reserved port is never bindable, even if a definition was altered to declare one.
+            declared=bool(sep and source_def and port in source_def.outputs and not port.startswith(RESERVED_PORT_PREFIX))
+            if declared and source in has:
                 continue
-            if sep and source in ran and source_def and port in source_def.outputs:
+            if declared and source in ran:
                 if nodes[source].on_error == 'continue':
                     continue  # Reported above with the fix: use 'route'.
                 errors.append(f'{id}: invalid binding {name} = {ref}; {ref} is unavailable on a possible error path, '
