@@ -1,0 +1,58 @@
+[
+ {
+  "items": 25,
+  "processed": 25,
+  "values_dropped": 0,
+  "final_bytes": {
+   "runs_row": 37758,
+   "run_loop_items": 26490,
+   "run_events": 108548
+  },
+  "written_bytes": {
+   "runs": 140660,
+   "run_events": 114957,
+   "run_loop_items": 27390,
+   "total": 283007
+  }
+ },
+ {
+  "items": 50,
+  "processed": 50,
+  "values_dropped": 0,
+  "final_bytes": {
+   "runs_row": 72933,
+   "run_loop_items": 52990,
+   "run_events": 215798
+  },
+  "written_bytes": {
+   "runs": 276285,
+   "run_events": 227807,
+   "run_loop_items": 54790,
+   "total": 558882
+  },
+  "growth_vs_previous": {
+   "items": 2.0,
+   "total_written": 1.97
+  }
+ },
+ {
+  "items": 100,
+  "processed": 100,
+  "values_dropped": 0,
+  "final_bytes": {
+   "runs_row": 143286,
+   "run_loop_items": 105990,
+   "run_events": 430304
+  },
+  "written_bytes": {
+   "runs": 581295,
+   "run_events": 453513,
+   "run_loop_items": 109590,
+   "total": 1144398
+  },
+  "growth_vs_previous": {
+   "items": 2.0,
+   "total_written": 2.05
+  }
+ }
+]

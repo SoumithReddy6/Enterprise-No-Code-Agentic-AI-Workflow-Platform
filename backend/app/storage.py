@@ -169,6 +169,15 @@ def observed(event):
     return {**kept,'preview_of':cut} if cut else event
 
 
+LOOP_RESULTS_STORE='run_loop_items'
+
+
+def results_digest(results):
+    """A canonical hash of loop results, so a compact checkpoint can prove its rows."""
+    import hashlib
+    return hashlib.sha256(json.dumps(results,ensure_ascii=False,sort_keys=True,separators=(',',':'),default=str).encode()).hexdigest()
+
+
 class Store:
     def __init__(self,database_url,encryption_key,auto_upgrade=True):
         self.engine=create_engine(database_url,connect_args={'check_same_thread':False,'timeout':30} if database_url.startswith('sqlite') else {})
@@ -466,6 +475,41 @@ class Store:
             s.add(RunTokenRecord(run_id=row.id,seq=0 if last is None else last+1,**usage))
 
     @staticmethod
+    def _compact_loop(s,row,node_id,outputs):
+        """A loop checkpoint that references its item rows instead of embedding results.
+
+        Compacted only when the rows provably hold the results: indexed 0..n-1 and equal
+        entry for entry. A loop resumed from document-era progress keeps its results
+        embedded. The rows were each committed under the lease before this checkpoint,
+        which is written in the same fenced transaction as the loop's success event.
+        """
+        kinds={n.get('id'):n.get('type') for n in row.data.get('workflow',{}).get('nodes',[])}
+        results=outputs.get('results')
+        if kinds.get(node_id)!='for_each' or not isinstance(results,list) or not results:return outputs
+        if [entry.get('index') for entry in results]!=list(range(len(results))):return outputs
+        stored={item.item_index:item.entry for item in s.scalars(select(RunLoopItemRecord).where(
+            RunLoopItemRecord.run_id==row.id,RunLoopItemRecord.node_id==node_id,RunLoopItemRecord.item_index<len(results)))}
+        if any(stored.get(index)!=entry for index,entry in enumerate(results)):return outputs
+        return {**outputs,'results':{'stored_in':LOOP_RESULTS_STORE,'count':len(results),'sha256':results_digest(results)}}
+
+    @staticmethod
+    def _hydrate_loop(node_id,outputs,rows):
+        """The public checkpoint shape of a compact loop checkpoint, or a visible failure.
+
+        Missing or altered rows never become an empty successful loop: the results are
+        replaced by a marker whose 'unavailable' reason resume refuses to proceed past.
+        """
+        marker=outputs.get('results')
+        if not (isinstance(marker,dict) and marker.get('stored_in')==LOOP_RESULTS_STORE):return outputs
+        entries=[rows.get((node_id,index)) for index in range(marker.get('count',0))]
+        missing=sum(entry is None for entry in entries)
+        if missing or results_digest(entries)!=marker.get('sha256'):
+            reason=(f'{missing} of {len(entries)} stored item results are missing' if missing
+                    else 'stored item results do not match the checkpoint')
+            return {**outputs,'results':{**marker,'unavailable':f'Loop {node_id} cannot be restored: {reason}. Start a new run.'}}
+        return {**outputs,'results':entries}
+
+    @staticmethod
     def _accounting(row):
         """Run-wide spend: the column, or the document copy for runs from before it."""
         return row.accounting if row.accounting is not None else row.data.get('accounting')
@@ -475,16 +519,25 @@ class Store:
         """The run document with state kept outside it merged back in.
 
         Loop progress: legacy progress lives in the document, new progress in
-        run_loop_items, and for the same item the row wins. Accounting: the column wins
+        run_loop_items, and for the same item the row wins. Loop checkpoints that
+        reference their rows are rehydrated. Accounting: the column wins
         over a legacy document copy. Every reader that decides what to skip, whether a
         write settled or what budget remains goes through here, so no store is consulted
         alone.
         """
         document=dict(row.data)
         progress={node:dict(entries) for node,entries in row.data.get('loop_progress',{}).items()}
+        rows={}
         for item in s.scalars(select(RunLoopItemRecord).where(RunLoopItemRecord.run_id==row.id)):
             progress.setdefault(item.node_id,{})[str(item.item_index)]=item.entry
+            rows[(item.node_id,item.item_index)]=item.entry
         if progress:document['loop_progress']=progress
+        # Compact loop checkpoints are rehydrated to their public shape: {results, failed,
+        # summary}, with results read from the rows they reference.
+        checkpoints=row.data.get('checkpoints')
+        if checkpoints:
+            document['checkpoints']={node:Store._hydrate_loop(node,outputs,rows) if isinstance(outputs,dict) else outputs
+                                     for node,outputs in checkpoints.items()}
         accounting=Store._accounting(row)
         if accounting is not None:document['accounting']=accounting
         return document
@@ -527,7 +580,14 @@ class Store:
         with Session(self.engine) as s:
             if not self._fence(s,id,owner):return False
             row=s.get(RunRecord,id);data=row.data
-            self._event(s,row,observed(event))
+            checkpoint=None
+            if event.get('node_id') and event['status']=='success' and 'outputs' in event and not event.get('transient'):
+                checkpoint=self._compact_loop(s,row,event['node_id'],event['outputs'])
+            stored=observed(event)
+            if checkpoint is not None and checkpoint is not event['outputs']:
+                # The event would otherwise hold a second full copy of the results.
+                stored={**stored,'outputs':checkpoint}
+            self._event(s,row,stored)
             from .evidence_registry import source_high_water
             high=source_high_water(event.get('outputs',{}))
             if high>row.citation_counter:row.citation_counter=high
@@ -540,8 +600,8 @@ class Store:
                 # instead of repeating paid work or an external write. merge makes a
                 # repeated event for the same item an update, not a duplicate.
                 s.merge(RunLoopItemRecord(run_id=id,node_id=event['node_id'],item_index=int(event['item_index']),entry=event['item_result']))
-            if event.get('node_id') and event['status']=='success' and 'outputs' in event and not event.get('transient'):
-                data={**data,'checkpoints':{**data.get('checkpoints',{}),event['node_id']:event['outputs']},'agent_frames':{k:v for k,v in data.get('agent_frames',{}).items() if v.get('checkpoint_owner')!=event['node_id']}}
+            if checkpoint is not None:
+                data={**data,'checkpoints':{**data.get('checkpoints',{}),event['node_id']:checkpoint},'agent_frames':{k:v for k,v in data.get('agent_frames',{}).items() if v.get('checkpoint_owner')!=event['node_id']}}
             if data is not row.data:row.data=data
             s.commit();return True
 
