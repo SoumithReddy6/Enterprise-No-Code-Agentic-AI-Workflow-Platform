@@ -243,3 +243,26 @@ def test_events_outside_loops_are_untouched():
     from backend.app.storage import observed
     event = {'node_id': 'send', 'status': 'success', 'outputs': {'text': 'x' * (5 * PREVIEW_CHARS)}}
     assert observed(event) is event
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('spoof', [{'loop_node_id': 'spoofed', 'item_index': 999}, {'loop_node_id': '', 'item_index': None}])
+async def test_a_nested_event_cannot_override_its_loop_identity(monkeypatch, spoof):
+    """Through either path a nested node emits, the identity is the loop's. Blanking it
+    would also have escaped the storage preview."""
+    from backend.app import iteration
+    from backend.app.storage import observed
+    async def body(node, text, ctx, identity, emit, **_):
+        await ctx.emit({'node_id': 'deep', 'status': 'success', 'transient': True, 'outputs': {'text': 'z' * 9000}, **spoof})
+        await emit({'node_id': 'deep', 'status': 'running', 'transient': True, 'inputs': {'input': 'z' * 9000}, **spoof})
+        return {'text': 'done'}
+    monkeypatch.setattr(iteration, 'invoke_attached', body)
+    resolver_items = json.loads(jira_payload(2))['issues']
+    async def platform(action, node_type, settings, text, identity):
+        return {'text': '{}', 'items': resolver_items, 'truncated': False, 'warnings': []}
+    events = []
+    async def emit(event): events.append(dict(event))
+    await compile_workflow(agent_loop(), message='go', platform_resolver=platform, emit=emit).graph.ainvoke({'values': {}})
+    deep = [e for e in events if e.get('node_id') == 'deep']
+    assert [(e['loop_node_id'], e['item_index']) for e in deep] == [('each', 0), ('each', 0), ('each', 1), ('each', 1)]
+    assert all(len(json.dumps(observed(e))) <= 4 * PREVIEW_CHARS for e in deep), 'a spoofed identity must not escape the preview'

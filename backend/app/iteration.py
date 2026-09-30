@@ -225,8 +225,10 @@ async def _run_item(ctx,body,emit,index,value):
     # every agent step, tool call, specialist, retry and failure nested beneath it. The
     # context is replaced too, because nested nodes may emit through ctx.emit rather than
     # the emit they were handed, and every nested context is derived from this one.
+    # The wrapper owns this identity: it is applied last, so a nested event can neither
+    # spoof another item nor blank it to escape the storage preview.
     loop_fields={'loop_node_id':ctx.node_id,'item_index':index}
-    async def item_emit(event):await emit({**loop_fields,**event})
+    async def item_emit(event):await emit({**event,**loop_fields})
     item_ctx=replace(ctx,emit=item_emit)
     common={**identity.event_fields(),'transient':True}
     await item_emit({**common,'status':'running','inputs':{'input':text[:PREVIEW_CHARS]}})
