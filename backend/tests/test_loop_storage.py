@@ -84,8 +84,8 @@ def test_item_events_keep_previews_while_the_row_keeps_the_full_value(tmp_path, 
     body = [e for e in run['events'] if e.get('node_id') == 'work' and e.get('status') == 'success']
     items = [e for e in run['events'] if e.get('kind') == 'loop_item']
     assert body and items
-    assert all(e['outputs']['text'] == long[:PREVIEW_CHARS] and e['preview_of'] == ['text'] for e in body)
-    assert all(e['item_result']['value'] == long[:PREVIEW_CHARS] and e['preview_of'] == ['value'] for e in items)
+    assert all(e['outputs']['text'] == long[:PREVIEW_CHARS] and e['preview_of'] == ['outputs.text'] for e in body)
+    assert all(e['item_result']['value'] == long[:PREVIEW_CHARS] and e['preview_of'] == ['item_result.value'] for e in items)
     # The durable copies are whole: the item rows and the loop's checkpointed results.
     assert all(entry['value'] == long for entry in rows(store, row['id']).values())
     assert all(r['value'] == long for r in run['checkpoints']['each']['results'])

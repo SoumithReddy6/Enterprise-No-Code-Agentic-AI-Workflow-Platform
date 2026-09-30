@@ -214,23 +214,31 @@ async def _run_item(ctx,body,emit,index,value):
     entry is None when the run-wide action budget refused the item before it made any
     call. The caller admits, persists and publishes the entry.
     """
+    from dataclasses import replace
     from .tool_service import UncertainWriteError
     from .approvals import ApprovalPause
     from .observability import journal
     invocation=f'{ctx.node_id}:{index}:{body.id}'
     identity=ExecutionIdentity(body.id,item_owner(ctx,index),invocation,ctx.node_id,index)
     text=item_input(value)
+    # Everything this item emits carries the loop's identity: the body's own events, and
+    # every agent step, tool call, specialist, retry and failure nested beneath it. The
+    # context is replaced too, because nested nodes may emit through ctx.emit rather than
+    # the emit they were handed, and every nested context is derived from this one.
+    loop_fields={'loop_node_id':ctx.node_id,'item_index':index}
+    async def item_emit(event):await emit({**loop_fields,**event})
+    item_ctx=replace(ctx,emit=item_emit)
     common={**identity.event_fields(),'transient':True}
-    await emit({**common,'status':'running','inputs':{'input':text[:PREVIEW_CHARS]}})
+    await item_emit({**common,'status':'running','inputs':{'input':text[:PREVIEW_CHARS]}})
     try:
         async def invoke():
-            return await invoke_attached(body,text,ctx,identity,emit,
+            return await invoke_attached(body,text,item_ctx,identity,item_emit,
                                          action_budget=(ctx.run or {}).get('action_budget'))
         outcome=await execute_with_policy(
-            invoke,identity,body.retry,ctx.run,emit,generic_error='Item execution failed.',
+            invoke,identity,body.retry,ctx.run,item_emit,generic_error='Item execution failed.',
             action_budget=(ctx.run or {}).get('action_budget'),charge_first_attempt=charges_action(body.type))
         if outcome.budget_exhausted and not outcome.attempts:
-            await emit({**common,'status':'not_run','reason':outcome.error})
+            await item_emit({**common,'status':'not_run','reason':outcome.error})
             journal(event='loop.budget_exhausted',node_id=ctx.node_id,reason_code='action_budget')
             return None,outcome.error
         if outcome.status=='failed':
@@ -238,7 +246,7 @@ async def _run_item(ctx,body,emit,index,value):
             event={**common,'status':'failed','error':outcome.error}
             if outcome.usage:event['usage']=outcome.usage
             if body.retry.attempts:event['attempt']=outcome.attempts
-            await emit(event)
+            await item_emit(event)
             journal(event='loop.item_failed',node_id=ctx.node_id,reason_code='item_error')
         else:
             output=outcome.outputs
@@ -247,14 +255,14 @@ async def _run_item(ctx,body,emit,index,value):
             if reason:entry['truncation_reason']=reason
             event={**common,'status':'success','outputs':output}
             if outcome.usage:event['usage']=outcome.usage
-            await emit(event)
+            await item_emit(event)
     except ApprovalPause:
         # A pause is not an item failure: swallowing it would disable the approval
         # gate for every write inside a loop. Usage already spent is still reported.
         from .execution_policy import usage_for
         paused={**common,'status':'paused'};usage=usage_for(ctx.run,identity)
         if usage:paused['usage']=usage
-        await emit(paused)
+        await item_emit(paused)
         raise
     except UncertainWriteError:
         # The external outcome is unknown; iterating past it could duplicate a write.

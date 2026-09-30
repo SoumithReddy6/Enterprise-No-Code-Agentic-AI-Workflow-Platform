@@ -136,28 +136,37 @@ def local_key(data_dir:Path):
         key=Fernet.generate_key();stream.write(key)
     return key
 
-def observed(event):
-    """The copy of an event kept for observability, with loop item values as previews.
+# Fields derived from events into their own records (token usage rows, guard decision
+# rows) are small and must stay exact, so previews never touch them.
+EXACT_EVENT_FIELDS=frozenset({'usage','answerability','abstention_source'})
 
-    A loop item's value is otherwise stored three times: in its durable item row, in the
-    body's success event and in the loop_item event. The row is the only copy resume and
-    write settlement read, so the two events keep previews. Checkpoints, approvals and
-    write results are recorded elsewhere and are never shortened.
+
+def observed(event):
+    """The copy of an event kept for observability, with loop work as previews.
+
+    Inside a loop an item's work is repeated for every item: the body, and every agent
+    step, tool call, specialist, retry and failure beneath it. Each such event carries the
+    loop's identity (loop_node_id, item_index), and its large fields are stored as previews
+    of PREVIEW_CHARS, so a batch cannot grow event storage with the size of what it
+    handles. The durable copies resume and settlement read - item rows, checkpoints,
+    approvals and write results - are recorded elsewhere and never shortened. preview_of
+    names every field that was shortened.
     """
     from .iteration import PREVIEW_CHARS
-    def shorten(value):
-        text=value if isinstance(value,str) else json.dumps(value,ensure_ascii=False,default=str)
-        return (text[:PREVIEW_CHARS],True) if len(text)>PREVIEW_CHARS else (value,False)
-    if event.get('item_index') is not None and isinstance(event.get('outputs'),dict):
-        outputs={};cut=[]
-        for key,value in event['outputs'].items():
-            outputs[key],shortened=shorten(value)
-            if shortened:cut.append(key)
-        if cut:return {**event,'outputs':outputs,'preview_of':cut}
-    if event.get('kind')=='loop_item' and isinstance(event.get('item_result'),dict):
-        value,shortened=shorten(event['item_result'].get('value',''))
-        if shortened:return {**event,'item_result':{**event['item_result'],'value':value},'preview_of':['value']}
-    return event
+    if not (event.get('loop_node_id') or event.get('kind')=='loop_item'):return event
+    cut=[]
+    def text_of(value):
+        return value if isinstance(value,str) else json.dumps(value,ensure_ascii=False,default=str)
+    def bound(value,path):
+        if isinstance(value,dict):
+            shortened={key:bound(item,f'{path}.{key}') for key,item in value.items()}
+            if len(text_of(shortened))<=4*PREVIEW_CHARS:return shortened
+            cut.append(path);return text_of(shortened)[:PREVIEW_CHARS]
+        text=text_of(value)
+        if len(text)<=PREVIEW_CHARS:return value
+        cut.append(path);return text[:PREVIEW_CHARS]
+    kept={key:(value if key in EXACT_EVENT_FIELDS else bound(value,key)) for key,value in event.items()}
+    return {**kept,'preview_of':cut} if cut else event
 
 
 class Store:
