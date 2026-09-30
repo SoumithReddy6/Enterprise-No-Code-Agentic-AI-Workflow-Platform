@@ -370,3 +370,71 @@ def test_0002_backfills_the_source_of_existing_truncated_runs(tmp_path):
         from alembic import command
         command.downgrade(schema._config(conn), '0001_baseline')
         assert 'truncation_source' not in {c['name'] for c in inspect(conn).get_columns('runs')}
+
+
+# --------------------------------------------------------------------------- retired tables
+
+# Verbatim from a database created before 4ec3f05 (2026-09-16) retired the legacy
+# knowledge-base and VectorDB stores. Frozen here because CI checkouts have no history.
+RETIRED_DDL = [
+    'CREATE TABLE knowledge_bases ( id VARCHAR(64) NOT NULL, tenant_id VARCHAR(64) NOT NULL, name VARCHAR(120) NOT NULL, PRIMARY KEY (id) )',
+    'CREATE TABLE knowledge_chunks ( id VARCHAR(64) NOT NULL, tenant_id VARCHAR(64) NOT NULL, base_id VARCHAR(64) NOT NULL, document_id VARCHAR(64) NOT NULL, page INTEGER NOT NULL, text TEXT NOT NULL, PRIMARY KEY (id) )',
+    'CREATE TABLE knowledge_documents ( id VARCHAR(64) NOT NULL, tenant_id VARCHAR(64) NOT NULL, base_id VARCHAR(64) NOT NULL, filename VARCHAR(240) NOT NULL, content BLOB NOT NULL, status VARCHAR(24) NOT NULL, error TEXT NOT NULL, pages INTEGER NOT NULL, owner VARCHAR(64) NOT NULL, lease_until FLOAT NOT NULL, created FLOAT NOT NULL, PRIMARY KEY (id) )',
+    'CREATE TABLE vector_chunks ( id VARCHAR(64) NOT NULL, tenant_id VARCHAR(64) NOT NULL, base_id VARCHAR(64) NOT NULL, document_id VARCHAR(64) NOT NULL, ordinal INTEGER NOT NULL, page INTEGER NOT NULL, text TEXT NOT NULL, PRIMARY KEY (id) )',
+    'CREATE TABLE vector_files ( id VARCHAR(64) NOT NULL, tenant_id VARCHAR(64) NOT NULL, base_id VARCHAR(64) NOT NULL, filename VARCHAR(240) NOT NULL, content BLOB NOT NULL, status VARCHAR(24) NOT NULL, error TEXT NOT NULL, index_key VARCHAR(64) NOT NULL, pages INTEGER NOT NULL, owner VARCHAR(64) NOT NULL, lease_until FLOAT NOT NULL, created FLOAT NOT NULL, PRIMARY KEY (id) )',
+    'CREATE TABLE vector_resources ( id VARCHAR(64) NOT NULL, tenant_id VARCHAR(64) NOT NULL, name VARCHAR(120) NOT NULL, config JSON NOT NULL, dimensions INTEGER NOT NULL, PRIMARY KEY (id) )',
+    'CREATE TABLE vector_segments ( id VARCHAR(64) NOT NULL, tenant_id VARCHAR(64) NOT NULL, resource_id VARCHAR(64) NOT NULL, document_id VARCHAR(64) NOT NULL, next_cleanup FLOAT NOT NULL, PRIMARY KEY (id) )',
+    'CREATE INDEX ix_knowledge_bases_tenant_id ON knowledge_bases (tenant_id)',
+    'CREATE INDEX ix_knowledge_documents_base_id ON knowledge_documents (base_id)',
+    'CREATE INDEX ix_vector_segments_resource_id ON vector_segments (resource_id)',
+]
+
+
+def database_with(path, statements, rows=True):
+    url = legacy_database(path)
+    engine = create_engine(url)
+    with engine.begin() as conn:
+        for statement in statements: conn.execute(text(statement))
+        if rows:
+            conn.execute(text("INSERT INTO knowledge_bases VALUES ('kb-old','local','Handbook')"))
+            conn.execute(text("INSERT INTO knowledge_documents VALUES ('doc-old','local','kb-old','policy.pdf',x'25504446','ready','',3,'',0,0)"))
+    engine.dispose()
+    return url
+
+
+def test_a_database_from_before_the_retirement_is_adopted_and_keeps_its_rows(tmp_path, caplog):
+    """The first real local database refused to start: its retired tables were reported
+    as unexpected. Relay's own retired tables are recognised and left exactly as they are."""
+    import logging
+    url = database_with(tmp_path / 'old.db', RETIRED_DDL)
+    with caplog.at_level(logging.INFO, logger='relay.journal'):
+        store = Store(url, Fernet.generate_key())
+    with store.engine.begin() as conn:
+        assert schema.current_revision(conn) == schema.head_revision()
+        assert conn.execute(text("SELECT name FROM knowledge_bases")).scalar() == 'Handbook'
+        assert conn.execute(text("SELECT filename FROM knowledge_documents")).scalar() == 'policy.pdf'
+        assert set(schema.RETIRED_TABLES) <= set(inspect(conn).get_table_names())
+    assert [w['name'] for w in store.workflows('local')] == ['Kept']
+    kept = [json.loads(r.message) for r in caplog.records if 'retired_tables_kept' in r.message]
+    assert kept and kept[0]['reason_code'].split(',') == sorted(schema.RETIRED_TABLES)
+
+
+def test_a_retired_name_with_a_different_shape_is_still_refused(tmp_path):
+    url = database_with(tmp_path / 'impostor.db',
+                        ['CREATE TABLE knowledge_bases ( id VARCHAR(64) NOT NULL, secret TEXT, PRIMARY KEY (id) )'], rows=False)
+    with pytest.raises(schema.SchemaStateError) as exc:
+        Store(url, Fernet.generate_key())
+    assert "table knowledge_bases has a retired Relay table's name but columns ['id', 'secret']" in str(exc.value)
+
+
+def test_an_unknown_table_is_still_refused_even_beside_retired_ones(tmp_path):
+    url = database_with(tmp_path / 'mixed.db', [*RETIRED_DDL, 'CREATE TABLE someone_elses (id INTEGER PRIMARY KEY)'])
+    with pytest.raises(schema.SchemaStateError) as exc:
+        Store(url, Fernet.generate_key())
+    message = str(exc.value)
+    assert 'unexpected table someone_elses' in message
+    assert not any(f'unexpected table {name}' in message for name in schema.RETIRED_TABLES)
+
+
+def test_retired_table_definitions_do_not_overlap_live_tables():
+    assert not set(schema.RETIRED_TABLES) & set(schema.target_metadata.tables)

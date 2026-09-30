@@ -198,11 +198,13 @@ class Store:
                 if schema.current_revision(conn) is None and not schema.is_empty(conn):
                     self._legacy_columns(conn)
                 action=schema.prepare(conn,allow_upgrade=auto_upgrade)
+                kept=schema.retired_tables(conn)
                 # Data transformations keep their own schema_migrations records; Alembic
                 # owns schema state only. The two answer different questions.
                 self._migrate_run_events(conn)
                 operator_metrics.migrate(conn)
             journal(event='storage.schema',scope='startup',status=action,reason_code=schema.head_revision())
+            if kept:journal(event='storage.retired_tables_kept',scope='startup',reason_code=','.join(kept))
             # Old in-flight runs did not have jobs; make them recoverable without losing history.
             with Session(self.engine) as session:
                 for row in session.scalars(select(RunRecord).where(RunRecord.status.in_(('queued','running')),~select(JobRecord.run_id).where(JobRecord.run_id==RunRecord.id).exists())):

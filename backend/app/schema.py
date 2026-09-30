@@ -82,6 +82,30 @@ def _describe(signature):
     return signature['type']+(f"({signature['length']})" if signature['length'] else '')
 
 
+# Tables earlier Relay releases created and later retired: the legacy knowledge-base and
+# VectorDB stores, whose models were removed in 4ec3f05 (2026-09-16). Databases created
+# before then still contain them, some with user rows. Adoption recognises each one by
+# its exact column set, taken from the removed models, and leaves it untouched: nothing
+# is dropped, and a same-named table of any other shape is still refused.
+RETIRED_TABLES={
+    'knowledge_bases':frozenset({'id','tenant_id','name'}),
+    'knowledge_documents':frozenset({'id','tenant_id','base_id','filename','content','status','error','pages','owner','lease_until','created'}),
+    'knowledge_chunks':frozenset({'id','tenant_id','base_id','document_id','page','text'}),
+    'vector_resources':frozenset({'id','tenant_id','name','config','dimensions'}),
+    'vector_files':frozenset({'id','tenant_id','base_id','filename','content','status','error','index_key','pages','owner','lease_until','created'}),
+    'vector_chunks':frozenset({'id','tenant_id','base_id','document_id','ordinal','page','text'}),
+    'vector_segments':frozenset({'id','tenant_id','resource_id','document_id','next_cleanup'}),
+}
+
+
+def retired_tables(connection):
+    """Live tables that exactly match a retired Relay table, and so are kept as they are."""
+    inspector=inspect(connection)
+    live=set(inspector.get_table_names())
+    return sorted(name for name,columns in RETIRED_TABLES.items()
+                  if name in live and {c['name'] for c in inspector.get_columns(name)}==columns)
+
+
 def schema_differences(connection,metadata=None):
     """Structural differences between the live database and the frozen baseline.
 
@@ -95,7 +119,13 @@ def schema_differences(connection,metadata=None):
     declared=set(metadata.tables)
     differences=[]
     for table in sorted(declared-live):differences.append(f'missing table {table}')
-    for table in sorted(live-declared):differences.append(f'unexpected table {table}')
+    retired=set(retired_tables(connection))
+    for table in sorted(live-declared-retired):
+        if table in RETIRED_TABLES:
+            have=sorted(c['name'] for c in inspector.get_columns(table))
+            differences.append(f"table {table} has a retired Relay table's name but columns {have}, "
+                               f"expected {sorted(RETIRED_TABLES[table])}")
+        else:differences.append(f'unexpected table {table}')
     for name in sorted(declared&live):
         table=metadata.tables[name]
         live_columns={column['name']:column for column in inspector.get_columns(name)}
