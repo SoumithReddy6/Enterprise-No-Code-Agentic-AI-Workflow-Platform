@@ -488,8 +488,9 @@ class Store:
         if kinds.get(node_id)!='for_each' or not isinstance(results,list) or not results:return outputs
         if [entry.get('index') for entry in results]!=list(range(len(results))):return outputs
         stored={item.item_index:item.entry for item in s.scalars(select(RunLoopItemRecord).where(
-            RunLoopItemRecord.run_id==row.id,RunLoopItemRecord.node_id==node_id,RunLoopItemRecord.item_index<len(results)))}
-        if any(stored.get(index)!=entry for index,entry in enumerate(results)):return outputs
+            RunLoopItemRecord.run_id==row.id,RunLoopItemRecord.node_id==node_id))}
+        # The rows must be exactly the results: the same indices, none extra, equal entries.
+        if set(stored)!=set(range(len(results))) or any(stored[index]!=entry for index,entry in enumerate(results)):return outputs
         return {**outputs,'results':{'stored_in':LOOP_RESULTS_STORE,'count':len(results),'sha256':results_digest(results)}}
 
     @staticmethod
@@ -499,14 +500,25 @@ class Store:
         Missing or altered rows never become an empty successful loop: the results are
         replaced by a marker whose 'unavailable' reason resume refuses to proceed past.
         """
+        import re
+        from .iteration import MAX_ITEMS_CEILING
         marker=outputs.get('results')
         if not (isinstance(marker,dict) and marker.get('stored_in')==LOOP_RESULTS_STORE):return outputs
-        entries=[rows.get((node_id,index)) for index in range(marker.get('count',0))]
-        missing=sum(entry is None for entry in entries)
-        if missing or results_digest(entries)!=marker.get('sha256'):
-            reason=(f'{missing} of {len(entries)} stored item results are missing' if missing
-                    else 'stored item results do not match the checkpoint')
+        def unavailable(reason):
             return {**outputs,'results':{**marker,'unavailable':f'Loop {node_id} cannot be restored: {reason}. Start a new run.'}}
+        # Validate the marker before using it: the count bounds what is read, so it is
+        # never trusted to size anything until it is a real item count.
+        count,digest=marker.get('count'),marker.get('sha256')
+        if type(count) is not int or not 1<=count<=MAX_ITEMS_CEILING:
+            return unavailable('its checkpoint marker has an invalid item count')
+        if not (isinstance(digest,str) and re.fullmatch(r'[0-9a-f]{64}',digest)):
+            return unavailable('its checkpoint marker has an invalid digest')
+        indices={index for node,index in rows if node==node_id}
+        missing=count-len(indices&set(range(count)));extra=len(indices-set(range(count)))
+        if missing:return unavailable(f'{missing} of {count} stored item results are missing')
+        if extra:return unavailable(f'{extra} stored item result(s) exist beyond the {count} it recorded')
+        entries=[rows[(node_id,index)] for index in range(count)]
+        if results_digest(entries)!=digest:return unavailable('stored item results do not match the checkpoint')
         return {**outputs,'results':entries}
 
     @staticmethod

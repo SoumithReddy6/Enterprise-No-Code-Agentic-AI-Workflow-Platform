@@ -186,3 +186,104 @@ def test_the_loop_checkpoint_is_written_only_under_the_lease(tmp_path, monkeypat
     assert 'each' not in raw(store, row['id']).get('checkpoints', {})
     assert store.worker_event(row['id'], 'worker', success) is True
     assert raw(store, row['id'])['checkpoints']['each']['results']['count'] == 1
+
+
+# --------------------------------------------------------------------------- the marker itself
+
+def compacted_run(tmp_path, monkeypatch):
+    """A run stopped right after each's compact checkpoint, before second ran."""
+    store, worker, _, _ = durable_setup(tmp_path, monkeypatch, items=3)
+    calls = []
+    async def execute(node_type, settings, text, tenant_id='local'):
+        calls.append(text); return 'done'
+    monkeypatch.setattr(worker.tools, 'execute', execute)
+    original = store.worker_event
+    def crash(id, owner, event):
+        persisted = original(id, owner, event)
+        if event.get('node_id') == 'each' and event['status'] == 'success' and not event.get('transient'): raise asyncio.CancelledError()
+        return persisted
+    monkeypatch.setattr(store, 'worker_event', crash)
+    row = store.create_run(two_loops(jira_connection(store)).model_dump(mode='json'), 'go')
+    asyncio.run(worker.execute(store.claim_next(worker.owner)))
+    monkeypatch.setattr(store, 'worker_event', original)
+    return store, worker, row['id'], calls
+
+
+def damage_marker(store, run_id, **changes):
+    with Session(store.engine) as s:
+        record = s.get(RunRecord, run_id)
+        each = dict(record.data['checkpoints']['each']); marker = dict(each['results'])
+        for key, value in changes.items():
+            if value is DELETE: marker.pop(key, None)
+            else: marker[key] = value
+        record.data = {**record.data, 'checkpoints': {**record.data['checkpoints'], 'each': {**each, 'results': marker}}}
+        s.commit()
+
+
+DELETE = object()
+BAD_MARKERS = {
+    'string count': ({'count': 'three'}, 'invalid item count'),
+    'boolean count': ({'count': True}, 'invalid item count'),
+    'zero count with the digest of an empty list': ({'count': 0, 'sha256': results_digest([])}, 'invalid item count'),
+    'negative count': ({'count': -1}, 'invalid item count'),
+    'count over the loop ceiling': ({'count': 1001}, 'invalid item count'),
+    'enormous count': ({'count': 10 ** 12}, 'invalid item count'),
+    'missing digest': ({'sha256': DELETE}, 'invalid digest'),
+    'null digest': ({'sha256': None}, 'invalid digest'),
+    'short digest': ({'sha256': 'abc'}, 'invalid digest'),
+    'numeric digest': ({'sha256': 123}, 'invalid digest'),
+    'non-hex digest': ({'sha256': 'z' * 64}, 'invalid digest'),
+    'wrong but well-formed digest': ({'sha256': '0' * 64}, 'do not match the checkpoint'),
+    'count smaller than the rows': ({'count': 2}, 'beyond the 2 it recorded'),
+}
+
+
+@pytest.mark.parametrize('case', sorted(BAD_MARKERS))
+def test_a_malformed_marker_is_unavailable_never_trusted(tmp_path, monkeypatch, case):
+    changes, reason = BAD_MARKERS[case]
+    store, _, run_id, _ = compacted_run(tmp_path, monkeypatch)
+    damage_marker(store, run_id, **changes)
+    shown = store.run(run_id)['checkpoints']['each']['results']
+    assert isinstance(shown, dict) and 'cannot be restored' in shown['unavailable'] and reason in shown['unavailable'], shown
+
+
+def test_an_extra_row_beyond_the_recorded_count_is_unavailable(tmp_path, monkeypatch):
+    store, _, run_id, _ = compacted_run(tmp_path, monkeypatch)
+    with Session(store.engine) as s:
+        s.add(RunLoopItemRecord(run_id=run_id, node_id='each', item_index=3, entry={'index': 3, 'status': 'success', 'value': 'extra', 'error': ''}))
+        s.commit()
+    shown = store.run(run_id)['checkpoints']['each']['results']
+    assert '1 stored item result(s) exist beyond the 3 it recorded' in shown['unavailable']
+
+
+def test_an_invalid_count_is_rejected_before_it_sizes_anything():
+    """A count of 10**12 must not allocate; validation runs before the count is used."""
+    import time
+    from backend.app.storage import Store
+    started = time.perf_counter()
+    shown = Store._hydrate_loop('each', {'results': {'stored_in': LOOP_RESULTS_STORE, 'count': 10 ** 12, 'sha256': '0' * 64}}, {})
+    assert 'invalid item count' in shown['results']['unavailable'] and time.perf_counter() - started < 1
+
+
+@pytest.mark.parametrize('case', ['string count', 'zero count with the digest of an empty list', 'missing digest', 'count smaller than the rows'])
+def test_resume_refuses_a_malformed_marker_before_anything_downstream_runs(tmp_path, monkeypatch, case):
+    changes, reason = BAD_MARKERS[case]
+    store, worker, run_id, calls = compacted_run(tmp_path, monkeypatch)
+    damage_marker(store, run_id, **changes)
+    before = len(calls)
+    store.resume_run(run_id)
+    asyncio.run(worker.execute(store.claim_next(worker.owner)))
+    run = store.run(run_id)
+    assert run['status'] == 'failed' and 'cannot be restored' in run['error'] and reason in run['error'], run['error']
+    assert len(calls) == before, 'second must not run on an untrusted checkpoint'
+
+
+def test_rows_beyond_the_results_keep_the_checkpoint_embedded(tmp_path, monkeypatch):
+    """Compaction and restore agree: rows must be exactly the results, none extra."""
+    store, worker, _, _ = durable_setup(tmp_path, monkeypatch, items=2)
+    row = store.create_run(loop_flow(connection_id=jira_connection(store)).model_dump(mode='json'), 'go')
+    with Session(store.engine) as s:
+        s.add(RunLoopItemRecord(run_id=row['id'], node_id='each', item_index=7, entry={'index': 7, 'status': 'success', 'value': 'stray', 'error': ''}))
+        s.commit()
+    asyncio.run(worker.execute(store.claim_next(worker.owner)))
+    assert isinstance(raw(store, row['id'])['checkpoints']['each']['results'], list)
