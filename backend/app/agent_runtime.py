@@ -41,7 +41,12 @@ async def tool_outputs(ctx,node_type,config,text,node_id):
         # retain the legacy string path (including approval replay) and no items.
         result=text if isinstance(text,dict) else {'text':text,'items':[],'truncated':False,'warnings':[]}
         ctx.run.setdefault('tool_output_metadata',{})[node_id]={'items_truncated':result['truncated'],'items_warnings':result['warnings']}
-        return {'text':result['text'],'items':result['items']}
+        outputs={'text':result['text'],'items':result['items']}
+        if result['truncated']:
+            # Carried in the outputs so it is checkpointed with them and survives resume.
+            from .execution_policy import TRUNCATION_KEY,truncation
+            outputs[TRUNCATION_KEY]=truncation(f"{node_id}: {result.get('truncation_reason') or 'Jira returned incomplete results.'}")
+        return outputs
     return {'text':text}
 
 def strip_fences(text):
@@ -339,6 +344,12 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
             child_grounding=json.loads(output.get('grounding','{}'))
             if child_grounding.get('truncated'):
                 truncations.append({'node_id':target,'reason':child_grounding.get('truncation_reason','Specialist returned an incomplete answer.')})
+            from .execution_policy import TRUNCATION_KEY
+            tool_cut=(output.get(TRUNCATION_KEY) or {})
+            if tool_cut.get('truncated'):
+                # An answer built on an incomplete tool result is itself incomplete.
+                truncations.append({'node_id':target,'reason':tool_cut['truncation_reason']})
+                child_grounding={**child_grounding,'truncated':True,'truncation_reason':tool_cut['truncation_reason']}
             success={**common,'status':'success','outputs':output,
                      **ctx.run.get('tool_output_metadata',{}).get(target,{})}
             if outcome.usage:success['usage']=outcome.usage

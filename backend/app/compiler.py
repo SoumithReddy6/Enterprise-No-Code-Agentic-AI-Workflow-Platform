@@ -274,7 +274,11 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                       outputs = await definition.handler(
                           inputs,config,replace(context,node_id=node.id,node_type=node.type,
                                                 checkpoint_owner=node.id,execution_identity=identity))
-                      if set(outputs) != set(definition.outputs) or any(not (isinstance(value,list) and all(isinstance(item,dict) for item in value)) if definition.outputs[name]=='array<object>' else not isinstance(value,str) for name,value in outputs.items()):
+                      # Run metadata may travel beside the declared ports under the reserved key.
+                      from .execution_policy import TRUNCATION_KEY
+                      ports={name:value for name,value in outputs.items() if name!=TRUNCATION_KEY}
+                      if set(ports) != set(definition.outputs) or any(not (isinstance(value,list) and all(isinstance(item,dict) for item in value)) if definition.outputs[name]=='array<object>' else not isinstance(value,str) for name,value in ports.items()) \
+                              or (TRUNCATION_KEY in outputs and not isinstance(outputs[TRUNCATION_KEY],dict)):
                           raise ValueError('Node returned outputs that do not match its declared contract.')
                       return outputs
                 async def guard_refusal():

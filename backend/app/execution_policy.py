@@ -69,13 +69,16 @@ class ActionBudgetExhausted(ValueError):
 TRUNCATION_KEY='_truncation'
 
 
+def truncation(reason,source='confirmed'):
+    """The one metadata shape every node uses to report that it did not deliver everything."""
+    return {'truncated':True,'truncation_reason':reason,'truncation_source':source}
+
+
 def budget_truncation(node_id,outcome):
     """The confirmed truncation a node recovering from budget exhaustion reports."""
     if outcome.attempts:
-        reason=f'{node_id} stopped after {outcome.attempts} attempt(s): {outcome.error}'
-    else:
-        reason=f'{node_id} did not run: {outcome.error}'
-    return {'truncated':True,'truncation_reason':reason,'truncation_source':'confirmed'}
+        return truncation(f'{node_id} stopped after {outcome.attempts} attempt(s): {outcome.error}')
+    return truncation(f'{node_id} did not run: {outcome.error}')
 
 
 def accounting_snapshot(run):

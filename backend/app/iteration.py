@@ -75,7 +75,15 @@ class ResultBudget:
 
 
 def body_truncation(output):
-    """An agent body that stopped early says so in its grounding metadata; '' otherwise."""
+    """Why a body's result is incomplete, or ''.
+
+    An agent says so in its grounding metadata; a tool that capped its result, such as a
+    Jira search, says so under the reserved truncation key.
+    """
+    from .execution_policy import TRUNCATION_KEY
+    tool=output.get(TRUNCATION_KEY)
+    if isinstance(tool,dict) and tool.get('truncated'):
+        return str(tool.get('truncation_reason') or 'A tool returned incomplete results.')
     try:metadata=json.loads(output.get('grounding') or '{}')
     except (TypeError,ValueError):return ''
     if not isinstance(metadata,dict) or not metadata.get('truncated'):return ''
@@ -102,7 +110,7 @@ def completeness(node_id,total,accepted,results,failed,halt=None):
         reasons.append(f'{node_id} stopped at item {halt[1]}: {halt[2]} {unrun} accepted items did not run.')
     partial=[r for r in results if r.get('truncation_reason')]
     if partial:
-        reasons.append(f'{node_id}: {len(partial)} item(s) returned incomplete agent work ({partial[0]["truncation_reason"]}).')
+        reasons.append(f'{node_id}: {len(partial)} item(s) returned incomplete results ({partial[0]["truncation_reason"]}).')
     dropped=sum(bool(r.get('value_dropped')) for r in results)
     if dropped:
         reasons.append(f'{node_id} kept item values up to {MAX_RESULT_BYTES} bytes; {dropped} later value(s) were dropped and only their outcomes kept.')

@@ -108,7 +108,7 @@ def jira_items(text,operation,endpoint):
     if not isinstance(rows,list):
         result['warnings']=['Jira response has no issues array; items is empty.'];return result
     budget=max(0,64000-len(text.encode('utf-8')))
-    size=2
+    size=2;causes=[];more=None
     def usable_string(value):
         if not isinstance(value,str):return False
         try:value.encode('utf-8');return True
@@ -117,7 +117,8 @@ def jira_items(text,operation,endpoint):
         if not isinstance(row,dict) or not usable_string(row.get('key')) or not row['key']:
             if not result['warnings']:result['warnings'].append('Jira response contains malformed issues; invalid entries were skipped.')
             continue
-        if len(result['items'])>=100:result['truncated']=True;break
+        if len(result['items'])>=100:
+            result['truncated']=True;causes.append('the 100-item result limit');break
         fields=row.get('fields') if isinstance(row.get('fields'),dict) else {}
         def field(name,nested=None):
             value=fields.get(name)
@@ -127,12 +128,19 @@ def jira_items(text,operation,endpoint):
               'assignee':field('assignee','displayName'),'updated':field('updated'),
               'url':endpoint.rstrip('/')+'/browse/'+quote(row['key'],safe='')}
         added=len(json.dumps(item,ensure_ascii=False).encode('utf-8'))+(2 if result['items'] else 0)
-        if size+added>budget:result['truncated']=True;break
+        if size+added>budget:
+            result['truncated']=True;causes.append('the 64,000-byte result budget');break
         result['items'].append(item);size+=added
     if operation=='search' and isinstance(data,dict):
         total=data.get('total');start=data.get('startAt',0)
         if data.get('nextPageToken') or data.get('isLast') is False or (isinstance(total,int) and isinstance(start,int) and total>start+len(rows)):
-            result['truncated']=True
+            result['truncated']=True;more=total if isinstance(total,int) else None
+            causes.append('further result pages that were not fetched')
+    if result['truncated']:
+        kept=len(result['items']);available=more if more is not None else len(rows)
+        noun='issue' if (available if available>kept else kept)==1 else 'issues'
+        returned=f'{kept} of {available} matching {noun}' if available>kept else f'{kept} matching {noun}, and more exist'
+        result['truncation_reason']=f"Jira returned {returned}; stopped by {' and '.join(causes)}."
     return result
 
 class ToolService:
