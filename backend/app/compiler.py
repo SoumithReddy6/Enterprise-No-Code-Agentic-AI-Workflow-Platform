@@ -298,13 +298,20 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                           failure={'node_id':node.id,'status':'failed','error':outcome.error}
                           if outcome.usage:failure['usage']=outcome.usage
                           if node.retry.attempts:failure['attempt']=outcome.attempts
+                          if outcome.budget_exhausted:failure['budget_exhausted']=True
                           if node.on_error=='fail':
                               await emit(failure)
                               raise ValueError(outcome.error) from None
                           run_state.setdefault('failed_nodes',set()).add(node.id)
                           await emit({**failure,'recovered':True})
                           journal(event='node.recovered',node_id=node.id,reason_code=node.on_error)
-                          return {'values':{node.id:{}}}
+                          # An ordinary recovered failure is the workflow's chosen path. Work
+                          # skipped because the budget ran out is not: the run is incomplete.
+                          # Recovered nodes are not checkpointed, so on resume this node runs
+                          # again against the persisted budget and reports the same.
+                          from .execution_policy import TRUNCATION_KEY,budget_truncation
+                          value={TRUNCATION_KEY:budget_truncation(node.id,outcome)} if outcome.budget_exhausted else {}
+                          return {'values':{node.id:value}}
                       outputs=outcome.outputs
                       evidence_from_outputs(run_state,outputs)
                       await emit_evidence_notice(run_state,emit,node.id)

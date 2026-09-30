@@ -62,6 +62,21 @@ class ActionBudgetExhausted(ValueError):
     """The run-wide action budget refused an attempt before it could execute."""
 
 
+# A node reports that the run did not deliver all its work under this key in its graph
+# value. It is not an output: no port can be named with a leading underscore, so it can
+# never be bound, and it is read only when the run's completeness is decided.
+TRUNCATION_KEY='_truncation'
+
+
+def budget_truncation(node_id,outcome):
+    """The confirmed truncation a node recovering from budget exhaustion reports."""
+    if outcome.attempts:
+        reason=f'{node_id} stopped after {outcome.attempts} attempt(s): {outcome.error}'
+    else:
+        reason=f'{node_id} did not run: {outcome.error}'
+    return {'truncated':True,'truncation_reason':reason,'truncation_source':'confirmed'}
+
+
 def accounting_snapshot(run):
     """Run-wide spend, for durable persistence beside checkpoints and loop progress.
 

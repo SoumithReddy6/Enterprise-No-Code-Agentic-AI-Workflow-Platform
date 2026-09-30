@@ -21,18 +21,20 @@ from .observability import journal,request_id,run_id,tenant_id
 def run_truncation(workflow,values):
     """Fold every node's incompleteness into the run's truncated flag, reason and source.
 
-    Agents report it in grounding, loops in summary. Both are node outputs, so values
-    restored from checkpoints on resume report it too. A confirmed cause anywhere in the
-    run outranks unverifiable legacy completeness elsewhere.
+    Agents report it in grounding, loops in summary; both are outputs, so values restored
+    from checkpoints on resume report it too. Any node may also report it under
+    TRUNCATION_KEY in its graph value, as a node recovering from budget exhaustion does.
+    A confirmed cause anywhere in the run outranks unverifiable legacy completeness.
     """
+    from .execution_policy import TRUNCATION_KEY
     reasons=[];sources=set()
     loops={n.id for n in workflow.nodes if n.type=='for_each'}
     for node_id,outputs in values.items():
         field,default=('summary','A loop did not run every item.') if node_id in loops else ('grounding','Agent work was incomplete.')
-        metadata=json.loads(outputs.get(field) or '{}')
-        if metadata.get('truncated'):
-            reasons.append(metadata.get('truncation_reason') or default)
-            sources.add(metadata.get('truncation_source') or 'confirmed')
+        for metadata in (json.loads(outputs.get(field) or '{}'),outputs.get(TRUNCATION_KEY) or {}):
+            if metadata.get('truncated'):
+                reasons.append(metadata.get('truncation_reason') or default)
+                sources.add(metadata.get('truncation_source') or 'confirmed')
     return {'truncated':bool(reasons),'truncation_reason':'; '.join(dict.fromkeys(reasons)),
             'truncation_source':'confirmed' if 'confirmed' in sources else next(iter(sources),'')}
 
