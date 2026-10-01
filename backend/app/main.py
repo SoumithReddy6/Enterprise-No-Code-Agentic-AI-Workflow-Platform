@@ -14,6 +14,7 @@ from pydantic import Field
 from .models import StrictModel, Workflow
 from .registry import REGISTRY
 from .compiler import validate_workflow,type_warnings
+from . import sandbox
 from .storage import Store, local_key, WorkflowConflict
 from .auth import install_auth
 from .worker import Worker
@@ -47,6 +48,7 @@ class CredentialRequest(StrictModel):
 
 
 def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_worker=None,knowledge_services=None):
+    sandbox.required()  # An invalid PYTHON_SANDBOX_REQUIRED fails at startup, not at the first readiness poll.
     directory=Path(os.environ.get('DATA_DIR','.data'));directory.mkdir(mode=0o700,parents=True,exist_ok=True)
     store=Store(database_url or os.environ.get('DATABASE_URL',f'sqlite:///{directory}/workflows.db'),encryption_key or local_key(directory))
     if embedded_worker is None:embedded_worker=os.environ.get('RELAY_EMBEDDED_WORKER','true').lower()=='true'
@@ -68,7 +70,7 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     install_kb_routes(app,store,tenant,knowledge_services)
     app.state.readiness=Readiness(store,app.state.knowledge_services)
     async def submission_errors(workflow,tenant_id,checkpoints=None,dependencies=None):
-        return validate_workflow(workflow)+store.model_errors(workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id,checkpoints,dependencies)
+        return validate_workflow(workflow)+store.model_errors(workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id,checkpoints,dependencies)+await sandbox.preflight_errors(workflow)
 
     @app.exception_handler(RequestValidationError)
     async def safe_validation_error(request,exc):
@@ -178,7 +180,7 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     async def resume(id:str,tenant_id:str=Depends(tenant)):
         previous=fetch_run(id,tenant_id)
         workflow=Workflow.model_validate(previous['workflow'])
-        errors=store.model_errors(workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id,previous.get('checkpoints'),previous.get('vector_dependencies'))
+        errors=store.model_errors(workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id,previous.get('checkpoints'),previous.get('vector_dependencies'))+await sandbox.preflight_errors(workflow)
         if errors:raise HTTPException(422,detail=errors)
         try:run=store.resume_run(id,tenant_id);return {'id':run['id'],'status':run['status']}
         except KeyError:raise HTTPException(404,'Run not found') from None

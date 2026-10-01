@@ -44,9 +44,18 @@ class Readiness:
                 result=await asyncio.wait_for(call(),PROBE_SECONDS)
                 return name,{'status':'ok'},result
             except Exception:return name,{'status':'unavailable'},None
-        results=await asyncio.gather(probe('database',self.database),probe('management',self.services.management.health),probe('search',self.services.index.health))
+        async def python_sandbox():
+            from . import sandbox
+            try:state=await asyncio.wait_for(sandbox.status(),PROBE_SECONDS)
+            except Exception:state={'status':'unavailable','reason':'probe_timeout'}
+            return {'status':state['status'],'required':sandbox.required(),**({'reason':state['reason']} if state.get('reason') else {})}
+        results,sandbox_check=await asyncio.gather(
+            asyncio.gather(probe('database',self.database),probe('management',self.services.management.health),probe('search',self.services.index.health)),
+            python_sandbox())
         checks={name:state for name,state,_ in results}
         latest=results[0][2]
         checks['worker']={'status':'ok' if latest is not None and 0<=time.time()-latest<=WORKER_MAX_AGE else 'unavailable'}
-        healthy=all(c['status']=='ok' for c in checks.values())
+        checks['python_sandbox']=sandbox_check
+        # The sandbox only runs Python tools: optional unless the deployment requires it.
+        healthy=all(c['status']=='ok' for name,c in checks.items() if name!='python_sandbox' or c['required'])
         return {'status':'ready' if healthy else 'not_ready','checks':checks},200 if healthy else 503
