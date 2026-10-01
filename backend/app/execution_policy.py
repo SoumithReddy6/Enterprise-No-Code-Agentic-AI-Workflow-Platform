@@ -88,7 +88,7 @@ def checked_truncation(value):
     if not (isinstance(value,dict) and set(value)=={'truncated','truncation_reason','truncation_source'}
             and value['truncated'] is True and isinstance(value['truncation_reason'],str)
             and value['truncation_reason'].strip() and len(value['truncation_reason'])<=MAX_TRUNCATION_REASON
-            and value['truncation_source'] in TRUNCATION_SOURCES):
+            and isinstance(value['truncation_source'],str) and value['truncation_source'] in TRUNCATION_SOURCES):
         raise ValueError('Malformed truncation metadata.')
     return value
 

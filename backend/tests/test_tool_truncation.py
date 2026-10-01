@@ -190,6 +190,8 @@ MALFORMED = {
     'blank reason': {**GOOD, 'truncation_reason': '  '},
     'oversized reason': {**GOOD, 'truncation_reason': 'r' * 2001},
     'unknown source': {**GOOD, 'truncation_source': 'guess'},
+    'list source': {**GOOD, 'truncation_source': []},
+    'dict source': {**GOOD, 'truncation_source': {}},
     'extra key': {**GOOD, 'note': 'x'},
 }
 
@@ -210,7 +212,7 @@ async def test_malformed_fresh_metadata_breaks_the_contract(monkeypatch, case):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('case', ['numeric reason', 'missing source', 'not truncated'])
+@pytest.mark.parametrize('case', ['numeric reason', 'missing source', 'not truncated', 'list source', 'dict source'])
 async def test_malformed_metadata_in_a_checkpoint_is_refused_on_restore(tmp_path, monkeypatch, case):
     """It used to pass the restore and raise TypeError when the run's verdict was built."""
     from sqlalchemy.orm import Session
@@ -262,3 +264,11 @@ async def test_a_run_reading_unusable_jira_data_is_incomplete(tmp_path, monkeypa
     await worker.execute(store.claim_next(worker.owner))
     run = store.run(row['id'])
     assert run['status'] == 'success' and run['truncated'] is True and run['truncation_reason'].startswith('tickets: Jira returned')
+
+
+@pytest.mark.parametrize('case', sorted(MALFORMED))
+def test_the_validator_refuses_every_malformed_shape_with_value_error(case):
+    """Unhashable values must be refused, not crash the membership test with TypeError."""
+    from backend.app.execution_policy import checked_truncation
+    with pytest.raises(ValueError, match='Malformed truncation metadata'):
+        checked_truncation(MALFORMED[case])
