@@ -69,9 +69,28 @@ class ActionBudgetExhausted(ValueError):
 TRUNCATION_KEY='_truncation'
 
 
+TRUNCATION_SOURCES=frozenset({'confirmed','legacy_checkpoint_unverified'})
+MAX_TRUNCATION_REASON=2000
+
+
 def truncation(reason,source='confirmed'):
     """The one metadata shape every node uses to report that it did not deliver everything."""
-    return {'truncated':True,'truncation_reason':reason,'truncation_source':source}
+    return checked_truncation({'truncated':True,'truncation_reason':reason,'truncation_source':source})
+
+
+def checked_truncation(value):
+    """value, if it is well-formed truncation metadata; ValueError otherwise.
+
+    Exactly the three keys, truncated True, a non-empty reason of bounded length and a
+    known source. Anything else is refused where it enters - a node's fresh outputs or a
+    restored checkpoint - rather than failing later where the run's verdict is built.
+    """
+    if not (isinstance(value,dict) and set(value)=={'truncated','truncation_reason','truncation_source'}
+            and value['truncated'] is True and isinstance(value['truncation_reason'],str)
+            and value['truncation_reason'].strip() and len(value['truncation_reason'])<=MAX_TRUNCATION_REASON
+            and value['truncation_source'] in TRUNCATION_SOURCES):
+        raise ValueError('Malformed truncation metadata.')
+    return value
 
 
 def budget_truncation(node_id,outcome):

@@ -177,3 +177,88 @@ async def test_only_structured_metadata_may_travel_beside_the_declared_ports(mon
     else:
         with pytest.raises(ValueError, match='declared contract'):
             await graph.ainvoke({'values': {}})
+
+
+# --------------------------------------------------------------------------- malformed metadata
+
+GOOD = {'truncated': True, 'truncation_reason': 'r', 'truncation_source': 'confirmed'}
+MALFORMED = {
+    'missing source': {'truncated': True, 'truncation_reason': 'r'},
+    'not truncated': {**GOOD, 'truncated': False},
+    'truthy but not True': {**GOOD, 'truncated': 1},
+    'numeric reason': {**GOOD, 'truncation_reason': 5},
+    'blank reason': {**GOOD, 'truncation_reason': '  '},
+    'oversized reason': {**GOOD, 'truncation_reason': 'r' * 2001},
+    'unknown source': {**GOOD, 'truncation_source': 'guess'},
+    'extra key': {**GOOD, 'note': 'x'},
+}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('case', sorted(MALFORMED))
+async def test_malformed_fresh_metadata_breaks_the_contract(monkeypatch, case):
+    from backend.app import registry
+    async def handler(inputs, config, ctx): return {'text': 'ok', TRUNCATION_KEY: MALFORMED[case]}
+    monkeypatch.setattr(registry.REGISTRY['tool_python'], 'handler', handler)
+    workflow = Workflow.model_validate({'version': 1, 'name': 'Contract', 'nodes': [
+        {'id': 'input', 'type': 'chat_input'},
+        {'id': 'work', 'type': 'tool_python', 'inputs': {'input': 'input.message'}, 'config': {'code': 'print(1)', 'description': 'x'}},
+        {'id': 'out', 'type': 'response', 'inputs': {'text': 'work.text'}}],
+        'edges': [{'id': 'a', 'source': 'input', 'target': 'work'}, {'id': 'b', 'source': 'work', 'target': 'out'}]})
+    with pytest.raises(ValueError, match='declared contract'):
+        await compile_workflow(workflow, message='go').graph.ainvoke({'values': {}})
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('case', ['numeric reason', 'missing source', 'not truncated'])
+async def test_malformed_metadata_in_a_checkpoint_is_refused_on_restore(tmp_path, monkeypatch, case):
+    """It used to pass the restore and raise TypeError when the run's verdict was built."""
+    from sqlalchemy.orm import Session
+    from backend.app.storage import RunRecord
+    store, worker = with_jira(tmp_path, monkeypatch, page(100, total=200))
+    original = store.worker_event
+    def crash(id, owner, event):
+        persisted = original(id, owner, event)
+        if event.get('node_id') == 'tickets' and event['status'] == 'success': raise asyncio.CancelledError()
+        return persisted
+    monkeypatch.setattr(store, 'worker_event', crash)
+    row = store.create_run(search_flow(jira_connection(store)).model_dump(mode='json'), 'go')
+    await worker.execute(store.claim_next(worker.owner))
+    with Session(store.engine) as s:
+        record = s.get(RunRecord, row['id'])
+        tickets = {**record.data['checkpoints']['tickets'], TRUNCATION_KEY: MALFORMED[case]}
+        record.data = {**record.data, 'checkpoints': {**record.data['checkpoints'], 'tickets': tickets}}; s.commit()
+    monkeypatch.setattr(store, 'worker_event', original)
+    store.resume_run(row['id'])
+    await worker.execute(store.claim_next(worker.owner))
+    run = store.run(row['id'])
+    assert run['status'] == 'failed' and 'tickets cannot be restored' in run['error'] and 'malformed truncation metadata' in run['error']
+    assert not any(e.get('node_id') == 'out' and e['status'] == 'success' for e in run['events'])
+
+
+# --------------------------------------------------------------------------- data the projection discarded
+
+@pytest.mark.parametrize('body,expected', [
+    ('not json', 'Jira returned a response that was not valid JSON; no issues could be read.'),
+    (json.dumps({'total': 5}), 'Jira returned a response without an issues array; no issues could be read.'),
+    (json.dumps({'issues': [issue(0), {'fields': {}}]}), 'Jira returned 1 of 2 matching issues; skipped 1 malformed issue.'),
+    (json.dumps({'issues': [None, 3, {}]}), 'Jira returned 0 of 3 matching issues; skipped 3 malformed issues.'),
+])
+def test_data_the_projection_could_not_read_makes_it_incomplete(body, expected):
+    result = jira_items(body, 'search', 'https://jira.example.com')
+    assert result['truncated'] is True and result['truncation_reason'] == expected and result['warnings']
+
+
+def test_an_empty_search_is_complete():
+    result = jira_items(json.dumps({'issues': [], 'total': 0, 'startAt': 0}), 'search', 'https://jira.example.com')
+    assert result['items'] == [] and result['truncated'] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('body', ['not json', json.dumps({'issues': [issue(0), {'fields': {}}]})])
+async def test_a_run_reading_unusable_jira_data_is_incomplete(tmp_path, monkeypatch, body):
+    store, worker = with_jira(tmp_path, monkeypatch, body)
+    row = store.create_run(search_flow(jira_connection(store)).model_dump(mode='json'), 'go')
+    await worker.execute(store.claim_next(worker.owner))
+    run = store.run(row['id'])
+    assert run['status'] == 'success' and run['truncated'] is True and run['truncation_reason'].startswith('tickets: Jira returned')

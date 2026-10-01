@@ -101,14 +101,18 @@ def jira_items(text,operation,endpoint):
     """
     result={'items':[],'truncated':False,'warnings':[]}
     if operation not in ('search','get_issue'):return result
+    # Anything read but not projected makes the result incomplete, not merely warned
+    # about: an empty or shortened list must never look like the full answer.
+    def unreadable(warning,reason):
+        result.update(warnings=[warning],truncated=True,truncation_reason=reason);return result
     try:data=json.loads(text)
     except (ValueError,TypeError,RecursionError):
-        result['warnings']=['Jira response was not valid JSON; items is empty.'];return result
+        return unreadable('Jira response was not valid JSON; items is empty.','Jira returned a response that was not valid JSON; no issues could be read.')
     rows=data.get('issues') if operation=='search' and isinstance(data,dict) else [data] if operation=='get_issue' else None
     if not isinstance(rows,list):
-        result['warnings']=['Jira response has no issues array; items is empty.'];return result
+        return unreadable('Jira response has no issues array; items is empty.','Jira returned a response without an issues array; no issues could be read.')
     budget=max(0,64000-len(text.encode('utf-8')))
-    size=2;causes=[];more=None
+    size=2;causes=[];more=None;skipped=0
     def usable_string(value):
         if not isinstance(value,str):return False
         try:value.encode('utf-8');return True
@@ -116,6 +120,7 @@ def jira_items(text,operation,endpoint):
     for row in rows:
         if not isinstance(row,dict) or not usable_string(row.get('key')) or not row['key']:
             if not result['warnings']:result['warnings'].append('Jira response contains malformed issues; invalid entries were skipped.')
+            skipped+=1;result['truncated']=True
             continue
         if len(result['items'])>=100:
             result['truncated']=True;causes.append('the 100-item result limit');break
@@ -140,7 +145,9 @@ def jira_items(text,operation,endpoint):
         kept=len(result['items']);available=more if more is not None else len(rows)
         noun='issue' if (available if available>kept else kept)==1 else 'issues'
         returned=f'{kept} of {available} matching {noun}' if available>kept else f'{kept} matching {noun}, and more exist'
-        result['truncation_reason']=f"Jira returned {returned}; stopped by {' and '.join(causes)}."
+        details=([f"stopped by {' and '.join(causes)}"] if causes else [])+(
+            [f"skipped {skipped} malformed {'issue' if skipped==1 else 'issues'}"] if skipped else [])
+        result['truncation_reason']=f"Jira returned {returned}; {'; '.join(details)}."
     return result
 
 class ToolService:

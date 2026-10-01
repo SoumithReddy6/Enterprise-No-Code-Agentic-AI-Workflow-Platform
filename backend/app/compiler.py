@@ -244,6 +244,11 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
             async def handler(state):
                 if completed and node.id in completed:
                     outputs=completed[node.id]
+                    from .execution_policy import TRUNCATION_KEY,checked_truncation
+                    if isinstance(outputs,dict) and TRUNCATION_KEY in outputs:
+                        try:checked_truncation(outputs[TRUNCATION_KEY])
+                        except ValueError:
+                            raise ValueError(f'{node.id} cannot be restored: its checkpoint carries malformed truncation metadata. Start a new run.') from None
                     if node.type=='for_each' and 'summary' not in outputs:
                         # Checkpointed by a release without the summary output.
                         from .iteration import reconstructed_summary
@@ -275,11 +280,13 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                           inputs,config,replace(context,node_id=node.id,node_type=node.type,
                                                 checkpoint_owner=node.id,execution_identity=identity))
                       # Run metadata may travel beside the declared ports under the reserved key.
-                      from .execution_policy import TRUNCATION_KEY
+                      from .execution_policy import TRUNCATION_KEY,checked_truncation
                       ports={name:value for name,value in outputs.items() if name!=TRUNCATION_KEY}
-                      if set(ports) != set(definition.outputs) or any(not (isinstance(value,list) and all(isinstance(item,dict) for item in value)) if definition.outputs[name]=='array<object>' else not isinstance(value,str) for name,value in ports.items()) \
-                              or (TRUNCATION_KEY in outputs and not isinstance(outputs[TRUNCATION_KEY],dict)):
+                      if set(ports) != set(definition.outputs) or any(not (isinstance(value,list) and all(isinstance(item,dict) for item in value)) if definition.outputs[name]=='array<object>' else not isinstance(value,str) for name,value in ports.items()):
                           raise ValueError('Node returned outputs that do not match its declared contract.')
+                      if TRUNCATION_KEY in outputs:
+                          try:checked_truncation(outputs[TRUNCATION_KEY])
+                          except ValueError:raise ValueError('Node returned outputs that do not match its declared contract.') from None
                       return outputs
                 async def guard_refusal():
                     """A guarded dependency refuses without a model call, so it must resolve
