@@ -134,13 +134,20 @@ def test_the_audit_itself_catches_unsafe_orders(source, expected_unsafe):
 
 # --------------------------------------------------------------------------- native mechanism
 
+# The control deliberately runs the unguarded configuration, whose teardown can abort with
+# "recursive_mutex lock failed" when the 1DS worker races static destruction - the defect
+# the switch exists to prevent. Once the verdict is printed, the process leaves through
+# os._exit, which skips atexit handlers and static destructors, so how the control's
+# process tears down is never part of what this test measures.
 SAMPLE_THREADS = '''
-import os, subprocess, time
+import os, subprocess, sys, time
 {prelude}
 import onnxruntime
 time.sleep(1)
 stacks = subprocess.run(["sample", str(os.getpid()), "1", "-mayDie"], capture_output=True, text=True).stdout
 print("Microsoft::Applications::Events" in stacks and "WorkerThread" in stacks)
+sys.stdout.flush()
+os._exit(0)
 '''
 
 
@@ -156,6 +163,12 @@ def test_the_telemetry_worker_thread_is_identified_and_absent_when_guarded():
     guarded = run(SAMPLE_THREADS.format(prelude='import backend.app'))
     assert control == 'True', 'the 1DS telemetry worker is no longer present in the control; re-verify the mechanism for this onnxruntime version'
     assert guarded == 'False', 'the 1DS telemetry worker started despite the switch'
+
+
+@pytest.mark.skipif(sys.platform != 'darwin', reason='uses the macOS thread sample; run by the macOS CI job')
+def test_the_control_verdict_does_not_depend_on_how_its_process_tears_down():
+    """An abort during teardown - here forced at exit - must not fail the control."""
+    assert run(SAMPLE_THREADS.format(prelude='import atexit; atexit.register(os.abort)')) == 'True'
 
 
 def test_importing_the_app_sets_the_switch_even_over_an_inherited_override():
