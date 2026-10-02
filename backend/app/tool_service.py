@@ -302,8 +302,8 @@ class ToolService:
 
     async def _python(self,config,text):
         name='relay-tool-'+new_id()
-        from .sandbox import IMAGE as SANDBOX_IMAGE
-        command=['docker','run','--rm','--pull=never','--name',name,'--network=none','--read-only','--cap-drop=ALL','--security-opt=no-new-privileges','--pids-limit=32','--memory=128m','--cpus=0.5','--ulimit','fsize=65536:65536','--user=65534:65534','--tmpfs','/tmp:rw,noexec,nosuid,size=16m','-i',SANDBOX_IMAGE,'python','-I','-c',"import json,sys,resource;resource.setrlimit(resource.RLIMIT_CPU,(5,5));p=json.load(sys.stdin);input_text=p['input'];exec(compile(p['code'],'<tool>','exec'))"]
+        from .sandbox import container_command
+        command=container_command(name,'python','-I','-c',"import json,sys,resource;resource.setrlimit(resource.RLIMIT_CPU,(5,5));p=json.load(sys.stdin);input_text=p['input'];exec(compile(p['code'],'<tool>','exec'))")
         process=None
         try:
             process=await asyncio.create_subprocess_exec(*command,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)

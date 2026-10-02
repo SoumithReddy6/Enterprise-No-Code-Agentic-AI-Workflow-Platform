@@ -16,5 +16,5 @@ def pytest_configure(config):
 def python_sandbox_available(request, monkeypatch):
     if request.node.get_closest_marker('real_sandbox'):return
     from backend.app import sandbox
-    async def available():return {'status': 'ok'}
+    async def available(fresh=False):return {'status': 'ok'}
     monkeypatch.setattr(sandbox, 'status', available)

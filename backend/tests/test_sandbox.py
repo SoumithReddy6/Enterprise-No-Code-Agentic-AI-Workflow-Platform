@@ -24,6 +24,12 @@ if [ -f "$dir/sleep" ]; then echo $$ > "$dir/pid"; exec sleep "$(cat "$dir/sleep
 case "$1" in
   version) if [ -f "$dir/daemon_down" ]; then echo "Cannot connect to the Docker daemon" >&2; exit 1; fi; echo 29.0;;
   image) if [ -f "$dir/image_missing" ]; then echo "Error: No such image" >&2; exit 1; fi; echo sha256:abc;;
+  run) echo "$@" >> "$dir/argv"
+       if [ -f "$dir/run_sleep" ]; then echo $$ > "$dir/pid"; exec sleep "$(cat "$dir/run_sleep")"; fi
+       if [ -f "$dir/run_fails" ]; then echo "docker: Error response from daemon: OCI runtime create failed" >&2; exit 125; fi
+       if [ -f "$dir/run_wrong" ]; then echo 2; exit 0; fi
+       case "$*" in *"print(1)"*) echo 1;; *) cat > /dev/null; echo executed;; esac;;
+  rm) ;;
 esac
 '''
 
@@ -59,7 +65,7 @@ def probe_now():
 
 def test_a_healthy_sandbox_is_ok(docker):
     assert probe_now() == {'status': 'ok'}
-    assert docker.calls() == ['version --format', 'image inspect']
+    assert docker.calls() == ['version --format', 'image inspect', 'run --rm']
 
 
 def test_a_missing_cli_is_reported(tmp_path, monkeypatch):
@@ -99,7 +105,7 @@ def test_concurrent_callers_share_one_probe_and_results_are_cached(docker, monke
     monkeypatch.setattr(sandbox, 'PROBE_SECONDS', 2)
     first, cached = asyncio.run(burst())
     assert len({json.dumps(r) for r in first}) == 1 and cached == first[0]
-    assert len(docker.calls()) == 2, f'one probe (version + image), not ten: {docker.calls()}'
+    assert len(docker.calls()) == 3, f'one probe (version, image, smoke run), not ten: {docker.calls()}'
 
 
 def test_recovery_is_noticed_once_the_cache_expires(docker, monkeypatch):
@@ -200,3 +206,78 @@ def test_python_workflows_are_accepted_again_after_recovery(tmp_path, monkeypatc
         docker.clear('daemon_down')
         assert client.post('/api/runs', json={'workflow': flow(True), 'message': 'hi'}).status_code == 201
         assert client.get('/api/ready').json()['checks']['python_sandbox']['status'] == 'ok'
+
+
+# --------------------------------------------------------------------------- the smoke container
+
+@pytest.mark.parametrize('failure', ['run_fails', 'run_wrong'])
+def test_a_container_that_cannot_run_python_is_reported(docker, failure):
+    """version and image inspect can succeed while Docker still refuses the container."""
+    docker.set(failure)
+    assert probe_now() == {'status': 'unavailable', 'reason': 'container_failed'}
+
+
+def test_a_hung_smoke_container_is_stopped_and_removed(docker, monkeypatch):
+    monkeypatch.setattr(sandbox, 'PROBE_SECONDS', 0.5)
+    docker.set('run_sleep', 30)
+    assert probe_now() == {'status': 'unavailable', 'reason': 'probe_timeout'}
+    with pytest.raises(ProcessLookupError):
+        os.kill(int((docker.dir / 'pid').read_text()), 0)
+    assert 'rm -f' in docker.calls(), 'the container the CLI may have started is removed'
+
+
+def test_the_probe_runs_the_container_exactly_as_the_executor_does(docker):
+    """Same image, security flags and limits: only the name and the program differ."""
+    from backend.app.registry import REGISTRY
+    from backend.app.tool_service import ToolService, PythonConfig
+    probe_now()
+    tools = ToolService.__new__(ToolService); tools.max_output = 64000
+    assert asyncio.run(tools._python(PythonConfig(code='print(input_text)', description='x'), 'hi')).strip() == 'executed'
+    probe_args, executor_args = [line.split() for line in (docker.dir / 'argv').read_text().splitlines()]
+    def configuration(args):
+        name = args.index('--name')
+        return args[:name] + args[name + 2:args.index(sandbox.IMAGE) + 1]
+    assert configuration(probe_args) == configuration(executor_args)
+    assert '--network=none' in configuration(probe_args) and '--cap-drop=ALL' in configuration(probe_args)
+
+
+# --------------------------------------------------------------------------- freshness and resume
+
+def test_the_worker_never_executes_on_a_cached_success(tmp_path, monkeypatch, docker):
+    """The audit's probe: ok is cached, the daemon stops, and execution must still refuse."""
+    from backend.app.storage import Store
+    from backend.app.worker import Worker
+    store = Store(f'sqlite:///{tmp_path}/fresh.db', Fernet.generate_key())
+    worker = Worker(store)
+    executed = []
+    async def execute(*args, **kwargs): executed.append(args); return 'ok'
+    monkeypatch.setattr(worker.tools, 'execute', execute)
+    async def scenario():
+        sandbox.PROBE = sandbox.SandboxProbe()
+        assert await sandbox.status() == {'status': 'ok'}
+        docker.set('daemon_down')
+        assert await sandbox.status() == {'status': 'ok'}, 'still cached for readiness and validation'
+        row = store.create_run(Workflow.model_validate(flow(True)).model_dump(mode='json'), 'hi')
+        await worker.execute(store.claim_next(worker.owner))
+        return row['id']
+    run = store.run(asyncio.run(scenario()))
+    assert run['status'] == 'failed' and 'Docker is not running' in run['error'] and executed == []
+    assert docker.calls().count('version --format') == 2, 'the worker probed afresh'
+
+
+def test_resume_is_refused_and_leaves_the_run_unchanged(tmp_path, monkeypatch, docker):
+    from sqlalchemy.orm import Session
+    from backend.app.storage import JobRecord
+    app = create_app(f'sqlite:///{tmp_path}/resume.db', Fernet.generate_key(), auth_enabled=False, embedded_worker=False)
+    store = app.state.store
+    row = store.create_run(Workflow.model_validate(flow(True)).model_dump(mode='json'), 'hi')
+    store.claim_next('worker'); store.finish_run(row['id'], 'worker', 'failed', error='earlier failure')
+    before = store.run(row['id'])
+    with Session(store.engine) as s: job_before = s.get(JobRecord, row['id']).status
+    docker.set('daemon_down')
+    with TestClient(app) as client:
+        refused = client.post(f"/api/runs/{row['id']}/resume")
+    assert refused.status_code == 422 and any('Docker is not running' in e for e in refused.json()['detail'])
+    after = store.run(row['id'])
+    assert (after['status'], after['error'], len(after['events'])) == (before['status'], before['error'], len(before['events']))
+    with Session(store.engine) as s: assert s.get(JobRecord, row['id']).status == job_before != 'queued'

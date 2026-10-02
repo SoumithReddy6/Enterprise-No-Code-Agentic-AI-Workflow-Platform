@@ -91,7 +91,7 @@ class Worker:
             self.store.check_resume_writes(run)
             from . import sandbox
             # Checked again here: Docker may have stopped after the run was submitted.
-            errors=self.store.model_errors(workflow,tenant_id)+platform_errors(self.store,workflow,tenant_id)+await kb_errors(self.kbs,workflow,tenant_id,run.get('checkpoints'),run.get('vector_dependencies'))+await sandbox.preflight_errors(workflow)
+            errors=self.store.model_errors(workflow,tenant_id)+platform_errors(self.store,workflow,tenant_id)+await kb_errors(self.kbs,workflow,tenant_id,run.get('checkpoints'),run.get('vector_dependencies'))+await sandbox.preflight_errors(workflow,fresh=True)
             if errors:raise ValueError('; '.join(errors))
             resolver=lambda credential_id:self.store.resolve_run_credential(id,owner,credential_id)
             async def platform_resolver(action,*args):
