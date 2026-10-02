@@ -78,7 +78,8 @@ async def _smoke(docker):
         # Killing the CLI does not stop a container it already started.
         cleanup=await asyncio.create_subprocess_exec(docker,'rm','-f',name,stdout=asyncio.subprocess.DEVNULL,stderr=asyncio.subprocess.DEVNULL)
         try:await asyncio.wait_for(cleanup.wait(),5)
-        except TimeoutError:cleanup.kill()
+        except TimeoutError:
+            cleanup.kill();await cleanup.wait()  # Reap it; never leave the cleanup process behind.
         raise
 
 

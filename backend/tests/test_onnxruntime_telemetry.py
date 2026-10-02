@@ -134,41 +134,50 @@ def test_the_audit_itself_catches_unsafe_orders(source, expected_unsafe):
 
 # --------------------------------------------------------------------------- native mechanism
 
-# The control deliberately runs the unguarded configuration, whose teardown can abort with
-# "recursive_mutex lock failed" when the 1DS worker races static destruction - the defect
-# the switch exists to prevent. Once the verdict is printed, the process leaves through
-# os._exit, which skips atexit handlers and static destructors, so how the control's
-# process tears down is never part of what this test measures.
+# Leave without interpreter teardown: no atexit handlers, no static destructors. The 1DS
+# worker's crash happens during that teardown, so a probe process that has already
+# printed its verdict must never be judged by how it exits.
+EXIT_WITHOUT_TEARDOWN = 'sys.stdout.flush()\nos._exit(0)\n'
+
 SAMPLE_THREADS = '''
 import os, subprocess, sys, time
-{prelude}
+import backend.app
 import onnxruntime
 time.sleep(1)
 stacks = subprocess.run(["sample", str(os.getpid()), "1", "-mayDie"], capture_output=True, text=True).stdout
 print("Microsoft::Applications::Events" in stacks and "WorkerThread" in stacks)
-sys.stdout.flush()
-os._exit(0)
-'''
+''' + EXIT_WITHOUT_TEARDOWN
+
+
+@pytest.mark.skipif(sys.platform != 'darwin', reason='the 1DS client ships in the macOS wheel; run by the macOS CI job')
+def test_the_pinned_wheel_ships_the_1ds_telemetry_client():
+    """The switch matters only while the wheel embeds the client, so prove it statically.
+
+    A runtime control was nondeterministic: an unguarded process does not always start the
+    1DS worker, or show it, within a second. The binaries are deterministic. If a future
+    onnxruntime drops the client, this fails loudly and the switch can be re-evaluated.
+    """
+    import importlib.util
+    capi = Path(importlib.util.find_spec('onnxruntime').origin).parent / 'capi'
+    binaries = [*capi.glob('*.so'), *capi.glob('*.dylib')]
+    assert binaries, 'no onnxruntime native libraries found'
+    shipping = [b.name for b in binaries if b'Microsoft12Applications6Events' in (data := b.read_bytes()) and b'WorkerThread' in data]
+    assert shipping, 'the 1DS telemetry client is no longer in this onnxruntime wheel; re-evaluate the switch'
 
 
 @pytest.mark.skipif(sys.platform != 'darwin', reason='identifies the 1DS worker by native symbol with macOS sample; run by the macOS CI job')
-def test_the_telemetry_worker_thread_is_identified_and_absent_when_guarded():
-    """Identify the specific thread rather than compare counts.
-
-    The control proves the pinned wheel still ships the 1DS worker, so this fails loudly
-    if a future onnxruntime changes the mechanism. The guarded process proves the switch
-    stops that thread from starting. Neither is a claim about all network traffic.
-    """
-    control = run(SAMPLE_THREADS.format(prelude=''))
-    guarded = run(SAMPLE_THREADS.format(prelude='import backend.app'))
-    assert control == 'True', 'the 1DS telemetry worker is no longer present in the control; re-verify the mechanism for this onnxruntime version'
-    assert guarded == 'False', 'the 1DS telemetry worker started despite the switch'
+def test_no_telemetry_worker_thread_runs_when_the_switch_is_set():
+    """With the switch set, the 1DS worker thread must not be among the process's threads.
+    This is a claim about that thread, not about all network traffic."""
+    assert run(SAMPLE_THREADS) == 'False', 'the 1DS telemetry worker started despite the switch'
 
 
-@pytest.mark.skipif(sys.platform != 'darwin', reason='uses the macOS thread sample; run by the macOS CI job')
-def test_the_control_verdict_does_not_depend_on_how_its_process_tears_down():
-    """An abort during teardown - here forced at exit - must not fail the control."""
-    assert run(SAMPLE_THREADS.format(prelude='import atexit; atexit.register(os.abort)')) == 'True'
+def test_a_probe_verdict_survives_an_abort_during_teardown():
+    """Independent of onnxruntime: a fixed verdict, then a forced abort at exit."""
+    code = 'import atexit, os, sys\natexit.register(os.abort)\nprint("verdict")\n' + EXIT_WITHOUT_TEARDOWN
+    assert run(code) == 'verdict'
+    with pytest.raises(AssertionError):
+        run('import atexit, os, sys\natexit.register(os.abort)\nprint("verdict")\n')  # without it, the abort fails the probe
 
 
 def test_importing_the_app_sets_the_switch_even_over_an_inherited_override():
