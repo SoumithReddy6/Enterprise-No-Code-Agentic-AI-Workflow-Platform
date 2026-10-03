@@ -233,6 +233,18 @@ A plain LLM node has no partial-answer contract, so it refuses with the same mes
 
 Sizing: a single multi-agent run over a large knowledge base typically consumes tens of thousands of tokens, so the 2,000,000 default is a runaway guard rather than a working limit. Lower it deliberately when moving to a metered provider, and set it per deployment rather than per workflow. Changing it requires a worker restart and does not affect runs already in flight.
 
+## Loop result and event size bounds
+
+A For each loop's `results` output has a stated contract, measured in serialized UTF-8 bytes of the whole list (brackets, separators and entry structure included):
+
+- **Retained values: 1,000,000 bytes.** Item values are kept in order while the list fits; the first value that does not fit, and every later value, is stored as `""` with `value_dropped: true`. Values are never cut part way and always form a prefix.
+- **Outcome text: 500 characters per field.** `error` and `truncation_reason` longer than that are shortened and end with `…`.
+- **Hard maximum: 2,000,000 bytes for the complete list, metadata included.** Room is always reserved for every remaining accepted item in compact form (at most 226 bytes each); an entry that would take that room is stored compact - `index` and `status` kept, details replaced by a marker and `details_omitted: true`. Unlike values, details are kept whenever room remains.
+
+Any dropped value or omitted detail marks the loop, and therefore the run, incomplete with the count and the reason. Item rows in `run_loop_items` hold the same admitted entries, so resume reaches identical results.
+
+Loop events stored for observability (`loop_node_id` set) are bounded too: large fields become 2,000-character previews, `preview_of` lists at most 20 shortened paths (`preview_omitted` counts the rest), `usage` and `answerability` stay exact at normal size and keep their structure when abnormally large, and a final ceiling of 32,768 bytes replaces the largest remaining fields - removing, never retyping, `usage` and `answerability` - until the event fits. Identity fields (`node_id`, `status`, `loop_node_id`, `item_index`, `invocation_id` and similar) are never shortened. Approvals, write results, checkpoints and item rows are stored in full elsewhere.
+
 ## Database schema
 
 Alembic is the single authority for DDL. `alembic_version` records schema state;

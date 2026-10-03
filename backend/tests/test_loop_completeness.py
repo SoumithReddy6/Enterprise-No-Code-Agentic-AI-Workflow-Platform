@@ -75,7 +75,7 @@ async def test_the_earliest_values_are_kept_and_later_ones_dropped(monkeypatch):
     """Each entry serializes to 63 bytes: '[' + two entries + ', ' + ']' is 130 and fits 150; a
     third does not. Dropped values are empty and marked; outcomes are always kept."""
     from backend.app import iteration
-    monkeypatch.setattr(iteration, 'MAX_RESULT_BYTES', 150)
+    monkeypatch.setattr(iteration, 'RETAINED_VALUE_BYTES', 150)
     resolver, _ = platform(issues(4), lambda index, text: 'done')
     result = await run(loop_flow(), resolver)
     results, summary = result['values']['each']['results'], summary_of(result)
@@ -91,7 +91,7 @@ async def test_the_earliest_values_are_kept_and_later_ones_dropped(monkeypatch):
 def test_the_bound_counts_serialized_utf8_bytes_not_characters(monkeypatch):
     """300 'é' are 300 characters but 600 UTF-8 bytes; the list must be measured as stored."""
     from backend.app import iteration
-    monkeypatch.setattr(iteration, 'MAX_RESULT_BYTES', 500)
+    monkeypatch.setattr(iteration, 'RETAINED_VALUE_BYTES', 500)
     budget = iteration.ResultBudget()
     entry = budget.admit({'index': 0, 'status': 'success', 'value': 'é' * 300, 'error': ''})
     assert entry['value'] == '' and entry['value_dropped'] is True
@@ -110,7 +110,7 @@ def test_the_running_size_matches_the_serialized_list_exactly():
 def test_a_value_is_never_cut_part_way(monkeypatch):
     """A value either survives whole or becomes '' - including JSON text, which a cut would corrupt."""
     from backend.app import iteration
-    monkeypatch.setattr(iteration, 'MAX_RESULT_BYTES', 120)
+    monkeypatch.setattr(iteration, 'RETAINED_VALUE_BYTES', 120)
     budget = iteration.ResultBudget()
     document = json.dumps({'rows': list(range(20))})
     for i in range(3):
@@ -122,13 +122,13 @@ def test_a_value_is_never_cut_part_way(monkeypatch):
 def test_once_a_value_is_dropped_later_small_values_are_dropped_too(monkeypatch):
     """Retained values always form a prefix, so a consumer never sees a gap in the middle."""
     from backend.app import iteration
-    monkeypatch.setattr(iteration, 'MAX_RESULT_BYTES', 300)
+    monkeypatch.setattr(iteration, 'RETAINED_VALUE_BYTES', 300)
     budget = iteration.ResultBudget()
     small = {'index': 2, 'status': 'success', 'value': 'z', 'error': ''}
     kept = [budget.admit({'index': i, 'status': 'success', 'value': v, 'error': ''})['value'] != ''
             for i, v in enumerate(['x' * 50, 'y' * 200])]
     # The small value would fit on its own, so only the prefix rule can drop it.
-    assert budget.size + 2 + iteration.serialized_bytes(small) <= iteration.MAX_RESULT_BYTES
+    assert budget.size + 2 + iteration.serialized_bytes(small) <= iteration.RETAINED_VALUE_BYTES
     kept.append(budget.admit(small)['value'] != '')
     assert kept == [True, False, False]
 
@@ -329,7 +329,7 @@ CASES = {
 async def execute_case(tmp_path, monkeypatch, case, crash_at=None, items=4):
     from backend.app import iteration
     options, failing, bound, actions = CASES[case]
-    if bound is not None: monkeypatch.setattr(iteration, 'MAX_RESULT_BYTES', bound)
+    if bound is not None: monkeypatch.setattr(iteration, 'RETAINED_VALUE_BYTES', bound)
     if actions is not None: monkeypatch.setenv('AGENT_RUN_BUDGET', str(actions))
     tmp_path.mkdir()
     store, worker, _, _ = durable_setup(tmp_path, monkeypatch, items=items)

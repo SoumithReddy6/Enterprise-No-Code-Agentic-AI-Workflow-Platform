@@ -218,15 +218,17 @@ async def test_resuming_a_looped_agent_ends_like_an_uninterrupted_run(tmp_path, 
 # --------------------------------------------------------------------------- the preview policy
 
 def test_fields_other_records_are_derived_from_stay_exact():
-    """Guard decision rows and token usage rows are built from the stored event."""
+    """Guard decision rows and token usage rows are built from the stored event: at their
+    normal size they are stored exactly."""
     from backend.app.storage import observed
-    reason = 'r' * (3 * PREVIEW_CHARS)
+    reason = 'r' * 300
     event = {'loop_node_id': 'each', 'item_index': 0, 'node_id': 'kb', 'status': 'success', 'kind': 'answerability',
              'answerability': {'decision': 'abstain', 'reason': reason}, 'usage': {'prompt_tokens': 7, 'by_model': [{'model': 'm' * 3000}]},
              'outputs': {'text': 't' * (3 * PREVIEW_CHARS)}}
     stored = observed(event)
     assert stored['answerability'] == event['answerability'] and stored['usage'] == event['usage']
     assert stored['outputs']['text'] == 't' * PREVIEW_CHARS and stored['preview_of'] == ['outputs.text']
+    assert len(json.dumps(event['usage'])) > PREVIEW_CHARS, 'usage above the preview size still stays exact'
 
 
 def test_a_dict_of_many_medium_values_is_bounded_as_a_whole():
@@ -266,3 +268,76 @@ async def test_a_nested_event_cannot_override_its_loop_identity(monkeypatch, spo
     deep = [e for e in events if e.get('node_id') == 'deep']
     assert [(e['loop_node_id'], e['item_index']) for e in deep] == [('each', 0), ('each', 0), ('each', 1), ('each', 1)]
     assert all(len(json.dumps(observed(e))) <= 4 * PREVIEW_CHARS for e in deep), 'a spoofed identity must not escape the preview'
+
+
+# --------------------------------------------------------------------------- the absolute ceiling
+
+def stored_bytes(event):
+    return len(json.dumps(event, ensure_ascii=False, default=str).encode('utf-8'))
+
+
+def test_an_oversized_exact_field_keeps_its_shape_and_its_record(tmp_path, monkeypatch):
+    """The audit's synthetic case: a 200 KB answerability field in a loop event. It is
+    bounded, stays a dict, and the guard decision record is still written from it."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import Session
+    from backend.app.operator_metrics import GuardDecisionRecord
+    from backend.app.storage import MAX_EVENT_BYTES, observed
+    from backend.tests.test_loop_completeness import durable_setup, jira_connection, loop_flow
+    event = {'kind': 'answerability', 'node_id': 'kb', 'status': 'success', 'transient': True, 'loop_node_id': 'each',
+             'item_index': 4, 'answerability': {'decision': 'abstain', 'reason': 'r' * 200_000}}
+    stored = observed(event)
+    assert isinstance(stored['answerability'], dict) and stored['answerability']['decision'] == 'abstain'
+    assert len(stored['answerability']['reason']) == PREVIEW_CHARS and 'answerability.reason' in stored['preview_of']
+    assert stored_bytes(stored) <= MAX_EVENT_BYTES
+    store, *_ = durable_setup(tmp_path, monkeypatch)
+    row = store.create_run(loop_flow(connection_id=jira_connection(store)).model_dump(mode='json'), 'go')
+    store.claim_next('worker')
+    assert store.worker_event(row['id'], 'worker', event) is True
+    with Session(store.engine) as s:
+        decisions = s.scalars(select(GuardDecisionRecord).where(GuardDecisionRecord.run_id == row['id'])).all()
+    assert [d.decision for d in decisions] == ['abstain']
+
+
+def test_the_list_of_shortened_paths_is_capped_with_a_count():
+    from backend.app.storage import MAX_EVENT_BYTES, MAX_PREVIEW_PATHS, observed
+    event = {'node_id': 'send', 'status': 'success', 'loop_node_id': 'each', 'item_index': 0,
+             'outputs': {f'field{i}': 'v' * (PREVIEW_CHARS + 1) for i in range(1000)}}
+    stored = observed(event)
+    assert len(stored['preview_of']) == MAX_PREVIEW_PATHS and stored['preview_omitted'] == 1001 - MAX_PREVIEW_PATHS
+    assert stored_bytes(stored) <= MAX_EVENT_BYTES
+
+
+IDENTITY = {'kind': 'node', 'node_id': 'deep', 'status': 'success', 'loop_node_id': 'each', 'item_index': 7,
+            'invocation_id': 'each:7:send>3:deep', 'parent_node_id': 'send', 'transient': True}
+
+
+def hostile_event(rng):
+    """Hostile in size and shape - many fields, nesting, long keys, characters JSON escapes
+    to six bytes, oversized exact fields - within a budget of about two million characters,
+    so each case builds quickly."""
+    budget = [2_000_000]
+    def text(n):
+        n = min(n, budget[0]); budget[0] -= n
+        return ''.join(rng.choices(['\x01', 'é', '"', 'a', '漢'], k=n))
+    def nested(depth):
+        if depth == 0 or budget[0] <= 0 or rng.random() < 0.3: return text(rng.choice([5, 1500, 30000]))
+        if rng.random() < 0.5: return [nested(depth - 1) for _ in range(rng.choice([1, 3, 25]))]
+        return {text(rng.choice([3, 300])) + str(i): nested(depth - 1) for i in range(rng.choice([1, 3, 60]))}
+    event = dict(IDENTITY)
+    for i in range(rng.choice([1, 5, 15])): event[f'field{i}'] = nested(3)
+    if rng.random() < 0.7: event['answerability'] = {'decision': 'allow', 'reason': text(rng.choice([10, 50_000])), 'extra': nested(2)}
+    if rng.random() < 0.7: event['usage'] = {'prompt_tokens': 3, 'by_model': [{'model': text(rng.choice([5, 3000])), 'calls': 1} for _ in range(rng.choice([1, 60]))]}
+    return event
+
+
+@pytest.mark.parametrize('seed', range(40))
+def test_any_loop_event_is_stored_within_the_absolute_ceiling(seed):
+    import random
+    from backend.app.storage import EXACT_EVENT_FIELDS, MAX_EVENT_BYTES, observed
+    event = hostile_event(random.Random(seed))
+    stored = observed(event)
+    assert stored_bytes(stored) <= MAX_EVENT_BYTES, stored_bytes(stored)
+    assert {k: stored[k] for k in IDENTITY} == IDENTITY, 'identity is never shortened'
+    for field in EXACT_EVENT_FIELDS & set(event):
+        assert field not in stored or isinstance(stored[field], dict), 'exact fields keep their type or are removed'

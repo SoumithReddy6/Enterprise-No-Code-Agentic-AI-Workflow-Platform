@@ -10,7 +10,14 @@ import json
 from .execution_policy import ExecutionIdentity,execute_with_policy,invoke_attached,charges_action,accounting_snapshot
 
 MAX_ITEMS_CEILING=1000
-MAX_RESULT_BYTES=1_000_000
+# The results contract, in serialized UTF-8 bytes of the results list:
+# * RETAINED_VALUE_BYTES bounds item values: the earliest are kept while the whole list fits.
+# * Outcome text (error, truncation_reason) is capped per entry at MAX_ENTRY_TEXT characters.
+# * HARD_RESULT_BYTES bounds the complete list, metadata included, and is never exceeded.
+RETAINED_VALUE_BYTES=1_000_000
+MAX_ENTRY_TEXT=500
+HARD_RESULT_BYTES=2_000_000
+DETAILS_OMITTED='[omitted: results reached their size ceiling]'
 # Observability events carry previews; the durable item result holds the full value.
 PREVIEW_CHARS=2000
 
@@ -46,30 +53,66 @@ def serialized_bytes(value):
     return len(json.dumps(value,ensure_ascii=False,default=str).encode('utf-8'))
 
 
+def capped_text(text):
+    """Outcome text bounded to MAX_ENTRY_TEXT characters, marked when shortened."""
+    if not isinstance(text,str):text=str(text)
+    return text if len(text)<=MAX_ENTRY_TEXT else text[:MAX_ENTRY_TEXT-1]+'…'
+
+
+def compact(entry):
+    """An entry reduced to what must survive: its index, status and the fact that details
+    or a value existed. Its size is bounded by COMPACT_BYTES whatever the original held."""
+    short={'index':entry.get('index'),'status':'failed' if entry.get('status')=='failed' else 'success',
+           'value':'','error':DETAILS_OMITTED if entry.get('error') else '','details_omitted':True}
+    if entry.get('value') or entry.get('value_dropped'):short['value_dropped']=True
+    if entry.get('truncation_reason'):short['truncation_reason']=DETAILS_OMITTED
+    return short
+
+
+# The largest compact entry, plus its list separator: the reserve every unadmitted item needs.
+COMPACT_BYTES=serialized_bytes(compact({'index':MAX_ITEMS_CEILING-1,'status':'success','value':'x','error':'x','truncation_reason':'x'}))+2
+
+
 class ResultBudget:
-    """Admit item entries in order while the serialized results list fits MAX_RESULT_BYTES.
+    """Admit item entries in order under the results contract (see RETAINED_VALUE_BYTES).
 
-    The earliest values are kept. The first value that does not fit, and every value after
-    it, is replaced by '' and marked value_dropped: a value is never cut part way, and the
-    retained values always form a prefix. Outcome metadata is always kept. The size counts
-    the whole list as serialized - brackets, separators and entry structure, not just the
-    value text - so the bound is on what is actually stored.
+    Values: the earliest are kept while the serialized list fits RETAINED_VALUE_BYTES. The
+    first value that does not fit, and every value after it, is replaced by '' and marked
+    value_dropped: a value is never cut part way, and the retained values form a prefix.
 
-    Restored entries pass through the same admission, so a replay reaches the same
-    decisions: fresh entries are admitted before they are persisted, and an entry that
-    was dropped is stored already marked.
+    Outcome text is capped per entry. The complete list never exceeds HARD_RESULT_BYTES:
+    the budget knows how many items were accepted and always keeps room for each of the
+    rest in compact form. An entry that would take that room is stored compact - index and
+    status kept, details marked omitted - so the hard maximum holds whatever the metadata.
+    Unlike values, details are kept whenever room remains, so a later entry may keep its
+    error text after an earlier one lost it.
+
+    Sizes count the whole list as serialized UTF-8 - brackets, separators and structure.
+    Restored entries pass through the same admission and every decision is stored on the
+    entry, so a replay reaches the same results; fresh entries are admitted before they
+    are persisted.
     """
-    def __init__(self):
+    def __init__(self,expected=MAX_ITEMS_CEILING):
         self.size=2  # '[]'
         self.count=0
         self.dropping=False
+        self.expected=max(int(expected),0)
+
+    def reserve(self,after):
+        """Room kept for the items not yet admitted once `after` entries are in."""
+        return max(self.expected-after,0)*COMPACT_BYTES
 
     def admit(self,entry):
         separator=2 if self.count else 0  # json.dumps separates list items with ', '
+        if not entry.get('details_omitted'):
+            entry={**entry,**{key:capped_text(entry[key]) for key in ('error','truncation_reason') if entry.get(key)}}
         if entry.get('value_dropped'):self.dropping=True
         elif entry.get('value'):
-            if self.dropping or self.size+separator+serialized_bytes(entry)>MAX_RESULT_BYTES:
+            if self.dropping or self.size+separator+serialized_bytes(entry)>RETAINED_VALUE_BYTES:
                 entry={**entry,'value':'','value_dropped':True};self.dropping=True
+        if self.size+separator+serialized_bytes(entry)+self.reserve(self.count+1)>HARD_RESULT_BYTES:
+            entry=compact(entry)
+            if entry.get('value_dropped'):self.dropping=True
         self.size+=separator+serialized_bytes(entry);self.count+=1
         return entry
 
@@ -113,10 +156,13 @@ def completeness(node_id,total,accepted,results,failed,halt=None):
         reasons.append(f'{node_id}: {len(partial)} item(s) returned incomplete results ({partial[0]["truncation_reason"]}).')
     dropped=sum(bool(r.get('value_dropped')) for r in results)
     if dropped:
-        reasons.append(f'{node_id} kept item values up to {MAX_RESULT_BYTES} bytes; {dropped} later value(s) were dropped and only their outcomes kept.')
+        reasons.append(f'{node_id} kept item values up to {RETAINED_VALUE_BYTES} bytes; {dropped} later value(s) were dropped and only their outcomes kept.')
+    omitted=sum(bool(r.get('details_omitted')) for r in results)
+    if omitted:
+        reasons.append(f'{node_id}: outcome details of {omitted} item(s) were omitted to keep results within {HARD_RESULT_BYTES} bytes.')
     return {'total':total,'accepted':accepted,'processed':len(results),'failed':failed,
             'limited':total>accepted,'stopped':stopped,'budget_exhausted':budget,'incomplete_items':len(partial),
-            'values_dropped':bool(dropped),'dropped_value_count':dropped,
+            'values_dropped':bool(dropped),'dropped_value_count':dropped,'details_omitted':omitted,
             'truncated':bool(reasons),'truncation_reason':' '.join(reasons),
             'truncation_source':'confirmed' if reasons else ''}
 
@@ -183,7 +229,7 @@ async def for_each_node(inputs,config,ctx):
     limit=min(config.max_items,MAX_ITEMS_CEILING)
     selected=items[:limit]
     done=completed_indices(ctx.run,ctx.node_id)
-    results=[];failed=0;halt=None;budget=ResultBudget()
+    results=[];failed=0;halt=None;budget=ResultBudget(len(selected))
 
     for index,value in enumerate(selected):
         if index in done:

@@ -137,26 +137,43 @@ def local_key(data_dir:Path):
     return key
 
 # Fields derived from events into their own records (token usage rows, guard decision
-# rows) are small and must stay exact, so previews never touch them.
+# rows) stay exact at their normal size. Only abnormally large ones are bounded, and then
+# their structure is kept - those records read them as dicts.
 EXACT_EVENT_FIELDS=frozenset({'usage','answerability','abstention_source'})
+EXACT_FIELD_BYTES=4096
+# Who and where an event is about; small by construction and never shortened.
+IDENTITY_EVENT_FIELDS=frozenset({'kind','node_id','status','loop_node_id','item_index','invocation_id','parent_node_id',
+                                 'transient','attempt','recovered','budget_exhausted','cached','seq','timestamp'})
+MAX_PREVIEW_PATHS=20
+# The absolute ceiling for a stored loop event, whatever its fields hold.
+MAX_EVENT_BYTES=32_768
+EVENT_FIELD_OMITTED='[omitted: event size ceiling]'
 
 
 def observed(event):
-    """The copy of an event kept for observability, with loop work as previews.
+    """The copy of an event kept for observability, with loop work bounded.
 
     Inside a loop an item's work is repeated for every item: the body, and every agent
     step, tool call, specialist, retry and failure beneath it. Each such event carries the
-    loop's identity (loop_node_id, item_index), and its large fields are stored as previews
-    of PREVIEW_CHARS, so a batch cannot grow event storage with the size of what it
-    handles. The durable copies resume and settlement read - item rows, checkpoints,
-    approvals and write results - are recorded elsewhere and never shortened. preview_of
-    names every field that was shortened.
+    loop's identity (loop_node_id, item_index), and is stored bounded:
+
+    * large fields become previews of PREVIEW_CHARS, a field of many medium values is
+      collapsed as a whole, and preview_of names up to MAX_PREVIEW_PATHS shortened paths;
+    * exact fields stay exact at normal size; abnormally large ones keep their structure
+      with their contents shortened, since other records read them as dicts;
+    * a final ceiling, MAX_EVENT_BYTES, replaces the largest remaining fields - exact ones
+      last, and removed rather than replaced - until the event fits. Identity fields are
+      never touched.
+
+    The durable copies resume and settlement read - item rows, checkpoints, approvals and
+    write results - are recorded elsewhere and never shortened.
     """
     from .iteration import PREVIEW_CHARS
     if not (event.get('loop_node_id') or event.get('kind')=='loop_item'):return event
     cut=[]
     def text_of(value):
         return value if isinstance(value,str) else json.dumps(value,ensure_ascii=False,default=str)
+    def size(value):return len(json.dumps(value,ensure_ascii=False,default=str).encode('utf-8'))
     def bound(value,path):
         if isinstance(value,dict):
             shortened={key:bound(item,f'{path}.{key}') for key,item in value.items()}
@@ -165,8 +182,37 @@ def observed(event):
         text=text_of(value)
         if len(text)<=PREVIEW_CHARS:return value
         cut.append(path);return text[:PREVIEW_CHARS]
-    kept={key:(value if key in EXACT_EVENT_FIELDS else bound(value,key)) for key,value in event.items()}
-    return {**kept,'preview_of':cut} if cut else event
+    def bound_contents(value,path,depth=0):
+        # Shorten what is inside without changing what kind of value it is.
+        if isinstance(value,dict):
+            items=list(value.items())
+            if len(items)>50:cut.append(path);items=items[:50]
+            return {key:bound_contents(item,f'{path}.{key}',depth+1) for key,item in items}
+        if isinstance(value,list):
+            if len(value)>20:cut.append(path);value=value[:20]
+            return [bound_contents(item,f'{path}[{i}]',depth+1) for i,item in enumerate(value)]
+        if isinstance(value,str) and len(value)>PREVIEW_CHARS:cut.append(path);return value[:PREVIEW_CHARS]
+        return value
+    stored={}
+    for key,value in event.items():
+        if key in IDENTITY_EVENT_FIELDS:stored[key]=value
+        elif key in EXACT_EVENT_FIELDS:stored[key]=value if size(value)<=EXACT_FIELD_BYTES else bound_contents(value,key)
+        else:stored[key]=bound(value,key)
+    if size(stored)>MAX_EVENT_BYTES:
+        omitted=[]
+        candidates=[key for key in stored if key not in IDENTITY_EVENT_FIELDS]
+        for key in sorted(candidates,key=lambda key:(key in EXACT_EVENT_FIELDS,-size(stored[key]))):
+            if size({**stored,'omitted_fields':omitted})<=MAX_EVENT_BYTES:break
+            # Exact fields are read as dicts by other records: remove them, never retype them.
+            if key in EXACT_EVENT_FIELDS:del stored[key]
+            else:stored[key]=EVENT_FIELD_OMITTED
+            omitted.append(key)
+        stored['omitted_fields']=[str(key)[:200] for key in omitted]
+    if not cut and stored==event:return event
+    if cut:
+        stored['preview_of']=[path[:200] for path in cut[:MAX_PREVIEW_PATHS]]
+        if len(cut)>MAX_PREVIEW_PATHS:stored['preview_omitted']=len(cut)-MAX_PREVIEW_PATHS
+    return stored
 
 
 LOOP_RESULTS_STORE='run_loop_items'
