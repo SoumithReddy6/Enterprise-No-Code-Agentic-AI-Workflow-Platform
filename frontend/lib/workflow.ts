@@ -58,6 +58,11 @@ export type RunEvent = {
   timestamp: string;
   reason?: string;
   truncated?: boolean;
+  recovered?: boolean;
+  budget_exhausted?: boolean;
+  preview_of?: string[];
+  preview_omitted?: number;
+  omitted_fields?: string[];
 };
 export type Run = {
   approvals?: import('./approvals').RunApproval[];
@@ -71,6 +76,8 @@ export type Run = {
   finished_at?: string;
   truncated?: boolean;
   truncation_reason?: string;
+  truncation_source?: string;
+  truncation_causes?: import('./run-status').TruncationCause[];
   events: RunEvent[];
   workflow: Workflow;
   message: string;

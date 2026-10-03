@@ -19,24 +19,33 @@ RUN_TIMEOUT_SECONDS=120
 from .observability import journal,request_id,run_id,tenant_id
 
 def run_truncation(workflow,values):
-    """Fold every node's incompleteness into the run's truncated flag, reason and source.
+    """Fold every node's incompleteness into the run's verdict, with one cause per node.
 
     Agents report it in grounding, loops in summary; both are outputs, so values restored
-    from checkpoints on resume report it too. Any node may also report it under
-    TRUNCATION_KEY in its graph value, as a node recovering from budget exhaustion does.
-    A confirmed cause anywhere in the run outranks unverifiable legacy completeness.
+    from checkpoints on resume report it too. Other nodes report it under TRUNCATION_KEY:
+    beside their outputs when a tool capped its result, or as their only value when the
+    node recovered from an exhausted action budget. truncation_causes lists each with its
+    node, kind (loop, agent, tool or budget), source and reason, so a reader can see what
+    was skipped and why. A confirmed cause anywhere outranks unverifiable legacy
+    completeness elsewhere.
     """
     from .execution_policy import TRUNCATION_KEY
-    reasons=[];sources=set()
+    causes=[]
     loops={n.id for n in workflow.nodes if n.type=='for_each'}
     for node_id,outputs in values.items():
-        field,default=('summary','A loop did not run every item.') if node_id in loops else ('grounding','Agent work was incomplete.')
-        for metadata in (json.loads(outputs.get(field) or '{}'),outputs.get(TRUNCATION_KEY) or {}):
+        found=[]
+        if node_id in loops:found.append(('loop',json.loads(outputs.get('summary') or '{}'),'A loop did not run every item.'))
+        else:found.append(('agent',json.loads(outputs.get('grounding') or '{}'),'Agent work was incomplete.'))
+        if outputs.get(TRUNCATION_KEY):
+            found.append(('budget' if set(outputs)=={TRUNCATION_KEY} else 'tool',outputs[TRUNCATION_KEY],'A tool returned incomplete results.'))
+        for kind,metadata,default in found:
             if metadata.get('truncated'):
-                reasons.append(metadata.get('truncation_reason') or default)
-                sources.add(metadata.get('truncation_source') or 'confirmed')
-    return {'truncated':bool(reasons),'truncation_reason':'; '.join(dict.fromkeys(reasons)),
-            'truncation_source':'confirmed' if 'confirmed' in sources else next(iter(sources),'')}
+                causes.append({'node_id':node_id,'kind':kind,'source':metadata.get('truncation_source') or 'confirmed',
+                               'reason':str(metadata.get('truncation_reason') or default)[:1000]})
+    reasons=[cause['reason'] for cause in causes];sources={cause['source'] for cause in causes}
+    return {'truncated':bool(causes),'truncation_reason':'; '.join(dict.fromkeys(reasons)),
+            'truncation_source':'confirmed' if 'confirmed' in sources else next(iter(sources),''),
+            'truncation_causes':causes}
 
 
 class Worker:

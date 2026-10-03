@@ -2245,3 +2245,26 @@ input[type='file']::file-selector-button {
   background: #fffbeb;
   border-color: #fcd34d;
 }
+
+.incomplete-run {
+  margin: 8px 0;
+  padding: 10px 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #854d0e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+}
+.incomplete-run p {
+  margin: 4px 0;
+}
+.incomplete-run ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.incomplete-run.unverified {
+  color: #475569;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}

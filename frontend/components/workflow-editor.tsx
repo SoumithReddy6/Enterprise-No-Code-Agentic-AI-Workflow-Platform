@@ -93,6 +93,7 @@ import PlatformSettings, {
   type ToolConnection,
 } from './platform-settings';
 import { sourcesForRun } from '@/lib/knowledge';
+import { eventNotes, incompleteRun } from '@/lib/run-status';
 import {
   type AllowedModel,
   selectedModelId,
@@ -1321,7 +1322,24 @@ function Editor() {
                     </div>
                     {events.some((e) => e.answerability?.decision === 'skip') && <output className="helper">An answerability check was skipped. The run used ordinary generation; inspect the execution log and worker model installation.</output>}
                     {events.some((e) => e.answerability?.decision === 'abstain') && <output className="helper">The answerability guard rejected retrieved evidence in this run.</output>}
-                    {run?.truncated && <output className="helper">Incomplete answer: {run.truncation_reason || 'The agent reached its tool budget.'}</output>}
+                    {(() => {
+                      const incomplete = incompleteRun(run);
+                      if (!incomplete) return null;
+                      return (
+                        <section className={`incomplete-run${incomplete.unverified ? ' unverified' : ''}`} aria-live="polite" aria-label="Incomplete run">
+                          <strong>{incomplete.title}</strong>
+                          <p>{incomplete.certainty}</p>
+                          <ul>
+                            {incomplete.causes.map((cause, i) => (
+                              <li key={i}>
+                                {cause.node && <span className="mono">{cause.node}</span>} {cause.label}
+                                {cause.unverified ? ' (unverified)' : ''}: {cause.reason}
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      );
+                    })()}
                     {/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Scroll regions need keyboard focus for arrow and page navigation. */}
                     <section
                       className="response-scroll"
@@ -1388,12 +1406,11 @@ function Editor() {
                           </span>
                           <ChevronDown size={13} />
                         </summary>
-                        {(e.items_truncated || e.items_warnings?.length) && (
-                          <p className="helper">
-                            {e.items_truncated ? 'Jira items are incomplete (result limit or additional pages). ' : ''}
-                            {e.items_warnings?.join(' ')}
+                        {eventNotes(e).map((note, i) => (
+                          <p className="helper" key={i}>
+                            {note}
                           </p>
-                        )}
+                        ))}
                         <pre>
                           {JSON.stringify(
                             e.inputs ||

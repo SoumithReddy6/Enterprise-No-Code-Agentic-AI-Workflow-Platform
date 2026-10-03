@@ -815,7 +815,7 @@ class Store:
             self.check_resume_writes(self._document(s,row))
             if not job:job=JobRecord(run_id=id);s.add(job)
             job.status='queued';job.owner='';job.lease_until=0;job.cancel_requested=False
-            row.data={**row.data,'status':'queued','error':'','output':'','finished_at':None,'truncated':False,'truncation_reason':'','truncation_source':''};row.status='queued'
+            row.data={**row.data,'status':'queued','error':'','output':'','finished_at':None,'truncated':False,'truncation_reason':'','truncation_source':'','truncation_causes':[]};row.status='queued'
             row.duration_seconds=None;row.grounded=False;row.abstained=False;row.truncated=False;row.truncation_source=''
             self._event(s,row,{'kind':'run','status':'queued','resumed':True})
             s.commit();return {**row.data,'events':self._events(s,id,tenant_id)}
