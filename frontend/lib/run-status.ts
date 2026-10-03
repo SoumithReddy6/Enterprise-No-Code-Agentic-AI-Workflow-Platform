@@ -1,7 +1,7 @@
 // How an incomplete run, and the events behind it, are explained in the run view.
 //
 // The backend records one truncation cause per node: what kind of work stopped short
-// (a loop, an agent, a capped tool result, or a node refused by the action budget), how
+// (a loop, a generated answer, a capped tool result, or a node refused by the action budget), how
 // certain that is (confirmed, or unverifiable because an older Relay version wrote the
 // checkpoint), and why. These helpers turn that into what a person reads, so the reason
 // is visible without opening the execution log.
@@ -22,9 +22,9 @@ export type IncompleteRun = { title: string; certainty: string; unverified: bool
 
 const KIND_LABELS: Record<string, string> = {
   loop: 'Loop did not deliver every item',
-  agent: 'Agent answer is incomplete',
+  agent: 'Generated answer is incomplete',
   tool: 'Tool returned capped results',
-  budget: 'Skipped: the action budget was exhausted',
+  budget: 'Skipped by the action budget',
 };
 const UNVERIFIED = 'legacy_checkpoint_unverified';
 
@@ -80,10 +80,11 @@ export function eventNotes(event: EventSummary): string[] {
   if (event.items_warnings?.length) notes.push(event.items_warnings.join(' '));
   const results = event.outputs?.results as { stored_in?: string; count?: number; unavailable?: string } | undefined;
   if (results && !Array.isArray(results) && results.stored_in) {
-    notes.push(results.unavailable ? results.unavailable : `${results.count ?? 0} results, stored per item; open the run's loop results for each one.`);
+    const count = results.count ?? 0;
+    notes.push(results.unavailable ? results.unavailable : `${count} ${count === 1 ? 'result is' : 'results are'} stored per item in the run data.`);
   }
   const shortened = (event.preview_of?.length || 0) + (event.preview_omitted || 0);
-  if (shortened) notes.push(`${shortened} field(s) in this log entry are previews; the run keeps the full values.`);
+  if (shortened) notes.push(`${shortened} ${shortened === 1 ? 'field in this log entry was' : 'fields in this log entry were'} shortened for storage.`);
   if (event.omitted_fields?.length) notes.push(`Omitted from this log entry to keep it small: ${event.omitted_fields.join(', ')}.`);
   return notes;
 }

@@ -26,9 +26,9 @@ void test('each kind of cause is named with its node and reason', () => {
     view.causes.map((c) => [c.node, c.label]),
     [
       ['each', 'Loop did not deliver every item'],
-      ['agent', 'Agent answer is incomplete'],
+      ['agent', 'Generated answer is incomplete'],
       ['tickets', 'Tool returned capped results'],
-      ['second', 'Skipped: the action budget was exhausted'],
+      ['second', 'Skipped by the action budget'],
     ],
   );
   assert.equal(view.causes[2].reason, 'tickets: Jira returned 100 of 200 matching issues.');
@@ -74,15 +74,19 @@ void test('event notes explain skipped, capped, compacted and previewed entries'
   );
   assert.deepEqual(eventNotes({ status: 'success', items_truncated: true }), ['Jira items are incomplete (result limit or additional pages).']);
   assert.deepEqual(eventNotes({ status: 'success', outputs: { results: { stored_in: 'run_loop_items', count: 100, sha256: 'x' } } }), [
-    "100 results, stored per item; open the run's loop results for each one.",
+    '100 results are stored per item in the run data.',
+  ]);
+  assert.deepEqual(eventNotes({ status: 'success', outputs: { results: { stored_in: 'run_loop_items', count: 1, sha256: 'x' } } }), [
+    '1 result is stored per item in the run data.',
   ]);
   assert.deepEqual(
     eventNotes({ status: 'success', outputs: { results: { stored_in: 'run_loop_items', count: 3, unavailable: 'Loop each cannot be restored.' } } }),
     ['Loop each cannot be restored.'],
   );
   assert.deepEqual(eventNotes({ status: 'success', preview_of: ['outputs.text'], preview_omitted: 2, omitted_fields: ['inputs'] }), [
-    '3 field(s) in this log entry are previews; the run keeps the full values.',
+    '3 fields in this log entry were shortened for storage.',
     'Omitted from this log entry to keep it small: inputs.',
   ]);
+  assert.deepEqual(eventNotes({ status: 'success', preview_of: ['inputs.input'] }), ['1 field in this log entry was shortened for storage.']);
   assert.deepEqual(eventNotes({ status: 'success', outputs: { results: [] } }), []);
 });

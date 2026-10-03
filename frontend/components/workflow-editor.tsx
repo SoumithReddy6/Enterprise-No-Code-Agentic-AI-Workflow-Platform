@@ -1322,30 +1322,31 @@ function Editor() {
                     </div>
                     {events.some((e) => e.answerability?.decision === 'skip') && <output className="helper">An answerability check was skipped. The run used ordinary generation; inspect the execution log and worker model installation.</output>}
                     {events.some((e) => e.answerability?.decision === 'abstain') && <output className="helper">The answerability guard rejected retrieved evidence in this run.</output>}
-                    {(() => {
-                      const incomplete = incompleteRun(run);
-                      if (!incomplete) return null;
-                      return (
-                        <section className={`incomplete-run${incomplete.unverified ? ' unverified' : ''}`} aria-live="polite" aria-label="Incomplete run">
-                          <strong>{incomplete.title}</strong>
-                          <p>{incomplete.certainty}</p>
-                          <ul>
-                            {incomplete.causes.map((cause, i) => (
-                              <li key={i}>
-                                {cause.node && <span className="mono">{cause.node}</span>} {cause.label}
-                                {cause.unverified ? ' (unverified)' : ''}: {cause.reason}
-                              </li>
-                            ))}
-                          </ul>
-                        </section>
-                      );
-                    })()}
                     {/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Scroll regions need keyboard focus for arrow and page navigation. */}
                     <section
                       className="response-scroll"
                       aria-label="Response and sources"
                       tabIndex={0}
                     >
+                      {/* Inside the scroll region so every cause, and the response below, stay reachable. */}
+                      {(() => {
+                        const incomplete = incompleteRun(run);
+                        if (!incomplete) return null;
+                        return (
+                          <section className={`incomplete-run${incomplete.unverified ? ' unverified' : ''}`} aria-live="polite" aria-label="Incomplete run">
+                            <strong>{incomplete.title}</strong>
+                            <p>{incomplete.certainty}</p>
+                            <ul>
+                              {incomplete.causes.map((cause, i) => (
+                                <li key={i}>
+                                  {cause.node && <span className="mono">{cause.node}</span>} {cause.label}
+                                  {cause.unverified ? ' (unverified)' : ''}: {cause.reason}
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        );
+                      })()}
                       {run?.status === 'awaiting_approval' && <button className="text-button" disabled={busy} onClick={() => void showRun(run.id)}>Refresh approval status</button>}
                       {run?.approvals?.filter((a) => a.status === 'pending').map((approval) => (
                         <ApprovalReview key={approval.id} approval={approval} disabled={busy || running}
