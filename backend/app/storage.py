@@ -198,21 +198,34 @@ def observed(event):
         if key in IDENTITY_EVENT_FIELDS:stored[key]=value
         elif key in EXACT_EVENT_FIELDS:stored[key]=value if size(value)<=EXACT_FIELD_BYTES else bound_contents(value,key)
         else:stored[key]=bound(value,key)
+    # Attach all observability metadata first, so the ceiling judges the event as stored.
+    if cut:
+        stored['preview_of']=[path[:200] for path in cut[:MAX_PREVIEW_PATHS]]
+        if len(cut)>MAX_PREVIEW_PATHS:stored['preview_omitted']=len(cut)-MAX_PREVIEW_PATHS
     if size(stored)>MAX_EVENT_BYTES:
         omitted=[]
-        candidates=[key for key in stored if key not in IDENTITY_EVENT_FIELDS]
-        for key in sorted(candidates,key=lambda key:(key in EXACT_EVENT_FIELDS,-size(stored[key]))):
-            if size({**stored,'omitted_fields':omitted})<=MAX_EVENT_BYTES:break
-            # Exact fields are read as dicts by other records: remove them, never retype them.
+        def fits():return size({**stored,'omitted_fields':omitted})<=MAX_EVENT_BYTES
+        ordinary=sorted((key for key in stored if key not in IDENTITY_EVENT_FIELDS|EXACT_EVENT_FIELDS
+                         and key not in ('preview_of','preview_omitted')),key=lambda key:-size(stored[key]))
+        exact=sorted((key for key in stored if key in EXACT_EVENT_FIELDS),key=lambda key:-size(stored[key]))
+        # Ordinary fields go first, then the list of preview paths (kept as a count), and
+        # exact fields last - removed rather than retyped, as other records read them as dicts.
+        for key in [*ordinary,'preview_of',*exact]:
+            if fits():break
+            if key=='preview_of':
+                if 'preview_of' in stored:stored['preview_omitted']=len(cut);del stored['preview_of']
+                continue
             if key in EXACT_EVENT_FIELDS:del stored[key]
             else:stored[key]=EVENT_FIELD_OMITTED
             omitted.append(key)
         stored['omitted_fields']=[str(key)[:200] for key in omitted]
-    if not cut and stored==event:return event
-    if cut:
-        stored['preview_of']=[path[:200] for path in cut[:MAX_PREVIEW_PATHS]]
-        if len(cut)>MAX_PREVIEW_PATHS:stored['preview_omitted']=len(cut)-MAX_PREVIEW_PATHS
-    return stored
+        if size(stored)>MAX_EVENT_BYTES:
+            # Unreachable while identity fields stay small, as node ids and invocations do.
+            stored={key:value for key,value in stored.items() if key in IDENTITY_EVENT_FIELDS}
+            stored['omitted_fields']=['*']
+    if size(stored)>MAX_EVENT_BYTES:
+        raise ValueError('A loop event exceeds the stored event ceiling even with only its identity.')
+    return event if stored==event else stored
 
 
 LOOP_RESULTS_STORE='run_loop_items'

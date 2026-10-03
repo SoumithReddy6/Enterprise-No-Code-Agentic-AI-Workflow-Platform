@@ -243,7 +243,7 @@ A For each loop's `results` output has a stated contract, measured in serialized
 
 Any dropped value or omitted detail marks the loop, and therefore the run, incomplete with the count and the reason. Item rows in `run_loop_items` hold the same admitted entries, so resume reaches identical results.
 
-Loop events stored for observability (`loop_node_id` set) are bounded too: large fields become 2,000-character previews, `preview_of` lists at most 20 shortened paths (`preview_omitted` counts the rest), `usage` and `answerability` stay exact at normal size and keep their structure when abnormally large, and a final ceiling of 32,768 bytes replaces the largest remaining fields - removing, never retyping, `usage` and `answerability` - until the event fits. Identity fields (`node_id`, `status`, `loop_node_id`, `item_index`, `invocation_id` and similar) are never shortened. Approvals, write results, checkpoints and item rows are stored in full elsewhere.
+Loop events stored for observability (`loop_node_id` set) are bounded too: large fields become 2,000-character previews, `preview_of` lists at most 20 shortened paths (`preview_omitted` counts the rest), `usage` and `answerability` stay exact at normal size and keep their structure when abnormally large, and a final ceiling of 32,768 bytes is applied to the event exactly as stored, preview metadata included: the largest ordinary fields are replaced first, then `preview_of` is reduced to its count, and `usage` and `answerability` are removed - never retyped - only as a last resort. Identity fields (`node_id`, `status`, `loop_node_id`, `item_index`, `invocation_id` and similar) are never shortened. Approvals, write results, checkpoints and item rows are stored in full elsewhere.
 
 ## Database schema
 

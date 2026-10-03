@@ -341,3 +341,67 @@ def test_any_loop_event_is_stored_within_the_absolute_ceiling(seed):
     assert {k: stored[k] for k in IDENTITY} == IDENTITY, 'identity is never shortened'
     for field in EXACT_EVENT_FIELDS & set(event):
         assert field not in stored or isinstance(stored[field], dict), 'exact fields keep their type or are removed'
+
+
+# --------------------------------------------------------------------------- the ceiling over the finished event
+
+BOUNDARY_IDENTITY = {'kind': 'node', 'node_id': 'deep', 'status': 'success', 'loop_node_id': 'each', 'item_index': 7,
+                     'invocation_id': 'each:7:send>3:deep', 'transient': True}
+
+
+def shortened_fields(count, char, length=2001):
+    return {**BOUNDARY_IDENTITY, **{f'field{i:02d}': char * length for i in range(count)}}
+
+
+def test_the_audited_boundary_case_fits_once_preview_metadata_is_attached():
+    """15 shortened fields of two-byte characters: the ceiling used to run before
+    preview_of was attached, and the stored event came out over the limit."""
+    from backend.app.storage import MAX_EVENT_BYTES, observed
+    stored = observed(shortened_fields(15, 'é'))
+    assert stored_bytes(stored) <= MAX_EVENT_BYTES
+    assert isinstance(stored.get('preview_of', []), list)
+
+
+@pytest.mark.parametrize('char,length', [('x', 2001), ('é', 2001), ('漢', 2001), ('\x01', 2001), ('x', 9000), ('é', 1999)])
+def test_no_count_of_fields_crosses_the_ceiling(char, length):
+    """A sweep that lands right at the boundary: some of these stored events end within a
+    few bytes of the limit, which random cases rarely reach."""
+    from backend.app.storage import MAX_EVENT_BYTES, observed
+    for count in range(1, 61):
+        stored = observed(shortened_fields(count, char, length))
+        assert stored_bytes(stored) <= MAX_EVENT_BYTES, (count, stored_bytes(stored))
+        assert {k: stored[k] for k in BOUNDARY_IDENTITY} == BOUNDARY_IDENTITY
+        assert 'preview_of' not in stored or isinstance(stored['preview_of'], list)
+
+
+def test_the_ceiling_removes_ordinary_fields_then_the_path_list_then_exact_fields(monkeypatch):
+    from backend.app import storage
+    event = {**BOUNDARY_IDENTITY, 'outputs': 'o' * 3000, 'inputs': 'i' * 3000,
+             'usage': {'prompt_tokens': 1, 'note': 'u' * 1000}, 'answerability': {'decision': 'allow', 'reason': 'a' * 1000}}
+    sizes = {}
+    for limit in (10_000, 3_200, 1_200, 600):
+        monkeypatch.setattr(storage, 'MAX_EVENT_BYTES', limit)
+        stored = storage.observed(event)
+        sizes[limit] = stored
+        assert stored_bytes(stored) <= limit
+    # A roomy limit keeps everything; then ordinary fields go, then exact ones.
+    assert sizes[10_000]['outputs'] == 'o' * storage_preview() and 'omitted_fields' not in sizes[10_000]
+    assert sizes[3_200]['outputs'] == storage.EVENT_FIELD_OMITTED and isinstance(sizes[3_200]['usage'], dict)
+    assert 'usage' not in sizes[1_200] or 'answerability' not in sizes[1_200]
+    assert 'preview_of' not in sizes[600] and sizes[600]['preview_omitted'] == 2, 'the path list became a count'
+
+
+def storage_preview():
+    from backend.app.iteration import PREVIEW_CHARS
+    return PREVIEW_CHARS
+
+
+def test_the_ceiling_is_an_invariant_with_an_identity_only_fallback(monkeypatch):
+    from backend.app import storage
+    event = {**BOUNDARY_IDENTITY, 'outputs': 'o' * 3000}
+    monkeypatch.setattr(storage, 'MAX_EVENT_BYTES', stored_bytes(BOUNDARY_IDENTITY) + 30)
+    stored = storage.observed(event)
+    assert {k: stored[k] for k in BOUNDARY_IDENTITY} == BOUNDARY_IDENTITY and stored['omitted_fields'] == ['*']
+    monkeypatch.setattr(storage, 'MAX_EVENT_BYTES', 50)
+    with pytest.raises(ValueError, match='exceeds the stored event ceiling'):
+        storage.observed(event)
