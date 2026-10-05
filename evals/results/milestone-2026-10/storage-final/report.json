@@ -1,0 +1,278 @@
+{
+  "head_at_start": "de3296368cc88e4efcbded03bdf6c0e05c781a31",
+  "head": "de3296368cc88e4efcbded03bdf6c0e05c781a31",
+  "started_at": "2026-10-05T01:39:35.985886+00:00",
+  "completed_at": "2026-10-05T01:40:41.383113+00:00",
+  "source_sha256": {
+    "backend/app/__init__.py": "59489687fe4e7c80a64c9ec50e182e03a117e49ccbf8c555f0b7078a17b86463",
+    "backend/app/agent_memory.py": "59421c58d5ef1babce0401e902d37283ffa4a14cede85cc3de5d0bab2f4d3368",
+    "backend/app/agent_runtime.py": "dca0b1e4a6c77ae31b6dabe722dc7316a794cc02a13778d351d80f599f2f0143",
+    "backend/app/answerability_guard.py": "e7917d0020ea2e3a7a43e9ebc8e6d1294166e9f6657a529ce8ecdcde2a4b4c9d",
+    "backend/app/approvals.py": "d3f8ba23cb56d3260863f9a596a989628dad29ab760b87502267f3c08576dcf5",
+    "backend/app/auth.py": "085a9b13fa0074d0873b8624a1f11fce1443de5d397e50e1550f0c460f7e2bf3",
+    "backend/app/auth_security.py": "9c5c399d2f2f2f9504e9f7dfe2c4996594644703eb9d6fc5ca1c2bd95ccdf3a5",
+    "backend/app/compiler.py": "d87d7c2ac81019e82855671ed7eea9e5c1e71d1b42fe7330165af3036c6114b6",
+    "backend/app/evidence_registry.py": "462bbafa5bc108e0bfe63fd45beb8fc26d77838be109f08be38bd6b12f488b0b",
+    "backend/app/execution_policy.py": "f29bb706cd5d926ccc8618d6191a4f5282c9de60c054181d3fa49166657e158f",
+    "backend/app/iteration.py": "0daf76370d7f5ddb3f88d7cf2673b03b401ca60308875c4f663471c17d8e1d3c",
+    "backend/app/kb/__init__.py": "b466075df148b1ec103d94036e1d215ae9bd891aa096c0aff9364ee155f9bad8",
+    "backend/app/kb/answerability.py": "224c4cdd6952446a56792c0c224f27ca54f7bf09e186d3bf64db28603762b5c3",
+    "backend/app/kb/embedding.py": "6c6bb4b63216ccbf5b0bf7dd1bb0ac1076e7e6120e7086f53ea6a1021504a3cc",
+    "backend/app/kb/ingestion.py": "c6f9587b14d7b353e1b33089cec27dae9394b480868e20c9e80885bc2dd478e8",
+    "backend/app/kb/management.py": "5b3985a2bab41adde0a70f1e7fa742fbb368dd9c78938a259dff1c54444a848d",
+    "backend/app/kb/management_app.py": "dbb7b6f17eef7e9a138f37a7171392573c374bb453208ef41a013d3c41886d3f",
+    "backend/app/kb/management_models.py": "2b2e65b53c4395998ef067083b81136964e3efa584eda0c62bc6d6790263d118",
+    "backend/app/kb/options.py": "064ef8e0087d8169334dbe15827f9fcf7693c278f9ffe37f5e1956c764637589",
+    "backend/app/kb/reranking.py": "31063b5307857444bdc416f0286df84b74255fdbdffb47af0ee4fde28cf32b91",
+    "backend/app/kb/rpc.py": "bf5bf4d535cf3207845be4a4904538fdfb52d29ed85f82556c711c96fe148bcd",
+    "backend/app/kb/search.py": "8e3354d9782c0e0b07b023d335f84c1f94f1106e6f3b680bf3dd44357bd6730f",
+    "backend/app/kb/search_app.py": "78945d1f66ced1125bf954765f92b1d3d561039e6f431918718f7708cd682aaa",
+    "backend/app/kb/search_models.py": "af8453c5453d515b07ff18db484b6b4c2f4a171c449dae6c75d4b64e77ac46a7",
+    "backend/app/kb/section_chunking.py": "82527dc829fa88fe1ff258f02eb243e2c0469950e00e310eb2fa1345ad77ada7",
+    "backend/app/kb_gateway.py": "efe542364c28f0f48a5605a992e37336ac8d841e471c4fec51596adcaaf0f91a",
+    "backend/app/main.py": "578ba171b814f059fa71f9ca2759b88a2a77202fcd40c3eca3a2655ed9fbd296",
+    "backend/app/models.py": "dce6b21386e15cadd125a3a8778ebf9de420f8d2b39945bedd3c1b04e096b552",
+    "backend/app/observability.py": "1ab89943a3c58247622213f809515fdbb0ef2fe5814bfca442400492040e10db",
+    "backend/app/operator_metrics.py": "8b675ed224933e6342c9c589c1fbcd022e60fd5d8e7fa962c6dc15e24d5d81ad",
+    "backend/app/pdf_extract.py": "9d1aeedd5688b52b0eeb61cd435adda695a1e443dc2fd79bb18585e1216c32b1",
+    "backend/app/platform_graph.py": "f890b04067ad7bb7da8661d80ea43f053c36e5ba1e1f6e29b009e7c4fc63e87b",
+    "backend/app/platform_nodes.py": "03ca499d16a0c22ebeff65a8463e13095962ec4115ddfb7cc81ce978777df7d5",
+    "backend/app/platform_validation.py": "5427a13803321f5b1ab3b74dffec5728539cba6a4ccbd55a99817d76a7658d93",
+    "backend/app/port_types.py": "df4e339dcbeda6eb6ffc5dd7a0123d435e717808dd531b9789da269c6bd6f073",
+    "backend/app/providers.py": "ae921d5ee05b15c65f5b1e001c6f5f7578830049db94a47faeca982a6c87c84c",
+    "backend/app/readiness.py": "3899bb1df17e843eaec83ccd500c607180be6befd5853bf36b05c664a7c20b5d",
+    "backend/app/registry.py": "1e6be3ac545cb3a659436e8a72909b3cf378a88c4ecf043244344319c39c73dd",
+    "backend/app/sandbox.py": "463c58aa45a4e12aef4a27f332369751a8eba9cebe590bce30365bd0d8997e68",
+    "backend/app/schema.py": "cbbd9eb6a2e5c65069448e48c15d2640e98d75abc0012273bec650763189d882",
+    "backend/app/storage.py": "685d3347ae7eeb9a6ecf40ae44f5f8693d1effcec189c4d414b7e4dd383d3947",
+    "backend/app/token_budget.py": "3d1d4397ea767c8583d98a5cc9dcf895119e90af2c4bfd782f3c2f00e841af45",
+    "backend/app/tool_api.py": "ef5542b16f8c2ef47ca8e15f75bb6571bfd63b976fc5470cf967f72f81db379d",
+    "backend/app/tool_service.py": "f35668cc18d914b2354bb263a930b752ba307bb68ea80da61c188cd5962105e5",
+    "backend/app/vector_adapters.py": "ed0d207c65b917343c32406deabd8adb6452bc8ac35e2fe1db99110afc328df2",
+    "backend/app/vector_extract.py": "f1e805901e22a8c76ad50604f2a0673a077dea9b7130a605b09fc0f56d174815",
+    "backend/app/worker.py": "5f86e08cd40e16761108877c84200276c0985c145990148fc5b3dab3249528d9",
+    "backend/migrations/baseline_schema.py": "b979c8c018cafbab87279c71c44d59ae2018e5ed9fb96da20dd825bfac414113",
+    "backend/migrations/env.py": "5f63ed98545095cdaaf1673ec3e87fb92f9137c748e73cc8052cbb173b84119c",
+    "backend/migrations/versions/0001_baseline_baseline.py": "1afc1c8ff05bb51be80fcdfd1318e06ff4bcb17c9509ce8a4098214d217f9eb1",
+    "backend/migrations/versions/0002_truncation_source.py": "f1f58ecf9d40b5564757bbb9df2796a84f20a6f57630efbd0170743de985bcae",
+    "backend/migrations/versions/0003_loop_storage.py": "ec11e846204c340c9bfb0fe4b583fbd7c3e11a57cb5ecc63d88a84b0e3834d95",
+    "scripts/analyze_answerability.py": "b0f88ae375d6ae8033bd5372b81b29838374ec781b69256400c898fa7cf1fed8",
+    "scripts/auth_admin.py": "029c3b12fa886a0cd00f8fd5b7ba2d50e71a54632c4b0ce33655329fe31f6d85",
+    "scripts/calibrate_claim_judge.py": "01d77f10fd6f0093820c348472ff94d071b2e687777843b458b6caeb0d8cf7dd",
+    "scripts/check_grounding_eval.py": "0a0159cb5b6f243f4199e26851327db41009e2f87b19b92c9f34cbe2560e409a",
+    "scripts/check_kb_postgres.py": "70b8d1d1c1a079bb72829120c2a16649ece6ceaad37dd615e4d79f96da622c04",
+    "scripts/check_knowledge_services.py": "aa3cb349da33104c3fff246cd54f83de963189c32b07d802f6fadef1d27e2e6f",
+    "scripts/check_milestone_storage.py": "1c44644620eb6767c34493d7d24fbeab51ac204c52569403d6847b1524653591",
+    "scripts/check_postgres.py": "e71e38737f73fd4724cf40e3c67929c6b2a56b262e5157c7f5381d1f890850c8",
+    "scripts/check_production_scenarios.py": "aea07e398b0e0a21be6233adf8d22a68584cf6accf0f9eedaf891ac95cf646c6",
+    "scripts/check_workflows.py": "b443ce4d8a16267ce2637052f13d2cc4d96255c496e10c9de29b6ee033147724",
+    "scripts/dev.py": "dee09b1685ce101aa48558a7bf2f11667634510bb6558f048fdc2dd46332a06e",
+    "scripts/eval_answerability_reader.py": "364552f63861d5a5894cab0dfc4ab5f04c6e36e82466e9c45dd752b9fbfed733",
+    "scripts/eval_claims.py": "4099b38b2bfb983aa80f0b4bc7734835766223a103a97bae4b3027b849551028",
+    "scripts/eval_nli.py": "972b2768daea689a88026a37f61b7362d3a2b41c35e146f2bd23fac38a72c04d",
+    "scripts/eval_retrieval.py": "08cd311b4470ab1c98883ffc9951c5d1005a7e895591af25adbaee3bbea2a22e",
+    "scripts/install_answerability.py": "4c2b91aae7e5689a617f66e9a88219a21288e44a90ae1a08db53c7f08a6fbac0",
+    "scripts/install_nli.py": "de47a600babf3fcfc362db6d420ac0fced51309cde61c0b70a0c0de3d752077e",
+    "scripts/install_reranker.py": "8e75c648a90161f2ac6b9a25b28dd01a8538d413e68d2a31dd62bf6639f6d5d7",
+    "scripts/scenarios/lab.py": "5c0a0d221893a43ab95174152a721482a42798fde5c796540f93b84f30f3dc5d",
+    "scripts/scenarios/milestone_worker.py": "019ae1e2df080b9b6833e7372edf4b5c6f8cf94e04a225fdfe7da86ac0c4f68f",
+    "scripts/scenarios/mixed_approval.py": "c504203bb31d7bc6215c8d7abe61be3dea16dc90087541944b1c0c35758d25fd",
+    "scripts/smoke.py": "da5e237c36aaf71867b9f744b8188401277222473fdf101d7a8109786446789d"
+  },
+  "source_files_changed": [],
+  "rows": [
+    {
+      "name": "postgres-migrations",
+      "passed": true,
+      "details": {
+        "upgrade_downgrade_upgrade": true,
+        "metadata_diff": []
+      },
+      "seconds": 0.226
+    },
+    {
+      "name": "postgres-four-workers",
+      "passed": true,
+      "details": {
+        "processes": 4,
+        "worker_slots_per_process": 1,
+        "runs": 50,
+        "claims": 50,
+        "deliveries": 100,
+        "loop_rows": 100,
+        "action_counter_each": 3
+      },
+      "seconds": 5.165
+    },
+    {
+      "name": "postgres-stale-lease",
+      "passed": true,
+      "details": {
+        "sigstop_sigcont": true,
+        "replacement_completed": true,
+        "refused_operations": {
+          "event": true,
+          "finish": true,
+          "reserve": true,
+          "mark_write": true,
+          "settle_write": true
+        }
+      },
+      "seconds": 4.054
+    },
+    {
+      "name": "postgres-sigkill-loop",
+      "passed": true,
+      "details": {
+        "sigkill": true,
+        "committed_items_repeated": 0,
+        "in_flight_read_repeated": 1,
+        "checkpoint_equals_uninterrupted": true,
+        "actions_including_retry": 5
+      },
+      "seconds": 47.604
+    },
+    {
+      "name": "storage-cost",
+      "passed": true,
+      "details": [
+        {
+          "database": "sqlite",
+          "samples": [
+            {
+              "items": 25,
+              "item_value_bytes": 60000,
+              "processed": 25,
+              "final_bytes": {
+                "runs": 8382,
+                "run_events": 111396,
+                "run_loop_items": 961697
+              },
+              "bound_parameter_bytes": {
+                "runs": 48523,
+                "run_events": 117805,
+                "run_loop_items": 962597,
+                "total": 1128925
+              }
+            },
+            {
+              "items": 50,
+              "item_value_bytes": 60000,
+              "processed": 50,
+              "final_bytes": {
+                "runs": 13611,
+                "run_events": 188875,
+                "run_loop_items": 963772
+              },
+              "bound_parameter_bytes": {
+                "runs": 90906,
+                "run_events": 200884,
+                "run_loop_items": 965572,
+                "total": 1257362
+              }
+            },
+            {
+              "items": 100,
+              "item_value_bytes": 60000,
+              "processed": 100,
+              "final_bytes": {
+                "runs": 24065,
+                "run_events": 343832,
+                "run_loop_items": 967922
+              },
+              "bound_parameter_bytes": {
+                "runs": 209419,
+                "run_events": 367041,
+                "run_loop_items": 971522,
+                "total": 1547982
+              }
+            }
+          ],
+          "doubling_write_ratios": [
+            1.1137692937971964,
+            1.231134709017769
+          ],
+          "measurement": "Serialized parameters submitted to SQL; excludes database WAL/index/page overhead. Tool transport scripted to isolate storage cost."
+        },
+        {
+          "database": "postgres",
+          "samples": [
+            {
+              "items": 25,
+              "item_value_bytes": 60000,
+              "processed": 25,
+              "final_bytes": {
+                "runs": 8382,
+                "run_events": 111397,
+                "run_loop_items": 961697
+              },
+              "bound_parameter_bytes": {
+                "runs": 48523,
+                "run_events": 117806,
+                "run_loop_items": 962597,
+                "total": 1128926
+              }
+            },
+            {
+              "items": 50,
+              "item_value_bytes": 60000,
+              "processed": 50,
+              "final_bytes": {
+                "runs": 13611,
+                "run_events": 188876,
+                "run_loop_items": 963772
+              },
+              "bound_parameter_bytes": {
+                "runs": 90906,
+                "run_events": 200885,
+                "run_loop_items": 965572,
+                "total": 1257363
+              }
+            },
+            {
+              "items": 100,
+              "item_value_bytes": 60000,
+              "processed": 100,
+              "final_bytes": {
+                "runs": 24065,
+                "run_events": 343835,
+                "run_loop_items": 967922
+              },
+              "bound_parameter_bytes": {
+                "runs": 209419,
+                "run_events": 367044,
+                "run_loop_items": 971522,
+                "total": 1547985
+              }
+            }
+          ],
+          "doubling_write_ratios": [
+            1.113769193020623,
+            1.231136115823354
+          ],
+          "measurement": "Serialized parameters submitted to SQL; excludes database WAL/index/page overhead. Tool transport scripted to isolate storage cost."
+        }
+      ],
+      "seconds": 6.133
+    },
+    {
+      "name": "copied-workspace",
+      "passed": true,
+      "details": {
+        "copy_only": true,
+        "revision": "0003_loop_storage",
+        "tables": 27,
+        "row_counts_preserved": true,
+        "limitation": "Current workspace copy; genuine pre-Alembic adoption is exercised by the migration suite, not invented by removing its version stamp."
+      },
+      "seconds": 0.01
+    },
+    {
+      "name": "populated-downgrade",
+      "passed": false,
+      "error": "AssertionError: Downgrade/re-upgrade lost persisted loop results",
+      "seconds": 2.174
+    }
+  ],
+  "passed": false
+}

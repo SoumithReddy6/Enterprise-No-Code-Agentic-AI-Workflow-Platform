@@ -55,7 +55,9 @@ The optional existing live campaign adds grounded retrieval, query generation, a
 - A second synthetic tenant is seeded as setup; its access tests use real login and HTTP authorization. This is not an invitation/registration conformance test.
 - SQLite is exercised here. PostgreSQL row locking and multiple concurrently claiming workers still need a dedicated real-Postgres profile; this suite does not certify them.
 - No real Jira, SMTP, or other external-account writes. Real provider sandbox conformance should be a separately configured opt-in profile with disposable accounts.
-- No browser automation: frontend tests/build are checked; visual usability is not certified.
+- This campaign checks frontend unit tests/build, not browser layout. The separate
+  [Chromium layout gate](browser-layout-testing.md) checks incomplete-run scrolling
+  at desktop and tablet widths; it does not certify general visual usability.
 - Security assertions are bounded regression checks, not a penetration test or claim that all vulnerabilities are absent.
 
 Artifacts include report.json with HEAD, dirty-tree status, source hashes, timing, stage results and strict pass/fail; runs.json with persisted histories; receiver request records; and separate process/build logs. Inputs are synthetic, but approval records include their exact outgoing payload. Do not reuse real credentials or sensitive documents in these fixtures.

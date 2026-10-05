@@ -202,7 +202,7 @@ Two separate limits bound agent work. They are often confused, so check which on
 | `AGENT_RUN_BUDGET` | Every action in the run, across the whole delegation tree | Environment | 40 (range 1–200) |
 | `RELAY_RUN_TOKEN_LIMIT` | Provider-reported tokens consumed by the run | Environment | 2,000,000 (0 disables) |
 
-An action is a tool call or a delegation to a specialist. Delegating counts, so a supervisor consulting three specialists that each run one tool spends six.
+An action is a tool call, knowledge-base retrieval or query, or a delegation to a specialist. Delegating counts, so a supervisor consulting three specialists that each run one tool spends six. Model calls are accounted under the separate token ceiling.
 
 `max_steps` is the per-agent allowance. `AGENT_RUN_BUDGET` is a backstop against a runaway delegation tree, not a per-agent allowance: set close to `max_steps` it will starve multi-agent workflows, which is why the default is well above it.
 
@@ -213,7 +213,7 @@ A truncation names the limit that was hit:
 
 The `agent_budget` run event carries `run_budget`, `actions_used` and `max_steps`, so operator metrics show whether the ceiling is set correctly rather than guessing. Raising it increases the maximum spend of a single run; on metered providers, size it against your cost limits.
 
-Changing `AGENT_RUN_BUDGET` requires a worker restart. It does not affect runs already in flight, and a run paused for approval resumes on the budget recorded in its saved frame.
+Changing `AGENT_RUN_BUDGET` requires a worker restart. A paused or interrupted run resumes from its durable accounting against the current configured ceiling. Lowering the ceiling can refuse further actions; previously spent actions remain spent, and saved remaining budget is never replenished. Approval frames are not a second budget authority.
 
 ### Token ceiling
 
