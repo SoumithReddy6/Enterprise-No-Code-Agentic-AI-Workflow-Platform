@@ -29,6 +29,12 @@ def is_write_node(node, definition):
     except Exception:return False
 
 
+def condition_config_error(node_id, error):
+    where = '.'.join(str(part) for part in error.get('loc', ()))
+    message = error['msg'].removeprefix('Value error, ')
+    return f'{node_id}: {where}: {message}' if where else f'{node_id}: {message}'
+
+
 def _validate_flow(workflow: Workflow) -> list[str]:
     errors = []
     nodes = {n.id: n for n in workflow.nodes}
@@ -55,7 +61,14 @@ def _validate_flow(workflow: Workflow) -> list[str]:
             if node.type == 'prompt': validate_template(config.template)
             if node.type in ('llm','agent','query') and config.provider in ('openai','claude') and not config.credential_id:
                 errors.append(f'{node.id}: choose a credential for {config.provider}.')
-        except (ValidationError, ValueError):
+        except ValidationError as exc:
+            if node.type == 'condition':
+                # Condition settings hold no credentials, so their messages are shown as
+                # written: an invalid comparison should say what is wrong with it.
+                errors.extend(condition_config_error(node.id, error) for error in exc.errors())
+            else:
+                errors.append(f'{node.id}: invalid configuration. Check required fields and template syntax; inline credentials are not allowed.')
+        except ValueError:
             errors.append(f'{node.id}: invalid configuration. Check required fields and template syntax; inline credentials are not allowed.')
         if set(node.inputs) != set(definition.inputs):
             errors.append(f'{node.id}: required inputs are {", ".join(definition.inputs) or "none"}.')

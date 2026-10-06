@@ -324,3 +324,43 @@ export function flowBinding(
   const output = evidence ? 'context' : Object.keys(fromDef.outputs)[0];
   return port && output ? { port, output } : null;
 }
+
+// The condition settings each operator uses. Operator and field always apply; the
+// inspector hides the rest, and the backend rejects an operand the operator does not use.
+const CONDITION_SETTINGS: Record<string, string[]> = {
+  contains: ['contains', 'case_sensitive'],
+  eq: ['compare_to', 'compare_as', 'case_sensitive'],
+  ne: ['compare_to', 'compare_as', 'case_sensitive'],
+  gt: ['compare_to'],
+  gte: ['compare_to'],
+  lt: ['compare_to'],
+  lte: ['compare_to'],
+  in: ['options', 'compare_as', 'case_sensitive'],
+  empty: [],
+};
+
+// A saved condition without an operator is a legacy contains condition.
+function conditionOperator(config: Record<string, unknown>): string {
+  return typeof config.operator === 'string' ? config.operator : 'contains';
+}
+
+export function conditionSettingVisible(
+  config: Record<string, unknown>,
+  key: string,
+): boolean {
+  if (key === 'operator' || key === 'field') return true;
+  return (CONDITION_SETTINGS[conditionOperator(config)] ?? []).includes(key);
+}
+
+// Switching operator drops the settings the new operator does not use, so a stale operand
+// or compare_as cannot make the condition invalid.
+export function withConditionOperator(
+  config: Record<string, unknown>,
+  operator: string,
+): Record<string, unknown> {
+  const used = CONDITION_SETTINGS[operator] ?? [];
+  const next: Record<string, unknown> = { ...config, operator };
+  for (const key of ['contains', 'compare_to', 'options', 'compare_as'])
+    if (!used.includes(key)) delete next[key];
+  return next;
+}

@@ -1,0 +1,107 @@
+{
+  "type": "condition",
+  "name": "Condition",
+  "version": 1,
+  "category": "Control",
+  "description": "Route to true or false by comparing a value: text, number, membership or empty.",
+  "inputs": {
+    "value": "string"
+  },
+  "outputs": {
+    "branch": "string"
+  },
+  "config_schema": {
+    "additionalProperties": false,
+    "properties": {
+      "operator": {
+        "default": "contains",
+        "description": "contains: text includes a phrase. eq / ne: equal or not equal. gt, gte, lt, lte: numeric comparison. in: equals one of several options. empty: nothing there.",
+        "enum": [
+          "contains",
+          "eq",
+          "ne",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "in",
+          "empty"
+        ],
+        "title": "Operator",
+        "type": "string"
+      },
+      "field": {
+        "default": "",
+        "description": "Optional. Read this key, or a dotted path such as order.amount, from a JSON object value - for example the output of an extraction agent.",
+        "maxLength": 520,
+        "title": "Field",
+        "type": "string"
+      },
+      "contains": {
+        "anyOf": [
+          {
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Contains"
+      },
+      "compare_to": {
+        "anyOf": [
+          {
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Compare to"
+      },
+      "options": {
+        "anyOf": [
+          {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "A JSON list, for example [\"high\", \"urgent\"].",
+        "title": "Options"
+      },
+      "compare_as": {
+        "default": "text",
+        "description": "For eq, ne and in. Ordering operators always compare numbers.",
+        "enum": [
+          "text",
+          "number"
+        ],
+        "title": "Compare as",
+        "type": "string"
+      },
+      "case_sensitive": {
+        "default": false,
+        "title": "Case Sensitive",
+        "type": "boolean"
+      }
+    },
+    "title": "ConditionConfig",
+    "type": "object"
+  },
+  "side_effects": [],
+  "hidden": false
+}

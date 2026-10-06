@@ -41,15 +41,18 @@ Exit zero means every requested scenario/stage passed. Failures, missing results
 | S12 | Another signed-in tenant requests a run | Run and connection isolation |
 | S13 | Two browser tabs edit one workflow | Stale update rejected |
 | S14 | Connection destination changes after review | Reviewed write does not go to changed endpoint |
+| S17 | Purchases above $1,000 go to the approval desk | A typed `gt` condition on a JSON field decides whether the external write is sent: 1200 and 1000.01 are sent, 80 and 1000.00 are not, and the receiver sees exactly those two |
+| S18 | A threshold is typed as words | Invalid comparison is rejected at validation with its reason; no run is created, nothing is sent |
+| S19 | The amount arrives as text that is not a number | The run fails naming the value; neither branch runs, nothing is sent |
 | L01 | Two tickets processed by real Ollama agents (optional) | Model usage survives into durable run events |
 | M01 | One agent performs a write, then asks approval for another | Approved continuation completes without repeating the first write; deterministic Worker/Store probe |
 
-The optional existing live campaign adds grounded retrieval, query generation, attached tools, specialist agents, condition branches, memory, extraction, chained agents, triggers, invalid-KB rejection, and consent enforcement. Model-quality assertions remain that campaign's own assertions; functional success is not a substitute for the 53-question grounding quality gate.
+The optional existing live campaign adds grounded retrieval, query generation, attached tools, specialist agents, condition branches, typed routing on an extraction agent's JSON (7b/7c), memory, extraction, chained agents, triggers, invalid-KB rejection, and consent enforcement. Model-quality assertions remain that campaign's own assertions; functional success is not a substitute for the 53-question grounding quality gate.
 
 ## Evidence and realism boundaries
 
 - Real processes, sockets, authentication, leases, SQL persistence, approval endpoints, actual tool transport, and SIGKILL/abrupt process exit.
-- S01–S16 and L01 use no API/worker function stubs. M01 is separately labelled: it exercises real Worker/Store logic with scripted model and delivery fixtures, not deployed HTTP. One test-only failpoint exits after the real item SQL commit to deterministically hit the settled-item crash boundary.
+- S01–S19 and L01 use no API/worker function stubs. M01 is separately labelled: it exercises real Worker/Store logic with scripted model and delivery fixtures, not deployed HTTP. One test-only failpoint exits after the real item SQL commit to deterministically hit the settled-item crash boundary.
 - DNS substitution permits only scenario-provider.invalid at the fixture's allocated port. The helper is never imported by product code. Other connection targets use ordinary SSRF checks.
 - The receiver records requests before dropping the response to simulate an ambiguous external outcome.
 - A second synthetic tenant is seeded as setup; its access tests use real login and HTTP authorization. This is not an invitation/registration conformance test.
@@ -72,4 +75,6 @@ Upcoming profiles: durable action/token budgets across resume; complete typed re
 
 The September 26 campaign was intentionally red: 13 of 18 scenarios passed; S07, S08, S09, L01 and M01 failed. See [Batch 1 audit](reviews/batch1-production-audit-2026-09-26.md) for reproductions, two hash-order test flakes, and coverage limits.
 
-As of 2026-09-29 (commit `4b1cb94`) all 18 scenarios pass, with the backend suite, frontend checks and live-model campaign: 24 of 24 stages, recorded in `evals/results/loop-storage-production/report.json`. The fixes and their independent audits are in [reviews](reviews/): S07 ([audit](reviews/s07-audit-2026-09-27.md), [completion](reviews/s07-complete-audit-2026-09-27.md)), [telemetry abort](reviews/telemetry-audit-2026-09-28.md), [S08](reviews/s08-audit-2026-09-28.md), [S09](reviews/s09-audit-2026-09-29.md) and [loop storage](reviews/loop-storage-audit-2026-09-29.md). One backend test, `test_hung_probes_have_deadlines_and_no_unbounded_db_tasks`, is timing-sensitive and has failed twice under machine load; it is being replaced with a scheduler-independent version.
+As of 2026-09-29 (commit `4b1cb94`) all 18 scenarios pass, with the backend suite, frontend checks and live-model campaign: 24 of 24 stages, recorded in `evals/results/loop-storage-production/report.json`. The fixes and their independent audits are in [reviews](reviews/): S07 ([audit](reviews/s07-audit-2026-09-27.md), [completion](reviews/s07-complete-audit-2026-09-27.md)), [telemetry abort](reviews/telemetry-audit-2026-09-28.md), [S08](reviews/s08-audit-2026-09-28.md), [S09](reviews/s09-audit-2026-09-29.md) and [loop storage](reviews/loop-storage-audit-2026-09-29.md). One backend test, `test_hung_probes_have_deadlines_and_no_unbounded_db_tasks`, was timing-sensitive and failed twice under machine load; `d2816f7` replaced it with a scheduler-independent version.
+
+On 2026-10-06, A5.1 (typed conditions) was run on `64e03f7` plus its working-tree changes, with `--all --live-models`: **27 of 27 stages** passed, including S17–S19 and all 17 live workflows, with no source change during execution. In live 7b/7c, `llama3.1` extracted `{"amount": 1350.0}` and `{"amount": 24.0}` from free-text orders, and the typed condition sent them to review and auto-approval respectively. Evidence: `evals/results/a5.1-production-2026-10-06/report.json`.

@@ -101,8 +101,8 @@ class Lab:
         self.http=self.connection('http',endpoint);self.jira=self.connection('jira',endpoint)
     def connection(self,provider,endpoint):
         r=self.client.post('/api/connections',json={'name':provider,'provider':provider,'endpoint':endpoint});assert r.status_code==200,r.text;return r.json()['id']
-    def submit(self,w):
-        r=self.client.post('/api/runs',json={'workflow':w,'message':'Customer case'});assert r.status_code==201,r.text;return r.json()['id']
+    def submit(self,w,message='Customer case'):
+        r=self.client.post('/api/runs',json={'workflow':w,'message':message});assert r.status_code==201,r.text;return r.json()['id']
     def wait(self,id,statuses=('success','failed','cancelled','awaiting_approval'),timeout=20):
         deadline=time.monotonic()+timeout
         while time.monotonic()<deadline:
@@ -214,6 +214,36 @@ def scenarios(lab):
     def routed_binding():
         w=flow_nodes([input_node(),lab.tool('/read',on_error='route'),response('work.text')]);w['nodes'].append(response('work.text','fallback'));w['edges'].append({'id':'err','source':'work','target':'fallback','sourceHandle':'error'})
         r=lab.client.post('/api/validate',json=w);assert not r.json()['valid'],r.json();return {'invalid_binding_rejected':True}
+    def amount_router(config,path):
+        # Purchases above the threshold are sent to the approval desk; the rest finish here.
+        w=flow_nodes([input_node(),{'id':'check','type':'condition','config':config,'inputs':{'value':'input.message'}}])
+        w['nodes']+=[{**lab.tool(path,True,False),'id':'desk'},response('desk.text','sent'),response('input.message','kept')]
+        w['edges']+=[{'id':'t','source':'check','target':'desk','sourceHandle':'true'},{'id':'f','source':'check','target':'kept','sourceHandle':'false'},{'id':'d','source':'desk','target':'sent'}]
+        return w
+    def branches(run):return [e['node_id'] for e in run['events'] if e.get('node_id') in ('desk','sent','kept') and e['status']=='success']
+    def typed_routing():
+        path='/deliver/high-value';w=amount_router({'operator':'gt','compare_to':'1000','field':'amount'},path);taken={}
+        for amount in ('1200','80','1000.00','1000.01'):
+            id=lab.submit(w,json.dumps({'item':'laptop','amount':float(amount) if '.' in amount else int(amount)}));run=lab.wait(id)
+            assert run['status']=='success',run.get('error');taken[amount]=branches(run)
+        assert taken=={'1200':['desk','sent'],'80':['kept'],'1000.00':['kept'],'1000.01':['desk','sent']},taken
+        sent=[json.loads(c['body'])['amount'] for c in lab.provider.calls if c['path']==path]
+        assert sorted(sent)==[1000.01,1200],sent
+        return {'branches':taken,'writes':len(sent)}
+    def typed_routing_invalid():
+        w=amount_router({'operator':'gt','compare_to':'a thousand','field':'amount'},'/deliver/never')
+        r=lab.client.post('/api/validate',json=w);body=r.json()
+        assert not body['valid'] and any("gt compares numbers, but compare_to 'a thousand' is not a number." in e for e in body['errors']),body
+        before=len(lab.client.get('/api/runs').json())
+        r=lab.client.post('/api/runs',json={'workflow':w,'message':'{"amount": 5}'});assert r.status_code==422,r.text
+        assert len(lab.client.get('/api/runs').json())==before and lab.provider.count('/deliver/never')==0
+        return {'validation_errors':body['errors'],'run_created':False}
+    def typed_routing_uncomparable():
+        path='/deliver/uncomparable';id=lab.submit(amount_router({'operator':'gt','compare_to':'1000','field':'amount'},path),'{"amount": "twelve hundred"}')
+        run=lab.wait(id);assert run['status']=='failed',run['status']
+        assert "Condition field amount 'twelve hundred' is not a number." in run['error'],run['error']
+        assert branches(run)==[] and lab.provider.count(path)==0
+        return {'run_id':id,'error':run['error'],'writes':0}
     def truncation():
         id=lab.submit(lab.batch('/read',n=3,write=False,limit=1));run=lab.wait(id)
         assert run['truncated'] is True,{'run_id':id,'truncated':run.get('truncated')};return {'run_id':id}
@@ -275,6 +305,9 @@ def scenarios(lab):
         ('S12','Security','Tenant isolation through authenticated HTTP',tenant_isolation),
         ('S13','Storage','Two tabs cannot overwrite silently',save_conflict),
         ('S14','Approvals','Changed destination invalidates reviewed write',approval_stale_connection),
+        ('S17','A5.1','Typed condition routes an external write by amount',typed_routing),
+        ('S18','A5.1','Invalid comparison rejected before execution',typed_routing_invalid),
+        ('S19','A5.1','Uncomparable value fails the run and takes no branch',typed_routing_uncomparable),
     ]
 
 

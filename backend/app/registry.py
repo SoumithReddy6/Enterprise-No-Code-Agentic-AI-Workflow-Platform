@@ -6,6 +6,7 @@ import json
 import string
 from pydantic import Field, model_validator
 from .models import StrictModel
+from .conditions import ConditionConfig, evaluate as evaluate_condition
 
 class EmptyConfig(StrictModel):
     pass
@@ -45,10 +46,6 @@ class AgentConfig(LLMConfig):
             try:jsonschema.Draft202012Validator.check_schema(self.output_schema)
             except jsonschema.SchemaError as exc:raise ValueError(f'Output schema is not a valid JSON Schema: {exc.message}') from None
         return self
-
-class ConditionConfig(StrictModel):
-    contains: str = Field(min_length=1, max_length=1000)
-    case_sensitive: bool = False
 
 @dataclass
 class Context:
@@ -179,10 +176,7 @@ async def llm_node(inputs, config, ctx):
     account_usage(ctx,usage,config);await record_spend(ctx);return {'text': text, 'provider': 'openai'}
 
 async def condition_node(inputs, config, ctx):
-    value, needle = inputs['value'], config.contains
-    if not config.case_sensitive:
-        value, needle = value.casefold(), needle.casefold()
-    return {'branch': 'true' if needle in value else 'false'}
+    return {'branch': 'true' if evaluate_condition(inputs['value'], config) else 'false'}
 
 async def response_node(inputs, config, ctx):
     """The response boundary: any [S#] label must name evidence this run actually retrieved."""
@@ -209,7 +203,7 @@ for definition in [
     NodeDefinition('manual_input', 'Manual trigger', 'Input', 'Start a workflow on demand with a text payload.', {}, {'message':'string'}, EmptyConfig, input_node),
     NodeDefinition('prompt', 'Prompt template', 'Transform', 'Compose a prompt with {message}.', {'message':'string'}, {'text':'string'}, PromptConfig, prompt_node),
     NodeDefinition('llm', 'Language model', 'AI', 'Generate text with a model, or test with demo mode.', {'prompt':'string'}, {'text':'string','provider':'string'}, LLMConfig, llm_node, ('external_model_request',)),
-    NodeDefinition('condition', 'Condition', 'Control', 'Route to true or false when text contains a phrase.', {'value':'string'}, {'branch':'string'}, ConditionConfig, condition_node),
+    NodeDefinition('condition', 'Condition', 'Control', 'Route to true or false by comparing a value: text, number, membership or empty.', {'value':'string'}, {'branch':'string'}, ConditionConfig, condition_node),
     NodeDefinition('response', 'Response', 'Output', 'Finish this path and return text.', {'text':'string'}, {'text':'string','sources':'string'}, EmptyConfig, response_node),
 ]:
     register(definition)

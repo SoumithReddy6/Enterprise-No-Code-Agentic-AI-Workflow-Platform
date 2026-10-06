@@ -2,7 +2,7 @@
 
 Relay is a full-stack visual platform for building, validating, and running AI-agent workflows with local or cloud models. It combines a node-based editor, durable LangGraph execution, external tools, versioned knowledge bases, grounded answers, and retrieval evaluation in one local development environment.
 
-> **Current status:** Functional local MVP under active development. Core workflow execution, knowledge ingestion, retrieval, tool calling, authentication, durable write approvals, recovery, per-node error policy, for-each iteration, and evaluation are implemented. Typed conditions, multi-way routing, parallel execution, deployment hardening, and team administration remain planned work.
+> **Current status:** Functional local MVP under active development. Core workflow execution, knowledge ingestion, retrieval, tool calling, authentication, durable write approvals, recovery, per-node error policy, for-each iteration, typed conditions, and evaluation are implemented. Multi-way routing, parallel execution, deployment hardening, and team administration remain planned work.
 
 ## Project at a glance
 
@@ -263,7 +263,8 @@ The opt-in `section` strategy retains heading paths, inline section headings, an
 - Input, Agent, Tool, Retrieval, Control, and Output node categories.
 - Backend-provided schemas drive the node inspector.
 - Deterministic bindings and validation before execution.
-- Conditions select one true/false branch by case-insensitive or exact text containment. Typed comparisons and multi-way routing are the next planned work; cycles and parallel fan-out are rejected.
+- Conditions choose a true or false branch with a typed comparison: `contains`, `eq`, `ne`, numeric `gt`/`gte`/`lt`/`lte`, `in` (one of several options), or `empty`. A condition can read a field from JSON, such as the `amount` an extraction agent returned. Numbers compare as exact decimals. A value that cannot be compared, such as text where a number is required, fails the run with the reason instead of choosing a branch. Saved `contains` conditions behave exactly as before. See [typed conditions](docs/typed-conditions.md).
+- Multi-way routing and parallel fan-out are the next planned work; cycles and parallel branches are rejected.
 
 ### Execution control
 
@@ -472,12 +473,13 @@ Configuration can be supplied through a root `.env` file. See [.env.example](.en
 
 | Implemented | Next engineering work | Later platform work |
 | --- | --- | --- |
-| Visual workflow editor, section-aware chunking, and durable write approvals | Typed conditions (A5.1) | Subgraphs and bounded loops |
-| Local/cloud providers and opt-in local reranking | Multi-way routing (A5.2) | Published workflow versions |
-| Agent roles and specialist delegation | Parallel execution and explicit joins (A5.3) | Webhooks and scheduled triggers |
+| Visual workflow editor, section-aware chunking, and durable write approvals | Multi-way routing (A5.2) | Subgraphs and bounded loops |
+| Local/cloud providers and opt-in local reranking | Parallel execution and explicit joins (A5.3) | Published workflow versions |
+| Agent roles and specialist delegation | Regex matching for conditions, with a ReDoS-safe engine | Webhooks and scheduled triggers |
 | Named, versioned knowledge bases | Remaining regulatory retrieval misses | Shared runtime state and per-tenant budgets |
 | Four retrieval techniques | Structured numeric-policy verifier | Team roles and invitations |
 | Durable queued execution with per-node error policy and retries | Improved retrieval test lab | Audit, retention, and PII controls |
+| Typed conditions over text, numbers and JSON fields | | |
 | For-each iteration with per-item checkpoints and bounded storage | Broader browser interaction tests | Managed production deployment |
 | Grounding and citation validation | Real remote-adapter integration tests | |
 | Tool integrations and probed Python sandbox | | |

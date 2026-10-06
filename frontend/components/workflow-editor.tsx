@@ -81,6 +81,8 @@ import {
   type RunEvent,
   type Credential,
   type SavedWorkflow,
+  conditionSettingVisible,
+  withConditionOperator,
 } from '@/lib/workflow';
 import '@xyflow/react/dist/style.css';
 import StudioDialog from './studio-dialog';
@@ -1647,10 +1649,26 @@ function Editor() {
                                     'model',
                                     'credential_id',
                                   ].includes(key)
+                                ) &&
+                                !(
+                                  chosen.type === 'condition' &&
+                                  !conditionSettingVisible(chosen.config, key)
                                 ),
                             )
                             .map(([key, property]) => {
                               const update = (value: unknown) => {
+                                if (
+                                  chosen.type === 'condition' &&
+                                  key === 'operator'
+                                ) {
+                                  modifyNode({
+                                    config: withConditionOperator(
+                                      chosen.config,
+                                      String(value),
+                                    ),
+                                  });
+                                  return;
+                                }
                                 const config = { ...chosen.config };
                                 if (value === undefined) delete config[key];
                                 else config[key] = value;
