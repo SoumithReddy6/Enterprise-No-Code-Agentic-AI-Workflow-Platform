@@ -25,8 +25,23 @@ independent review closing R01–R04 is in
 
 The populated-downgrade limitation is unchanged and remains documented, not fixed.
 
-Hosted CI on the final commit is the remaining closure check: the browser-layout and
-postgres-conformance jobs have not yet been observed running on GitHub.
+**Hosted CI is green on `f7b3cfa`** ([run 37536800088](https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/37536800088), 2026-10-06), with all five jobs passing:
+
+| Job | Result |
+| --- | --- |
+| backend (Python 3.12, Linux) | 996 passed at the default hash seed and again at `PYTHONHASHSEED=1`; 2 skipped, both macOS-only telemetry checks that the native job runs |
+| native-macos | passed |
+| frontend | dependency gate: accepted residual vulnerability, 6 high, not clean; tests, typecheck, lint and build passed |
+| browser-layout | 8 Chromium tests passed |
+| postgres-conformance | migrations, four workers, stale lease and SIGKILL-in-loop checks passed |
+
+Getting there took three hosted runs, and the failures are kept as evidence. The first two
+failed one backend test: the missing-Docker test put `/usr/bin` on its PATH, where Ubuntu
+has a real Docker. The third failed a lease test whose 10 ms lease could expire before the
+owner's own write on a slower runner. Both were test-isolation defects, not product
+behaviour, and both were fixed with tests that reproduce the runner condition.
+
+The milestone is closed. The accepted `braces` residual remains and expires on 2026-12-04.
 
 ## Release recommendation (2026-10-04, at `de32963`)
 
