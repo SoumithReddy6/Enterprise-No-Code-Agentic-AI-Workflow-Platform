@@ -1,0 +1,20 @@
+[
+  {
+    "probe": "audit exits 2 with parseable output",
+    "gate_exit_code": 0,
+    "stdout": "npm audit gate: passed with ACCEPTED RESIDUAL VULNERABILITY - not a clean audit (reported: 1 high, 1 total)\n  - GHSA-vfj7-8cjw-p6xm (high) in braces, accepted until 2026-12-04: Stack-exhaustion denial of service when braces expands deeply nested patterns. No patched braces release exists (3.0.3 is the latest and is in range), and npm's only proposed fix downgrades vinext from 1.0.0-beta.9 to 0.0.15. The chain enters through vite-plugin-commonjs, which vinext's CLI imports with its config loader, so the code is loaded in development, build and the production process. It is used only by development, build and configuration transformation of glob patterns written in this repository's source; no request data or user input reaches it.",
+    "stderr": ""
+  },
+  {
+    "probe": "dependency tree exits 1 and reports problems",
+    "gate_exit_code": 0,
+    "stdout": "npm audit gate: passed with ACCEPTED RESIDUAL VULNERABILITY - not a clean audit (reported: 1 high, 1 total)\n  - GHSA-vfj7-8cjw-p6xm (high) in braces, accepted until 2026-12-04: Stack-exhaustion denial of service when braces expands deeply nested patterns. No patched braces release exists (3.0.3 is the latest and is in range), and npm's only proposed fix downgrades vinext from 1.0.0-beta.9 to 0.0.15. The chain enters through vite-plugin-commonjs, which vinext's CLI imports with its config loader, so the code is loaded in development, build and the production process. It is used only by development, build and configuration transformation of glob patterns written in this repository's source; no request data or user input reaches it.",
+    "stderr": ""
+  },
+  {
+    "probe": "registry exits 1 with an empty JSON array",
+    "gate_exit_code": 0,
+    "stdout": "npm audit gate: passed with ACCEPTED RESIDUAL VULNERABILITY - not a clean audit (reported: 1 high, 1 total)\n  - GHSA-vfj7-8cjw-p6xm (high) in braces, accepted until 2026-12-04: Stack-exhaustion denial of service when braces expands deeply nested patterns. No patched braces release exists (3.0.3 is the latest and is in range), and npm's only proposed fix downgrades vinext from 1.0.0-beta.9 to 0.0.15. The chain enters through vite-plugin-commonjs, which vinext's CLI imports with its config loader, so the code is loaded in development, build and the production process. It is used only by development, build and configuration transformation of glob patterns written in this repository's source; no request data or user input reaches it.",
+    "stderr": ""
+  }
+]

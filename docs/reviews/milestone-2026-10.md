@@ -4,7 +4,31 @@ Date: **2026-10-04** (America/New_York). Audited revision: **`de3296368cc88e4efc
 Product runtime remains the version from `448c91c`; the audit commit adds tests, scripts,
 CI configuration and Playwright, with no backend or editor runtime changes.
 
-## Release recommendation
+## Closure — 2026-10-06
+
+**The dependency blockers below are resolved.** The recommendation and findings that follow
+are the dated snapshot from `de32963` and are kept unchanged.
+
+| Blocker | Resolution | Commit |
+| --- | --- | --- |
+| Python: `pypdf`, `urllib3` | Pinned `pypdf` 6.19.0 and `urllib3` 2.8.0. A fresh environment built from `backend/requirements.txt` audits clean | `6141895` |
+| Python: `oauthlib` | Not a declared requirement: it came from an unrelated `kubernetes` install in the local virtualenv. CI audits a fresh environment | — |
+| npm: Cloudflare `undici` chain, `shadcn` brace/glob chains, `tinypool`, `source-map-js` | Updated `@cloudflare/vite-plugin`, `wrangler` and its peer types; removed the unused `shadcn` CLI; updated `oxfmt` and `source-map-js`. No `--force` or `--legacy-peer-deps` | `dded39d`, `8797054` |
+| npm: `braces` through `vinext` | No patched release exists. **Accepted residual vulnerability**, gated by a reviewed exception that **expires on 2026-12-04** with no automatic extension | `dded39d` |
+| npm: `sharp` through `miniflare` (new on 2026-10-06, [GHSA-wq5f-xc86-pv6w](https://github.com/advisories/GHSA-wq5f-xc86-pv6w)) | The gate failed closed on it. `miniflare` pins the vulnerable `sharp` exactly, so no upstream release fixes it. The unused `@cloudflare/vite-plugin` and `wrangler` that brought it in were removed | this branch, after `64e03f7` |
+| Audit gate integrity (R01–R04) | The gate fails closed on malformed reports, failed commands, tree problems, invalid registry data and severities that contradict their `via`. Each fix has tests that fail on the previous code | `8797054`, `64e03f7` |
+
+After the Cloudflare removal, as at `64e03f7`, the live npm gate prints *passed with ACCEPTED RESIDUAL VULNERABILITY - not a
+clean audit* (6 high, all on the reviewed `braces` chain). This is not a clean audit. The
+independent review closing R01–R04 is in
+[dependency-gate-audit-2026-10-05.md](dependency-gate-audit-2026-10-05.md).
+
+The populated-downgrade limitation is unchanged and remains documented, not fixed.
+
+Hosted CI on the final commit is the remaining closure check: the browser-layout and
+postgres-conformance jobs have not yet been observed running on GitHub.
+
+## Release recommendation (2026-10-04, at `de32963`)
 
 **Do not release yet.** Functional, layout, process-recovery and PostgreSQL conformance
 checks passed. Both dependency audits fail the project's existing security policy:

@@ -1,0 +1,31 @@
+{
+  "reviewed_commit": "87970549ed00bf0429c538a099bfad8c258e6842",
+  "verified_at_utc": "2026-10-06T02:07:13.064214+00:00",
+  "sha256": {
+    "frontend/scripts/audit-gate-core.mjs": "20ce878daf2e0c6a3ce8c1bf57c3e59e74ae73521c6bbfbc1cb7f5ccbd841b43",
+    "frontend/scripts/audit-gate.mjs": "c1c28a9143f58c1b2dc4867981cd5026ec07789892be297b8a120c5cc725459c",
+    "frontend/tests/audit-gate-cli.test.ts": "4c3f67150a2b28de95850d09893cc0d24b474f807b751fdf4feadbba7eae57a5",
+    "frontend/package-lock.json": "1f8c78b1efc7e4fce674eb64786260d980e0477916e5bac76de325942d097b05",
+    "evals/results/dependency-gate-review-2026-10-05/probe_gate.mjs": "c6b9bab6075f99bc28971d6d8574642be8ccd70996f20cdd0acaff869f1ec50d"
+  },
+  "verification": {
+    "frontend_unit_tests": 57,
+    "lint_exit": 0,
+    "typecheck_exit": 0,
+    "dependency_tree_exit": 0,
+    "live_gate_exit": 0,
+    "live_gate_high_package_findings": 6,
+    "original_corrected_policy_probes_passed": 8,
+    "severity_policy_probes_passed": 1,
+    "severity_policy_probes_total": 3,
+    "severity_cli_actual_exit": 0,
+    "severity_cli_expected_exit": 1
+  },
+  "not_rerun": [
+    "backend suite",
+    "production campaign",
+    "Playwright",
+    "fresh npm ci",
+    "mutation campaign"
+  ]
+}

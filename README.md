@@ -2,7 +2,7 @@
 
 Relay is a full-stack visual platform for building, validating, and running AI-agent workflows with local or cloud models. It combines a node-based editor, durable LangGraph execution, external tools, versioned knowledge bases, grounded answers, and retrieval evaluation in one local development environment.
 
-> **Current status:** Functional local MVP under active development. Core workflow execution, knowledge ingestion, retrieval, tool calling, authentication, durable write approvals, recovery, and evaluation are implemented. Deployment hardening, team administration, and advanced control flow remain planned work.
+> **Current status:** Functional local MVP under active development. Core workflow execution, knowledge ingestion, retrieval, tool calling, authentication, durable write approvals, recovery, per-node error policy, for-each iteration, and evaluation are implemented. Typed conditions, multi-way routing, parallel execution, deployment hardening, and team administration remain planned work.
 
 ## Project at a glance
 
@@ -263,7 +263,14 @@ The opt-in `section` strategy retains heading paths, inline section headings, an
 - Input, Agent, Tool, Retrieval, Control, and Output node categories.
 - Backend-provided schemas drive the node inspector.
 - Deterministic bindings and validation before execution.
-- Conditions select one true/false branch; unsupported cycles and parallel fan-out are rejected.
+- Conditions select one true/false branch by case-insensitive or exact text containment. Typed comparisons and multi-way routing are the next planned work; cycles and parallel fan-out are rejected.
+
+### Execution control
+
+- Each node has an error policy: `fail` (default), `continue`, or `route` to an error branch carrying `{code, message, attempts}`. Bindings to outputs that a failure path cannot provide are rejected at validation.
+- Transient failures retry up to five times with jittered exponential backoff. Nodes that write externally are never retried, and a write whose outcome is uncertain is not repeated: the run stops until someone reconciles it with the remote system.
+- A For-each node runs one attached callable per list element (1–1,000 items, default 100), with per-item `continue` or `stop`. Item results are stored per row, so a crash resumes mid-collection without repeating committed items.
+- Run-wide action and token ceilings cover tool calls, retrievals and model spend, including retries and loop items. Truncation from limits, budgets or capped tool results is reported as incomplete work with its cause, never silently.
 
 ### Models and agent behavior
 
@@ -387,7 +394,9 @@ npm run lint
 npm run build
 ```
 
-[GitHub Actions](.github/workflows/ci.yml) runs these checks on pushes, pull requests, and a weekly schedule, including `pip-audit` and `npm audit --audit-level=high`. Its first hosted run is pending; local checks do not establish that hosted CI has passed. Real-model evaluation is a separate local gate because it requires the downloaded corpus and Ollama models:
+[GitHub Actions](.github/workflows/ci.yml) runs these checks on pushes, pull requests, and a weekly schedule: backend tests with `pip-audit`, a native macOS job, frontend tests with the npm audit gate, a Chromium layout job (`npm run test:browser`), and PostgreSQL 17 conformance. Local checks do not establish that hosted CI has passed; see the [October milestone audit](docs/reviews/milestone-2026-10.md) for the most recent hosted result.
+
+The npm audit gate fails on any high or critical advisory except a reviewed, expiring exception. One is in force: [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) in `braces`, reachable only through `vinext`'s build tooling, which has no patched release. It **expires on 2026-12-04** and is not extended automatically. A passing gate reports an accepted residual vulnerability, not a clean audit; see [security hardening](docs/security-hardening.md#accepted-residual-vulnerability). Real-model evaluation is a separate local gate because it requires the downloaded corpus and Ollama models:
 
 ```bash
 .venv/bin/python -m scripts.eval_retrieval --corpus evals/real --questions evals/real/questions-expanded.json --chunking section --modes hybrid --candidate-k 50 --reranker local_cross_encoder --generate llama3.1:latest --generate-mode hybrid --product-answerability-guard --out evals/results/real-generation-candidate.json
@@ -463,16 +472,18 @@ Configuration can be supplied through a root `.env` file. See [.env.example](.en
 
 | Implemented | Next engineering work | Later platform work |
 | --- | --- | --- |
-| Visual workflow editor, section-aware chunking, and durable write approvals | Remaining regulatory retrieval misses | Advanced control flow |
-| Local/cloud providers and opt-in local reranking | Unanswerable-question safety regression | Action ledger and reconciliation |
-| Agent roles and specialist delegation | Structured numeric-policy verifier | Published workflow versions |
-| Named, versioned knowledge bases | Improved retrieval test lab | Webhooks and scheduled triggers |
-| Four retrieval techniques | Browser interaction and visual QA | Parallel joins and bounded loops |
-| Durable queued execution | Per-tenant budgets | Team roles and invitations |
-| Grounding and citation validation | Deployment health/readiness | Audit, retention, and PII controls |
-| Tool integrations and sandboxed Python | Real remote-adapter integration tests | Managed production deployment |
+| Visual workflow editor, section-aware chunking, and durable write approvals | Typed conditions (A5.1) | Subgraphs and bounded loops |
+| Local/cloud providers and opt-in local reranking | Multi-way routing (A5.2) | Published workflow versions |
+| Agent roles and specialist delegation | Parallel execution and explicit joins (A5.3) | Webhooks and scheduled triggers |
+| Named, versioned knowledge bases | Remaining regulatory retrieval misses | Shared runtime state and per-tenant budgets |
+| Four retrieval techniques | Structured numeric-policy verifier | Team roles and invitations |
+| Durable queued execution with per-node error policy and retries | Improved retrieval test lab | Audit, retention, and PII controls |
+| For-each iteration with per-item checkpoints and bounded storage | Broader browser interaction tests | Managed production deployment |
+| Grounding and citation validation | Real remote-adapter integration tests | |
+| Tool integrations and probed Python sandbox | | |
+| Alembic-owned schema, readiness probe, PostgreSQL conformance | | |
 
-Relay is currently intended for local development and portfolio demonstration. It should remain bound to loopback until TLS, managed secrets, database migrations, backups, operational telemetry, load testing, and deployment controls are completed.
+Relay is currently intended for local development and portfolio demonstration. It should remain bound to loopback until TLS, managed secrets, tested backup and restore, operational telemetry, load testing, and deployment controls are completed. Schema downgrades can discard data; roll back by restoring a stopped-system backup.
 
 ## Engineering decisions and boundaries
 
