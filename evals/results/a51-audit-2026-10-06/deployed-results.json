@@ -1,0 +1,36 @@
+{
+  "deployment": "isolated API process + worker process + local HTTP receiver",
+  "external_writes": "synthetic localhost only",
+  "rows": [
+    {
+      "message": "{\"amount\":1000.00000000000001}",
+      "operator": "gt",
+      "target": "1000",
+      "run_id": "19a04c7f532c44e9870699433ad1bd51",
+      "status": "success",
+      "branch": "false",
+      "expected_writes": 1,
+      "actual_writes": 0,
+      "passed": false
+    },
+    {
+      "message": "{\"amount\":0.100000000000000005}",
+      "operator": "eq",
+      "target": "0.1",
+      "run_id": "b796b93711b640da84af63f6f90dc8e6",
+      "status": "success",
+      "branch": "true",
+      "expected_writes": 0,
+      "actual_writes": 1,
+      "passed": false
+    }
+  ],
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/deliver/audit-eq",
+      "body": "{\"amount\":0.1}"
+    }
+  ],
+  "passed": false
+}
