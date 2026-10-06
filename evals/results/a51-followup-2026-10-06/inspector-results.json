@@ -1,0 +1,11 @@
+{
+  "visible_options": "[\"urgent\",",
+  "visible_error": true,
+  "validation_requests_with_invalid_draft": 0,
+  "submitted_options": [
+    "high"
+  ],
+  "unexpected": [],
+  "passed": true,
+  "scope": "Actual inspector with mocked API; proves stale predicate submission, not a remote production write."
+}

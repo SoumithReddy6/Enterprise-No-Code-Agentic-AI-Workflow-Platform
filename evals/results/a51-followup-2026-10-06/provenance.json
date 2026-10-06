@@ -1,0 +1,139 @@
+{
+  "recorded_at": "2026-10-06T22:05:25.896781+00:00",
+  "head": "f7b3cfa35fb3a9bb2dba6567d098ad3725f4df59",
+  "python": "3.14.6",
+  "working_tree": " M docs/reviews/milestone-2026-10.md\n?? docs/reviews/a51-followup-2026-10-06.md\n?? evals/results/a51-followup-2026-10-06/\n?? evals/results/loop-marker-production-rerun/\n?? evals/results/loop-marker-production/\n?? evals/results/milestone-2026-10/browser-original-bug-trace.zip\n?? evals/results/milestone-2026-10/npm-audit.json\n?? evals/results/milestone-2026-10/pip-audit.json\n?? evals/results/milestone-2026-10/storage-validation/\n?? evals/results/milestone-2026-10/storage/\n",
+  "checks": {
+    "backend": {
+      "exit_code": 0,
+      "passed": 998,
+      "log": "backend-tests.log"
+    },
+    "frontend": {
+      "exit_code": 0,
+      "passed": 65,
+      "log": "frontend-tests.log"
+    },
+    "browser": {
+      "exit_code": 0,
+      "passed": 8,
+      "log": "browser-tests.log"
+    },
+    "typecheck": {
+      "exit_code": 0,
+      "log": "typecheck.log"
+    },
+    "lint": {
+      "exit_code": 0,
+      "log": "lint.log"
+    },
+    "build": {
+      "exit_code": 0,
+      "log": "build.log"
+    },
+    "numeric_probe": {
+      "exit_code": 0,
+      "passed": 7
+    },
+    "inspector_probe": {
+      "exit_code": 0
+    },
+    "scenarios": {
+      "exit_code": 0,
+      "passed": 20
+    },
+    "boundary_probe": {
+      "exit_code": 1,
+      "defects_reproduced": 2
+    },
+    "deployed_probe": {
+      "exit_code": 1,
+      "controls_passed": 3,
+      "defects_reproduced": 2
+    },
+    "dependency_gate": {
+      "exit_code": 0,
+      "accepted_residual": true,
+      "high": 6,
+      "total": 6
+    }
+  },
+  "hosted_ci": {
+    "run_id": 37536800088,
+    "head": "f7b3cfa35fb3a9bb2dba6567d098ad3725f4df59",
+    "conclusion": "success",
+    "jobs": [
+      "backend",
+      "native-macos",
+      "frontend",
+      "browser-layout",
+      "postgres-conformance"
+    ]
+  },
+  "source_sha256": {
+    "backend/app/__init__.py": "59489687fe4e7c80a64c9ec50e182e03a117e49ccbf8c555f0b7078a17b86463",
+    "backend/app/agent_memory.py": "59421c58d5ef1babce0401e902d37283ffa4a14cede85cc3de5d0bab2f4d3368",
+    "backend/app/agent_runtime.py": "9b5e11fd95cc44abb3928b4a0d06beeb412d6df05269857f5ae8d284476d4321",
+    "backend/app/answerability_guard.py": "e7917d0020ea2e3a7a43e9ebc8e6d1294166e9f6657a529ce8ecdcde2a4b4c9d",
+    "backend/app/approvals.py": "d3f8ba23cb56d3260863f9a596a989628dad29ab760b87502267f3c08576dcf5",
+    "backend/app/auth.py": "085a9b13fa0074d0873b8624a1f11fce1443de5d397e50e1550f0c460f7e2bf3",
+    "backend/app/auth_security.py": "9c5c399d2f2f2f9504e9f7dfe2c4996594644703eb9d6fc5ca1c2bd95ccdf3a5",
+    "backend/app/compiler.py": "7df81a758c9a596fbe20a87e52b7c1725537ab769116ae3a77cd331da9c8d615",
+    "backend/app/conditions.py": "efed8e1e77ddbb6abdde4adc8a5802568d72df7972fb128d3f9d30d227e29a92",
+    "backend/app/evidence_registry.py": "462bbafa5bc108e0bfe63fd45beb8fc26d77838be109f08be38bd6b12f488b0b",
+    "backend/app/exact_json.py": "8a954820cae5793024fb0b3cef357d7f46382f1c6ff29faf9dce9df2a6fdc73d",
+    "backend/app/execution_policy.py": "f29bb706cd5d926ccc8618d6191a4f5282c9de60c054181d3fa49166657e158f",
+    "backend/app/iteration.py": "0daf76370d7f5ddb3f88d7cf2673b03b401ca60308875c4f663471c17d8e1d3c",
+    "backend/app/kb/__init__.py": "b466075df148b1ec103d94036e1d215ae9bd891aa096c0aff9364ee155f9bad8",
+    "backend/app/kb/answerability.py": "224c4cdd6952446a56792c0c224f27ca54f7bf09e186d3bf64db28603762b5c3",
+    "backend/app/kb/embedding.py": "6c6bb4b63216ccbf5b0bf7dd1bb0ac1076e7e6120e7086f53ea6a1021504a3cc",
+    "backend/app/kb/ingestion.py": "c6f9587b14d7b353e1b33089cec27dae9394b480868e20c9e80885bc2dd478e8",
+    "backend/app/kb/management.py": "5b3985a2bab41adde0a70f1e7fa742fbb368dd9c78938a259dff1c54444a848d",
+    "backend/app/kb/management_app.py": "dbb7b6f17eef7e9a138f37a7171392573c374bb453208ef41a013d3c41886d3f",
+    "backend/app/kb/management_models.py": "2b2e65b53c4395998ef067083b81136964e3efa584eda0c62bc6d6790263d118",
+    "backend/app/kb/options.py": "064ef8e0087d8169334dbe15827f9fcf7693c278f9ffe37f5e1956c764637589",
+    "backend/app/kb/reranking.py": "31063b5307857444bdc416f0286df84b74255fdbdffb47af0ee4fde28cf32b91",
+    "backend/app/kb/rpc.py": "bf5bf4d535cf3207845be4a4904538fdfb52d29ed85f82556c711c96fe148bcd",
+    "backend/app/kb/search.py": "8e3354d9782c0e0b07b023d335f84c1f94f1106e6f3b680bf3dd44357bd6730f",
+    "backend/app/kb/search_app.py": "78945d1f66ced1125bf954765f92b1d3d561039e6f431918718f7708cd682aaa",
+    "backend/app/kb/search_models.py": "af8453c5453d515b07ff18db484b6b4c2f4a171c449dae6c75d4b64e77ac46a7",
+    "backend/app/kb/section_chunking.py": "82527dc829fa88fe1ff258f02eb243e2c0469950e00e310eb2fa1345ad77ada7",
+    "backend/app/kb_gateway.py": "efe542364c28f0f48a5605a992e37336ac8d841e471c4fec51596adcaaf0f91a",
+    "backend/app/main.py": "578ba171b814f059fa71f9ca2759b88a2a77202fcd40c3eca3a2655ed9fbd296",
+    "backend/app/models.py": "dce6b21386e15cadd125a3a8778ebf9de420f8d2b39945bedd3c1b04e096b552",
+    "backend/app/observability.py": "1ab89943a3c58247622213f809515fdbb0ef2fe5814bfca442400492040e10db",
+    "backend/app/operator_metrics.py": "8b675ed224933e6342c9c589c1fbcd022e60fd5d8e7fa962c6dc15e24d5d81ad",
+    "backend/app/pdf_extract.py": "9d1aeedd5688b52b0eeb61cd435adda695a1e443dc2fd79bb18585e1216c32b1",
+    "backend/app/platform_graph.py": "f890b04067ad7bb7da8661d80ea43f053c36e5ba1e1f6e29b009e7c4fc63e87b",
+    "backend/app/platform_nodes.py": "03ca499d16a0c22ebeff65a8463e13095962ec4115ddfb7cc81ce978777df7d5",
+    "backend/app/platform_validation.py": "5427a13803321f5b1ab3b74dffec5728539cba6a4ccbd55a99817d76a7658d93",
+    "backend/app/port_types.py": "df4e339dcbeda6eb6ffc5dd7a0123d435e717808dd531b9789da269c6bd6f073",
+    "backend/app/providers.py": "ae921d5ee05b15c65f5b1e001c6f5f7578830049db94a47faeca982a6c87c84c",
+    "backend/app/readiness.py": "3899bb1df17e843eaec83ccd500c607180be6befd5853bf36b05c664a7c20b5d",
+    "backend/app/registry.py": "1a77041113617c9a8c6c9c31d2b06e201885bd41430a5d3293008df89420b9c0",
+    "backend/app/sandbox.py": "463c58aa45a4e12aef4a27f332369751a8eba9cebe590bce30365bd0d8997e68",
+    "backend/app/schema.py": "cbbd9eb6a2e5c65069448e48c15d2640e98d75abc0012273bec650763189d882",
+    "backend/app/storage.py": "685d3347ae7eeb9a6ecf40ae44f5f8693d1effcec189c4d414b7e4dd383d3947",
+    "backend/app/token_budget.py": "3d1d4397ea767c8583d98a5cc9dcf895119e90af2c4bfd782f3c2f00e841af45",
+    "backend/app/tool_api.py": "ef5542b16f8c2ef47ca8e15f75bb6571bfd63b976fc5470cf967f72f81db379d",
+    "backend/app/tool_service.py": "368879799fac574388c8b6c4831251cafdd5f1ca3e9c2538ab7622e58c6eba90",
+    "backend/app/vector_adapters.py": "ed0d207c65b917343c32406deabd8adb6452bc8ac35e2fe1db99110afc328df2",
+    "backend/app/vector_extract.py": "f1e805901e22a8c76ad50604f2a0673a077dea9b7130a605b09fc0f56d174815",
+    "backend/app/worker.py": "a1359960b6d58e40f1db1adb1b1fd203aac8d9cf9ba23831296433a50f5dd575",
+    "frontend/components/platform-settings.tsx": "6c2b7170a53c1b8161e2fb24cfa7e776a70aa77d87ca17d7323b2ae12adb227e",
+    "frontend/components/workflow-editor.tsx": "f2b12a6f00acf585b0509f69176f2986621a60c2bf20150f8ed0658a76272196",
+    "frontend/lib/workflow.ts": "90134163748910e5c425cf11dfe36c18fa192137d7088376abe00e497d4e8403",
+    "scripts/check_production_scenarios.py": "aff9c1154d88f444fbc424d922a63a527d5ff10b724b0cd1a6c85595036df077",
+    "evals/results/a51-followup-2026-10-06/probe_boundaries.py": "89dd7227200c6fb234e9f694c6ccc8018f8b9f29eef40a41186c46b57c288096",
+    "evals/results/a51-followup-2026-10-06/probe_conditions.py": "c70ae23ea72722204443436a23f64f8b05e91ce936a90f74a7d4ef1525b44c62",
+    "evals/results/a51-followup-2026-10-06/probe_deployed.py": "593c2adbd5130624e54b3e50a7a2357fe012ff6186a7aa16ee94c1ea42262591",
+    "evals/results/a51-followup-2026-10-06/probe_inspector.mjs": "7fe5377449736245d016b9245d44f0c8625ee3f96521264bbbcde1c4ef341c7a"
+  },
+  "result_sha256": {
+    "boundaries-results.json": "a4e7a36cce5ba3866e34d51f2e5f701234a812e78b3d9e62cc9a707b9df49888",
+    "conditions-results.json": "a862fdaf2e787f9b7a8209c2ceda52f956ce90ecbee33e543d1eef4db4f78edc",
+    "deployed-results.json": "05c20136ad5f8f941a5d3e94701e0089591549029e237508899718855c3277e6",
+    "inspector-results.json": "3d2c5bdae1fb3395d2610c1fb8500857f26bd699731c91edd1e1d06eccdea730",
+    "schema-before-after.json": "6d738e1eff2c618c8e4e52b921e96d8d009dbb5cc4314f9ac2619918e66819af"
+  }
+}

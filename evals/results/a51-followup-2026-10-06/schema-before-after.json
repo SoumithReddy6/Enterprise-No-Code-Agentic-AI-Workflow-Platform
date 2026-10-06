@@ -1,0 +1,16 @@
+{
+  "old_revision": "6d42c41",
+  "current_revision": "f7b3cfa35fb3a9bb2dba6567d098ad3725f4df59",
+  "input": "{\"amount\":1000.00000000000001}",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "amount": {
+        "type": "number",
+        "maximum": 1000
+      }
+    }
+  },
+  "old_output": "{\"amount\": 1000.0}",
+  "current_output": "{\"amount\": 1000.00000000000001}"
+}

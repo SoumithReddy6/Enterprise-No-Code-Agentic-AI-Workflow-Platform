@@ -1,0 +1,75 @@
+{
+  "scope": "Real HTTP, API and worker processes; deterministic local Ollama and tool fixtures.",
+  "rows": [
+    {
+      "case": "precision_gt",
+      "status": "failed",
+      "branch": "true",
+      "error": "HTTP body: 1000.00000000000001 cannot be sent as a JSON number without rounding; send it as a string",
+      "writes": 0,
+      "write_nodes": null,
+      "passed": true
+    },
+    {
+      "case": "precision_eq",
+      "status": "success",
+      "branch": "false",
+      "error": "",
+      "writes": 0,
+      "write_nodes": null,
+      "passed": true
+    },
+    {
+      "case": "exact_number_approval",
+      "payload_json": "{\n  \"body\": {\n    \"amount\": 9007199254740993\n  },\n  \"method\": \"POST\",\n  \"transport\": \"http\",\n  \"url\": \"http://scenario-provider.invalid:61475/deliver/exact-approved\"\n}",
+      "mismatched_digest_status": 409,
+      "writes_before_approval": 0,
+      "approve_status": 200,
+      "second_approve_status": 200,
+      "final_status": "success",
+      "received": [
+        "{\"amount\":9007199254740993}"
+      ],
+      "passed": true
+    },
+    {
+      "case": "schema_violation_reaches_external_write",
+      "status": "success",
+      "extracted": "{\"amount\": 1000.00000000000001}",
+      "branch": "true",
+      "writes": 1,
+      "passed": false
+    },
+    {
+      "case": "range_refusal_should_be_correctable",
+      "status": "failed",
+      "error": "External write outcome is uncertain; reconciliation is required before trying again. Check the remote system.",
+      "write_nodes": null,
+      "writes": 0,
+      "passed": false
+    }
+  ],
+  "model_calls": [
+    {
+      "mode": "schema",
+      "path": "/api/chat"
+    },
+    {
+      "mode": "exponent",
+      "path": "/api/chat"
+    }
+  ],
+  "receiver_calls": [
+    {
+      "method": "POST",
+      "path": "/deliver/exact-approved",
+      "body": "{\"amount\":9007199254740993}"
+    },
+    {
+      "method": "POST",
+      "path": "/deliver/schema-violation",
+      "body": "{\"audit\":\"schema-violation\"}"
+    }
+  ],
+  "passed": false
+}
