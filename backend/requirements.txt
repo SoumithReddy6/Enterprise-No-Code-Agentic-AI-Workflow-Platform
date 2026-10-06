@@ -48,7 +48,7 @@ tenacity==9.1.4
 truststore==0.10.4
 typing-inspection==0.4.4
 typing_extensions==4.16.0
-urllib3==2.7.0
+urllib3==2.8.0
 uuid_utils==0.17.0
 uvicorn==0.52.4
 uvloop==0.22.1
@@ -57,7 +57,7 @@ websockets==16.1.1
 xxhash==4.0.1
 zstandard==0.25.0
 
-pypdf==6.18.1
+pypdf==6.19.0
 
 # Local vector indexes
 faiss-cpu==1.12.0
