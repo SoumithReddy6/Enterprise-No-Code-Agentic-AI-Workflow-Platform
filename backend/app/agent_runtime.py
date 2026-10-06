@@ -66,9 +66,8 @@ def validate_structured(text,schema):
     try:value=exact_json.loads(clean)
     except ValueError as exc:raise ValueError(f'not valid JSON ({str(exc)[:120]})') from None
     if schema:
-        # The schema sees standard floats, so numeric keywords behave as jsonschema documents;
-        # the returned text keeps the exact digits a downstream condition compares.
-        try:jsonschema.validate(json.loads(clean),schema)
+        # The schema judges the exact value that is returned, not a float-rounded copy.
+        try:exact_json.validate(value,schema)
         except jsonschema.ValidationError as exc:raise ValueError(f'does not match the output schema: {exc.message[:200]}') from None
     elif not isinstance(value,dict):raise ValueError('expected a JSON object')
     return exact_json.dumps(value)

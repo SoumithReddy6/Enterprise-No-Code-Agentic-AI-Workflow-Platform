@@ -249,7 +249,7 @@ class ToolService:
             if rendered:
                 from . import exact_json
                 try:body=exact_json.loads(rendered)
-                except exact_json.NonFiniteNumber as exc:raise ValueError(f'HTTP body: {exc}') from None
+                except exact_json.UnsupportedNumber as exc:raise ValueError(f'HTTP body: {exc}') from None
                 except ValueError:body={'input':rendered}
                 # Parsed exactly, then passed on only as numbers JSON carries without rounding.
                 try:body=exact_json.plain(body)

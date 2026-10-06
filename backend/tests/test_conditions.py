@@ -269,3 +269,69 @@ async def test_an_extraction_agent_amount_reaches_the_condition_exactly():
         result = await compile_workflow(Workflow.model_validate(raw), lambda _: '', message='Order').graph.ainvoke({'values': {}})
     assert result['values']['extract']['text'] == '{"amount": 1000.00000000000001}'
     assert result['values']['check']['branch'] == 'true'
+
+
+AMOUNT = lambda **rule: {'type': 'object', 'properties': {'amount': rule}, 'required': ['amount']}
+
+
+@pytest.mark.parametrize('text,schema,reason', [
+    ('{"amount": 1000.00000000000001}', AMOUNT(type='number', maximum=1000), 'is greater than the maximum of 1000'),
+    ('{"amount": 1000.00000000000001}', AMOUNT(type='integer'), "is not of type 'integer'"),
+    ('{"amount": 0.99999999999999999999}', AMOUNT(type='number', minimum=1), 'is less than the minimum of 1'),
+    ('{"amount": 1000.00000000000001}', AMOUNT(multipleOf=0.01), 'is not a multiple of 0.01'),
+    ('{"amount": 1000.00000000000001}', AMOUNT(const=1000), '1000 was expected'),
+    ('{"amount": 1000.00000000000001}', AMOUNT(enum=[1000]), 'is not one of [1000]'),
+    ('{"amount": 1000}', AMOUNT(exclusiveMaximum=1000), 'greater than or equal to the maximum of 1000'),
+    ('{"amount": true}', AMOUNT(type='integer'), "True is not of type 'integer'"),
+    ('{"amount": true}', AMOUNT(type='number'), "True is not of type 'number'"),
+])
+def test_the_output_schema_judges_the_exact_number_that_is_returned(text, schema, reason):
+    from backend.app.agent_runtime import validate_structured
+    with pytest.raises(ValueError, match='does not match the output schema') as caught:
+        validate_structured(text, schema)
+    assert reason in str(caught.value) and "Decimal(" not in str(caught.value)
+
+
+@pytest.mark.parametrize('text,returned', [('{"amount": 1000}', None), ('{"amount": 1000.00}', None), ('{"amount": 999.99}', None),
+                                           ('{"amount": 1e3}', '{"amount": 1E+3}')])
+def test_exact_values_inside_the_schema_still_pass(text, returned):
+    from backend.app.agent_runtime import validate_structured
+    schema = AMOUNT(type='number', maximum=1000, multipleOf=0.01)
+    assert validate_structured(text, schema) == (returned or text)
+    assert validate_structured('{"amount": 1000.0}', AMOUNT(type='integer', const=1000, enum=[1000])) == '{"amount": 1000.0}'
+    # Exact multiples of large values: plain Decimal remainder would exceed its precision.
+    assert validate_structured('{"amount": 1e30}', AMOUNT(multipleOf=0.01)) == '{"amount": 1E+30}'
+
+
+@pytest.mark.parametrize('token', ['1e99999999999999999999', '1e-99999999999999999999', '1e1001', '1e-1001', '9' * 1002])
+def test_numbers_outside_the_supported_range_are_named_errors_at_every_boundary(token):
+    from backend.app.agent_runtime import validate_structured
+    with pytest.raises(ValueError, match='outside the supported number range'):
+        validate_structured('{"amount": ' + token + '}', {})
+    with pytest.raises(ValueError, match='Condition field amount: .* is outside the supported number range'):
+        check('{"amount": ' + token + '}', operator='gt', compare_to='1', field='amount')
+    assert check('{"amount": 1e1000}', operator='gt', compare_to='1', field='amount') is True
+
+
+@pytest.mark.asyncio
+async def test_a_schema_invalid_extraction_is_repaired_once_then_stops_the_run_before_routing():
+    from unittest.mock import patch
+    raw = workflow({'operator': 'gt', 'compare_to': '1000', 'field': 'amount'}).model_dump(mode='json')
+    raw['nodes'].insert(1, {'id': 'extract', 'type': 'agent', 'inputs': {'input': 'input.message'},
+                            'config': {'provider': 'ollama', 'model': 'llama3.1:latest', 'role': 'extraction',
+                                       'output_schema': AMOUNT(type='number', maximum=1000)}})
+    raw['nodes'][2]['inputs']['value'] = 'extract.text'
+    raw['edges'][0] = {'id': 'a', 'source': 'input', 'target': 'extract'}
+    raw['edges'].append({'id': 'x', 'source': 'extract', 'target': 'check'})
+    calls = []
+    async def model(*args, **kwargs):
+        calls.append(args)
+        kwargs['usage'].update(prompt_tokens=1, completion_tokens=1)
+        return '{"amount":1000.00000000000001}'
+    events = []
+    async def emit(event): events.append(event)
+    with patch('backend.app.providers.ollama_chat', model):
+        with pytest.raises(ValueError, match='greater than the maximum of 1000'):
+            await compile_workflow(Workflow.model_validate(raw), lambda _: '', emit, 'Order').graph.ainvoke({'values': {}})
+    assert len(calls) == 2, 'one answer and one repair, then the run stops'
+    assert not any(e.get('node_id') in ('check', 'yes', 'no') for e in events), 'nothing downstream ran'

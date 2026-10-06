@@ -142,8 +142,10 @@ async def test_http_body_numbers_reach_the_receiver_exactly_or_not_at_all(servic
     assert '9007199254740993' in sent[1] and '9007199254740992' not in sent[1]
     for text,reason in [('{"amount": 1000.00000000000001}','1000.00000000000001 cannot be sent as a JSON number without rounding'),
                         ('{"amount": 1e309}','cannot be sent as a JSON number without rounding'),
-                        ('{"amount": 1e999999999}','cannot be sent as a JSON number without rounding'),
-                        ('{"amount": NaN}','NaN is not a JSON number')]:
+                        ('{"amount": 1e999999999}','outside the supported number range'),
+                        ('{"amount": NaN}','NaN is not a JSON number'),
+                        ('{"amount": 1e99999999999999999999}','outside the supported number range'),
+                        ('{"amount": '+'9'*1002+'}','outside the supported number range')]:
         before=len(sent)
         with pytest.raises(ValueError,match=reason):
             service.prepare('tool_http',config,text,'a')

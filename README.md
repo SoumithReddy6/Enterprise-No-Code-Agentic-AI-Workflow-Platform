@@ -248,7 +248,7 @@ Each doubling of item count adds roughly 10–25% more bytes, not 4×.
 
 **Design (A5.1).**
 - Typed operators: `eq ne gt gte lt lte in empty contains`, with optional JSON field paths.
-- Numbers compare as exact decimals, including JSON numbers. They are parsed as `Decimal` from the input through an extraction agent's structured output, because Python's default JSON parsing would turn `1000.00000000000001` into `1000.0`. Text equality is the default, so identifiers are never silently treated as numbers.
+- Numbers compare as exact decimals, including JSON numbers. They are parsed as `Decimal` from the input through an extraction agent's structured output, because Python's default JSON parsing would turn `1000.00000000000001` into `1000.0`. An agent's output schema judges that same exact value, so `maximum: 1000` rejects `1000.00000000000001` instead of passing a rounded copy. Text equality is the default, so identifiers are never silently treated as numbers.
 - An HTTP write sends a number only if JSON carries exactly that value. Otherwise it is refused before sending, rather than delivering a rounded amount.
 - A value that cannot be compared **fails the run with the reason and takes neither branch**.
 - Invalid configuration is reported verbatim at validation.

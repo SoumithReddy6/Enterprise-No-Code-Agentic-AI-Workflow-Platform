@@ -106,7 +106,9 @@ async def test_a_write_refused_before_sending_is_an_ordinary_failure(client,monk
     graph=calc_flow();graph.nodes[2].type='tool_http'
     graph.nodes[2].config={'method':'POST','enable_writes':True,'connection_id':connection['id'],'body':'{input}'}
     scripted(monkeypatch,['{"action":"call","target":"calc","input":"{\\"amount\\": 1000.00000000000001}"}',
-                          '{"action":"final","text":"The amount must be sent as a string."}'])
+                          '{"action":"call","target":"calc","input":"{\\"amount\\": 1e99999999999999999999}"}',
+                          '{"action":"call","target":"calc","input":"{\\"amount\\": \\"1000.00000000000001\\"}"}',
+                          '{"action":"final","text":"Sent the amount as a string."}'])
     store=client.app.state.store;worker=Worker(store);sent=[]
     async def send(*args):
         sent.append(args)
@@ -117,8 +119,9 @@ async def test_a_write_refused_before_sending_is_an_ordinary_failure(client,monk
     id=response.json()['id']
     await worker.execute(store.claim_next(worker.owner))
     run=store.run(id)
-    assert sent==[],'nothing was sent'
     assert run['status']=='success',run.get('error')
-    assert not run.get('write_nodes'),run.get('write_nodes')
-    refused=[e for e in run['events'] if e.get('status')=='failed' and 'cannot be sent as a JSON number without rounding' in e.get('error','')]
-    assert refused,'the agent saw the refusal as an ordinary tool error'
+    errors=[e.get('error','') for e in run['events'] if e.get('status')=='failed']
+    assert any('cannot be sent as a JSON number without rounding' in e for e in errors),errors
+    assert any('outside the supported number range' in e for e in errors),errors
+    # Both refusals reached the agent as tool errors, and its corrected call was sent once.
+    assert len(sent)==1 and sent[0][0]['payload']['body']=={'amount':'1000.00000000000001'},sent

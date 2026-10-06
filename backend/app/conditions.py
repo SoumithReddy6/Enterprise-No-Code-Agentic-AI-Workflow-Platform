@@ -96,7 +96,7 @@ def read_field(value, path):
     if isinstance(value, str):
         try:
             value = exact_json.loads(value)
-        except exact_json.NonFiniteNumber as exc:
+        except exact_json.UnsupportedNumber as exc:
             raise ValueError(f'Condition field {path}: {exc}.') from None
         except ValueError:
             raise ValueError(f'Condition field {path}: the value is not JSON, so it has no fields.') from None
