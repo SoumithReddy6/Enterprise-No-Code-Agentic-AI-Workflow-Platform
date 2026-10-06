@@ -37,7 +37,6 @@
     "vinext": "1.0.0-beta.9"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.62.5",
     "@cloudflare/workers-types": "5.20261005.1",
     "@openai/sites-vite-plugin": "0.2.0",
     "@playwright/test": "1.63.0",
@@ -52,8 +51,7 @@
     "oxlint-tsgolint": "7.0.2001",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
-    "vite": "8.2.2",
-    "wrangler": "4.147.0"
+    "vite": "8.2.2"
   },
   "type": "module"
 }
