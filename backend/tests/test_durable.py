@@ -15,13 +15,19 @@ def test_tenant_records_and_credentials_are_isolated(store):
     c=store.credential('key','private',tenant_id='one')
     with pytest.raises(ValueError):store.resolve_credential(c['id'],'two')
 
-def test_expired_claim_can_be_recovered_and_stale_owner_is_fenced(store):
+def test_expired_claim_can_be_recovered_and_stale_owner_is_fenced(store,monkeypatch):
+    # A controlled clock: a real 10 ms lease could expire before the owner's write on a
+    # slow runner, and the fence would then rightly refuse it.
+    from types import SimpleNamespace
+    from backend.app import storage
+    clock=[1_000_000.0]
+    monkeypatch.setattr(storage,'time',SimpleNamespace(time=lambda:clock[0],perf_counter=time.perf_counter))
     run=store.create_run(sample(),'Ada',tenant_id='one')
-    first=store.claim_next('old',lease_seconds=.01)
+    first=store.claim_next('old',lease_seconds=30)
     assert first['id']==run['id']
     assert store.claim_next('other') is None
-    store.worker_event(run['id'],'old',{'node_id':'input','status':'success','outputs':{'message':'Ada'}})
-    time.sleep(.02)
+    assert store.worker_event(run['id'],'old',{'node_id':'input','status':'success','outputs':{'message':'Ada'}}) is True
+    clock[0]+=31
     recovered=store.claim_next('new')
     assert recovered['checkpoints']['input']=={'message':'Ada'}
     assert store.worker_event(run['id'],'old',{'status':'failed'}) is False
