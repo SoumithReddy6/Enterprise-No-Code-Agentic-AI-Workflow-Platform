@@ -83,6 +83,7 @@ import {
   type SavedWorkflow,
   conditionSettingVisible,
   withConditionOperator,
+  unparsedJsonSettings,
 } from '@/lib/workflow';
 import '@xyflow/react/dist/style.css';
 import StudioDialog from './studio-dialog';
@@ -489,6 +490,13 @@ function Editor() {
     }
   }
   async function validate() {
+    const unparsed = unparsedJsonSettings(current.current, catalog);
+    if (unparsed.length) {
+      setErrors(unparsed);
+      setWarnings([]);
+      setNotice('Fix the validation issues below.');
+      return false;
+    }
     try {
       const result = await api<{ valid: boolean; errors: string[]; warnings?: string[] }>(
         '/validate',

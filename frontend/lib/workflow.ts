@@ -364,3 +364,25 @@ export function withConditionOperator(
     if (!used.includes(key)) delete next[key];
   return next;
 }
+
+// JSON settings whose text does not parse yet. The inspector keeps such text as the setting
+// itself rather than the last valid value, so a workflow holding any must not be validated
+// or run: what would execute is not what the screen shows.
+export function unparsedJsonSettings(
+  workflow: Workflow,
+  catalog: Definition[],
+): string[] {
+  const definitions = new Map(catalog.map((d) => [d.type, d]));
+  const problems: string[] = [];
+  for (const node of workflow.nodes) {
+    const properties = definitions.get(node.type)?.config_schema.properties ?? {};
+    for (const [key, property] of Object.entries(properties)) {
+      const type = (property.anyOf?.find((p) => p.type !== 'null') ?? property).type;
+      if ((type === 'object' || type === 'array') && typeof node.config[key] === 'string')
+        problems.push(
+          `${node.id}: ${property.title || key} is not valid JSON yet. Fix it before validating or running.`,
+        );
+    }
+  }
+  return problems;
+}

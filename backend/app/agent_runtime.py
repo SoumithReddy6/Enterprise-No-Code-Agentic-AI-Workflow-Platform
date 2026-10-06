@@ -3,7 +3,7 @@ import json
 import os
 import re
 from dataclasses import replace
-from .tool_service import UncertainWriteError, is_write
+from .tool_service import UncertainWriteError, WriteNotSent, is_write
 from .approvals import ApprovalPause
 from . import token_budget
 
@@ -324,7 +324,7 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
                 try:
                     return await invoke_attached(target_node,task,ctx,identity,emit,
                                                  depth+1 if target in specialists else depth,budget)
-                except CONTROL_FLOW:
+                except (*CONTROL_FLOW, WriteNotSent):
                     raise
                 except Exception:
                     if write_attempt:

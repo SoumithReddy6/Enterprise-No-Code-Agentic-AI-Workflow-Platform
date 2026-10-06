@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { conditionSettingVisible, withConditionOperator } from '../lib/workflow.ts';
+import { readFileSync } from 'node:fs';
+import { conditionSettingVisible, withConditionOperator, unparsedJsonSettings, seed, type Definition, type Workflow } from '../lib/workflow.ts';
 
 const SETTINGS = ['operator', 'field', 'contains', 'compare_to', 'options', 'compare_as', 'case_sensitive'];
 const shown = (config: Record<string, unknown>) => SETTINGS.filter((key) => conditionSettingVisible(config, key));
@@ -24,4 +25,17 @@ void test('switching operator drops the previous operand and an inapplicable com
   assert.deepEqual(withConditionOperator(numericIn, 'empty'), { operator: 'empty', field: '' });
   assert.deepEqual(withConditionOperator({ operator: 'gt', compare_to: '5' }, 'lte'), { operator: 'lte', compare_to: '5' });
   assert.deepEqual(numericIn.options, ['1', '2'], 'the original config is not mutated');
+});
+
+void test('a JSON setting holding unparsed text blocks validation and names the setting', () => {
+  const condition = JSON.parse(readFileSync(new URL('./browser/condition-node.json', import.meta.url), 'utf8')) as Definition;
+  const withOptions = (options: unknown): Workflow => ({
+    ...seed,
+    nodes: [...seed.nodes, { id: 'check', type: 'condition', version: 1, label: 'Condition', position: { x: 0, y: 0 }, inputs: { value: '' }, config: { operator: 'in', options } }],
+  });
+  assert.deepEqual(unparsedJsonSettings(withOptions(['high']), [condition]), []);
+  assert.deepEqual(unparsedJsonSettings(withOptions('["urgent",'), [condition]), [
+    'check: Options is not valid JSON yet. Fix it before validating or running.',
+  ]);
+  assert.deepEqual(unparsedJsonSettings(withOptions('["urgent",'), []), [], 'unknown node types are left to the server');
 });

@@ -168,6 +168,7 @@ stateDiagram-v2
 - External writes are **never retried**. Validation rejects a retry policy on any write node, including write tools attached to agents and loop bodies.
 - `on_error: continue` and `route` **cannot hide uncertainty**: an uncertain write stops the run even inside a recovery path (S03, S04).
 - Resuming a run whose write is uncertain is refused with HTTP 409.
+- Uncertainty is reserved for the send itself. The request is built and checked *before* the marker is written, so a refusal at that stage, such as missing write consent, a mismatched connection or a number JSON cannot carry exactly, is an ordinary failure with nothing to reconcile. Address checks happen at connect time and stay on the uncertain side.
 
 **Evidence.** S16: the worker is killed *after the receiver accepted the write but before the response arrived*. The receiver logged exactly one request after recovery, and resume was refused.
 
@@ -247,13 +248,15 @@ Each doubling of item count adds roughly 10–25% more bytes, not 4×.
 
 **Design (A5.1).**
 - Typed operators: `eq ne gt gte lt lte in empty contains`, with optional JSON field paths.
-- Numbers compare as exact decimals. Text equality is the default, so identifiers are never silently treated as numbers.
+- Numbers compare as exact decimals, including JSON numbers. They are parsed as `Decimal` from the input through an extraction agent's structured output, because Python's default JSON parsing would turn `1000.00000000000001` into `1000.0`. Text equality is the default, so identifiers are never silently treated as numbers.
+- An HTTP write sends a number only if JSON carries exactly that value. Otherwise it is refused before sending, rather than delivering a rounded amount.
 - A value that cannot be compared **fails the run with the reason and takes neither branch**.
 - Invalid configuration is reported verbatim at validation.
 - Saved conditions are unchanged, checked against the original implementation on 20,000 randomized Unicode cases.
 
 **Evidence.**
-- S17: an amount condition gates a real external write; the receiver saw exactly 1200 and 1000.01, and not 80 or 1000.00.
+- S17: an amount condition gates a real external write at the precision boundary. The receiver got exactly 1200, 1000.01 and 9007199254740993, did not get 80 or 1000.00, and `1000.00000000000001` was refused before sending.
+- An independent review found JSON numbers rounded before comparison, plus a stale-predicate bug in the editor. Both are fixed with regression tests; the review is kept in [`docs/reviews`](docs/reviews/).
 - S18 and S19 cover the error cases.
 - A live run had `llama3.1` extract the amount from free text, and the condition routed it correctly.
 - Details: [`docs/typed-conditions.md`](docs/typed-conditions.md).

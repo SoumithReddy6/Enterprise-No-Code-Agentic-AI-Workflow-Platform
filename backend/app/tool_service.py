@@ -23,6 +23,11 @@ RETRYABLE_TOOL_STATUS=frozenset({408,425,429,500,502,503,504,529})
 class UncertainWriteError(ValueError):
     """An external mutation may have completed; automatic retries must stop."""
 
+class WriteNotSent(ValueError):
+    """A write refused while it was being prepared, before anything left this machine.
+
+    Unlike UncertainWriteError it needs no reconciliation: it is an ordinary failure."""
+
 class TransientToolError(ValueError):
     """Infrastructure failed, not the request. Only this class is eligible for node retries.
 
@@ -242,8 +247,13 @@ class ToolService:
             method=config.method;path=config.path
             rendered=config.body.replace('{input}',input_text)
             if rendered:
-                try:body=json.loads(rendered)
+                from . import exact_json
+                try:body=exact_json.loads(rendered)
+                except exact_json.NonFiniteNumber as exc:raise ValueError(f'HTTP body: {exc}') from None
                 except ValueError:body={'input':rendered}
+                # Parsed exactly, then passed on only as numbers JSON carries without rounding.
+                try:body=exact_json.plain(body)
+                except ValueError as exc:raise ValueError(f'HTTP body: {exc}') from None
         elif node_type=='tool_github':
             path='/repos/'+config.repository+'/issues'
             if config.operation=='get_issue':path+='/'+str(config.issue_number)

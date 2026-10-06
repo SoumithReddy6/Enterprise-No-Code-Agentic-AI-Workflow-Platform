@@ -121,3 +121,35 @@ def test_connection_api(service):
     assert client.put('/api/connections/'+id,json={'name':'B','provider':'http','endpoint':'https://example.com'}).status_code==200
     assert service.resolve(id,'a')['secret']=='SECRET'
     assert client.get('/api/connections').json()[0]['name']=='B'
+
+
+@pytest.mark.asyncio
+async def test_http_body_numbers_reach_the_receiver_exactly_or_not_at_all(service,monkeypatch):
+    """The receiver gets the number the workflow decided on, or nothing: a value a JSON
+    number cannot carry without rounding is refused before anything is sent."""
+    id=connection(service)
+    monkeypatch.setattr('backend.app.tool_service.public_addresses',lambda host,port:['93.184.216.34'])
+    sent=[]
+    async def handler(request):
+        sent.append(request.content.decode())
+        return httpx.Response(200,text='ok')
+    service.transport=httpx.MockTransport(handler)
+    config={'connection_id':id,'path':'/orders','method':'POST','enable_writes':True,'body':'{input}'}
+    for text,received in [('{"amount": 1000.01}',1000.01),('{"amount": 9007199254740993.0}',9007199254740993),
+                          ('{"amount": 1.50, "n": 7}',1.5),('{"amount": "1000.00000000000001"}','1000.00000000000001')]:
+        assert await service.execute('tool_http',config,text,'a')=='ok'
+        assert json.loads(sent[-1])['amount']==received,(text,sent[-1])
+    assert '9007199254740993' in sent[1] and '9007199254740992' not in sent[1]
+    for text,reason in [('{"amount": 1000.00000000000001}','1000.00000000000001 cannot be sent as a JSON number without rounding'),
+                        ('{"amount": 1e309}','cannot be sent as a JSON number without rounding'),
+                        ('{"amount": 1e999999999}','cannot be sent as a JSON number without rounding'),
+                        ('{"amount": NaN}','NaN is not a JSON number')]:
+        before=len(sent)
+        with pytest.raises(ValueError,match=reason):
+            service.prepare('tool_http',config,text,'a')
+        with pytest.raises(ValueError,match=reason):
+            await service.execute('tool_http',config,text,'a')
+        assert len(sent)==before,'nothing is sent'
+    # Text that is not JSON is still wrapped as before.
+    assert await service.execute('tool_http',config,'plain words','a')=='ok'
+    assert json.loads(sent[-1])=={'input':'plain words'}

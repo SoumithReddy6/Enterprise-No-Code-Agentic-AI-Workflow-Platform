@@ -6,6 +6,7 @@ model and user JSON with Decimal instead, and writes it back without passing thr
 float. NaN and Infinity are not JSON, so they are refused rather than carried forward.
 """
 import json
+import math
 from decimal import Decimal
 
 
@@ -19,6 +20,32 @@ def _refuse(constant):
 
 def loads(text):
     return json.loads(text, parse_float=Decimal, parse_constant=_refuse)
+
+
+# Integers beyond this many digits are refused rather than expanded: an exponent such as
+# 1e999999999 would otherwise become a billion-digit integer.
+MAX_INTEGER_DIGITS = 300
+
+
+def plain(value):
+    """value with every Decimal replaced by an int or float carrying exactly the same number,
+    for code that serializes through the standard json module, such as an HTTP request body.
+
+    A number a binary float cannot represent exactly raises instead of being sent rounded:
+    the receiver must get the value the workflow decided on, or nothing.
+    """
+    if isinstance(value, Decimal):
+        if value.adjusted() < MAX_INTEGER_DIGITS and value == value.to_integral_value():
+            return int(value)
+        number = float(value)
+        if math.isfinite(number) and Decimal(repr(number)) == value:
+            return number
+        raise ValueError(f'{value} cannot be sent as a JSON number without rounding; send it as a string')
+    if isinstance(value, dict):
+        return {k: plain(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [plain(v) for v in value]
+    return value
 
 
 def dumps(value):

@@ -95,3 +95,30 @@ async def test_agent_write_failure_stops_and_keeps_resume_blocked(client,monkeyp
     assert run['write_nodes'] and all(n.startswith('agent') for n in run['write_nodes']),run['write_nodes']
     assert 'agent' not in run['checkpoints']
     assert client.post(f'/api/runs/{id}/resume').status_code==409
+
+
+@pytest.mark.asyncio
+async def test_a_write_refused_before_sending_is_an_ordinary_failure(client,monkeypatch):
+    """A request refused while it is being prepared never left the machine: no write marker,
+    no reconciliation, and an agent sees it as a tool error it can correct."""
+    from backend.tests.test_agent_tools import calc_flow,scripted
+    connection=client.post('/api/connections',json={'name':'API','provider':'http','endpoint':'https://example.com'}).json()
+    graph=calc_flow();graph.nodes[2].type='tool_http'
+    graph.nodes[2].config={'method':'POST','enable_writes':True,'connection_id':connection['id'],'body':'{input}'}
+    scripted(monkeypatch,['{"action":"call","target":"calc","input":"{\\"amount\\": 1000.00000000000001}"}',
+                          '{"action":"final","text":"The amount must be sent as a string."}'])
+    store=client.app.state.store;worker=Worker(store);sent=[]
+    async def send(*args):
+        sent.append(args)
+        return 'created'
+    monkeypatch.setattr(worker.tools,'execute_prepared',send)
+    response=client.post('/api/runs',json={'workflow':graph.model_dump(),'message':'order'})
+    assert response.status_code==201,response.text
+    id=response.json()['id']
+    await worker.execute(store.claim_next(worker.owner))
+    run=store.run(id)
+    assert sent==[],'nothing was sent'
+    assert run['status']=='success',run.get('error')
+    assert not run.get('write_nodes'),run.get('write_nodes')
+    refused=[e for e in run['events'] if e.get('status')=='failed' and 'cannot be sent as a JSON number without rounding' in e.get('error','')]
+    assert refused,'the agent saw the refusal as an ordinary tool error'

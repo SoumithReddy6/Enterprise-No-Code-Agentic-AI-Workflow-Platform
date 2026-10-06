@@ -20,9 +20,11 @@ Implementation: [`backend/app/conditions.py`](../backend/app/conditions.py). Tes
 
 ## Semantics
 
-- **Numbers are exact decimals.** `0.30000000000000004 > 0.3` is true, and integers beyond 2^53 compare correctly. A number is a JSON number or text such as `1200`, `-5`, `.5` or `2.5e3`. `1,200`, `$1200`, `NaN`, `Infinity`, booleans and blank text are not numbers.
+- **Numbers are exact decimals, end to end.** `0.30000000000000004 > 0.3` is true, and integers beyond 2^53 compare correctly. A number is a JSON number or text such as `1200`, `-5`, `.5` or `2.5e3`. `1,200`, `$1200`, booleans and blank text are not numbers.
+- **JSON numbers keep their digits** ([`exact_json`](../backend/app/exact_json.py)). Python's `json` module turns `1000.00000000000001` into the float `1000.0`, which would flip `gt 1000`. Field values and an extraction agent's structured output are therefore parsed as `Decimal`, and the agent's output is written back with its original digits. `NaN` and `Infinity` are not JSON and are refused with that reason. Schema validation still sees standard floats, so `multipleOf` and similar keywords behave as jsonschema documents.
+- **Write bodies carry the decided number, or nothing.** An HTTP tool body passes each number on only if a JSON number represents exactly that value, for example `1000.01` or `9007199254740993`. A value such as `1000.00000000000001` is refused before anything is sent or offered for approval: most receivers parse JSON numbers as doubles and would round it anyway. Send such values as strings. A refusal at that stage sent nothing, so it is an ordinary failure, not an uncertain write that needs reconciliation.
 - **Text is the default for equality.** `"02134" eq "2134"` is false unless `compare_as` is `number`, so identifiers such as zip codes, order numbers and version strings are never silently compared as numbers.
-- **JSON values become text predictably.** `true` becomes `true`, `15` becomes `15`, and `15.0` becomes `15.0`. Use `compare_as: number` to compare numbers by value.
+- **JSON values become text predictably.** `true` becomes `true`, `15` becomes `15`, and `15.0` becomes `15.0`; exponent forms are normalized, so `1e3` becomes `1E+3`. Use `compare_as: number` to compare numbers by value.
 - **`empty` never treats `0` or `false` as empty.**
 
 ## Errors, not silent branches
@@ -36,7 +38,7 @@ An invalid comparison never quietly takes the `false` branch.
 
 A saved condition, `{contains, case_sensitive}`, is valid unchanged; no migration rewrites it. A reference copy of the original implementation is checked against the new one on a fixed Unicode corpus and 20,000 seeded random cases, covering casefolding cases such as `ß`/`SS`, `İ`, ligatures and combining marks. The only behaviour change is for non-text values, such as a list, which the old node crashed on: they now either compare as documented here or fail with a named error, instead of an unexpected-error message.
 
-The inspector shows only the settings the chosen operator uses. Switching operators removes the previous operator's operand, so a stale value cannot invalidate the node.
+The inspector shows only the settings the chosen operator uses. Switching operators removes the previous operator's operand, so a stale value cannot invalidate the node. A JSON setting such as **Options** whose text does not parse is kept as that text, not the last valid list. Saving keeps what is on screen, and Validate and Run are refused, with the setting named, until it parses: the editor never runs a predicate the screen no longer shows.
 
 ## Deliberately not in A5.1
 

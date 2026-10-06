@@ -222,13 +222,25 @@ def scenarios(lab):
         return w
     def branches(run):return [e['node_id'] for e in run['events'] if e.get('node_id') in ('desk','sent','kept') and e['status']=='success']
     def typed_routing():
+        # Amounts are JSON number tokens written exactly as a client sends them, including
+        # values a binary float would round onto the threshold.
+        from decimal import Decimal
         path='/deliver/high-value';w=amount_router({'operator':'gt','compare_to':'1000','field':'amount'},path);taken={}
-        for amount in ('1200','80','1000.00','1000.01'):
-            id=lab.submit(w,json.dumps({'item':'laptop','amount':float(amount) if '.' in amount else int(amount)}));run=lab.wait(id)
+        for amount in ('1200','80','1000.00','1000.01','9007199254740993.0'):
+            id=lab.submit(w,'{"item": "laptop", "amount": '+amount+'}');run=lab.wait(id)
             assert run['status']=='success',run.get('error');taken[amount]=branches(run)
-        assert taken=={'1200':['desk','sent'],'80':['kept'],'1000.00':['kept'],'1000.01':['desk','sent']},taken
-        sent=[json.loads(c['body'])['amount'] for c in lab.provider.calls if c['path']==path]
-        assert sorted(sent)==[1000.01,1200],sent
+        assert taken=={'1200':['desk','sent'],'80':['kept'],'1000.00':['kept'],'1000.01':['desk','sent'],
+                       '9007199254740993.0':['desk','sent']},taken
+        sent=sorted(json.loads(c['body'],parse_float=Decimal)['amount'] for c in lab.provider.calls if c['path']==path)
+        assert sent==[Decimal('1000.01'),1200,9007199254740993],sent
+        # Above the threshold, but a JSON number cannot carry it without rounding: the
+        # condition routes it to the desk, and the write is refused rather than sent rounded.
+        id=lab.submit(w,'{"item": "laptop", "amount": 1000.00000000000001}');run=lab.wait(id)
+        branch=[e['outputs']['branch'] for e in run['events'] if e.get('node_id')=='check' and e['status']=='success']
+        assert branch==['true'] and run['status']=='failed',(branch,run['status'])
+        assert 'cannot be sent as a JSON number without rounding' in run['error'],run['error']
+        assert len([c for c in lab.provider.calls if c['path']==path])==3,'the unrepresentable amount was not sent'
+        taken['1000.00000000000001']='routed to desk; write refused before sending'
         return {'branches':taken,'writes':len(sent)}
     def typed_routing_invalid():
         w=amount_router({'operator':'gt','compare_to':'a thousand','field':'amount'},'/deliver/never')

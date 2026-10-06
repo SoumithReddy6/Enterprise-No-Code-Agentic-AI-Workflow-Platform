@@ -31,7 +31,10 @@ export function ConfigField({
   const type = schema.type;
   const json = type === 'object' || type === 'array';
   const [draft, setDraft] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  // Text that does not parse is stored as the setting itself, so the workflow never keeps
+  // an older value the screen no longer shows; the editor refuses to validate or run it.
+  const unparsed = json && typeof value === 'string';
+  const error = unparsed ? 'Enter valid JSON before leaving this field.' : '';
   const options = schema.enum || property.enum;
   return (
     <label>
@@ -68,6 +71,7 @@ export function ConfigField({
           rows={5}
           value={
             draft ??
+            (unparsed ? (value as string) : null) ??
             JSON.stringify(
               value ?? property.default ?? (type === 'array' ? [] : {}),
               null,
@@ -88,9 +92,8 @@ export function ConfigField({
               if (type === 'array' && !Array.isArray(parsed))
                 throw Error('Enter a JSON array');
               onChange(parsed);
-              setError('');
             } catch {
-              setError('Enter valid JSON before leaving this field.');
+              onChange(e.target.value);
             }
           }}
         />

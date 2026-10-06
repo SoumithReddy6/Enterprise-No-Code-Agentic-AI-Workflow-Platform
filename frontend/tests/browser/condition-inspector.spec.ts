@@ -72,3 +72,33 @@ test('the condition inspector shows each operator\'s settings and sends only tho
   expect(await validatedCondition(page, validated)).toEqual({ operator: 'empty', field: 'amount', case_sensitive: false });
   expect(unexpected).toEqual([]);
 });
+
+test('an invalid Options edit is never validated or run as the previous list', async ({ page }) => {
+  const validated: Workflow[] = [];
+  const unexpected: string[] = [];
+  await editorWithCondition(page, validated, unexpected);
+  const setting = (name: string) => page.getByLabel(new RegExp(`^${name}`));
+  await setting('Operator').selectOption('in');
+  const options = setting('Options');
+  await options.fill('["high"]');
+  expect((await validatedCondition(page, validated)).options).toEqual(['high']);
+
+  const before = validated.length;
+  await options.fill('["urgent",');
+  await expect(page.getByText('Enter valid JSON before leaving this field.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Validate', exact: true }).click();
+  await expect(page.getByText(/: Options is not valid JSON yet\. Fix it before validating or running\./)).toBeVisible();
+  await expect(page.getByText('Workflow is valid and ready to run.')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Run workflow', exact: true }).click();
+  await expect(page.getByText('Fix the validation issues below.')).toBeVisible();
+  expect(validated.length).toBe(before);
+
+  // The visible edit survives leaving the node and coming back.
+  await page.getByRole('button', { name: 'Close node settings', exact: true }).click();
+  await page.locator('.react-flow__node', { hasText: 'Condition' }).click();
+  await expect(options).toHaveValue('["urgent",');
+
+  await options.fill('["urgent"]');
+  expect((await validatedCondition(page, validated)).options).toEqual(['urgent']);
+  expect(unexpected).toEqual([]);
+});

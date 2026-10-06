@@ -41,7 +41,7 @@ Exit zero means every requested scenario/stage passed. Failures, missing results
 | S12 | Another signed-in tenant requests a run | Run and connection isolation |
 | S13 | Two browser tabs edit one workflow | Stale update rejected |
 | S14 | Connection destination changes after review | Reviewed write does not go to changed endpoint |
-| S17 | Purchases above $1,000 go to the approval desk | A typed `gt` condition on a JSON field decides whether the external write is sent: 1200 and 1000.01 are sent, 80 and 1000.00 are not, and the receiver sees exactly those two |
+| S17 | Purchases above $1,000 go to the approval desk | A typed `gt` condition on a JSON field decides whether the external write is sent. 1200, 1000.01 and 9007199254740993.0 are sent and arrive with exactly those values; 80 and 1000.00 are not. 1000.00000000000001 is routed to the desk, then refused before sending because a JSON number cannot carry it unrounded |
 | S18 | A threshold is typed as words | Invalid comparison is rejected at validation with its reason; no run is created, nothing is sent |
 | S19 | The amount arrives as text that is not a number | The run fails naming the value; neither branch runs, nothing is sent |
 | L01 | Two tickets processed by real Ollama agents (optional) | Model usage survives into durable run events |

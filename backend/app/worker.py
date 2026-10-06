@@ -8,7 +8,7 @@ from pathlib import Path
 from .storage import Store, local_key, new_id
 from .models import Workflow
 from .compiler import compile_workflow,PersistedNodeCancellation
-from .tool_service import ToolService,CONFIGS,is_write,UncertainWriteError
+from .tool_service import ToolService,CONFIGS,is_write,UncertainWriteError,WriteNotSent
 from .agent_memory import MemoryService
 from .platform_validation import platform_errors,kb_errors
 from .kb_gateway import KnowledgeServices
@@ -114,6 +114,11 @@ class Worker:
                         config=CONFIGS[node_type].model_validate(settings)
                         self.tools.check(config,tenant)
                         write=is_write(node_type,config)
+                        def prepare_write():
+                            # Building and checking the request sends nothing, so a failure here
+                            # is an ordinary error, not an outcome to reconcile.
+                            try:return self.tools.prepare(node_type,settings,input_text,tenant)
+                            except ValueError as exc:raise WriteNotSent(str(exc)) from None
                         if node_type=='tool_jira' and not write:
                             from .tool_service import jira_items
                             prepared=self.tools.prepare(node_type,settings,input_text,tenant)
@@ -125,9 +130,8 @@ class Worker:
                         if required:
                             saved=approvals.resolve(self.store,id,owner,invocation)
                             if saved is None:
-                                prepared=self.tools.prepare(node_type,settings,input_text,tenant)
-                                raise approvals.ApprovalPause(node_id,checkpoint_owner,invocation,prepared)
-                            candidate=self.tools.prepare(node_type,settings,input_text,tenant)
+                                raise approvals.ApprovalPause(node_id,checkpoint_owner,invocation,prepare_write())
+                            candidate=prepare_write()
                             if candidate['payload']!=saved['prepared']['payload'] or candidate['connection_id']!=saved['prepared']['connection_id']:
                                 raise ValueError('The resumed action differs from the reviewed request. Start a new run.')
                             if saved['status']=='completed':return saved['result']
@@ -145,6 +149,9 @@ class Worker:
                         if write:
                             done=self.store.completed_action(id,marker)
                             if done is not None:return done  # Already sent; never send again.
+                            # Check the request before marking: a refusal here sends nothing, and
+                            # only the send itself can leave an outcome unknown.
+                            prepare_write()
                             self.store.mark_write(id,owner,marker)
                         try:
                             result=await self.tools.execute(node_type,settings,input_text,tenant)
