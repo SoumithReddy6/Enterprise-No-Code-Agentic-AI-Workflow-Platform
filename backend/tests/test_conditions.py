@@ -303,14 +303,16 @@ def test_exact_values_inside_the_schema_still_pass(text, returned):
     assert validate_structured('{"amount": 1e30}', AMOUNT(multipleOf=0.01)) == '{"amount": 1E+30}'
 
 
-@pytest.mark.parametrize('token', ['1e99999999999999999999', '1e-99999999999999999999', '1e1001', '1e-1001', '9' * 1002])
+@pytest.mark.parametrize('token', ['1e99999999999999999999', '1e-99999999999999999999', '1e1001', '1e-1001', '9' * 1002,
+                                   '9e1000', '1.00000000000000001e1000', '9.9e-1001', str(2 * 10 ** 1000), '-9e1000'])
 def test_numbers_outside_the_supported_range_are_named_errors_at_every_boundary(token):
     from backend.app.agent_runtime import validate_structured
     with pytest.raises(ValueError, match='outside the supported number range'):
         validate_structured('{"amount": ' + token + '}', {})
     with pytest.raises(ValueError, match='Condition field amount: .* is outside the supported number range'):
         check('{"amount": ' + token + '}', operator='gt', compare_to='1', field='amount')
-    assert check('{"amount": 1e1000}', operator='gt', compare_to='1', field='amount') is True
+    for inside in ('1e1000', '-1e1000', '1e-1000', '9.99e999', str(10 ** 1000), '0e-5000'):
+        check('{"amount": ' + inside + '}', operator='empty', field='amount')
 
 
 @pytest.mark.asyncio
@@ -332,6 +334,62 @@ async def test_a_schema_invalid_extraction_is_repaired_once_then_stops_the_run_b
     async def emit(event): events.append(event)
     with patch('backend.app.providers.ollama_chat', model):
         with pytest.raises(ValueError, match='greater than the maximum of 1000'):
+            await compile_workflow(Workflow.model_validate(raw), lambda _: '', emit, 'Order').graph.ainvoke({'values': {}})
+    assert len(calls) == 2, 'one answer and one repair, then the run stops'
+    assert not any(e.get('node_id') in ('check', 'yes', 'no') for e in events), 'nothing downstream ran'
+
+
+def money(rule, dialect=None):
+    """A schema whose amount is checked by a bundled resource reached through $ref, which may
+    declare its own dialect. jsonschema picks a fresh validator class for such a resource."""
+    resource = {'$id': 'urn:relay:test:money', **rule, **({'$schema': dialect} if dialect else {})}
+    return {'$schema': 'https://json-schema.org/draft/2020-12/schema', 'type': 'object', 'required': ['amount'],
+            'properties': {'amount': {'$ref': 'urn:relay:test:money'}}, '$defs': {'Money': resource}}
+
+
+DIALECTS = [None, 'https://json-schema.org/draft/2020-12/schema', 'http://json-schema.org/draft-07/schema#']
+
+
+@pytest.mark.parametrize('dialect', DIALECTS)
+@pytest.mark.parametrize('text,rule,valid', [
+    ('{"amount": 1000.0}', {'if': {'type': 'integer'}, 'then': {'maximum': 999}}, False),
+    ('{"amount": 998.5}', {'if': {'type': 'integer'}, 'then': {'maximum': 999}}, True),
+    ('{"amount": 1000.0}', {'type': 'integer'}, True),
+    ('{"amount": 1000.5}', {'type': 'integer'}, False),
+    ('{"amount": 1e30}', {'type': 'number', 'multipleOf': 0.01}, True),
+    ('{"amount": 1000.00000000000001}', {'type': 'number', 'multipleOf': 0.01}, False),
+    ('{"amount": 1000.00000000000001}', {'maximum': 1000}, False),
+    ('{"amount": true}', {'type': 'number'}, False),
+])
+def test_referenced_resources_validate_exactly_whatever_dialect_they_declare(dialect, text, rule, valid):
+    from backend.app.agent_runtime import validate_structured
+    if valid:
+        validate_structured(text, money(rule, dialect))
+    else:
+        with pytest.raises(ValueError, match='does not match the output schema'):
+            validate_structured(text, money(rule, dialect))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('dialect', DIALECTS)
+async def test_a_conditional_bound_in_a_declared_resource_stops_the_run_before_routing(dialect):
+    from unittest.mock import patch
+    raw = workflow({'operator': 'gt', 'compare_to': '999', 'field': 'amount'}).model_dump(mode='json')
+    raw['nodes'].insert(1, {'id': 'extract', 'type': 'agent', 'inputs': {'input': 'input.message'},
+                            'config': {'provider': 'ollama', 'model': 'llama3.1:latest', 'role': 'extraction',
+                                       'output_schema': money({'if': {'type': 'integer'}, 'then': {'maximum': 999}}, dialect)}})
+    raw['nodes'][2]['inputs']['value'] = 'extract.text'
+    raw['edges'][0] = {'id': 'a', 'source': 'input', 'target': 'extract'}
+    raw['edges'].append({'id': 'x', 'source': 'extract', 'target': 'check'})
+    calls = []
+    async def model(*args, **kwargs):
+        calls.append(args)
+        kwargs['usage'].update(prompt_tokens=1, completion_tokens=1)
+        return '{"amount":1000.0}'
+    events = []
+    async def emit(event): events.append(event)
+    with patch('backend.app.providers.ollama_chat', model):
+        with pytest.raises(ValueError, match='greater than the maximum of 999'):
             await compile_workflow(Workflow.model_validate(raw), lambda _: '', emit, 'Order').graph.ainvoke({'values': {}})
     assert len(calls) == 2, 'one answer and one repair, then the run stops'
     assert not any(e.get('node_id') in ('check', 'yes', 'no') for e in events), 'nothing downstream ran'
