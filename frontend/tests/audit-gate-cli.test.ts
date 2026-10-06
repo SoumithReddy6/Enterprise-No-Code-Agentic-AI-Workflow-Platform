@@ -88,3 +88,12 @@ void test('unparseable output or a missing npm fails', () => {
   assert.equal(absent.status, 1);
   assert.match(absent.output, /npm audit --json could not run/);
 });
+
+void test('a high finding whose only advisory says moderate fails through the real CLI', () => {
+  const advisory = { source: 2, name: 'other', url: 'https://github.com/advisories/GHSA-aaaa-bbbb-cccc', severity: 'moderate', range: '<2.0.0' };
+  const contradicted = { auditReportVersion: 2, vulnerabilities: { other: { name: 'other', severity: 'high', via: [advisory] } }, metadata: { vulnerabilities: { info: 0, low: 0, moderate: 0, high: 1, critical: 0, total: 1 } } };
+  const { status, output } = gate({ audit: { json: contradicted, status: 1 } });
+  assert.equal(status, 1, output);
+  assert.match(output, /finding other is high but nothing in its via is above moderate/);
+  assert.doesNotMatch(output, /no high or critical advisories/);
+});

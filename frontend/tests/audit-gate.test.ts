@@ -186,6 +186,33 @@ void test('broken references, mismatched names and inconsistent duplicates fail'
   assert.equal(run({ report: report({ other: { name: 'other', severity: 'high', via: [] } }) }).ok, false, 'an empty via list');
 });
 
+void test('a blocking finding whose advisory says moderate fails, while a genuine moderate passes', () => {
+  for (const severity of ['high', 'critical']) {
+    const contradicted = run({ report: report({ other: { name: 'other', severity, via: [{ ...OTHER, severity: 'moderate' }] } }) });
+    assert.equal(contradicted.ok, false, severity);
+    assert.match(contradicted.failures.join(), new RegExp(`finding other is ${severity} but nothing in its via is above moderate`));
+    assert.doesNotMatch(summary(contradicted, {}).join('\n'), /no high or critical advisories/);
+  }
+  assert.equal(run({ report: report({ other: { name: 'other', severity: 'moderate', via: [{ ...OTHER, severity: 'moderate' }] } }) }).ok, true);
+});
+
+void test('a parent takes its severity from a referenced finding within npm\'s bounds', () => {
+  assert.equal(run().ok, true, 'the reviewed chain: each parent is high through its referenced child');
+  const inflated = report({ vinext: { name: 'vinext', severity: 'critical', via: ['vite-plugin-commonjs'] } });
+  assert.match(run({ report: inflated }).failures.join(), /finding vinext is critical but nothing in its via is above high/);
+  // As npm reported miniflare over a high undici: only undici's moderate advisories reached it.
+  const lowerParent = report({ other: { name: 'other', severity: 'moderate', via: ['vinext'] } });
+  assert.equal(run({ report: lowerParent }).ok, true);
+  const understated = report({ other: { name: 'other', severity: 'moderate', via: [{ ...OTHER, severity: 'critical' }] } });
+  assert.match(run({ report: understated }).failures.join(), /finding other is moderate but carries a critical advisory/);
+});
+
+void test('a blocking finding carrying the accepted advisory itself must still lie on a reviewed path', () => {
+  const result = run({ report: report({ other: { name: 'other', severity: 'high', via: [ADVISORY] } }) });
+  assert.equal(result.ok, false);
+  assert.match(result.failures.join(), /Unexpected high finding in other, outside every reviewed dependency path/);
+});
+
 // --------------------------------------------------------------------------- fail closed: registry data (R04)
 
 void test('registry data that cannot show whether a patch exists fails', () => {

@@ -134,6 +134,20 @@ export function reportProblems(report) {
       }
     }
   }
+  // A finding is at least as severe as its own advisory records and no more severe than the
+  // most severe entry in its via. A parent can sit below a referenced finding - npm rates it
+  // only by the advisories that reach it through that dependency - but it can never exceed
+  // everything it is attributed to. A finding outside those bounds cannot be trusted.
+  if (!problems.length) {
+    for (const [name, entry] of Object.entries(report.vulnerabilities)) {
+      const rank = (via) => SEVERITIES.indexOf(typeof via === 'string' ? report.vulnerabilities[via].severity : via.severity);
+      const ceiling = Math.max(...entry.via.map(rank));
+      const floor = Math.max(-1, ...entry.via.filter(isMap).map(rank));
+      const own = SEVERITIES.indexOf(entry.severity);
+      if (own > ceiling) problems.push(`finding ${name} is ${entry.severity} but nothing in its via is above ${SEVERITIES[ceiling]}`);
+      if (own < floor) problems.push(`finding ${name} is ${entry.severity} but carries a ${SEVERITIES[floor]} advisory`);
+    }
+  }
   for (const severity of SEVERITIES) {
     if (tally[severity] !== counts[severity]) problems.push(`metadata reports ${counts[severity]} ${severity} but the report lists ${tally[severity]}`);
   }
@@ -192,8 +206,9 @@ export function evaluate({ report, trees, published, exceptions, today, commands
     for (const path of exception.paths || []) for (const step of path) allowedAffected.add(step.slice(0, step.lastIndexOf('@')));
     accepted.push({ id: root.id, package: root.name, severity: root.severity, expires: exception.expires, reason: exception.reason });
   }
+  // Every blocking finding must lie on an accepted path, whatever form its via takes.
   for (const [name, entry] of Object.entries(report.vulnerabilities)) {
-    if (BLOCKING.has(entry.severity) && !allowedAffected.has(name) && entry.via.every((via) => typeof via === 'string')) {
+    if (BLOCKING.has(entry.severity) && !allowedAffected.has(name)) {
       fail(`Unexpected ${entry.severity} finding in ${name}, outside every reviewed dependency path.`);
     }
   }
