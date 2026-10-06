@@ -94,6 +94,12 @@ async def test_a_saved_legacy_condition_routes_unchanged(message, chosen):
     ('{"amount": 1200}', {'operator': 'gt', 'compare_to': '1000', 'field': 'amount'}, True),
     ('{"amount": 999.99}', {'operator': 'gt', 'compare_to': '1000', 'field': 'amount'}, False),
     ('{"amount": "1500"}', {'operator': 'gt', 'compare_to': '1000', 'field': 'amount'}, True),
+    # JSON numbers keep their exact digits (R01): no binary-float rounding before comparison.
+    ('{"amount": 1000.00000000000001}', {'operator': 'gt', 'compare_to': '1000', 'field': 'amount'}, True),
+    ('{"amount": 9007199254740993.0}', {'operator': 'gt', 'compare_to': '9007199254740992', 'field': 'amount'}, True),
+    ('{"amount": 0.100000000000000005}', {'operator': 'eq', 'compare_to': '0.1', 'compare_as': 'number', 'field': 'amount'}, False),
+    ('{"amount": 1e309}', {'operator': 'gt', 'compare_to': '1e308', 'field': 'amount'}, True),
+    ('{"code": 404.00000000000001}', {'operator': 'in', 'options': ['404'], 'compare_as': 'number', 'field': 'code'}, False),
     # eq / ne compare trimmed text, case-insensitively by default.
     ('High', {'operator': 'eq', 'compare_to': 'high'}, True),
     (' high\n', {'operator': 'eq', 'compare_to': 'high'}, True),
@@ -141,7 +147,8 @@ def test_operator_matrix(value, config, expected):
     ('{"amount": true}', {'operator': 'gt', 'compare_to': '1', 'field': 'amount'}, 'Condition field amount is a boolean, not a number.'),
     ('{"amount": null}', {'operator': 'gt', 'compare_to': '1', 'field': 'amount'}, 'Condition field amount is null, not a number.'),
     ('{"amount": [1]}', {'operator': 'gt', 'compare_to': '1', 'field': 'amount'}, 'Condition field amount is a list, not a number.'),
-    ('{"amount": NaN}', {'operator': 'gt', 'compare_to': '1', 'field': 'amount'}, 'Condition field amount is not a finite number.'),
+    ('{"amount": NaN}', {'operator': 'gt', 'compare_to': '1', 'field': 'amount'}, 'Condition field amount: NaN is not a JSON number.'),
+    ('{"amount": Infinity}', {'operator': 'gt', 'compare_to': '1', 'field': 'amount'}, 'Condition field amount: Infinity is not a JSON number.'),
     ('{"tags": ["a"]}', {'operator': 'eq', 'compare_to': 'a', 'field': 'tags'}, 'Condition field tags is a list, not text; use the empty operator, or choose a field.'),
     ('{"note": null}', {'operator': 'eq', 'compare_to': 'a', 'field': 'note'}, 'Condition field note is null, not text; use the empty operator to test for it.'),
     ('{"order": {}}', {'operator': 'gt', 'compare_to': '1', 'field': 'order.amount'}, "Condition field order.amount: 'amount' is missing."),
@@ -233,3 +240,32 @@ def test_the_browser_fixture_matches_the_served_condition_definition():
     from backend.app.registry import REGISTRY
     fixture = Path(__file__).resolve().parents[2] / 'frontend/tests/browser/condition-node.json'
     assert json.loads(fixture.read_text()) == json.loads(json.dumps(REGISTRY['condition'].public()))
+
+
+def test_structured_agent_output_keeps_exact_numbers():
+    from backend.app.agent_runtime import validate_structured
+    schema = {'type': 'object', 'properties': {'amount': {'type': 'number', 'multipleOf': 0.5}}}
+    assert validate_structured('{"amount": 1000.00000000000001}', {}) == '{"amount": 1000.00000000000001}'
+    assert validate_structured('```json\n{"amount": 1.5, "n": 7, "ok": true}\n```', schema) == '{"amount": 1.5, "n": 7, "ok": true}'
+    with pytest.raises(ValueError, match='multiple of'):
+        validate_structured('{"amount": 1.2}', schema)
+    with pytest.raises(ValueError, match='NaN is not a JSON number'):
+        validate_structured('{"amount": NaN}', {})
+
+
+@pytest.mark.asyncio
+async def test_an_extraction_agent_amount_reaches_the_condition_exactly():
+    from unittest.mock import patch
+    raw = workflow({'operator': 'gt', 'compare_to': '1000', 'field': 'amount'}).model_dump(mode='json')
+    raw['nodes'].insert(1, {'id': 'extract', 'type': 'agent', 'inputs': {'input': 'input.message'},
+                            'config': {'provider': 'ollama', 'model': 'llama3.1:latest', 'role': 'extraction'}})
+    raw['nodes'][2]['inputs']['value'] = 'extract.text'
+    raw['edges'][0] = {'id': 'a', 'source': 'input', 'target': 'extract'}
+    raw['edges'].append({'id': 'x', 'source': 'extract', 'target': 'check'})
+    async def model(*args, **kwargs):
+        kwargs['usage'].update(prompt_tokens=1, completion_tokens=1)
+        return '{"amount":1000.00000000000001}'
+    with patch('backend.app.providers.ollama_chat', model):
+        result = await compile_workflow(Workflow.model_validate(raw), lambda _: '', message='Order').graph.ainvoke({'values': {}})
+    assert result['values']['extract']['text'] == '{"amount": 1000.00000000000001}'
+    assert result['values']['check']['branch'] == 'true'

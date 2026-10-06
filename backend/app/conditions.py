@@ -17,6 +17,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Literal
 from pydantic import Field, model_validator
 from .models import StrictModel
+from . import exact_json
 
 ORDERING = ('gt', 'gte', 'lt', 'lte')
 NUMBER = re.compile(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?')
@@ -94,7 +95,9 @@ def read_field(value, path):
         return value
     if isinstance(value, str):
         try:
-            value = json.loads(value)
+            value = exact_json.loads(value)
+        except exact_json.NonFiniteNumber as exc:
+            raise ValueError(f'Condition field {path}: {exc}.') from None
         except ValueError:
             raise ValueError(f'Condition field {path}: the value is not JSON, so it has no fields.') from None
     walked = []
@@ -111,6 +114,8 @@ def read_field(value, path):
 def as_number(value, what):
     if isinstance(value, bool):
         raise ValueError(f'{what} is a boolean, not a number.')
+    if isinstance(value, Decimal):
+        return value  # Parsed from JSON text: already exact and finite.
     if isinstance(value, int):
         return Decimal(value)
     if isinstance(value, float):
@@ -128,6 +133,7 @@ def as_number(value, what):
 def as_text(value, what):
     if isinstance(value, str): return value
     if isinstance(value, bool): return 'true' if value else 'false'
+    if isinstance(value, Decimal): return str(value)
     if isinstance(value, (int, float)) and not isinstance(value, bool): return json.dumps(value)
     hint = '; use the empty operator, or choose a field' if isinstance(value, (list, dict)) else '; use the empty operator to test for it'
     raise ValueError(f'{what} is {describe(value)}, not text{hint}.')

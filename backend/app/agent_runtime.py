@@ -61,13 +61,17 @@ def parse_action(text):
 def validate_structured(text,schema):
     """Parse the answer as JSON and check it against the node's schema (or require an object)."""
     import jsonschema
-    try:value=json.loads(strip_fences(text))
+    from . import exact_json
+    clean=strip_fences(text)
+    try:value=exact_json.loads(clean)
     except ValueError as exc:raise ValueError(f'not valid JSON ({str(exc)[:120]})') from None
     if schema:
-        try:jsonschema.validate(value,schema)
+        # The schema sees standard floats, so numeric keywords behave as jsonschema documents;
+        # the returned text keeps the exact digits a downstream condition compares.
+        try:jsonschema.validate(json.loads(clean),schema)
         except jsonschema.ValidationError as exc:raise ValueError(f'does not match the output schema: {exc.message[:200]}') from None
     elif not isinstance(value,dict):raise ValueError('expected a JSON object')
-    return json.dumps(value,ensure_ascii=False)
+    return exact_json.dumps(value)
 
 CITATION=re.compile(r'\[(S\d+(?:\s*,\s*S\d+)*)\]')
 NO_EVIDENCE='I could not find matching evidence in the selected knowledge base. Try another question or search technique, or add relevant documents.'

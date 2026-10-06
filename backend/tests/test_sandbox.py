@@ -96,7 +96,8 @@ def test_a_healthy_sandbox_is_ok(docker):
 
 def test_a_missing_cli_is_reported(tmp_path, monkeypatch):
     empty = tmp_path / 'empty'; empty.mkdir()
-    monkeypatch.setenv('PATH', f'{empty}:/usr/bin:/bin')
+    # Only the empty directory: CI runners install a real docker in /usr/bin.
+    monkeypatch.setenv('PATH', str(empty))
     monkeypatch.setattr(sandbox, 'PROBE', sandbox.SandboxProbe())
     assert probe_now() == {'status': 'unavailable', 'reason': 'cli_missing'}
 
