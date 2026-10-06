@@ -1,0 +1,135 @@
+{
+  "scope": "Direct validators plus real durable worker; model and network mocked.",
+  "rows": [
+    {
+      "case": "numeric_schema_maximum",
+      "input": "{\"amount\":1000.00000000000001}",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "amount"
+        ]
+      },
+      "returned": "does not match the output schema: 1000.00000000000001 is greater than the maximum of 1000",
+      "accepted": false,
+      "passed": true
+    },
+    {
+      "case": "numeric_schema_integer",
+      "input": "{\"amount\":1000.00000000000001}",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "amount"
+        ]
+      },
+      "returned": "does not match the output schema: 1000.00000000000001 is not of type 'integer'",
+      "accepted": false,
+      "passed": true
+    },
+    {
+      "case": "numeric_schema_minimum",
+      "input": "{\"amount\":0.99999999999999999999}",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "amount"
+        ]
+      },
+      "returned": "does not match the output schema: 0.99999999999999999999 is less than the minimum of 1",
+      "accepted": false,
+      "passed": true
+    },
+    {
+      "case": "numeric_schema_multipleOf",
+      "input": "{\"amount\":1000.00000000000001}",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "multipleOf": 0.01
+          }
+        },
+        "required": [
+          "amount"
+        ]
+      },
+      "returned": "does not match the output schema: 1000.00000000000001 is not a multiple of 0.01",
+      "accepted": false,
+      "passed": true
+    },
+    {
+      "case": "numeric_schema_const",
+      "input": "{\"amount\":1000.00000000000001}",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "const": 1000
+          }
+        },
+        "required": [
+          "amount"
+        ]
+      },
+      "returned": "does not match the output schema: 1000 was expected",
+      "accepted": false,
+      "passed": true
+    },
+    {
+      "case": "numeric_schema_enum",
+      "input": "{\"amount\":1000.00000000000001}",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "enum": [
+              1000
+            ]
+          }
+        },
+        "required": [
+          "amount"
+        ]
+      },
+      "returned": "does not match the output schema: 1000.00000000000001 is not one of [1000]",
+      "accepted": false,
+      "passed": true
+    },
+    {
+      "case": "durable_extraction_schema",
+      "status": "failed",
+      "checkpoint": null,
+      "error": "Agent output did not match the required structure: does not match the output schema: 1000.00000000000001 is greater than the maximum of 1000",
+      "passed": true
+    },
+    {
+      "case": "out_of_range_exponent_pre_send",
+      "input": "{\"amount\":1e99999999999999999999}",
+      "status": "success",
+      "error": "",
+      "write_nodes": null,
+      "network_calls": 0,
+      "passed": true
+    }
+  ],
+  "passed": true
+}
