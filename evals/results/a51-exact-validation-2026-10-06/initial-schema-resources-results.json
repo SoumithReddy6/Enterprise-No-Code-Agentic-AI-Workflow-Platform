@@ -1,0 +1,208 @@
+{
+  "scope": "Real isolated API and worker, deterministic local Ollama fixture; no external writes.",
+  "rows": [
+    {
+      "case": "integer",
+      "layer": "direct",
+      "embedded_dialect_declared": false,
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "urn:relay:audit:money"
+          }
+        },
+        "$defs": {
+          "Money": {
+            "$id": "urn:relay:audit:money",
+            "type": "integer"
+          }
+        }
+      },
+      "input": "{\"amount\":1000.0}",
+      "returned": "{\"amount\": 1000.0}",
+      "error": null,
+      "passed": true
+    },
+    {
+      "case": "integer",
+      "layer": "direct",
+      "embedded_dialect_declared": true,
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "urn:relay:audit:money"
+          }
+        },
+        "$defs": {
+          "Money": {
+            "$id": "urn:relay:audit:money",
+            "type": "integer",
+            "$schema": "https://json-schema.org/draft/2020-12/schema"
+          }
+        }
+      },
+      "input": "{\"amount\":1000.0}",
+      "returned": null,
+      "error": {
+        "type": "ValueError",
+        "message": "does not match the output schema: 1000.0 is not of type 'integer'"
+      },
+      "passed": false
+    },
+    {
+      "case": "multiple",
+      "layer": "direct",
+      "embedded_dialect_declared": false,
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "urn:relay:audit:money"
+          }
+        },
+        "$defs": {
+          "Money": {
+            "$id": "urn:relay:audit:money",
+            "type": "number",
+            "multipleOf": 0.01
+          }
+        }
+      },
+      "input": "{\"amount\":1e30}",
+      "returned": "{\"amount\": 1E+30}",
+      "error": null,
+      "passed": true
+    },
+    {
+      "case": "multiple",
+      "layer": "direct",
+      "embedded_dialect_declared": true,
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "urn:relay:audit:money"
+          }
+        },
+        "$defs": {
+          "Money": {
+            "$id": "urn:relay:audit:money",
+            "type": "number",
+            "multipleOf": 0.01,
+            "$schema": "https://json-schema.org/draft/2020-12/schema"
+          }
+        }
+      },
+      "input": "{\"amount\":1e30}",
+      "returned": null,
+      "error": {
+        "type": "InvalidOperation",
+        "message": "[<class 'decimal.DivisionImpossible'>]"
+      },
+      "passed": false
+    },
+    {
+      "case": "integer",
+      "layer": "API_and_worker_processes",
+      "embedded_dialect_declared": false,
+      "validation": true,
+      "input": "{\"amount\":1000.0}",
+      "run_id": "8e5f0e40f8ec4f85a4ece09cdd31ba8a",
+      "status": "success",
+      "output": "{\"amount\": 1000.0}",
+      "error": "",
+      "model_calls": 1,
+      "checkpoint": {
+        "text": "{\"amount\": 1000.0}",
+        "provider": "ollama",
+        "sources": "[]",
+        "grounding": "{}"
+      },
+      "passed": true
+    },
+    {
+      "case": "integer",
+      "layer": "API_and_worker_processes",
+      "embedded_dialect_declared": true,
+      "validation": true,
+      "input": "{\"amount\":1000.0}",
+      "run_id": "a573adb8fa7b419da2770d372aa439d3",
+      "status": "failed",
+      "output": "",
+      "error": "Agent output did not match the required structure: does not match the output schema: 1000.0 is not of type 'integer'",
+      "model_calls": 2,
+      "checkpoint": null,
+      "passed": false
+    },
+    {
+      "case": "multiple",
+      "layer": "API_and_worker_processes",
+      "embedded_dialect_declared": false,
+      "validation": true,
+      "input": "{\"amount\":1e30}",
+      "run_id": "3ef0cad9862f439595d0fbd5c1c07ccf",
+      "status": "success",
+      "output": "{\"amount\": 1E+30}",
+      "error": "",
+      "model_calls": 1,
+      "checkpoint": {
+        "text": "{\"amount\": 1E+30}",
+        "provider": "ollama",
+        "sources": "[]",
+        "grounding": "{}"
+      },
+      "passed": true
+    },
+    {
+      "case": "multiple",
+      "layer": "API_and_worker_processes",
+      "embedded_dialect_declared": true,
+      "validation": true,
+      "input": "{\"amount\":1e30}",
+      "run_id": "54bf1c6f3713420baa1176c924e8b53e",
+      "status": "failed",
+      "output": "",
+      "error": "Node execution failed.",
+      "model_calls": 1,
+      "checkpoint": null,
+      "passed": false
+    }
+  ],
+  "range_observations": [
+    {
+      "token": "1e1000",
+      "accepted": true
+    },
+    {
+      "token": "9e1000",
+      "accepted": true
+    },
+    {
+      "token": "integer 2 * 10**1000",
+      "accepted": true
+    },
+    {
+      "token": "1e1001",
+      "accepted": false
+    }
+  ],
+  "passed": false
+}
