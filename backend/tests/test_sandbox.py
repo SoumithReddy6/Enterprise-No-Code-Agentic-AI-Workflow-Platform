@@ -8,6 +8,7 @@ logged so probe counts can be asserted.
 import asyncio
 import json
 import os
+import signal
 import pytest
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
@@ -56,6 +57,31 @@ def docker(tmp_path, monkeypatch):
     return Docker(bin_dir)
 
 
+@pytest.fixture
+def spawned(monkeypatch):
+    """Every process the probe starts. A hung-docker test checks these handles rather than a
+    pid the fake writes, because a timeout can fire before the fake shell runs its first
+    line - the probe is then correct, and a pid file would simply be missing."""
+    processes = []
+    original = asyncio.create_subprocess_exec
+    async def record(*args, **kwargs):
+        process = await original(*args, **kwargs)
+        processes.append((args[1:], process))
+        return process
+    monkeypatch.setattr(sandbox.asyncio, 'create_subprocess_exec', record)
+    return processes
+
+
+def killed_and_reaped(processes):
+    """The docker subcommands that were killed, once every started process is confirmed gone."""
+    assert processes, 'the probe started docker'
+    for _, process in processes:
+        assert process.returncode is not None, 'every process the probe started has been reaped'
+        with pytest.raises(ProcessLookupError):
+            os.kill(process.pid, 0)
+    return [args[0] for args, process in processes if process.returncode == -signal.SIGKILL]
+
+
 def probe_now():
     sandbox.PROBE = sandbox.SandboxProbe()
     return asyncio.run(sandbox.status())
@@ -86,13 +112,12 @@ def test_a_missing_image_is_reported(docker):
     assert probe_now() == {'status': 'unavailable', 'reason': 'image_missing'}
 
 
-def test_a_hung_docker_times_out_and_is_stopped(docker, monkeypatch):
-    monkeypatch.setattr(sandbox, 'PROBE_SECONDS', 0.3)
+def test_a_hung_docker_times_out_and_is_stopped(docker, spawned, monkeypatch):
+    # The budget only has to outlast starting a process; the fake then sleeps for 30 seconds.
+    monkeypatch.setattr(sandbox, 'PROBE_SECONDS', 1.0)
     docker.set('sleep', 30)
     assert probe_now() == {'status': 'unavailable', 'reason': 'probe_timeout'}
-    pid = int((docker.dir / 'pid').read_text())
-    with pytest.raises(ProcessLookupError):
-        os.kill(pid, 0)  # the hung docker process was killed, not left running
+    assert killed_and_reaped(spawned) == ['version'], 'the hung docker process was killed, not left running'
 
 
 def test_concurrent_callers_share_one_probe_and_results_are_cached(docker, monkeypatch):
@@ -217,12 +242,12 @@ def test_a_container_that_cannot_run_python_is_reported(docker, failure):
     assert probe_now() == {'status': 'unavailable', 'reason': 'container_failed'}
 
 
-def test_a_hung_smoke_container_is_stopped_and_removed(docker, monkeypatch):
-    monkeypatch.setattr(sandbox, 'PROBE_SECONDS', 0.5)
+def test_a_hung_smoke_container_is_stopped_and_removed(docker, spawned, monkeypatch):
+    # Version, image inspect and the run start before the budget may expire.
+    monkeypatch.setattr(sandbox, 'PROBE_SECONDS', 2.0)
     docker.set('run_sleep', 30)
     assert probe_now() == {'status': 'unavailable', 'reason': 'probe_timeout'}
-    with pytest.raises(ProcessLookupError):
-        os.kill(int((docker.dir / 'pid').read_text()), 0)
+    assert killed_and_reaped(spawned) == ['run'], 'the hung run was killed'
     assert 'rm -f' in docker.calls(), 'the container the CLI may have started is removed'
 
 
