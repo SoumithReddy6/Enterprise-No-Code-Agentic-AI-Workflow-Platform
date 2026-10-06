@@ -278,13 +278,29 @@ async def test_cancellation_during_event_commit_does_not_double_count_tokens(tmp
             entered.set();assert release.wait(3)
         return original(id,owner,event)
     monkeypatch.setattr(store,'worker_event',paused)
-    if deadline:monkeypatch.setattr('backend.app.worker.RUN_TIMEOUT_SECONDS',.1)
+    deadlines=[]
+    if deadline:
+        # The run's real deadline, armed only once the write is in flight: a short timeout
+        # from the start could expire during preflight on a slow runner, before the write.
+        from backend.app import worker as worker_module
+        monkeypatch.setattr(worker_module,'RUN_TIMEOUT_SECONDS',60)
+        real_timeout=asyncio.timeout
+        def capture(delay):
+            timeout=real_timeout(delay)
+            if delay==60:deadlines.append(timeout)
+            return timeout
+        monkeypatch.setattr(worker_module.asyncio,'timeout',capture)
     run=store.create_run(raw,'input');worker=Worker(store)
     execution=asyncio.create_task(worker.execute(store.claim_next(worker.owner)))
     assert await asyncio.to_thread(entered.wait,2)
-    if not deadline:execution.cancel()
     # Deliver explicit cancellation or the run deadline while the write is in flight.
-    await asyncio.sleep(.15 if deadline else .03);release.set()
+    if deadline:
+        assert len(deadlines)==1
+        deadlines[0].reschedule(asyncio.get_running_loop().time())
+        while not deadlines[0].expired():await asyncio.sleep(0)
+    else:
+        execution.cancel();await asyncio.sleep(.03)
+    release.set()
     await asyncio.wait_for(execution,3)
     tokens=metrics(store)['tokens']
     assert tokens==[{'provider':'ollama','model':'tiny','prompt_tokens':13,'completion_tokens':7,'calls':1}]
