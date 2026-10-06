@@ -54,9 +54,15 @@ The live audit found four distinct Chroma advisories and a pip advisory (duplica
 
 Existing original documents and metadata are not deleted or silently migrated. Existing Chroma search/build requests fail with an instruction to rebuild with FAISS. Open the KB configuration, select FAISS and its `flat` index method, and rebuild; original uploads remain available. Authorized index cleanup after rebuild/deletion removes the retired per-segment directory directly, without importing Chroma, and preserves other index directories. No existing user KB was rebuilt during these tests.
 
-pip is upgraded to 26.2.1. The patched frontend pins are `@cloudflare/vite-plugin` 1.56.0, `wrangler` 4.135.0, and required peer `@cloudflare/workers-types` 5.20260919.1. Plain `npm audit fix` could not update the old exact pins; compatible explicit upgrades resolved the dependency tree without force/legacy-peer-deps.
+pip is upgraded to 26.2.1. As of 2026-10-05 the backend pins `urllib3` 2.8.0 and `pypdf` 6.19.0 (six advisories in the previous pins; `pypdf` parses uploaded PDFs). The frontend pins `@cloudflare/vite-plugin` 1.62.5, `wrangler` 4.147.0 and its required peer `@cloudflare/workers-types` 5.20261005.1, which bring `undici` 7.29.1. The unused `shadcn` scaffolding CLI was removed (`@shadcn/react` remains); run `npx shadcn@latest` when adding components. No change used `--force` or `--legacy-peer-deps`.
 
-CI upgrades pip, installs the application and pip-audit 2.10.1, then runs `python -m pip_audit`. Frontend CI runs `npm audit --audit-level=high`, including build dependencies. Audits run on push/PR/manual dispatch and weekly Monday at 09:23 UTC. Registry failures also fail CI; findings are not suppressed. A hosted CI execution has not yet been verified.
+CI upgrades pip, installs the application and pip-audit 2.10.1 into a fresh environment, then runs `python -m pip_audit`. A local virtualenv can hold packages the project does not declare - for example an unrelated `kubernetes` install pulling in `oauthlib` - so audit the declared set with `pip-audit -r backend/requirements.txt` when the environment is not fresh. Frontend CI runs `node scripts/audit-gate.mjs`, described below, including build dependencies. Audits run on push/PR/manual dispatch and weekly Monday at 09:23 UTC. Registry failures also fail CI.
+
+### Accepted residual vulnerability
+
+`frontend/scripts/audit-gate.mjs` fails on every high or critical npm advisory except those listed in `frontend/audit-exceptions.json`. An exception passes only if the advisory and package match, the advisory's vulnerable range is the reviewed one, every installed dependency path to the package matches a reviewed path with the reviewed versions, no compatible patched release of the package is published, and the expiry date has not passed. A malformed report, an audit-service failure or missing registry data also fails. A pass with an exception prints **accepted residual vulnerability - not a clean audit**. Exceptions are never extended automatically; renewal is a new review.
+
+One exception is in force until **2026-12-04**: [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm), stack-exhaustion denial of service in `braces` 3.0.3, through `vinext@1.0.0-beta.9 > vite-plugin-commonjs@0.10.4 > vite-plugin-dynamic-import@1.6.0 > fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3`. No patched `braces` release exists, and npm's only proposed fix downgrades `vinext` to 0.0.15. `vinext`'s CLI imports the plugin with its config loader, so the code is loaded in development, build and the production process; it is used only by development, build and configuration transformation of glob patterns from this repository's source, and no request data or user input reaches it. The gate fails as soon as a compatible patched `braces` is published, the path changes, or the date passes.
 
 ## Verification
 
@@ -73,7 +79,7 @@ The real service smoke requires installed Ollama `embeddinggemma:latest` and `ll
 .venv/bin/python -m scripts.check_knowledge_services
 .venv/bin/python -m pip_audit
 cd frontend
-npm audit --audit-level=high
+cd frontend && node scripts/audit-gate.mjs
 npm test
 npm run typecheck
 npm run lint

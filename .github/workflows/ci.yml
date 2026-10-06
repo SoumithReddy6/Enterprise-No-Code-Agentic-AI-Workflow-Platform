@@ -57,7 +57,9 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - run: npm audit --audit-level=high
+      # Fails on any high or critical advisory except the reviewed, expiring exceptions in
+      # audit-exceptions.json; a pass with an exception is reported as accepted residual risk.
+      - run: node scripts/audit-gate.mjs
       - run: npm test
       - run: npm run typecheck
       - run: npm run lint
