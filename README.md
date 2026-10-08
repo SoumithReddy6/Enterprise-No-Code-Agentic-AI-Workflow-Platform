@@ -10,7 +10,7 @@ This README is about how the system is designed for those cases.
 | --- | --- |
 | **Status** | Working local platform, single workspace per account. Intended for loopback use until the deployment and identity work below lands. |
 | **Stack** | React + React Flow · FastAPI · LangGraph · SQLAlchemy on SQLite or PostgreSQL · Alembic · Ollama, OpenAI, Claude · FAISS, Elasticsearch, Pinecone · Docker sandbox |
-| **Verification** | 988 backend tests run under five hash seeds · 64 frontend unit tests + Chromium layout tests · 19 deployed-process production scenarios · 17 live-model workflows · PostgreSQL conformance in CI · a 53-question grounding gate with thresholds fixed before measurement |
+| **Verification** | 1,055 backend tests run under five hash seeds · 72 frontend unit tests + 10 Chromium tests · 19 deployed-process production scenarios · 17 live-model workflows · PostgreSQL conformance · all five GitHub Actions jobs green · a 53-question grounding gate with thresholds fixed before measurement |
 
 ---
 
@@ -382,15 +382,19 @@ These are substring and abstention heuristics, not proof of semantic correctness
 
 | Layer | What runs | Where |
 | --- | --- | --- |
-| Unit and integration | 988 backend tests under `PYTHONHASHSEED` 0–4, to catch hidden ordering assumptions; 64 frontend tests | CI + local |
+| Unit and integration | 1,055 backend tests under `PYTHONHASHSEED` 0–4, to catch hidden ordering assumptions; 72 frontend tests | CI + local |
 | Deployed processes | 19 scenarios against a real API process, real worker processes and an HTTP receiver: kill -9 mid-write, restarts between approvals, stale leases, SSRF, tenant isolation | `scripts/check_production_scenarios.py` |
 | Live models | 17 workflow shapes on real Ollama models and real Docker | same runner, `--live-models` |
 | PostgreSQL | migrations up/down/up, four concurrent workers, a stale lease, `SIGKILL` inside a loop | CI `postgres-conformance` |
-| Browser | Chromium layout and the condition-editor flow, against intercepted API fixtures | CI `browser-layout` |
+| Browser | 10 Chromium tests: layout, the condition editor, invalid-JSON edits that must never run, and validation errors that name and open their node, against intercepted API fixtures | CI `browser-layout` |
 | Supply chain | `pip-audit` on a fresh environment; the fail-closed npm exception gate | CI |
 | Quality | the 53-question grounding gate | local (needs models and corpus) |
 
 **Process.** Each fix is shipped with a test that fails without it: run against the previous commit and against deliberately broken copies of the fix (mutation testing). Each change is also re-verified from a clean `git archive` of exactly the committed files. An independent review of each phase is kept in [`docs/reviews`](docs/reviews/), including the reviews that found defects.
+
+**Tests that cannot pass by luck.**
+- A test that depends on timing uses a barrier or a controlled clock, not a sleep. Three tests that passed on a laptop failed under load or on slower GitHub runners: a 10 ms lease, a 100 ms run deadline, and a hung-process check. They now use a controlled clock, a deadline armed at the exact commit it targets, and the killed process's own handle. The deadline fix was confirmed against an injected 200 ms delay that broke the old version.
+- A test that depends on the environment builds its own. The "Docker is missing" test used to find the CI runner's real Docker in `/usr/bin`; it now runs with an empty `PATH`.
 
 ---
 
