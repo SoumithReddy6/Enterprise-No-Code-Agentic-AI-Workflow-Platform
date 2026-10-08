@@ -114,7 +114,7 @@ async def test_graph_retry_event_contract_is_stable_across_the_policy_seam(monke
         {'node_id':'work','status':'running','inputs':{'input':'hello'}},
         {'node_id':'work','status':'retrying','transient':True,'error':'busy',
          'attempt':1,'delay_seconds':0.125},
-        {'node_id':'work','status':'success','outputs':{'text':'ok'},'duration_ms':0},
+        {'node_id':'work','status':'success','outputs':{'text':'ok','_provenance':{'v':1,'ports':{'text':'source'}}},'duration_ms':0},
     ]
 
 

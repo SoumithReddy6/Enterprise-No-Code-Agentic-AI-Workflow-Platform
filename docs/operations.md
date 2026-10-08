@@ -192,6 +192,18 @@ ANSWERABILITY_MODEL_DIR=/absolute/path/to/reader .venv/bin/python -m scripts.eva
 
 Verify the report's `product_answerability_guard.decisions`: a skipped or unmeasured reader is not evidence of enforcement, even if other generation metrics pass.
 
+## Decision provenance (shadow mode)
+
+Every successful node output carries a `_provenance` record. It labels each output, and each field of a structured Agent answer, as `source`, `quoted`, `calculated`, `guessed` or `absent`. Labels are assigned by code: a model's value is `quoted` only if it is written in that Agent's trusted bound input. System prompts and examples are never searched, and another Agent's free text is never trusted. See [the plan](superpowers/plans/2026-10-08-decision-provenance.md) for the rule and its limits.
+
+In this release the labels are **observational**. A Condition still takes its branch exactly as before. Its success event carries `decision: {label, would_review, reason}`, and a decision on a guessed value writes a content-free `decision.would_review` journal entry with `node_id` and `reason_code`. The reason codes are:
+
+- `guessed`: the value could not be found in the trusted input;
+- `unlabelled`: the value came from a checkpoint created before this feature;
+- `missing_field` or `unrecorded_field`: the field has no label.
+
+Use these entries to measure how often enforcement would pause runs before turning it on. A checkpoint with a malformed `_provenance` record is refused on resume; start a new run.
+
 ## Agent action budgets
 
 Two separate limits bound agent work. They are often confused, so check which one a truncation names.

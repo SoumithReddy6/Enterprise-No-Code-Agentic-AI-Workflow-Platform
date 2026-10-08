@@ -319,6 +319,11 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                         try:checked_truncation(outputs[TRUNCATION_KEY])
                         except ValueError:
                             raise ValueError(f'{node.id} cannot be restored: its checkpoint carries malformed truncation metadata. Start a new run.') from None
+                    from .provenance import PROVENANCE_KEY,checked as checked_provenance
+                    if isinstance(outputs,dict) and PROVENANCE_KEY in outputs:
+                        try:checked_provenance(outputs[PROVENANCE_KEY])
+                        except ValueError:
+                            raise ValueError(f'{node.id} cannot be restored: its checkpoint carries malformed provenance metadata. Start a new run.') from None
                     if node.type=='for_each' and 'summary' not in outputs:
                         # Checkpointed by a release without the summary output.
                         from .iteration import reconstructed_summary
@@ -396,9 +401,23 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                           value={TRUNCATION_KEY:budget_truncation(node.id,outcome)} if outcome.budget_exhausted else {}
                           return {'values':{node.id:value}}
                       outputs=outcome.outputs
+                      from . import provenance
+                      body_type=next((n.type for n in full_workflow.nodes if n.id==getattr(config,'body',None)),None) if node.type=='for_each' else None
+                      record=provenance.for_node(node,definition,inputs,outputs,state['values'],body_type)
+                      decision=None
+                      if node.type=='condition':
+                          # Shadow mode: the branch is taken as before; the event records whether
+                          # the value it decided on was trusted, and would have needed a person.
+                          label,reason=provenance.value_label(state['values'],node.inputs['value'],config.field)
+                          review=label==provenance.GUESSED
+                          decision={'label':label,'would_review':review,**({'reason':reason} if review else {})}
+                          record['ports']['branch']=provenance.GUESSED if review else provenance.CALCULATED
+                          if review:journal(event='decision.would_review',node_id=node.id,reason_code=reason)
+                      outputs={**outputs,provenance.PROVENANCE_KEY:provenance.checked(record)}
                       evidence_from_outputs(run_state,outputs)
                       await emit_evidence_notice(run_state,emit,node.id)
                       event={'node_id': node.id, 'status': 'success', 'outputs': outputs,'duration_ms': round((time.perf_counter()-started)*1000)}
+                      if decision is not None:event['decision']=decision
                       event.update(run_state.get('tool_output_metadata',{}).get(node.id,{}))
                       if outcome.usage:event['usage']=outcome.usage
                       await emit(event)
