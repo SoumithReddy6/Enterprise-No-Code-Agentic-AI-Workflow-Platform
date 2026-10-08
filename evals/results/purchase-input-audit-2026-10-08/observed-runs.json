@@ -1,0 +1,113 @@
+{
+  "scope": "Read-only query restricted to the screenshot input. No private unrelated history or credentials copied.",
+  "rows": [
+    {
+      "run_id": "8c2f0778652f494f88a2bda99b4153de",
+      "created_at": "2026-10-08T16:01:08.159775+00:00",
+      "status": "success",
+      "message": "How do AI workflows work?",
+      "node_count": 7,
+      "has_missing_total_gate": false,
+      "extraction_config": {
+        "provider": "ollama",
+        "model": "llama3.1:latest",
+        "role": "extraction",
+        "system": "Return the order total in US dollars as a number under the key amount.",
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "amount"
+          ]
+        }
+      },
+      "extraction_checkpoint": {
+        "text": "{\"amount\": 0}",
+        "provider": "ollama",
+        "sources": "[]",
+        "grounding": "{}"
+      },
+      "amount_condition": {
+        "branch": "false"
+      },
+      "output": "Auto-approved: the order total is $1,000 or less. No review needed.\nExtracted: {\"amount\": 0}"
+    },
+    {
+      "run_id": "f494b7faf47248deb6038fdfee3af934",
+      "created_at": "2026-10-08T16:00:58.357649+00:00",
+      "status": "success",
+      "message": "How do AI workflows work?",
+      "node_count": 7,
+      "has_missing_total_gate": false,
+      "extraction_config": {
+        "provider": "ollama",
+        "model": "llama3.1:latest",
+        "role": "extraction",
+        "system": "Return the order total in US dollars as a number under the key amount.",
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "amount"
+          ]
+        }
+      },
+      "extraction_checkpoint": {
+        "text": "{\"amount\": 0}",
+        "provider": "ollama",
+        "sources": "[]",
+        "grounding": "{}"
+      },
+      "amount_condition": {
+        "branch": "false"
+      },
+      "output": "Auto-approved: the order total is $1,000 or less. No review needed.\nExtracted: {\"amount\": 0}"
+    },
+    {
+      "run_id": "d3c9e9df517f4ed18015a4fc52523d8b",
+      "created_at": "2026-10-08T16:00:47.466602+00:00",
+      "status": "success",
+      "message": "How do AI workflows work?",
+      "node_count": 7,
+      "has_missing_total_gate": false,
+      "extraction_config": {
+        "provider": "ollama",
+        "model": "llama3.1:latest",
+        "role": "extraction",
+        "system": "Return the order total in US dollars as a number under the key amount.",
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "amount"
+          ]
+        }
+      },
+      "extraction_checkpoint": {
+        "text": "{\"amount\": 0}",
+        "provider": "ollama",
+        "sources": "[]",
+        "grounding": "{}"
+      },
+      "amount_condition": {
+        "branch": "false"
+      },
+      "output": "Auto-approved: the order total is $1,000 or less. No review needed.\nExtracted: {\"amount\": 0}"
+    }
+  ]
+}
