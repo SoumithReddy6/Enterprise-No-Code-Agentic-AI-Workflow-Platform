@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "Purchase routing",
-  "description": "An extraction agent reads the order total; a typed condition sends orders over $1,000 to human review and approves the rest.",
+  "description": "An extraction agent reads the order total. Messages with no order total are turned away before any approval decision; orders over $1,000 go to human review and the rest are approved.",
   "nodes": [
     {
       "id": "input",
@@ -22,7 +22,7 @@
       "label": "Extract amount",
       "position": {
         "x": 300,
-        "y": 230
+        "y": 220
       },
       "inputs": {
         "input": "input.message"
@@ -32,7 +32,7 @@
         "model": "llama3.1:latest",
         "credential_id": "",
         "role": "extraction",
-        "system": "Return the order total in US dollars as a number under the key amount.",
+        "system": "You read purchase requests. Whatever the message is (an order, a greeting, a question or anything else), respond with only one JSON object with one key, amount, and nothing else. For an order whose total is $1,350, respond {\"amount\": 1350}. If the message is not an order, or states no total, respond {\"amount\": null}. Never guess an amount.",
         "user_prompt": "{input}",
         "temperature": 0,
         "max_tokens": 200,
@@ -42,7 +42,10 @@
           "type": "object",
           "properties": {
             "amount": {
-              "type": "number",
+              "type": [
+                "number",
+                "null"
+              ],
               "minimum": 0
             }
           },
@@ -53,13 +56,31 @@
       }
     },
     {
+      "id": "gate",
+      "type": "condition",
+      "version": 1,
+      "label": "Order total found?",
+      "position": {
+        "x": 300,
+        "y": 400
+      },
+      "inputs": {
+        "value": "extract.text"
+      },
+      "config": {
+        "operator": "empty",
+        "field": "amount",
+        "case_sensitive": false
+      }
+    },
+    {
       "id": "check",
       "type": "condition",
       "version": 1,
       "label": "Over $1,000?",
       "position": {
-        "x": 300,
-        "y": 420
+        "x": 140,
+        "y": 580
       },
       "inputs": {
         "value": "extract.text"
@@ -77,8 +98,8 @@
       "version": 1,
       "label": "Review message",
       "position": {
-        "x": 80,
-        "y": 610
+        "x": -60,
+        "y": 760
       },
       "inputs": {
         "message": "extract.text"
@@ -93,8 +114,8 @@
       "version": 1,
       "label": "Approval message",
       "position": {
-        "x": 520,
-        "y": 610
+        "x": 320,
+        "y": 760
       },
       "inputs": {
         "message": "extract.text"
@@ -104,13 +125,29 @@
       }
     },
     {
+      "id": "none_note",
+      "type": "prompt",
+      "version": 1,
+      "label": "Rejection message",
+      "position": {
+        "x": 620,
+        "y": 580
+      },
+      "inputs": {
+        "message": "input.message"
+      },
+      "config": {
+        "template": "Not a purchase request: no order total was found, so nothing was approved or sent for review.\nMessage: {message}"
+      }
+    },
+    {
       "id": "review",
       "type": "response",
       "version": 1,
       "label": "Needs review",
       "position": {
-        "x": 80,
-        "y": 800
+        "x": -60,
+        "y": 940
       },
       "inputs": {
         "text": "review_note.text"
@@ -123,11 +160,25 @@
       "version": 1,
       "label": "Auto-approved",
       "position": {
-        "x": 520,
-        "y": 800
+        "x": 320,
+        "y": 940
       },
       "inputs": {
         "text": "auto_note.text"
+      },
+      "config": {}
+    },
+    {
+      "id": "none",
+      "type": "response",
+      "version": 1,
+      "label": "Not a purchase request",
+      "position": {
+        "x": 620,
+        "y": 760
+      },
+      "inputs": {
+        "text": "none_note.text"
       },
       "config": {}
     }
@@ -137,11 +188,6 @@
       "id": "input-extract",
       "source": "input",
       "target": "extract"
-    },
-    {
-      "id": "extract-check",
-      "source": "extract",
-      "target": "check"
     },
     {
       "id": "check-review-note",
@@ -164,6 +210,28 @@
       "id": "auto-note-auto",
       "source": "auto_note",
       "target": "auto"
+    },
+    {
+      "id": "extract-gate",
+      "source": "extract",
+      "target": "gate"
+    },
+    {
+      "id": "gate-none",
+      "source": "gate",
+      "target": "none_note",
+      "sourceHandle": "true"
+    },
+    {
+      "id": "gate-check",
+      "source": "gate",
+      "target": "check",
+      "sourceHandle": "false"
+    },
+    {
+      "id": "none-note-none",
+      "source": "none_note",
+      "target": "none"
     }
   ]
 }
