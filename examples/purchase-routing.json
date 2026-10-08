@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "name": "Purchase routing",
+  "description": "An extraction agent reads the order total; a typed condition sends orders over $1,000 to human review and approves the rest.",
+  "nodes": [
+    {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "Purchase request",
+      "position": {
+        "x": 300,
+        "y": 40
+      },
+      "inputs": {},
+      "config": {}
+    },
+    {
+      "id": "extract",
+      "type": "agent",
+      "version": 1,
+      "label": "Extract amount",
+      "position": {
+        "x": 300,
+        "y": 230
+      },
+      "inputs": {
+        "input": "input.message"
+      },
+      "config": {
+        "provider": "ollama",
+        "model": "llama3.1:latest",
+        "credential_id": "",
+        "role": "extraction",
+        "system": "Return the order total in US dollars as a number under the key amount.",
+        "user_prompt": "{input}",
+        "temperature": 0,
+        "max_tokens": 200,
+        "max_steps": 6,
+        "memory_key": "default",
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "amount"
+          ]
+        }
+      }
+    },
+    {
+      "id": "check",
+      "type": "condition",
+      "version": 1,
+      "label": "Over $1,000?",
+      "position": {
+        "x": 300,
+        "y": 420
+      },
+      "inputs": {
+        "value": "extract.text"
+      },
+      "config": {
+        "operator": "gt",
+        "field": "amount",
+        "compare_to": "1000",
+        "case_sensitive": false
+      }
+    },
+    {
+      "id": "review_note",
+      "type": "prompt",
+      "version": 1,
+      "label": "Review message",
+      "position": {
+        "x": 80,
+        "y": 610
+      },
+      "inputs": {
+        "message": "extract.text"
+      },
+      "config": {
+        "template": "Routed to human review: the order total is over $1,000. A manager must approve it before purchase.\nExtracted: {message}"
+      }
+    },
+    {
+      "id": "auto_note",
+      "type": "prompt",
+      "version": 1,
+      "label": "Approval message",
+      "position": {
+        "x": 520,
+        "y": 610
+      },
+      "inputs": {
+        "message": "extract.text"
+      },
+      "config": {
+        "template": "Auto-approved: the order total is $1,000 or less. No review needed.\nExtracted: {message}"
+      }
+    },
+    {
+      "id": "review",
+      "type": "response",
+      "version": 1,
+      "label": "Needs review",
+      "position": {
+        "x": 80,
+        "y": 800
+      },
+      "inputs": {
+        "text": "review_note.text"
+      },
+      "config": {}
+    },
+    {
+      "id": "auto",
+      "type": "response",
+      "version": 1,
+      "label": "Auto-approved",
+      "position": {
+        "x": 520,
+        "y": 800
+      },
+      "inputs": {
+        "text": "auto_note.text"
+      },
+      "config": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "input-extract",
+      "source": "input",
+      "target": "extract"
+    },
+    {
+      "id": "extract-check",
+      "source": "extract",
+      "target": "check"
+    },
+    {
+      "id": "check-review-note",
+      "source": "check",
+      "target": "review_note",
+      "sourceHandle": "true"
+    },
+    {
+      "id": "review-note-review",
+      "source": "review_note",
+      "target": "review"
+    },
+    {
+      "id": "check-auto-note",
+      "source": "check",
+      "target": "auto_note",
+      "sourceHandle": "false"
+    },
+    {
+      "id": "auto-note-auto",
+      "source": "auto_note",
+      "target": "auto"
+    }
+  ]
+}
