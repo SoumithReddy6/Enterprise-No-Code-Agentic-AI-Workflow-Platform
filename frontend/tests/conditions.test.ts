@@ -35,7 +35,7 @@ void test('a JSON setting holding unparsed text blocks validation and names the 
   });
   assert.deepEqual(unparsedJsonSettings(withOptions(['high']), [condition]), []);
   assert.deepEqual(unparsedJsonSettings(withOptions('["urgent",'), [condition]), [
-    'check: Options is not valid JSON yet. Fix it before validating or running.',
+    { node_id: 'check', message: 'Options is not valid JSON yet. Fix it before validating or running.' },
   ]);
   assert.deepEqual(unparsedJsonSettings(withOptions('["urgent",'), []), [], 'unknown node types are left to the server');
 });

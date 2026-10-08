@@ -1,0 +1,575 @@
+{
+ "outputs": {
+  "agent": [
+   "text",
+   "provider",
+   "sources",
+   "grounding"
+  ],
+  "chat_input": [
+   "message"
+  ],
+  "condition": [
+   "branch"
+  ],
+  "prompt": [
+   "text"
+  ],
+  "response": [
+   "text",
+   "sources"
+  ],
+  "tool_python": [
+   "text"
+  ]
+ },
+ "cases": {
+  "linear": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "inputs": {}
+     },
+     {
+      "id": "agent",
+      "type": "agent",
+      "inputs": {
+       "input": "input.message"
+      }
+     },
+     {
+      "id": "out",
+      "type": "response",
+      "inputs": {
+       "text": "agent.text"
+      }
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-agent-",
+      "source": "input",
+      "target": "agent"
+     },
+     {
+      "id": "agent-out-",
+      "source": "agent",
+      "target": "out"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "agent": [
+     "input.message"
+    ],
+    "out": [
+     "input.message",
+     "agent.text",
+     "agent.provider",
+     "agent.sources",
+     "agent.grounding"
+    ]
+   }
+  },
+  "condition_branches": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "Purchase request",
+      "position": {
+       "x": 300,
+       "y": 40
+      },
+      "inputs": {},
+      "config": {}
+     },
+     {
+      "id": "extract",
+      "type": "agent",
+      "version": 1,
+      "label": "Extract amount",
+      "position": {
+       "x": 300,
+       "y": 230
+      },
+      "inputs": {
+       "input": "input.message"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "llama3.1:latest",
+       "credential_id": "",
+       "role": "extraction",
+       "system": "Return the order total in US dollars as a number under the key amount.",
+       "user_prompt": "{input}",
+       "temperature": 0,
+       "max_tokens": 200,
+       "max_steps": 6,
+       "memory_key": "default",
+       "output_schema": {
+        "type": "object",
+        "properties": {
+         "amount": {
+          "type": "number",
+          "minimum": 0
+         }
+        },
+        "required": [
+         "amount"
+        ]
+       }
+      }
+     },
+     {
+      "id": "check",
+      "type": "condition",
+      "version": 1,
+      "label": "Over $1,000?",
+      "position": {
+       "x": 300,
+       "y": 420
+      },
+      "inputs": {
+       "value": "extract.text"
+      },
+      "config": {
+       "operator": "gt",
+       "field": "amount",
+       "compare_to": "1000",
+       "case_sensitive": false
+      }
+     },
+     {
+      "id": "review_note",
+      "type": "prompt",
+      "version": 1,
+      "label": "Review message",
+      "position": {
+       "x": 80,
+       "y": 610
+      },
+      "inputs": {
+       "message": "extract.text"
+      },
+      "config": {
+       "template": "Routed to human review: the order total is over $1,000. A manager must approve it before purchase.\nExtracted: {message}"
+      }
+     },
+     {
+      "id": "auto_note",
+      "type": "prompt",
+      "version": 1,
+      "label": "Approval message",
+      "position": {
+       "x": 520,
+       "y": 610
+      },
+      "inputs": {
+       "message": "extract.text"
+      },
+      "config": {
+       "template": "Auto-approved: the order total is $1,000 or less. No review needed.\nExtracted: {message}"
+      }
+     },
+     {
+      "id": "review",
+      "type": "response",
+      "version": 1,
+      "label": "Needs review",
+      "position": {
+       "x": 80,
+       "y": 800
+      },
+      "inputs": {
+       "text": "review_note.text"
+      },
+      "config": {}
+     },
+     {
+      "id": "auto",
+      "type": "response",
+      "version": 1,
+      "label": "Auto-approved",
+      "position": {
+       "x": 520,
+       "y": 800
+      },
+      "inputs": {
+       "text": "auto_note.text"
+      },
+      "config": {}
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-extract",
+      "source": "input",
+      "target": "extract"
+     },
+     {
+      "id": "extract-check",
+      "source": "extract",
+      "target": "check"
+     },
+     {
+      "id": "check-review-note",
+      "source": "check",
+      "target": "review_note",
+      "sourceHandle": "true"
+     },
+     {
+      "id": "review-note-review",
+      "source": "review_note",
+      "target": "review"
+     },
+     {
+      "id": "check-auto-note",
+      "source": "check",
+      "target": "auto_note",
+      "sourceHandle": "false"
+     },
+     {
+      "id": "auto-note-auto",
+      "source": "auto_note",
+      "target": "auto"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "extract": [
+     "input.message"
+    ],
+    "check": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding"
+    ],
+    "auto_note": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding",
+     "check.branch"
+    ],
+    "auto": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding",
+     "check.branch",
+     "auto_note.text"
+    ],
+    "review_note": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding",
+     "check.branch"
+    ],
+    "review": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding",
+     "check.branch",
+     "review_note.text"
+    ]
+   }
+  },
+  "branches_rejoin": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "inputs": {}
+     },
+     {
+      "id": "check",
+      "type": "condition",
+      "inputs": {
+       "value": "input.message"
+      },
+      "config": {
+       "contains": "x"
+      }
+     },
+     {
+      "id": "yes",
+      "type": "prompt",
+      "inputs": {
+       "message": "input.message"
+      }
+     },
+     {
+      "id": "no",
+      "type": "prompt",
+      "inputs": {
+       "message": "input.message"
+      }
+     },
+     {
+      "id": "join",
+      "type": "prompt",
+      "inputs": {
+       "message": "input.message"
+      }
+     },
+     {
+      "id": "out",
+      "type": "response",
+      "inputs": {
+       "text": "join.text"
+      }
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-check-",
+      "source": "input",
+      "target": "check"
+     },
+     {
+      "id": "check-yes-true",
+      "source": "check",
+      "target": "yes",
+      "sourceHandle": "true"
+     },
+     {
+      "id": "check-no-false",
+      "source": "check",
+      "target": "no",
+      "sourceHandle": "false"
+     },
+     {
+      "id": "yes-join-",
+      "source": "yes",
+      "target": "join"
+     },
+     {
+      "id": "no-join-",
+      "source": "no",
+      "target": "join"
+     },
+     {
+      "id": "join-out-",
+      "source": "join",
+      "target": "out"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "check": [
+     "input.message"
+    ],
+    "no": [
+     "input.message",
+     "check.branch"
+    ],
+    "yes": [
+     "input.message",
+     "check.branch"
+    ],
+    "join": [
+     "input.message",
+     "check.branch"
+    ],
+    "out": [
+     "input.message",
+     "check.branch",
+     "join.text"
+    ]
+   }
+  },
+  "error_route": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "inputs": {}
+     },
+     {
+      "id": "fetch",
+      "type": "prompt",
+      "inputs": {
+       "message": "input.message"
+      },
+      "on_error": "route"
+     },
+     {
+      "id": "ok",
+      "type": "response",
+      "inputs": {
+       "text": "fetch.text"
+      }
+     },
+     {
+      "id": "fallback",
+      "type": "response",
+      "inputs": {
+       "text": "input.message"
+      }
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-fetch-",
+      "source": "input",
+      "target": "fetch"
+     },
+     {
+      "id": "fetch-ok-",
+      "source": "fetch",
+      "target": "ok"
+     },
+     {
+      "id": "fetch-fallback-error",
+      "source": "fetch",
+      "target": "fallback",
+      "sourceHandle": "error"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "fetch": [
+     "input.message"
+    ],
+    "fallback": [
+     "input.message"
+    ],
+    "ok": [
+     "input.message",
+     "fetch.text"
+    ]
+   }
+  },
+  "continue_on_error": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "inputs": {}
+     },
+     {
+      "id": "step",
+      "type": "prompt",
+      "inputs": {
+       "message": "input.message"
+      },
+      "on_error": "continue"
+     },
+     {
+      "id": "out",
+      "type": "response",
+      "inputs": {
+       "text": "input.message"
+      }
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-step-",
+      "source": "input",
+      "target": "step"
+     },
+     {
+      "id": "step-out-",
+      "source": "step",
+      "target": "out"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "step": [
+     "input.message"
+    ],
+    "out": [
+     "input.message"
+    ]
+   }
+  },
+  "attached_tool": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "inputs": {}
+     },
+     {
+      "id": "agent",
+      "type": "agent",
+      "inputs": {
+       "input": "input.message"
+      }
+     },
+     {
+      "id": "calc",
+      "type": "tool_python",
+      "inputs": {},
+      "config": {
+       "code": "print(1)"
+      }
+     },
+     {
+      "id": "out",
+      "type": "response",
+      "inputs": {
+       "text": "agent.text"
+      }
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-agent-",
+      "source": "input",
+      "target": "agent"
+     },
+     {
+      "id": "agent-out-",
+      "source": "agent",
+      "target": "out"
+     },
+     {
+      "id": "tool",
+      "source": "calc",
+      "target": "agent",
+      "kind": "tool",
+      "targetHandle": "tools"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "agent": [
+     "input.message"
+    ],
+    "out": [
+     "input.message",
+     "agent.text",
+     "agent.provider",
+     "agent.sources",
+     "agent.grounding"
+    ]
+   }
+  }
+ }
+}

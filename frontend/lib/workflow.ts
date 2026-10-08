@@ -6,6 +6,8 @@ export type WorkflowNode = {
   position: { x: number; y: number };
   inputs: Record<string, string>;
   config: Record<string, unknown>;
+  on_error?: 'fail' | 'continue' | 'route';
+  retry?: { attempts: number; base_delay: number };
 };
 export type WorkflowEdge = {
   id: string;
@@ -13,8 +15,10 @@ export type WorkflowEdge = {
   target: string;
   sourceHandle?: string | null;
   targetHandle?: string | null;
-  kind?: 'flow' | 'tool' | 'agent';
+  kind?: 'flow' | 'tool' | 'agent' | 'loop';
 };
+// A validation message and the node it concerns, when it concerns one.
+export type Issue = { node_id: string | null; message: string };
 export type Workflow = {
   version: 1;
   name: string;
@@ -371,18 +375,78 @@ export function withConditionOperator(
 export function unparsedJsonSettings(
   workflow: Workflow,
   catalog: Definition[],
-): string[] {
+): Issue[] {
   const definitions = new Map(catalog.map((d) => [d.type, d]));
-  const problems: string[] = [];
+  const problems: Issue[] = [];
   for (const node of workflow.nodes) {
     const properties = definitions.get(node.type)?.config_schema.properties ?? {};
     for (const [key, property] of Object.entries(properties)) {
       const type = (property.anyOf?.find((p) => p.type !== 'null') ?? property).type;
       if ((type === 'object' || type === 'array') && typeof node.config[key] === 'string')
-        problems.push(
-          `${node.id}: ${property.title || key} is not valid JSON yet. Fix it before validating or running.`,
-        );
+        problems.push({
+          node_id: node.id,
+          message: `${property.title || key} is not valid JSON yet. Fix it before validating or running.`,
+        });
     }
   }
   return problems;
+}
+
+// The outputs each node may bind: those of upstream nodes whose outputs exist on every flow
+// path to it. Mirrors bindable_outputs in backend/app/compiler.py, and both are held to
+// tests/fixtures/bindable-outputs.json. A node reached by an error edge, or through a node
+// using on_error 'continue', ran without outputs on that path, so it does not count.
+export function bindableOutputs(
+  workflow: Pick<Workflow, 'nodes' | 'edges'>,
+  outputs: (type: string) => string[],
+): Record<string, string[]> {
+  const byId = new Map(workflow.nodes.map((n) => [n.id, n]));
+  const flow = workflow.edges.filter(
+    (e) => (!e.kind || e.kind === 'flow') && byId.has(e.source) && byId.has(e.target),
+  );
+  // As in split_graph: the flow is the triggers plus every node a flow edge touches. Attached
+  // tools and loop bodies are callables, not steps, and bind nothing.
+  const ids = new Set([
+    ...workflow.nodes.filter((n) => ['chat_input', 'manual_input'].includes(n.type)).map((n) => n.id),
+    ...flow.flatMap((e) => [e.source, e.target]),
+  ]);
+  const arrivals = new Map([...ids].map((id) => [id, flow.filter((e) => e.target === id)]));
+  const degree = new Map([...ids].map((id) => [id, arrivals.get(id)!.length]));
+  const queue = [...ids].filter((id) => degree.get(id) === 0).sort();
+  const order: string[] = [];
+  while (queue.length) {
+    const id = queue.shift()!;
+    order.push(id);
+    for (const edge of flow.filter((e) => e.source === id)) {
+      degree.set(edge.target, degree.get(edge.target)! - 1);
+      if (degree.get(edge.target) === 0) {
+        queue.push(edge.target);
+        queue.sort();
+      }
+    }
+  }
+  const yields = (edge: WorkflowEdge) =>
+    edge.sourceHandle !== 'error' && byId.get(edge.source)?.on_error !== 'continue';
+  const available = new Map<string, Set<string>>();
+  for (const id of order) {
+    const edges = arrivals.get(id)!;
+    const sets = edges.map(
+      (e) => new Set([...(available.get(e.source) ?? []), ...(yields(e) ? [e.source] : [])]),
+    );
+    available.set(
+      id,
+      sets.length ? sets.reduce((a, b) => new Set([...a].filter((x) => b.has(x)))) : new Set(),
+    );
+  }
+  const result: Record<string, string[]> = {};
+  for (const id of order) {
+    result[id] = [...available.get(id)!]
+      .sort((a, b) => order.indexOf(a) - order.indexOf(b))
+      .flatMap((source) =>
+        outputs(byId.get(source)!.type)
+          .filter((port) => !port.startsWith('_'))
+          .map((port) => `${source}.${port}`),
+      );
+  }
+  return result;
 }

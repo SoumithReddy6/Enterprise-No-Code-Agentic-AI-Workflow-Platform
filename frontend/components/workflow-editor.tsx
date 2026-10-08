@@ -84,6 +84,8 @@ import {
   conditionSettingVisible,
   withConditionOperator,
   unparsedJsonSettings,
+  bindableOutputs,
+  type Issue,
 } from '@/lib/workflow';
 import '@xyflow/react/dist/style.css';
 import StudioDialog from './studio-dialog';
@@ -107,11 +109,19 @@ import {
 const displayValue = (value: unknown) =>
   ['string', 'number', 'boolean'].includes(typeof value) ? String(value) : '';
 
+type Validation = {
+  valid: boolean;
+  errors: string[];
+  warnings?: string[];
+  issues?: Issue[];
+  warning_issues?: Issue[];
+};
 type CanvasNode = FlowNode<
   {
     spec: WorkflowNode;
     definition?: Definition;
     status?: string;
+    invalid?: boolean;
   },
   'workflow'
 >;
@@ -131,11 +141,11 @@ const icons: Record<string, typeof Zap> = {
 };
 
 function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
-  const { spec, definition, status } = data;
+  const { spec, definition, status, invalid } = data;
   const Icon = Object.hasOwn(icons, spec.type) ? icons[spec.type] : Layers3;
   return (
     <div
-      className={`workflow-card ${selected ? 'selected' : ''} ${status || ''}`}
+      className={`workflow-card ${selected ? 'selected' : ''} ${status || ''} ${invalid ? 'invalid' : ''}`}
     >
       <div className="node-heading">
         <span className={`node-icon ${accent[spec.type] || 'blue'}`}>
@@ -230,8 +240,8 @@ function Editor() {
   const [selected, setSelected] = useState<string>('agent');
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
-  const [errors, setErrors] = useState<string[]>([]);
-  const [warnings, setWarnings] = useState<string[]>([]);
+  const [errors, setErrors] = useState<Issue[]>([]);
+  const [warnings, setWarnings] = useState<Issue[]>([]);
   const [busy, setBusy] = useState(false);
   const [running, setRunning] = useState(false);
   const [message, setMessage] = useState('How do AI workflows work?');
@@ -358,6 +368,24 @@ function Editor() {
   }, [dirty]);
 
 
+  // Located issues from the server; plain messages from an older server stay unlocated.
+  function located(issues: Issue[] | undefined, messages: string[]): Issue[] {
+    return issues ?? messages.map((message) => ({ node_id: null, message }));
+  }
+  function showNode(id: string) {
+    setSelected(id);
+    setInspectorOpen(true);
+    void canvas.fitView({ nodes: [{ id }], duration: 300, maxZoom: 1.2 });
+  }
+  function IssueRow({ issue }: { issue: Issue }) {
+    const node = nodes.find((n) => n.id === issue.node_id)?.data.spec;
+    if (!node) return <>{issue.message}</>;
+    return (
+      <button className="issue-link" onClick={() => showNode(node.id)}>
+        <strong>{node.label || node.id}</strong>: {issue.message}
+      </button>
+    );
+  }
   function snapshot() {
     setUndo((s) => [...s.slice(-39), structuredClone(current.current)]);
     setRedo([]);
@@ -498,13 +526,9 @@ function Editor() {
       return false;
     }
     try {
-      const result = await api<{ valid: boolean; errors: string[]; warnings?: string[] }>(
-        '/validate',
-        'POST',
-        current.current,
-      );
-      setErrors(result.errors);
-      setWarnings(result.warnings ?? []);
+      const result = await api<Validation>('/validate', 'POST', current.current);
+      setErrors(located(result.issues, result.errors));
+      setWarnings(located(result.warning_issues, result.warnings ?? []));
       setNotice(
         result.valid
           ? (result.warnings?.length ? 'Workflow is valid. Review the advisory warnings below.' : 'Workflow is valid and ready to run.')
@@ -774,7 +798,7 @@ function Editor() {
       if (file.size > 1000000)
         throw new Error('Workflow files must be smaller than 1 MB.');
       const value = JSON.parse(await file.text());
-      const normalized = await api<{ workflow: Workflow; errors: string[]; warnings?: string[] }>(
+      const normalized = await api<Validation & { workflow: Workflow }>(
         '/validate',
         'POST',
         value,
@@ -785,8 +809,8 @@ function Editor() {
       );
       if (discardAllowed()) {
         loadDocument(imported);
-        setErrors(normalized.errors);
-        setWarnings(normalized.warnings ?? []);
+        setErrors(located(normalized.issues, normalized.errors));
+        setWarnings(located(normalized.warning_issues, normalized.warnings ?? []));
       }
     } catch (e) {
       setNotice(`Import failed: ${(e as Error).message}`);
@@ -797,10 +821,16 @@ function Editor() {
   const statuses = Object.fromEntries(
     events.filter((e) => e.node_id).map((e) => [e.node_id, e.status]),
   );
+  const invalidNodes = new Set(errors.map((e) => e.node_id));
+  const bindable = bindableOutputs(
+    { nodes: nodes.map((n) => n.data.spec), edges },
+    (type) => Object.keys(catalog.find((d) => d.type === type)?.outputs ?? {}),
+  );
   const renderedNodes = nodes.map((n) => ({
     ...n,
     data: {
       ...n.data,
+      invalid: invalidNodes.has(n.id),
       definition: catalog.find((d) => d.type === n.data.spec.type),
       status:
         run && sameExecutionGraph(run.workflow, workflow)
@@ -1212,7 +1242,7 @@ function Editor() {
               <div className="validation-errors validation-warnings" aria-live="polite" aria-label="Validation warnings">
                 <button className="icon-button" aria-label="Dismiss validation warnings" onClick={() => setWarnings([])}><X size={16} /></button>
                 <strong>Advisory warnings — running is still allowed</strong>
-                <ul>{warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul>
+                <ul>{warnings.map((warning, i) => <li key={i}><IssueRow issue={warning} /></li>)}</ul>
               </div>
             )}
             {errors.length > 0 && (
@@ -1226,7 +1256,9 @@ function Editor() {
                 </button>
                 <ul>
                   {errors.map((error, i) => (
-                    <li key={i}>{error}</li>
+                    <li key={i}>
+                      <IssueRow issue={error} />
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -1516,6 +1548,18 @@ function Editor() {
                           (e.kind === 'agent' && e.target === chosen.id),
                       ) && (
                         <section className="settings-section">
+                          {errors.some((e) => e.node_id === chosen.id) && (
+                            <div className="node-issues" role="alert">
+                              <strong>This node needs attention</strong>
+                              <ul>
+                                {errors
+                                  .filter((e) => e.node_id === chosen.id)
+                                  .map((e, i) => (
+                                    <li key={i}>{e.message}</li>
+                                  ))}
+                              </ul>
+                            </div>
+                          )}
                           <h3>INPUT BINDINGS</h3>
                           {Object.keys(definition.inputs).map((port) => (
                             <label key={port}>
@@ -1533,28 +1577,20 @@ function Editor() {
                                 }
                               >
                                 <option value="">Choose upstream output</option>
-                                {nodes
-                                  .filter((n) =>
-                                    edges.some(
-                                      (e) =>
-                                        (!e.kind || e.kind === 'flow') &&
-                                        e.source === n.id &&
-                                        e.target === chosen.id,
-                                    ),
-                                  )
-                                  .flatMap((n) =>
-                                    Object.keys(
-                                      catalog.find(
-                                        (d) => d.type === n.data.spec.type,
-                                      )?.outputs || {},
-                                    ).map((output) => (
-                                      <option
-                                        key={`${n.id}.${output}`}
-                                        value={`${n.id}.${output}`}
-                                      >
-                                        {n.data.spec.label || n.id} → {output}
-                                      </option>
-                                    )),
+                                {(bindable[chosen.id] ?? []).map((ref) => {
+                                  const [source, output] = ref.split('.');
+                                  const node = nodes.find((n) => n.id === source)?.data.spec;
+                                  return (
+                                    <option key={ref} value={ref}>
+                                      {node?.label || source} → {output}
+                                    </option>
+                                  );
+                                })}
+                                {chosen.inputs[port] &&
+                                  !(bindable[chosen.id] ?? []).includes(chosen.inputs[port]) && (
+                                    <option value={chosen.inputs[port]}>
+                                      {chosen.inputs[port]} (not available on every path here)
+                                    </option>
                                   )}
                               </select>
                             </label>

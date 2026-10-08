@@ -1,0 +1,316 @@
+[
+ {
+  "type": "agent",
+  "name": "Agent node",
+  "version": 1,
+  "category": "Agent",
+  "description": "Configure a role, attach tools and delegate to specialist agents.",
+  "inputs": {
+   "input": "string"
+  },
+  "outputs": {
+   "text": "string",
+   "provider": "string",
+   "sources": "string",
+   "grounding": "string"
+  },
+  "config_schema": {
+   "additionalProperties": false,
+   "properties": {
+    "provider": {
+     "default": "demo",
+     "enum": [
+      "demo",
+      "openai",
+      "claude",
+      "ollama"
+     ],
+     "title": "Provider",
+     "type": "string"
+    },
+    "model": {
+     "default": "gpt-4.1-mini",
+     "maxLength": 100,
+     "minLength": 1,
+     "title": "Model",
+     "type": "string"
+    },
+    "credential_id": {
+     "default": "",
+     "maxLength": 128,
+     "title": "Credential Id",
+     "type": "string"
+    },
+    "system": {
+     "default": "You are a helpful assistant.",
+     "maxLength": 20000,
+     "title": "System",
+     "type": "string"
+    },
+    "temperature": {
+     "anyOf": [
+      {
+       "maximum": 2,
+       "minimum": 0,
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Temperature"
+    },
+    "top_p": {
+     "anyOf": [
+      {
+       "exclusiveMinimum": 0,
+       "maximum": 1,
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Top P"
+    },
+    "max_tokens": {
+     "default": 2048,
+     "maximum": 16384,
+     "minimum": 1,
+     "title": "Max Tokens",
+     "type": "integer"
+    },
+    "role": {
+     "default": "reasoner",
+     "enum": [
+      "planner",
+      "reasoner",
+      "reflection",
+      "critic",
+      "router",
+      "memory",
+      "summarizer",
+      "extraction",
+      "classification"
+     ],
+     "title": "Role",
+     "type": "string"
+    },
+    "user_prompt": {
+     "default": "{input}",
+     "maxLength": 20000,
+     "title": "User Prompt",
+     "type": "string"
+    },
+    "max_steps": {
+     "default": 6,
+     "maximum": 12,
+     "minimum": 1,
+     "title": "Max Steps",
+     "type": "integer"
+    },
+    "memory_key": {
+     "default": "default",
+     "maxLength": 120,
+     "minLength": 1,
+     "title": "Memory Key",
+     "type": "string"
+    },
+    "description": {
+     "default": "",
+     "maxLength": 500,
+     "title": "Description",
+     "type": "string"
+    },
+    "output_schema": {
+     "additionalProperties": true,
+     "description": "When set, the answer must be JSON matching this schema; extraction and classification roles always require a JSON object.",
+     "title": "Output JSON schema",
+     "type": "object"
+    }
+   },
+   "title": "AgentConfig",
+   "type": "object"
+  },
+  "side_effects": [],
+  "hidden": false
+ },
+ {
+  "type": "chat_input",
+  "name": "Chat input",
+  "version": 1,
+  "category": "Input",
+  "description": "Start with a message from the run panel.",
+  "inputs": {},
+  "outputs": {
+   "message": "string"
+  },
+  "config_schema": {
+   "additionalProperties": false,
+   "properties": {},
+   "title": "EmptyConfig",
+   "type": "object"
+  },
+  "side_effects": [],
+  "hidden": false
+ },
+ {
+  "type": "condition",
+  "name": "Condition",
+  "version": 1,
+  "category": "Control",
+  "description": "Route to true or false by comparing a value: text, number, membership or empty.",
+  "inputs": {
+   "value": "string"
+  },
+  "outputs": {
+   "branch": "string"
+  },
+  "config_schema": {
+   "additionalProperties": false,
+   "properties": {
+    "operator": {
+     "default": "contains",
+     "description": "contains: text includes a phrase. eq / ne: equal or not equal. gt, gte, lt, lte: numeric comparison. in: equals one of several options. empty: nothing there.",
+     "enum": [
+      "contains",
+      "eq",
+      "ne",
+      "gt",
+      "gte",
+      "lt",
+      "lte",
+      "in",
+      "empty"
+     ],
+     "title": "Operator",
+     "type": "string"
+    },
+    "field": {
+     "default": "",
+     "description": "Optional. Read this key, or a dotted path such as order.amount, from a JSON object value - for example the output of an extraction agent.",
+     "maxLength": 520,
+     "title": "Field",
+     "type": "string"
+    },
+    "contains": {
+     "anyOf": [
+      {
+       "maxLength": 1000,
+       "minLength": 1,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Contains"
+    },
+    "compare_to": {
+     "anyOf": [
+      {
+       "maxLength": 1000,
+       "minLength": 1,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Compare to"
+    },
+    "options": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "maxItems": 100,
+       "minItems": 1,
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "A JSON list, for example [\"high\", \"urgent\"].",
+     "title": "Options"
+    },
+    "compare_as": {
+     "default": "text",
+     "description": "For eq, ne and in. Ordering operators always compare numbers.",
+     "enum": [
+      "text",
+      "number"
+     ],
+     "title": "Compare as",
+     "type": "string"
+    },
+    "case_sensitive": {
+     "default": false,
+     "title": "Case Sensitive",
+     "type": "boolean"
+    }
+   },
+   "title": "ConditionConfig",
+   "type": "object"
+  },
+  "side_effects": [],
+  "hidden": false
+ },
+ {
+  "type": "prompt",
+  "name": "Prompt template",
+  "version": 1,
+  "category": "Transform",
+  "description": "Compose a prompt with {message}.",
+  "inputs": {
+   "message": "string"
+  },
+  "outputs": {
+   "text": "string"
+  },
+  "config_schema": {
+   "additionalProperties": false,
+   "properties": {
+    "template": {
+     "default": "{message}",
+     "maxLength": 20000,
+     "title": "Template",
+     "type": "string"
+    }
+   },
+   "title": "PromptConfig",
+   "type": "object"
+  },
+  "side_effects": [],
+  "hidden": true
+ },
+ {
+  "type": "response",
+  "name": "Response",
+  "version": 1,
+  "category": "Output",
+  "description": "Finish this path and return text.",
+  "inputs": {
+   "text": "string"
+  },
+  "outputs": {
+   "text": "string",
+   "sources": "string"
+  },
+  "config_schema": {
+   "additionalProperties": false,
+   "properties": {},
+   "title": "EmptyConfig",
+   "type": "object"
+  },
+  "side_effects": [],
+  "hidden": false
+ }
+]

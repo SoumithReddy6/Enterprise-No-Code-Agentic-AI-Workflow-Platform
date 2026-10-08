@@ -13,7 +13,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import Field
 from .models import StrictModel, Workflow
 from .registry import REGISTRY
-from .compiler import validate_workflow,type_warnings
+from .compiler import validate_workflow,type_warnings,locate
 from . import sandbox
 from .storage import Store, local_key, WorkflowConflict
 from .auth import install_auth
@@ -108,8 +108,11 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
         return {**discovery,'models':[m for m in discovery['models'] if supports(m,'completion')]}
     @app.post('/api/validate')
     async def validate(workflow:Workflow,tenant_id:str=Depends(tenant)):
-        errors=await submission_errors(workflow,tenant_id)
-        return {'valid':not errors,'errors':errors,'warnings':type_warnings(workflow),'workflow':workflow.model_dump(mode='json')}
+        errors=await submission_errors(workflow,tenant_id);warnings=type_warnings(workflow)
+        # issues/warning_issues carry the node each message concerns, so the editor can name
+        # and highlight it; errors/warnings keep their original text for existing readers.
+        return {'valid':not errors,'errors':errors,'warnings':warnings,'issues':locate(errors,workflow),
+                'warning_issues':locate(warnings,workflow),'workflow':workflow.model_dump(mode='json')}
     @app.get('/api/workflows')
     async def workflows(tenant_id:str=Depends(tenant)):return store.workflows(tenant_id)
     @app.post('/api/workflows',status_code=201)

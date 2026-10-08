@@ -35,6 +35,74 @@ def condition_config_error(node_id, error):
     return f'{node_id}: {where}: {message}' if where else f'{node_id}: {message}'
 
 
+def binding_guarantees(order, arrivals, nodes):
+    """For each node, the upstream nodes that ran on every path to it, and those whose outputs
+    exist on every path to it; a node may bind only to the second set.
+
+    The two differ because an error edge leaves a node that ran but failed and recovered with
+    no outputs, so it passes on the first set but not the second; so does a node using
+    on_error 'continue'. Propagation is per edge, not per parent, because a routed node's
+    normal and error edges may both reach the same consumer.
+    """
+    def yields(edge):
+        return edge.sourceHandle != 'error' and nodes[edge.source].on_error != 'continue'
+    executed, available = {}, {}
+    for id in order:
+        edges = arrivals[id]
+        executed[id] = set.intersection(*(executed.get(e.source, set()) | {e.source} for e in edges)) if edges else set()
+        available[id] = set.intersection(*(available.get(e.source, set()) | ({e.source} if yields(e) else set()) for e in edges)) if edges else set()
+    return executed, available
+
+
+def flow_order(workflow: Workflow):
+    """Kahn order over flow edges, with each node's arriving edges. A cycle leaves its nodes out."""
+    nodes = {n.id: n for n in workflow.nodes}
+    outgoing = {id: [] for id in nodes}
+    arrivals = {id: [] for id in nodes}
+    for edge in workflow.edges:
+        if edge.source in nodes and edge.target in nodes:
+            outgoing[edge.source].append(edge); arrivals[edge.target].append(edge)
+    degree = {id: len(arrivals[id]) for id in nodes}
+    queue = sorted(id for id, d in degree.items() if d == 0)
+    order = []
+    while queue:
+        id = queue.pop(0); order.append(id)
+        for edge in outgoing[id]:
+            degree[edge.target] -= 1
+            if degree[edge.target] == 0: queue.append(edge.target); queue.sort()
+    return order, arrivals, nodes
+
+
+def bindable_outputs(workflow: Workflow) -> dict[str, list[str]]:
+    """Every source.port each node may bind, by the same rule validation enforces. The editor
+    offers exactly these, so a valid binding is never shown as unset."""
+    from .platform_graph import split_graph
+    flow, _, _ = split_graph(workflow)
+    order, arrivals, nodes = flow_order(flow)
+    _, available = binding_guarantees(order, arrivals, nodes)
+    result = {}
+    for id in order:
+        refs = []
+        for source in sorted(available[id], key=order.index):
+            definition = REGISTRY.get(nodes[source].type)
+            if definition:
+                refs += [f'{source}.{port}' for port in definition.outputs if not port.startswith(RESERVED_PORT_PREFIX)]
+        result[id] = refs
+    return result
+
+
+def locate(messages: list[str], workflow: Workflow) -> list[dict]:
+    """Each message with the node it concerns, matched against the workflow's actual node IDs
+    (messages about a node start with '<id>: '), so the editor can name and highlight it."""
+    ids = {n.id for n in workflow.nodes}
+    issues = []
+    for message in messages:
+        head, separator, rest = message.partition(': ')
+        located = separator and head in ids
+        issues.append({'node_id': head if located else None, 'message': rest if located else message})
+    return issues
+
+
 def _validate_flow(workflow: Workflow) -> list[str]:
     errors = []
     nodes = {n.id: n for n in workflow.nodes}
@@ -127,20 +195,9 @@ def _validate_flow(workflow: Workflow) -> list[str]:
     if len(triggers) == 1: visit(triggers[0])
     for id in nodes:
         if id not in reachable: errors.append(f'{id}: node is unreachable from the trigger.')
-    # A binding must be available along every possible path to the consumer. Two guarantees
-    # are tracked per node because they differ: `executed` holds the nodes that ran on every
-    # path here, `available` the nodes whose outputs exist on every path. An error edge leaves
-    # a node that ran but failed and recovered with no outputs, so it passes on the first set
-    # but not the second. Propagation is per edge, not per parent, because a routed node's
-    # normal and error edges may both reach the same consumer.
-    def yields(edge):
-        return edge.sourceHandle != 'error' and nodes[edge.source].on_error != 'continue'
-    executed, available = {}, {}
+    executed, available = binding_guarantees(order, arrivals, nodes)
     for id in order:
-        edges = arrivals[id]
-        ran = set.intersection(*(executed.get(e.source, set()) | {e.source} for e in edges)) if edges else set()
-        has = set.intersection(*(available.get(e.source, set()) | ({e.source} if yields(e) else set()) for e in edges)) if edges else set()
-        executed[id], available[id] = ran, has
+        ran, has = executed[id], available[id]
         for name, ref in nodes[id].inputs.items():
             source, sep, port = ref.partition('.')
             source_def = REGISTRY.get(nodes[source].type) if source in nodes else None

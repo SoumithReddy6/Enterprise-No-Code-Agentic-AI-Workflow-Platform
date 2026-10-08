@@ -518,6 +518,11 @@ pre {
 .workflow-card.failed {
   border-color: #d77870;
 }
+/* A node a validation message points at: visible at any zoom, distinct from a failed run. */
+.workflow-card.invalid {
+  border-color: #c2410c;
+  box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.22);
+}
 .node-heading {
   display: flex;
   align-items: center;
@@ -1089,6 +1094,29 @@ pre {
 }
 .validation-errors > button {
   float: right;
+}
+.validation-errors .issue-link {
+  all: unset;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.validation-errors .issue-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.node-issues {
+  margin: 4px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #efc8be;
+  border-radius: 8px;
+  background: #fff6f2;
+  color: #a85c4e;
+  font-size: 12px;
+}
+.node-issues ul {
+  margin: 6px 0 0;
+  padding-left: 16px;
 }
 .validation-errors ul {
   padding-left: 18px;
