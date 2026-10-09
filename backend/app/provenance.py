@@ -259,3 +259,75 @@ def checked(record):
     if len(json.dumps(record, ensure_ascii=False).encode()) > MAX_BYTES:
         raise ValueError('provenance record exceeds its size limit')
     return record
+
+
+# ------------------------------------------------------------------ before a run
+
+# What a value can be, known from the graph alone: always trusted, decided per run by the
+# quote check, or always a guess. Ordered from least to most trusted.
+STATIC_GUESSED, STATIC_RUNTIME, STATIC_TRUSTED = 'guessed', 'runtime', 'trusted'
+_STATIC_RANK = {STATIC_GUESSED: 0, STATIC_RUNTIME: 1, STATIC_TRUSTED: 2}
+
+
+def _static_weakest(labels):
+    labels = list(labels)
+    return min(labels, key=_STATIC_RANK.get) if labels else STATIC_TRUSTED
+
+
+def static_label(nodes, ref, field='', seen=None):
+    """What the value at `ref` (and `field` within it) can be, before any run."""
+    seen = set() if seen is None else seen
+    source, _, port = ref.partition('.')
+    node = nodes.get(source)
+    if node is None or ref in seen or len(seen) > len(nodes) * 4:
+        return STATIC_GUESSED
+    seen = seen | {ref}
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+    if node.type in SOURCE_NODES:
+        return STATIC_TRUSTED
+    if node.type == 'retrieve':
+        return static_label(nodes, node.inputs['query'], '', seen) if port == 'query' and 'query' in node.inputs else STATIC_TRUSTED
+    if node.type in MODEL_NODES:
+        if port != 'text':
+            return STATIC_TRUSTED
+        return STATIC_RUNTIME if field and node.type == 'agent' and structured(node) else STATIC_GUESSED
+    if node.type == 'calculate':
+        from .calculate import CalculationError, parse, paths
+        try:
+            used = paths(parse((node.config or {}).get('expression', '')))
+        except CalculationError:
+            return STATIC_GUESSED
+        value = node.inputs.get('value')
+        return _static_weakest(static_label(nodes, value, path, seen) for path in used) if value else STATIC_GUESSED
+    if node.type == 'for_each':
+        if port != 'results':
+            return STATIC_TRUSTED
+        body = nodes.get((node.config or {}).get('body', ''))
+        return STATIC_TRUSTED if body is not None and body.type in SOURCE_NODES else STATIC_GUESSED
+    if node.type in DETERMINISTIC_NODES:
+        return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+    return STATIC_GUESSED
+
+
+def decision_warnings(workflow):
+    """A located warning for each decision whose value is always a model's guess: once
+    enforcement is on, every run would pause there for a person."""
+    nodes = {n.id: n for n in workflow.nodes}
+    warnings = []
+    for node in workflow.nodes:
+        config = node.config or {}
+        ref = node.inputs.get('value')
+        if not ref:
+            continue
+        if node.type == 'condition':
+            field = config.get('field', '')
+            reading = f"{ref}{' field ' + field if field else ''}"
+            if static_label(nodes, ref, field) == STATIC_GUESSED:
+                warnings.append(f'{node.id}: decides on {reading}, which is always a model\'s guess: free model text cannot be '
+                                'checked against the input. When enforcement is on, every run will pause here for a person. '
+                                'Decide on a field of a structured Agent output, or calculate the value from such fields.')
+        elif node.type == 'calculate' and config.get('mode') == 'check':
+            if static_label(nodes, f'{node.id}.text', 'result') == STATIC_GUESSED:
+                warnings.append(f'{node.id}: checks values that are always a model\'s guess, so the check cannot confirm them. '
+                                'When enforcement is on, every run will pause here for a person. Use fields of a structured Agent output.')
+    return warnings

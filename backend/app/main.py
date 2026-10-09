@@ -108,7 +108,8 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
         return {**discovery,'models':[m for m in discovery['models'] if supports(m,'completion')]}
     @app.post('/api/validate')
     async def validate(workflow:Workflow,tenant_id:str=Depends(tenant)):
-        errors=await submission_errors(workflow,tenant_id);warnings=type_warnings(workflow)
+        from .provenance import decision_warnings
+        errors=await submission_errors(workflow,tenant_id);warnings=type_warnings(workflow)+decision_warnings(workflow)
         # issues/warning_issues carry the node each message concerns, so the editor can name
         # and highlight it; errors/warnings keep their original text for existing readers.
         return {'valid':not errors,'errors':errors,'warnings':warnings,'issues':locate(errors,workflow),
