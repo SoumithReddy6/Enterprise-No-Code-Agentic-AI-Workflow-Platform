@@ -65,8 +65,9 @@ test('the binding dropdown shows the real binding and offers only what validatio
   await editor(page, [], unexpected);
   await page.locator('.react-flow__node', { hasText: 'Approval message' }).click();
   const select = page.locator('label', { hasText: /^message/ }).locator('select');
-  await expect(select).toHaveValue('extract.text');
+  await expect(select).toHaveValue('total.text');
   const options = await select.locator('option').evaluateAll((all) => all.map((o) => [(o as HTMLOptionElement).value, o.textContent]));
+  expect(options).toContainEqual(['total.text', 'Order total → text']);
   expect(options).toContainEqual(['extract.text', 'Extract amount → text']);
   expect(options.map(([value]) => value)).not.toContain('review_note.text');
   expect(options.map(([value]) => value)).toContain('check.branch');

@@ -138,6 +138,48 @@
   "hidden": false
  },
  {
+  "type": "calculate",
+  "name": "Calculate",
+  "version": 1,
+  "category": "Transform",
+  "description": "Compute or check numbers from JSON fields exactly, in code rather than a model.",
+  "inputs": {
+   "value": "string"
+  },
+  "outputs": {
+   "text": "string"
+  },
+  "config_schema": {
+   "additionalProperties": false,
+   "properties": {
+    "expression": {
+     "description": "Fields of the bound JSON object with + - * / ( ), min, max, abs, round(x, places) and coalesce. Check mode compares: == != < <= > >=, and, or, not.",
+     "maxLength": 500,
+     "minLength": 1,
+     "title": "Expression",
+     "type": "string"
+    },
+    "mode": {
+     "default": "compute",
+     "description": "compute returns a number; check returns whether the comparison holds.",
+     "enum": [
+      "compute",
+      "check"
+     ],
+     "title": "Mode",
+     "type": "string"
+    }
+   },
+   "required": [
+    "expression"
+   ],
+   "title": "CalculateConfig",
+   "type": "object"
+  },
+  "side_effects": [],
+  "hidden": false
+ },
+ {
   "type": "chat_input",
   "name": "Chat input",
   "version": 1,

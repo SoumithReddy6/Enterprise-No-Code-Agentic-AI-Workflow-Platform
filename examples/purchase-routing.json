@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "Purchase routing",
-  "description": "An extraction agent reads the order total. Messages with no order total are turned away before any approval decision; orders over $1,000 go to human review and the rest are approved.",
+  "description": "An extraction agent reads the order parts; a Calculate node computes the total in code. Messages with no total are turned away before any approval decision; orders over $1,000 go to human review and the rest are approved.",
   "nodes": [
     {
       "id": "input",
@@ -32,7 +32,7 @@
         "model": "llama3.1:latest",
         "credential_id": "",
         "role": "extraction",
-        "system": "You read purchase requests. Whatever the message is (an order, a greeting, a question or anything else), respond with only one JSON object with one key, amount, and nothing else. For an order whose total is $1,350, respond {\"amount\": 1350}. If the message is not an order, or states no total, respond {\"amount\": null}. Never guess an amount.",
+        "system": "You read purchase requests. Whatever the message is (an order, a greeting, a question or anything else), respond with only one JSON object with the keys item, quantity, unit_price and total, and nothing else. item is the name of the product being bought, never a verb such as \"buy\" or \"order\". Copy each value exactly as the message states it, and use null for anything it does not state. If the message gives a price per item, put it in unit_price; if it gives one price for the whole order, put it in total. Never calculate a total yourself, and never guess. For \"3 laptops at $450 each\" respond {\"item\": \"laptops\", \"quantity\": 3, \"unit_price\": 450, \"total\": null}. For \"a monitor for $1,200\" respond {\"item\": \"monitor\", \"quantity\": null, \"unit_price\": null, \"total\": 1200}.",
         "user_prompt": "{input}",
         "temperature": 0,
         "max_tokens": 200,
@@ -41,7 +41,27 @@
         "output_schema": {
           "type": "object",
           "properties": {
-            "amount": {
+            "item": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "quantity": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "unit_price": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "total": {
               "type": [
                 "number",
                 "null"
@@ -50,9 +70,29 @@
             }
           },
           "required": [
-            "amount"
+            "item",
+            "quantity",
+            "unit_price",
+            "total"
           ]
         }
+      }
+    },
+    {
+      "id": "total",
+      "type": "calculate",
+      "version": 1,
+      "label": "Order total",
+      "position": {
+        "x": 300,
+        "y": 400
+      },
+      "inputs": {
+        "value": "extract.text"
+      },
+      "config": {
+        "expression": "coalesce(total, quantity * unit_price)",
+        "mode": "compute"
       }
     },
     {
@@ -62,14 +102,14 @@
       "label": "Order total found?",
       "position": {
         "x": 300,
-        "y": 400
+        "y": 580
       },
       "inputs": {
-        "value": "extract.text"
+        "value": "total.text"
       },
       "config": {
         "operator": "empty",
-        "field": "amount",
+        "field": "result",
         "case_sensitive": false
       }
     },
@@ -80,15 +120,15 @@
       "label": "Over $1,000?",
       "position": {
         "x": 140,
-        "y": 580
+        "y": 760
       },
       "inputs": {
-        "value": "extract.text"
+        "value": "total.text"
       },
       "config": {
         "operator": "gt",
-        "field": "amount",
         "compare_to": "1000",
+        "field": "result",
         "case_sensitive": false
       }
     },
@@ -99,13 +139,13 @@
       "label": "Review message",
       "position": {
         "x": -60,
-        "y": 760
+        "y": 940
       },
       "inputs": {
-        "message": "extract.text"
+        "message": "total.text"
       },
       "config": {
-        "template": "Routed to human review: the order total is over $1,000. A manager must approve it before purchase.\nExtracted: {message}"
+        "template": "Routed to human review: the order total is over $1,000. A manager must approve it before purchase.\nCalculated: {message}"
       }
     },
     {
@@ -115,13 +155,13 @@
       "label": "Approval message",
       "position": {
         "x": 320,
-        "y": 760
+        "y": 940
       },
       "inputs": {
-        "message": "extract.text"
+        "message": "total.text"
       },
       "config": {
-        "template": "Auto-approved: the order total is $1,000 or less. No review needed.\nExtracted: {message}"
+        "template": "Auto-approved: the order total is $1,000 or less. No review needed.\nCalculated: {message}"
       }
     },
     {
@@ -131,7 +171,7 @@
       "label": "Rejection message",
       "position": {
         "x": 620,
-        "y": 580
+        "y": 760
       },
       "inputs": {
         "message": "input.message"
@@ -147,7 +187,7 @@
       "label": "Needs review",
       "position": {
         "x": -60,
-        "y": 940
+        "y": 1120
       },
       "inputs": {
         "text": "review_note.text"
@@ -161,7 +201,7 @@
       "label": "Auto-approved",
       "position": {
         "x": 320,
-        "y": 940
+        "y": 1120
       },
       "inputs": {
         "text": "auto_note.text"
@@ -175,7 +215,7 @@
       "label": "Not a purchase request",
       "position": {
         "x": 620,
-        "y": 760
+        "y": 940
       },
       "inputs": {
         "text": "none_note.text"
@@ -212,11 +252,6 @@
       "target": "auto"
     },
     {
-      "id": "extract-gate",
-      "source": "extract",
-      "target": "gate"
-    },
-    {
       "id": "gate-none",
       "source": "gate",
       "target": "none_note",
@@ -232,6 +267,16 @@
       "id": "none-note-none",
       "source": "none_note",
       "target": "none"
+    },
+    {
+      "id": "extract-total",
+      "source": "extract",
+      "target": "total"
+    },
+    {
+      "id": "total-gate",
+      "source": "total",
+      "target": "gate"
     }
   ]
 }
