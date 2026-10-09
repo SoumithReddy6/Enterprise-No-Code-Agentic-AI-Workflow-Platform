@@ -86,6 +86,8 @@ import {
   withConditionOperator,
   unparsedJsonSettings,
   bindableOutputs,
+  trustSummary,
+  trustText,
   type Issue,
 } from '@/lib/workflow';
 import '@xyflow/react/dist/style.css';
@@ -824,6 +826,13 @@ function Editor() {
     events.filter((e) => e.node_id).map((e) => [e.node_id, e.status]),
   );
   const invalidNodes = new Set(errors.map((e) => e.node_id));
+  // Labels from the run on screen, only when it ran this same graph.
+  const trust =
+    chosen && run && sameExecutionGraph(run.workflow, workflow)
+      ? trustSummary(
+          events.filter((e) => e.node_id === chosen.id && e.status === 'success').at(-1),
+        )
+      : null;
   const bindable = bindableOutputs(
     { nodes: nodes.map((n) => n.data.spec), edges },
     (type) => Object.keys(catalog.find((d) => d.type === type)?.outputs ?? {}),
@@ -1831,6 +1840,29 @@ function Editor() {
                         ),
                       )}
                     </section>
+                    {trust && (
+                      <section className="settings-section trust" aria-label="Trust in the last run">
+                        <h3>TRUST IN THE LAST RUN</h3>
+                        {trust.decision && (
+                          <p className={`trust-decision ${trust.decision.would_review ? 'review' : ''}`}>
+                            {trust.decision.explanation}
+                          </p>
+                        )}
+                        <ul className="trust-list">
+                          {trust.values.map((value) => (
+                            <li key={value.name}>
+                              <code>{value.name}</code>
+                              <span className={`trust-badge ${value.label}`}>
+                                {trustText[value.label]}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="helper">
+                          Labels are recorded for every run. Runs are not paused for a person yet.
+                        </p>
+                      </section>
+                    )}
                     <button
                       className="button delete-node"
                       disabled={running}

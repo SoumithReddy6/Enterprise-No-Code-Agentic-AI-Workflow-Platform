@@ -55,6 +55,7 @@ export type RunEvent = {
   status: string;
   inputs?: Record<string, unknown>;
   outputs?: Record<string, unknown>;
+  decision?: TrustDecision;
   duration_ms?: number;
   cached?: boolean;
   usage?: { calls: number; prompt_tokens: number; completion_tokens: number };
@@ -450,4 +451,56 @@ export function bindableOutputs(
       );
   }
   return result;
+}
+
+// Where a value came from, as labelled by the backend (backend/app/provenance.py).
+export type TrustLabel = 'source' | 'quoted' | 'calculated' | 'guessed' | 'absent';
+export type TrustDecision = {
+  label: TrustLabel;
+  would_review: boolean;
+  reason?: string;
+  passed?: boolean;
+};
+export const trustText: Record<TrustLabel, string> = {
+  source: 'From outside any model',
+  quoted: 'Found in the input',
+  calculated: 'Calculated in code',
+  guessed: 'Not confirmed: a model guess',
+  absent: 'Not stated',
+};
+const reasonText: Record<string, string> = {
+  guessed: 'the value was not found in the input',
+  unlabelled: 'the value comes from an earlier run without labels',
+  check_failed: 'the values disagree',
+  missing_field: 'the field has no label',
+  unrecorded_field: 'the field has no label',
+};
+const isLabel = (value: unknown): value is TrustLabel =>
+  typeof value === 'string' && Object.hasOwn(trustText, value);
+
+// The labels of one node's latest successful outputs, for the inspector: a structured
+// answer's fields when it has them, otherwise its ports; and its decision, if it made one.
+export function trustSummary(event: RunEvent | undefined): {
+  values: { name: string; label: TrustLabel }[];
+  decision?: TrustDecision & { explanation: string };
+} | null {
+  const record = event?.outputs?._provenance as
+    | { ports?: Record<string, unknown>; fields?: Record<string, Record<string, unknown>> }
+    | undefined;
+  if (!record && !event?.decision) return null;
+  const values: { name: string; label: TrustLabel }[] = [];
+  for (const [port, label] of Object.entries(record?.ports ?? {})) {
+    const fields = record?.fields?.[port];
+    if (fields)
+      for (const [path, fieldLabel] of Object.entries(fields)) {
+        if (isLabel(fieldLabel)) values.push({ name: path, label: fieldLabel });
+      }
+    else if (isLabel(label)) values.push({ name: port, label });
+  }
+  const decision = event?.decision;
+  if (!decision) return { values };
+  const explanation = decision.would_review
+    ? `A person would need to decide: ${reasonText[decision.reason ?? ''] ?? 'the value could not be confirmed'}.`
+    : `Decided automatically on a value that is ${trustText[decision.label].toLowerCase()}.`;
+  return { values, decision: { ...decision, explanation } };
 }

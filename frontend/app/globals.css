@@ -1114,6 +1114,42 @@ pre {
   color: #a85c4e;
   font-size: 12px;
 }
+.trust-list {
+  list-style: none;
+  margin: 6px 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.trust-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+.trust-badge {
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  background: #e6f4ea;
+  color: #1b5e20;
+}
+.trust-badge.guessed {
+  background: #fff4e5;
+  color: #9a3412;
+}
+.trust-badge.absent {
+  background: #f1f3f4;
+  color: #3c4043;
+}
+.trust-decision {
+  font-size: 12px;
+  margin: 4px 0 6px;
+}
+.trust-decision.review {
+  color: #9a3412;
+  font-weight: 600;
+}
 .node-issues ul {
   margin: 6px 0 0;
   padding-left: 16px;
