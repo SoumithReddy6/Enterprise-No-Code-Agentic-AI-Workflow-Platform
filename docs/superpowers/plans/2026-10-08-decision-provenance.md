@@ -198,7 +198,12 @@ Each phase is independently shippable, reviewed and green on hosted CI before th
   where Agent A invents and Agent B copies, which must stay guessed. Plus propagation per
   node type, resume restoring labels, and bounds.
 
-**Phase 2: Calculate node**
+**Phase 2: Calculate node.** *Implemented 2026-10-09: `backend/app/calculate.py`; tests in
+`backend/tests/test_calculate.py`. The purchase example now extracts parts and computes the
+total in code. Two details differ from the sketch above: `null` propagates through
+arithmetic (a missing part gives a null result, not a guess), and `coalesce` takes the
+first non-null argument. Only the fields a calculation actually reads count toward its
+label.*
 - Parser, exact evaluator, `compute` and `check` modes, label propagation, editor form.
 - *Tests:* grammar fuzzing (no `eval` reachable), division by zero, missing and `null`
   fields, precision, depth and length bounds, and labels on every operand combination.
@@ -237,7 +242,7 @@ Each phase is independently shippable, reviewed and green on hosted CI before th
 | Observation | Result | Consequence for the plan |
 | --- | --- | --- |
 | A non-order ("How do AI workflows work?") with a required numeric `amount` | The model invented `{"amount": 0}`; the run auto-approved | Labels: `0` is not in the input, so it is guessed |
-| A greeting with the same schema | `amount` was omitted on both the answer and its repair; the run failed safely | Separate repair-prompt item (section 13) |
+| A greeting with the same schema | `amount` was omitted on both the answer and its repair; the run failed safely | Separate repair-prompt item (section 14) |
 | A nullable `amount` and an explicit null instruction, over 10 messages × 3 runs | All routed correctly | Allow `null` as honest absence |
 | A computed total, over 16 messages × 3 runs | **4 of 16 wrong, every run.** 7 × $142.86 gave 999.72 instead of 1,000.02 and **auto-approved over the limit**; 9 × $111.11 gave 9,999.99 | Calculate node: models must not do arithmetic |
 | Unit price taken as the total, over 8 phrasings × 3 runs | **Not observed** | Kept as a documented possibility, not the main risk |
@@ -250,10 +255,35 @@ would decide automatically. Non-orders were `absent`. Three **correct** totals t
 1,050 and 300) were also `guessed`: unnecessary reviews, which the Phase 2 Calculate node removes by
 computing them in code.
 
+**Phase 2 measurement** (same model, the rebuilt example, 20 messages): **0 wrong totals,
+0 wrong routes and 0 decisions needing a person**. Every computed total, including the four
+the model had miscalculated, is exact and labelled `calculated`. The live run also found a
+grammar defect: a trailing comma, as in "$300, quantity 4", hid the number. It is fixed,
+with that case as a unit test.
+
+**Open finding: quoted is not the right role, for text.** On vague requests the model puts
+a verb or fragment in `item`, despite instructions: "order $450" gave `item: "order"`, and
+"purchase 3 for $100 each" gave `item: "3 for $100 each"`. Both are written in the message,
+so both are `quoted`, and "order $450" was auto-approved. `requires: ["item"]` does not
+catch this, because the item is present and quoted. This is the limit stated in section 4,
+now observed. It needs its own decision before Phase 4; see section 13.
+
 These are small, author-defined probes on one model, not a calibration set. Phase 5 repeats
 them as a fixed suite, with expected outcomes written before running.
 
-## 13. What this plan deliberately does not do
+## 13. Open: checking meaning, not just presence
+
+Candidates for the item-role finding, none chosen yet:
+
+1. **Check against authoritative data.** A field is trusted only if it matches a record from
+   a `source`, such as a product catalogue fetched by a tool, so `"order"` is not an item.
+   This is generic (an `in` check against a source list) and strongest, but needs the data.
+2. **Policy: free text never authorises on its own.** An automatic decision may rely on
+   quoted numbers, but any required text field also needs a source match (option 1) or a
+   person.
+3. **Prompt guidance only.** Already tried; it reduced but did not remove the problem.
+
+## 14. What this plan deliberately does not do
 
 - **No extra model call per Agent** to judge input validity. That may come later as an
   optional per-Agent setting, never as the safety boundary.
@@ -265,14 +295,14 @@ them as a fixed suite, with expected outcomes written before running.
 - **No change to the structured-output repair prompt.** That's tracked separately,
   because it affects the calibrated grounding gate.
 
-## 14. Decisions (agreed 2026-10-08)
+## 15. Decisions (agreed 2026-10-08)
 
 1. **Review mechanism:** pause, and a person chooses the branch.
 2. **Number words:** accepted. Zero to twenty and "a dozen" quote their numbers.
 3. **Default for new workflows:** `contract: 2`, so enforcement is on by default.
 4. **Booleans from text:** always need confirmation. Only a structured source quotes a boolean.
 
-## 15. Risks
+## 16. Risks
 
 | Risk | Mitigation |
 | --- | --- |

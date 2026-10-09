@@ -200,7 +200,8 @@ In this release the labels are **observational**. A Condition still takes its br
 
 - `guessed`: the value could not be found in the trusted input;
 - `unlabelled`: the value came from a checkpoint created before this feature;
-- `missing_field` or `unrecorded_field`: the field has no label.
+- `missing_field` or `unrecorded_field`: the field has no label;
+- `check_failed`: a Calculate node in check mode found its values disagree, such as a written total that differs from quantity × unit price. Its success event carries `decision: {label, passed, would_review, reason}`.
 
 Use these entries to measure how often enforcement would pause runs before turning it on. A checkpoint with a malformed `_provenance` record is refused on resume; start a new run.
 
