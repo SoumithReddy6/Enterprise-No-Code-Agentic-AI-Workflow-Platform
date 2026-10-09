@@ -208,7 +208,13 @@ label.*
 - *Tests:* grammar fuzzing (no `eval` reachable), division by zero, missing and `null`
   fields, precision, depth and length bounds, and labels on every operand combination.
 
-**Phase 3: warnings and editor labels**
+**Phase 3: warnings and editor labels.** *Implemented 2026-10-09: `static_label` and
+`decision_warnings` in `provenance.py`; the inspector's "Trust in the last run" section;
+tests in `backend/tests/test_provenance_static.py`, `frontend/tests/trust.test.ts` and
+`frontend/tests/browser/trust.spec.ts`. To keep validation quiet on sound workflows, only
+decisions that are **always** guessed get a warning. Decisions checked at run time get
+none; their outcome shows in the Trust section after a run. A test runs every static case
+and checks that the run-time label never contradicts the static prediction.*
 - Static provenance analysis in the compiler, located warnings, inspector and run-view
   labels.
 - *Tests:* the backend analysis matrix, plus a browser test showing the warning on the
