@@ -128,6 +128,7 @@ void test('typed attachments reject incompatible endpoints and preserve normal f
   assert.equal(connectionKind('agent', 'response', null, null), 'flow');
   assert.equal(paletteCategory('llm'), null);
   assert.equal(paletteCategory('retrieve'), 'Retrieval');
+  assert.equal(paletteCategory('calculate'), 'Control');
 });
 
 void test('retrieval flow binds evidence envelope to Agent', async () => {

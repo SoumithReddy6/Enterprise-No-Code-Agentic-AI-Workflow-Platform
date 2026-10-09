@@ -9,6 +9,7 @@ from langgraph.graph import StateGraph, START, END
 from pydantic import ValidationError
 from .models import Workflow
 from .registry import REGISTRY, RESERVED_PORT_PREFIX, Context, validate_template
+from . import exact_json
 from .approvals import ApprovalPause
 from .execution_policy import (ExecutionIdentity, execute_with_policy, charges_action,
                                accounting_snapshot,
@@ -130,9 +131,9 @@ def _validate_flow(workflow: Workflow) -> list[str]:
             if node.type in ('llm','agent','query') and config.provider in ('openai','claude') and not config.credential_id:
                 errors.append(f'{node.id}: choose a credential for {config.provider}.')
         except ValidationError as exc:
-            if node.type == 'condition':
-                # Condition settings hold no credentials, so their messages are shown as
-                # written: an invalid comparison should say what is wrong with it.
+            if node.type in ('condition', 'calculate'):
+                # Condition and Calculate settings hold no credentials, so their messages are
+                # shown as written: an invalid comparison or expression says what is wrong.
                 errors.extend(condition_config_error(node.id, error) for error in exc.errors())
             else:
                 errors.append(f'{node.id}: invalid configuration. Check required fields and template syntax; inline credentials are not allowed.')
@@ -413,6 +414,14 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                           decision={'label':label,'would_review':review,**({'reason':reason} if review else {})}
                           record['ports']['branch']=provenance.GUESSED if review else provenance.CALCULATED
                           if review:journal(event='decision.would_review',node_id=node.id,reason_code=reason)
+                      elif node.type=='calculate' and config.mode=='check':
+                          # A failed check means the values disagree; a check on guessed values
+                          # proves nothing. Either would have needed a person (shadow mode).
+                          label=record['ports']['text']
+                          passed=exact_json.loads(outputs['text'])['result'] is True
+                          reason=None if passed and label!=provenance.GUESSED else ('check_failed' if not passed else 'guessed')
+                          decision={'label':label,'passed':passed,'would_review':reason is not None,**({'reason':reason} if reason else {})}
+                          if reason:journal(event='decision.would_review',node_id=node.id,reason_code=reason)
                       outputs={**outputs,provenance.PROVENANCE_KEY:provenance.checked(record)}
                       evidence_from_outputs(run_state,outputs)
                       await emit_evidence_notice(run_state,emit,node.id)

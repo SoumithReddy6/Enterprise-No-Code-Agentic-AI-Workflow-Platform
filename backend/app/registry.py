@@ -7,6 +7,7 @@ import string
 from pydantic import Field, model_validator
 from .models import StrictModel
 from .conditions import ConditionConfig, evaluate as evaluate_condition
+from .calculate import CalculateConfig, calculate_node
 
 class EmptyConfig(StrictModel):
     pass
@@ -204,6 +205,7 @@ for definition in [
     NodeDefinition('prompt', 'Prompt template', 'Transform', 'Compose a prompt with {message}.', {'message':'string'}, {'text':'string'}, PromptConfig, prompt_node),
     NodeDefinition('llm', 'Language model', 'AI', 'Generate text with a model, or test with demo mode.', {'prompt':'string'}, {'text':'string','provider':'string'}, LLMConfig, llm_node, ('external_model_request',)),
     NodeDefinition('condition', 'Condition', 'Control', 'Route to true or false by comparing a value: text, number, membership or empty.', {'value':'string'}, {'branch':'string'}, ConditionConfig, condition_node),
+    NodeDefinition('calculate', 'Calculate', 'Transform', 'Compute or check numbers from JSON fields exactly, in code rather than a model.', {'value':'string'}, {'text':'string'}, CalculateConfig, calculate_node),
     NodeDefinition('response', 'Response', 'Output', 'Finish this path and return text.', {'text':'string'}, {'text':'string','sources':'string'}, EmptyConfig, response_node),
 ]:
     register(definition)

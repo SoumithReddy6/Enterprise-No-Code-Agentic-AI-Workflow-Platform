@@ -53,6 +53,7 @@ def numbers_in(text):
     """Every number written in text, as exact decimals."""
     found = set()
     for sign, digits in _NUMBER_RUN.findall(text):
+        digits = digits.rstrip(',')  # "$300, quantity 4": the comma ends the clause.
         if not _GROUPED.fullmatch(digits):
             continue
         try:
@@ -154,6 +155,21 @@ MODEL_NODES = {'agent', 'llm', 'query'}
 DETERMINISTIC_NODES = {'prompt', 'response', 'condition'}
 
 
+def calculation_label(node, inputs, state_values):
+    """(label, result) for a Calculate node: calculated only if every field it actually read
+    was trusted. coalesce reads only the branch it takes, so an unused guess does not count."""
+    from .calculate import run
+    config = node.config or {}
+    result, used = run(config['expression'], inputs['value'], config.get('mode', 'compute'))
+    if result is None:
+        return ABSENT, result
+    ref = node.inputs['value']
+    labels = [value_label(state_values, ref, path)[0] for path in used]
+    # Null fields that a fallback replaced do not weaken it: coalesce(total, 0) is calculated.
+    label = weakest(labels) if labels else CALCULATED
+    return (CALCULATED if label in TRUSTED or label == ABSENT else GUESSED), result
+
+
 def structured(node):
     config = node.config or {}
     return bool(config.get('output_schema')) or config.get('role') in ('extraction', 'classification')
@@ -214,6 +230,10 @@ def for_node(node, definition, inputs, outputs, state_values, body_type=None):
     elif node.type == 'for_each':
         results = SOURCE if body_type in SOURCE_NODES else GUESSED
         record['ports'] = {p: (results if p == 'results' else CALCULATED) for p in ports}
+    elif node.type == 'calculate':
+        label, _ = calculation_label(node, inputs, state_values)
+        record['ports'] = {'text': label}
+        record['fields'] = {'text': {'result': label}}
     elif node.type in DETERMINISTIC_NODES:
         record['ports'] = {p: (SOURCE if p == 'sources' else derived) for p in ports}
     else:

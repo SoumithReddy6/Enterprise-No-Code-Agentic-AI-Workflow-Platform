@@ -27,6 +27,8 @@ from backend.app.provenance import ABSENT, CALCULATED, GUESSED, QUOTED, SOURCE, 
     ('version 2.0.1', set()),
     ('SKU123 and ABC450', set()),
     ('1000.00000000000001 exactly', {Decimal('1000.00000000000001')}),
+    ('Unit price $300, quantity 4.', {300, 4}),
+    ('Pay $1,350, then $45, today', {1350, 45}),
 ])
 def test_numbers_written_in_text(text, expected):
     assert numbers_in(text) == {Decimal(v) for v in expected}

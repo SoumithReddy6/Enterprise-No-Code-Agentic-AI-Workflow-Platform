@@ -59,6 +59,7 @@ import {
   Workflow as WorkflowIcon,
   X,
   Zap,
+  Calculator,
 } from 'lucide-react';
 import {
   api,
@@ -137,6 +138,7 @@ const icons: Record<string, typeof Zap> = {
   tool_email: Send,
   tool_python: Code2,
   condition: GitBranch,
+  calculate: Calculator,
   response: Send,
 };
 

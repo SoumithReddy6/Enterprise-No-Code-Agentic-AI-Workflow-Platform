@@ -309,6 +309,7 @@ export function paletteCategory(type: string): string | null {
         manual_input: 'Input',
         agent: 'Agent',
         condition: 'Control',
+        calculate: 'Control',
         response: 'Output',
       } as Record<string, string>
     )[type] || null
