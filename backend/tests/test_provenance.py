@@ -69,7 +69,7 @@ def test_field_labels_are_bounded():
 
 
 @pytest.mark.parametrize('record', [
-    None, {}, {'v': 2, 'ports': {}}, {'v': 1, 'ports': {'text': 'trusted'}}, {'v': 1, 'ports': {}, 'extra': 1},
+    None, {}, {'v': 3, 'ports': {}}, {'v': 1, 'ports': {'text': 'trusted'}}, {'v': 1, 'ports': {}, 'extra': 1},
     {'v': 1, 'ports': {}, 'fields': {'text': {'a': 'maybe'}}}, {'v': 1, 'ports': {}, 'truncated': False},
     {'v': 1, 'ports': {'text': GUESSED}, 'fields': {'text': {f'f{i}': GUESSED for i in range(65)}}},
 ])
@@ -124,8 +124,8 @@ def decision(events):
 async def test_an_invented_amount_is_guessed_and_would_need_a_person_but_the_branch_is_unchanged():
     values, events = await run(purchase({'operator': 'gt', 'compare_to': '1000', 'field': 'amount'}),
                                'How do AI workflows work?', '{"item": null, "amount": 0}')
-    assert values['input']['_provenance'] == {'v': 1, 'ports': {'message': SOURCE}}
-    assert values['extract']['_provenance']['fields']['text'] == {'item': ABSENT, 'amount': GUESSED}
+    assert values['input']['_provenance'] == {'v': 2, 'ports': {'message': SOURCE}, 'eligible_ports': ['message']}
+    assert values['extract']['_provenance']['fields']['text'] == {'/item': ABSENT, '/amount': GUESSED}
     assert values['extract']['_provenance']['ports']['text'] == GUESSED
     assert decision(events) == {'label': GUESSED, 'would_review': True, 'reason': 'guessed'}
     assert 'no' in values and 'yes' not in values, 'shadow mode: the branch is taken exactly as before'
@@ -136,7 +136,7 @@ async def test_an_invented_amount_is_guessed_and_would_need_a_person_but_the_bra
 async def test_a_quoted_amount_decides_without_review():
     values, events = await run(purchase({'operator': 'gt', 'compare_to': '1000', 'field': 'amount'}),
                                'I need a monitor for $1,200.', '{"item": "monitor", "amount": 1200}')
-    assert values['extract']['_provenance']['fields']['text'] == {'item': QUOTED, 'amount': QUOTED}
+    assert values['extract']['_provenance']['fields']['text'] == {'/item': QUOTED, '/amount': QUOTED}
     assert decision(events) == {'label': QUOTED, 'would_review': False}
     assert values['check']['_provenance']['ports']['branch'] == CALCULATED
 
@@ -164,7 +164,7 @@ async def test_a_value_repeated_from_another_agents_text_is_never_quoted():
     values, events = await run(purchase({'operator': 'gt', 'compare_to': '1000', 'field': 'amount'}, second_agent=True),
                                'buy something', 'The customer wants to spend $450.', '{"item": null, "amount": 450}')
     assert values['draft']['_provenance']['ports']['text'] == GUESSED
-    assert values['extract']['_provenance']['fields']['text']['amount'] == GUESSED
+    assert values['extract']['_provenance']['fields']['text']['/amount'] == GUESSED
     assert decision(events)['would_review'] is True
 
 
@@ -173,7 +173,7 @@ async def test_examples_in_the_system_prompt_never_count_as_evidence():
     workflow = purchase({'operator': 'gt', 'compare_to': '1000', 'field': 'amount'})
     workflow.nodes[1].config['system'] = 'Example: {"item": "laptops", "amount": 1350}'
     values, events = await run(workflow, 'buy stuff', '{"item": "laptops", "amount": 1350}')
-    assert values['extract']['_provenance']['fields']['text'] == {'item': GUESSED, 'amount': GUESSED}
+    assert values['extract']['_provenance']['fields']['text'] == {'/item': GUESSED, '/amount': GUESSED}
 
 
 @pytest.mark.asyncio
@@ -226,7 +226,7 @@ async def test_labels_persist_in_checkpoints_through_the_real_worker(tmp_path, m
     await worker.execute(store.claim_next(worker.owner))
     run = store.run(created['id'])
     assert run['status'] == 'success', run.get('error')
-    assert run['checkpoints']['extract']['_provenance']['fields']['text'] == {'item': QUOTED, 'amount': QUOTED}
+    assert run['checkpoints']['extract']['_provenance']['fields']['text'] == {'/item': QUOTED, '/amount': QUOTED}
     assert [e['decision'] for e in run['events'] if e.get('node_id') == 'check' and e.get('status') == 'success'] == [
         {'label': QUOTED, 'would_review': False}]
     store.engine.dispose()

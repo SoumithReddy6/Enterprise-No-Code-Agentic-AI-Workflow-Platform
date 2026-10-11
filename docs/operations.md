@@ -196,6 +196,25 @@ Verify the report's `product_answerability_guard.decisions`: a skipped or unmeas
 
 Every successful node output carries a `_provenance` record. It labels each output, and each field of a structured Agent answer, as `source`, `quoted`, `calculated`, `guessed` or `absent`. Labels are assigned by code: a model's value is `quoted` only if it is written in that Agent's trusted bound input. System prompts and examples are never searched, and another Agent's free text is never trusted. See [the plan](superpowers/plans/2026-10-08-decision-provenance.md) for the rule and its limits.
 
+Current records use version 2 and collision-free JSON Pointer field paths: `/order/amount`
+and `/order.amount` identify different values. Records fit within 4,096 serialized bytes;
+omitted fields or incomplete traversal remain unknown, never proven absent. Attached
+Agents, specialists and loop bodies use the same labelling function as graph nodes.
+Loop entries retain their bounded labels on checkpoint and replay.
+
+Quotation evidence is limited to this invocation's resolved, eligible input. Trigger
+messages and explicit Jira/Confluence/GitHub record reads can establish independent
+data. Arbitrary HTTP/Python results and write responses remain guessed, even if they
+echo a request. Prompt literals, model grounding answers and retrieval wrappers
+(question, filename, citation and page) cannot establish quotation evidence. Retrieval
+uses the passage text only. A model-authored specialist task is also unverified.
+
+On resume, version-1 derived labels are conservatively downgraded before a new decision
+consumes them; the old rules could label invented values as trusted. Public values and
+completed decision receipts are preserved. A completed decision replays its saved
+receipt without another model call. Malformed labels inside cached loop results or
+saved item progress are refused, just like malformed top-level metadata.
+
 In this release the labels are **observational**. A Condition still takes its branch exactly as before. Its success event carries `decision: {label, would_review, reason}`, and a decision on a guessed value writes a content-free `decision.would_review` journal entry with `node_id` and `reason_code`. The reason codes are:
 
 - `guessed`: the value could not be found in the trusted input;
@@ -205,9 +224,10 @@ In this release the labels are **observational**. A Condition still takes its br
 
 Use these entries to measure how often enforcement would pause runs before turning it on.
 
-Validation also warns, on the node, about a decision that can **only** rest on a guess: for
-example a Condition on an Agent's free text, or a Calculate check over such text. Those
-warnings are advisory. The editor's "Trust in the last run" section shows each value's
+Validation distinguishes decisions that can **only** rest on a guess from calculations
+that may use guessed values when present. Constant short circuits do not warn about
+unread operands, and nullable calculations do not claim that every run needs review.
+Warnings are advisory. The editor's "Trust in the last run" section shows each value's
 label and each decision's outcome for the run on screen. A checkpoint with a malformed `_provenance` record is refused on resume; start a new run.
 
 ## Agent action budgets

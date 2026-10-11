@@ -1,0 +1,89 @@
+{
+  "base_commit": "dad766ed3302441d2ba2503b7457672cd3cba131",
+  "results": [
+    {
+      "mutation": "template_evidence",
+      "target": "prompt_examples",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "opaque_tool_source",
+      "target": "python_echo",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "field_identity",
+      "target": "field_identity",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "numeric_prefix",
+      "target": "exponents_quote",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "unused_operators",
+      "target": "selected_arithmetic",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "rounded_sign",
+      "target": "sign_operations",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "rounded_abs",
+      "target": "sign_operations",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "field_byte_budget",
+      "target": "64_long_fields",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "static_short_circuit",
+      "target": "static_short_circuits",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "lost_decision_receipt",
+      "target": "checkpoint_replay_preserves",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "false_absence",
+      "target": "depth_limit",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "attached_labels",
+      "target": "attached_labels_and_item_labels",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "grounding_source",
+      "target": "grounding",
+      "exit_code": 1,
+      "killed": true
+    },
+    {
+      "mutation": "old_label_acceptance",
+      "target": "legacy_opaque_tool or pre_fix_derived",
+      "exit_code": 1,
+      "killed": true
+    }
+  ]
+}

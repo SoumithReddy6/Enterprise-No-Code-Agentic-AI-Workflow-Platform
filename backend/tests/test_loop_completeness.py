@@ -72,20 +72,19 @@ async def test_failed_items_under_continue_are_failures_not_truncation():
 
 @pytest.mark.asyncio
 async def test_the_earliest_values_are_kept_and_later_ones_dropped(monkeypatch):
-    """Each entry serializes to 63 bytes: '[' + two entries + ', ' + ']' is 130 and fits 150; a
+    """Two labelled entries fit 250 bytes; a
     third does not. Dropped values are empty and marked; outcomes are always kept."""
     from backend.app import iteration
-    monkeypatch.setattr(iteration, 'RETAINED_VALUE_BYTES', 150)
+    monkeypatch.setattr(iteration, 'RETAINED_VALUE_BYTES', 250)
     resolver, _ = platform(issues(4), lambda index, text: 'done')
     result = await run(loop_flow(), resolver)
     results, summary = result['values']['each']['results'], summary_of(result)
-    assert iteration.serialized_bytes(results[0]) == 63
     assert [bool(r['value']) for r in results] == [True, True, False, False]
     assert [r.get('value_dropped', False) for r in results] == [False, False, True, True]
     assert [r['status'] for r in results] == ['success'] * 4
     assert summary['values_dropped'] is True and summary['dropped_value_count'] == 2 and summary['truncated'] is True
     assert '2 later value(s) were dropped' in summary['truncation_reason']
-    assert iteration.serialized_bytes(results[:2]) <= 150 < iteration.serialized_bytes(results[:2] + [{**results[2], 'value': 'done'}])
+    assert iteration.serialized_bytes(results[:2]) <= 250 < iteration.serialized_bytes(results[:2] + [{**results[2], 'value': 'done'}])
 
 
 def test_the_bound_counts_serialized_utf8_bytes_not_characters(monkeypatch):

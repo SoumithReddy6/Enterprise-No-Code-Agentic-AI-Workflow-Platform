@@ -14,10 +14,10 @@ const run: Run = {
   workflow: example, message: 'order $450', events: [
     { seq: 1, node_id: 'extract', status: 'success', timestamp: '', outputs: {
       text: '{"item": "order", "quantity": null, "unit_price": null, "total": 450}', provider: 'ollama', sources: '[]', grounding: '{}',
-      _provenance: { v: 1, ports: { text: 'guessed', provider: 'source', sources: 'source', grounding: 'source' },
-        fields: { text: { item: 'quoted', quantity: 'absent', unit_price: 'absent', total: 'quoted' } } } } },
-    { seq: 2, node_id: 'check', status: 'success', timestamp: '', outputs: { branch: 'false',
-      _provenance: { v: 1, ports: { branch: 'guessed' } } },
+        _provenance: { v: 2, ports: { text: 'guessed', provider: 'source', sources: 'source', grounding: 'guessed' },
+        fields: { text: { '/item': 'quoted', '/quantity': 'absent', '/unit_price': 'absent', '/total': 'quoted' } } } } },
+    { seq: 2, node_id: 'check', status: 'success', cached: true, timestamp: '', outputs: { branch: 'false',
+      _provenance: { v: 2, ports: { branch: 'guessed' }, decision: { label: 'guessed', would_review: true, reason: 'guessed' } } },
       decision: { label: 'guessed', would_review: true, reason: 'guessed' } },
   ],
 };

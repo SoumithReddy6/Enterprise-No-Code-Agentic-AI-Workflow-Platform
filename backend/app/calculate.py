@@ -190,6 +190,32 @@ def paths(node):
     return found
 
 
+def dependencies(node):
+    """Possible field reads and whether they depend on an undecidable short circuit.
+
+    Evaluate only field-free prefixes. Never execute an expression on invented field
+    values to claim that a runtime branch is guaranteed.
+    """
+    def constant(arg):
+        if paths(arg): return False, None
+        try: return True, evaluate(arg, {})
+        except CalculationError: return False, None
+    if node.kind == 'path': return [node.value], False
+    found, conditional = [], False
+    for i, arg in enumerate(node.args):
+        used, uncertain = dependencies(arg)
+        found += [p for p in used if p not in found]
+        conditional |= uncertain
+        known, value = constant(arg)
+        if node.kind == 'call' and node.value == 'coalesce':
+            if known and value is not None: break
+            if not known: conditional = True
+        if node.kind in ('and', 'or') and i == 0:
+            if known and (value is False and node.kind == 'and' or value is True and node.kind == 'or'): break
+            if not known: conditional = True
+    return found, conditional
+
+
 def _field(value, path):
     current = value
     for key in path.split('.'):
@@ -244,7 +270,7 @@ def _evaluate(node, value, used):
         return _number(found, f'field {node.value}')
     if kind == 'unary':
         operand = _number(_evaluate(node.args[0], value, used), _what(node.args[0], 'the operand of -'))
-        return None if operand is None else -operand
+        return None if operand is None else operand.copy_negate()
     if kind == 'binary':
         left = _number(_evaluate(node.args[0], value, used), _what(node.args[0], f'the left side of {node.value}'))
         right = _number(_evaluate(node.args[1], value, used), _what(node.args[1], f'the right side of {node.value}'))
@@ -257,7 +283,9 @@ def _evaluate(node, value, used):
         with localcontext() as exact:
             exact.traps[Inexact] = True
             try:
-                return {'+': left + right, '-': left - right, '*': left * right}[node.value]
+                if node.value == '+': return left + right
+                if node.value == '-': return left - right
+                return left * right
             except Inexact:
                 raise CalculationError('the exact result needs more than 50 significant digits') from None
     if kind == 'call':
@@ -272,7 +300,7 @@ def _evaluate(node, value, used):
         if any(arg is None for arg in args):
             return None
         if name == 'abs':
-            return abs(args[0])
+            return args[0].copy_abs()
         if name == 'round':
             places = args[1]
             if places != places.to_integral_value() or not 0 <= places <= 20:

@@ -321,7 +321,12 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
                 write_attempt=is_write(target_node.type,target_config)
             async def invoke():
                 try:
-                    return await invoke_attached(target_node,task,ctx,identity,emit,
+                    # An agent-authored task is not a new source, even if it repeats a
+                    # number from elsewhere in the run. Specialists see only this task.
+                    from .provenance import EvidenceContext,GUESSED
+                    from dataclasses import replace
+                    attached_ctx=replace(ctx,input_origins=EvidenceContext(complete=False),input_label=GUESSED)
+                    return await invoke_attached(target_node,task,attached_ctx,identity,emit,
                                                  depth+1 if target in specialists else depth,budget)
                 except (*CONTROL_FLOW, WriteNotSent):
                     raise

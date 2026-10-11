@@ -179,7 +179,7 @@ async def test_quoted_parts_give_a_calculated_total_that_decides_without_review(
     values, decisions = await execute(workflow('coalesce(total, quantity * unit_price)'), '7 licences at $142.86 each.',
                                       '{"quantity": 7, "unit_price": 142.86, "total": null}')
     assert json.loads(values['calc']['text']) == {'result': 1000.02}
-    assert values['calc']['_provenance'] == {'v': 1, 'ports': {'text': CALCULATED}, 'fields': {'text': {'result': CALCULATED}}}
+    assert values['calc']['_provenance'] == {'v': 2, 'ports': {'text': CALCULATED}, 'fields': {'text': {'/result': CALCULATED}}, 'eligible_ports': ['text']}
     assert decisions['check'] == {'label': CALCULATED, 'would_review': False}
     assert 'yes' in values, 'over $1,000: the exact total routes to review, where the model said 999.72'
 

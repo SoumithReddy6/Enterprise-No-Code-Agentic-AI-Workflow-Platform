@@ -254,10 +254,16 @@ async def invoke_attached(node,input_text,ctx,identity:ExecutionIdentity,emit,de
                   checkpoint_owner=identity.checkpoint_owner,
                   execution_identity=identity)
     if node.type=='agent':
-        return await execute_agent(node.id,input_text,ctx.workflow,child,emit,depth,
-                                   action_budget,identity.checkpoint_owner)
-    if node.type.startswith('tool_'):
+        outputs=await execute_agent(node.id,input_text,ctx.workflow,child,emit,depth,
+                                    action_budget,identity.checkpoint_owner)
+    elif node.type.startswith('tool_'):
         if ctx.platform is None:raise ValueError('Tool execution unavailable.')
         raw=await ctx.platform('tool',node.type,config.model_dump(),input_text,identity)
-        return await tool_outputs(child,node.type,config,raw,node.id)
-    return await definition.handler({'query':input_text},config,child)
+        outputs=await tool_outputs(child,node.type,config,raw,node.id)
+    else:
+        outputs=await definition.handler({'query':input_text},config,child)
+    from . import provenance
+    record=provenance.for_node(node,definition,{'input':input_text},outputs,{},
+                               origins=ctx.input_origins or provenance.EvidenceContext(complete=False),
+                               input_label=ctx.input_label or provenance.GUESSED)
+    return {**outputs,provenance.PROVENANCE_KEY:provenance.checked(record)}

@@ -114,7 +114,7 @@ async def test_converging_edges_run_either_way(fail_times):
     result = await run(success_and_error_converge('input.message'), resolver, [])
     assert result['values']['out']['text'] == 'hello'
     # A recovered failure has no outputs and no provenance; a success is labelled.
-    assert result['values']['work'] == ({} if fail_times else {'text': 'ok', '_provenance': {'v': 1, 'ports': {'text': 'source'}}})
+    assert result['values']['work'] == ({} if fail_times else {'text': 'ok', '_provenance': {'v': 2, 'ports': {'text': 'guessed'}}})
 
 
 # --------------------------------------------------------------------------- nesting and other policies

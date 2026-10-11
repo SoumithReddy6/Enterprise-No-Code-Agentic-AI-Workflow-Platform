@@ -27,3 +27,15 @@ void test('a decision is explained in plain words', () => {
   const failed = trustSummary(event({ decision: { label: 'calculated', would_review: true, reason: 'check_failed', passed: false } }));
   assert.equal(failed?.decision?.explanation, 'A person would need to decide: the values disagree.');
 });
+
+void test('cached v2 decisions and distinct JSON Pointer fields remain visible', () => {
+  const receipt = { label: 'guessed', would_review: true, reason: 'guessed' } as const;
+  const replay = event({ cached: true, decision: receipt, outputs: {
+    _provenance: { v: 2, ports: { text: 'guessed' }, decision: receipt,
+      fields: { text: { '/order/amount': 'guessed', '/order.amount': 'quoted' } } } } });
+  const summary = trustSummary(replay);
+  assert.deepEqual(summary?.values, [
+    { name: '/order/amount', label: 'guessed' }, { name: '/order.amount', label: 'quoted' }]);
+  assert.equal(summary?.decision?.would_review, true);
+  assert.equal(summary?.decision?.explanation, 'A person would need to decide: the value was not found in the input.');
+});

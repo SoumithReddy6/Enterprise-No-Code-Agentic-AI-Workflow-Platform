@@ -233,9 +233,13 @@ async def for_each_node(inputs,config,ctx):
 
     for index,value in enumerate(selected):
         if index in done:
+            from .provenance import PROVENANCE_KEY, restored_record
+            saved=done[index]
+            if PROVENANCE_KEY in saved:
+                saved={**saved,PROVENANCE_KEY:restored_record(body,saved[PROVENANCE_KEY])}
             # Restored from an earlier attempt: it passes through the same admission and
             # policy checks as a fresh item, so replay reaches the same decisions.
-            entry=budget.admit(done[index])
+            entry=budget.admit(saved)
         else:
             entry,exhausted=await _run_item(ctx,body,emit,index,value)
             if entry is None:
@@ -283,7 +287,15 @@ async def _run_item(ctx,body,emit,index,value):
     # spoof another item nor blank it to escape the storage preview.
     loop_fields={'loop_node_id':ctx.node_id,'item_index':index}
     async def item_emit(event):await emit({**event,**loop_fields})
-    item_ctx=replace(ctx,emit=item_emit)
+    from . import provenance
+    origins=ctx.input_origins
+    # Narrow eligible evidence to this element. A sibling's values cannot quote this
+    # item's extraction, and guessed collection members cannot become sources.
+    item_origins=provenance.EvidenceContext(complete=False)
+    if isinstance(origins,provenance.EvidenceContext) and origins.complete and ctx.input_label in provenance.TRUSTED and origins.eligible_texts:
+        source=origins.structured_sources[0] if origins.structured_sources else {}
+        item_origins=provenance.source_context(source.get('node_id',ctx.node_id),source.get('port','items'),text)
+    item_ctx=replace(ctx,emit=item_emit,input_origins=item_origins,input_label=ctx.input_label)
     common={**identity.event_fields(),'transient':True}
     await item_emit({**common,'status':'running','inputs':{'input':text[:PREVIEW_CHARS]}})
     try:
@@ -307,6 +319,11 @@ async def _run_item(ctx,body,emit,index,value):
         else:
             output=outcome.outputs
             entry={'index':index,'status':'success','value':output.get('text',''),'error':''}
+            record=output.get(provenance.PROVENANCE_KEY)
+            if record:
+                # The body's whole model-text port is guessed; the item's aggregate
+                # label is the weakest actually inspected field, including omissions.
+                entry[provenance.PROVENANCE_KEY]={**record,'ports':{**record['ports'],'text':provenance.output_label(output)}}
             reason=body_truncation(output)
             if reason:entry['truncation_reason']=reason
             event={**common,'status':'success','outputs':output}

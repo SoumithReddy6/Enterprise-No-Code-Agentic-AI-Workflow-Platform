@@ -320,11 +320,18 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                         try:checked_truncation(outputs[TRUNCATION_KEY])
                         except ValueError:
                             raise ValueError(f'{node.id} cannot be restored: its checkpoint carries malformed truncation metadata. Start a new run.') from None
-                    from .provenance import PROVENANCE_KEY,checked as checked_provenance
-                    if isinstance(outputs,dict) and PROVENANCE_KEY in outputs:
-                        try:checked_provenance(outputs[PROVENANCE_KEY])
-                        except ValueError:
-                            raise ValueError(f'{node.id} cannot be restored: its checkpoint carries malformed provenance metadata. Start a new run.') from None
+                    from .provenance import PROVENANCE_KEY,restored_record
+                    try:
+                        if isinstance(outputs,dict) and PROVENANCE_KEY in outputs:
+                            outputs={**outputs,PROVENANCE_KEY:restored_record(node,outputs[PROVENANCE_KEY])}
+                        if node.type=='for_each' and isinstance(outputs.get('results'),list):
+                            body=next(n for n in full_workflow.nodes if n.id==config.body)
+                            entries=[{**entry,PROVENANCE_KEY:restored_record(body,entry[PROVENANCE_KEY])}
+                                     if isinstance(entry,dict) and PROVENANCE_KEY in entry else entry
+                                     for entry in outputs['results']]
+                            outputs={**outputs,'results':entries}
+                    except ValueError:
+                        raise ValueError(f'{node.id} cannot be restored: its checkpoint carries malformed provenance metadata. Start a new run.') from None
                     if node.type=='for_each' and 'summary' not in outputs:
                         # Checkpointed by a release without the summary output.
                         from .iteration import reconstructed_summary
@@ -336,7 +343,9 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     if inspect.isawaitable(validation):await validation
                     evidence_from_outputs(run_state,outputs)  # Restored evidence keeps its original labels.
                     await emit_evidence_notice(run_state,emit,node.id)
-                    await emit({'node_id':node.id,'status':'success','outputs':outputs,'cached':True,'duration_ms':0})
+                    receipt=(outputs.get(PROVENANCE_KEY) or {}).get('decision')
+                    await emit({'node_id':node.id,'status':'success','outputs':outputs,'cached':True,'duration_ms':0,
+                                **({'decision':receipt} if receipt is not None else {})})
                     return {'values':{node.id:outputs}}
                 inputs = {key: state['values'][ref.split('.')[0]][ref.split('.')[1]] for key, ref in node.inputs.items()}
                 started = time.perf_counter()
@@ -352,9 +361,12 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     upstream=next((n for n in workflow.nodes if n.id==identifier),None)
                     return bool(upstream and any(guarded_dependency(ref.split('.')[0],seen) for ref in upstream.inputs.values()))
                 async def invoke():
+                      from . import provenance
                       outputs = await definition.handler(
                           inputs,config,replace(context,node_id=node.id,node_type=node.type,
-                                                checkpoint_owner=node.id,execution_identity=identity))
+                                                checkpoint_owner=node.id,execution_identity=identity,
+                                                input_origins=provenance.evidence_context(node,inputs,state['values']),
+                                                input_label=provenance.weakest(provenance.port_label(state['values'],ref) for ref in node.inputs.values())))
                       # Run metadata may travel beside the declared ports under the reserved key.
                       from .execution_policy import TRUNCATION_KEY,checked_truncation
                       ports={name:value for name,value in outputs.items() if name!=TRUNCATION_KEY}
@@ -422,6 +434,7 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                           reason=None if passed and label!=provenance.GUESSED else ('check_failed' if not passed else 'guessed')
                           decision={'label':label,'passed':passed,'would_review':reason is not None,**({'reason':reason} if reason else {})}
                           if reason:journal(event='decision.would_review',node_id=node.id,reason_code=reason)
+                      if decision is not None:record['decision']=decision
                       outputs={**outputs,provenance.PROVENANCE_KEY:provenance.checked(record)}
                       evidence_from_outputs(run_state,outputs)
                       await emit_evidence_notice(run_state,emit,node.id)

@@ -63,6 +63,8 @@ class Context:
     workflow: object = None
     emit: Callable | None = None
     run: dict | None = None  # Shared per run: {'evidence': [passages with unique citation labels]}
+    input_origins: object | None = None  # Eligible data for this invocation, not shared run evidence.
+    input_label: str | None = None
 
 # Ports named with this prefix would collide with run metadata carried in a node's graph
 # value (execution_policy.TRUNCATION_KEY), which must never be declared or bound.

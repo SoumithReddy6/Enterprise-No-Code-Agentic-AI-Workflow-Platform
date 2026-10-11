@@ -1,0 +1,22 @@
+{
+  "base_commit": "dad766ed3302441d2ba2503b7457672cd3cba131",
+  "overlay_files": [
+    "backend/app/agent_runtime.py",
+    "backend/app/calculate.py",
+    "backend/app/compiler.py",
+    "backend/app/execution_policy.py",
+    "backend/app/iteration.py",
+    "backend/app/provenance.py",
+    "backend/app/registry.py",
+    "backend/tests/test_calculate.py",
+    "backend/tests/test_loop_completeness.py",
+    "backend/tests/test_node_error_policy.py",
+    "backend/tests/test_provenance.py",
+    "backend/tests/test_provenance_static.py",
+    "backend/tests/test_recovery_bindings.py",
+    "frontend/tests/browser/trust.spec.ts",
+    "frontend/tests/trust.test.ts",
+    "backend/tests/test_provenance_foundation.py"
+  ],
+  "scratch": "/private/tmp/relay-foundation-clean-ibwxf_jg"
+}

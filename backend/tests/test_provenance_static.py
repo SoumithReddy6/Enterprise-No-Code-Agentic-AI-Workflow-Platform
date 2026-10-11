@@ -53,7 +53,7 @@ CASES = {
                                 STATIC_RUNTIME, '{"amount": 600, "item": null}'),
     'calculation over free text': (graph(agent(FREE), {'id': 'calc', 'type': 'calculate', 'inputs': {'value': 'step.text'},
                                                        'config': {'expression': 'amount * 2'}}, decide='calc.text', field='result'),
-                                   STATIC_GUESSED, '{"amount": 600}'),
+                                   STATIC_RUNTIME, '{"amount": 600}'),
     'calculation of constants': (graph({'id': 'calc', 'type': 'calculate', 'inputs': {'value': 'input.message'},
                                         'config': {'expression': '600 * 2'}}, decide='calc.text', field='result'), STATIC_TRUSTED, None),
 }
