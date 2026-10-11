@@ -1,5 +1,17 @@
 name: relay-workflow-foundation
 services:
+  common-replies:
+    # Disposable optional cache; database approvals/results never live here.
+    image: redis:8.6.7-alpine3.23@sha256:ac2da09bc822f325a9f68f533120b86fa39c1b8db46b3aa7c1bbea7fdfd4fcba
+    profiles: [common-replies]
+    command: [redis-server, --save, "", --appendonly, "no", --maxmemory, 64mb, --maxmemory-policy, allkeys-lru]
+    ports:
+      - "127.0.0.1:56379:6379"
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 1s
+      retries: 10
   postgres:
     image: postgres:17-alpine
     environment:

@@ -1,0 +1,123 @@
+{
+  "task": 3,
+  "status": "implemented_verified_uncommitted",
+  "date": "2026-10-11",
+  "base_commit": "453dbb54ae8c91d070daf8cff813a5202f6bcf77",
+  "scope": "Exact configured prepared-reply caching only. Tasks 4\u20138 remain pending. The contract-2 starter remains unchanged.",
+  "files_sha256": {
+    ".env.example": "b9bd7718e95b6c2528f392b52bd0d4b7a38fc92828fd1f924ec743010b0f40d8",
+    ".github/workflows/ci.yml": "f23124555cf4f4fac498d2e9f4369fed90f18a917df3a01bf0213ca1cad1c419",
+    "backend/app/common_replies.py": "c41b2575ced6e0a22fbc7274a2a38f8fe9b3eb7ca129de3df789d1858f737fd4",
+    "backend/app/main.py": "15792a51f14ba58813b8cf8647a3dba26e922684b7d506aea2230478af9b8607",
+    "backend/app/readiness.py": "4f26c72f07a2af2ae5db44c0988e588547d6a4bdfef72c359a6c45b052f66074",
+    "backend/app/registry.py": "044e9c6caea55ff3edbbd7337f9e5a74a1b7306d7411fdb5292594bb31da39b3",
+    "backend/app/request_contracts.py": "149d38128823de178fd5f55e690523fdeaf85df68c91bc16e1ee4125fc3f80fa",
+    "backend/app/worker.py": "ef33d3e9bb7efc769ec240cc13497da66f06a5e0a6c58bfffa297e92dfcd6175",
+    "backend/requirements.txt": "47d0e0995f585ef8e546f015fac1b9a1dfc6555ed61bf587c7263f70e88d18e4",
+    "backend/tests/test_common_replies.py": "991d2511de33761dcb1f8ea8527c118622489ea7c4578d0682b22e97f2349715",
+    "backend/tests/test_common_replies_redis.py": "26e13c5e2c75edfa121fe5039dfc80dd3f04ea82c5a516b7acb568bbef5d648e",
+    "backend/tests/test_request_contracts.py": "5b988d301e930bcdd95c0725da0b1380c54cdbbc671164d41fcbc4e7240c5db1",
+    "compose.yaml": "9e82bdb7aea77428935a9300cefa12f110ed89a4b48d7af067f201dc0e414fd4",
+    "docs/operations.md": "72d48026e55920f50ea9b97857974760ff011c7a67ae4486977e7d5f8ba21d66",
+    "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md": "dac2b06788ad20dc349656779f8d5135274b5968e83e097931119070ea6ebf16"
+  },
+  "backend": [
+    {
+      "seed": 0,
+      "tests": 1389,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "seconds": 69.925
+    },
+    {
+      "seed": 1,
+      "tests": 1389,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "seconds": 65.674
+    },
+    {
+      "seed": 2,
+      "tests": 1389,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 0,
+      "seconds": 68.093
+    }
+  ],
+  "cache_tests": {
+    "passed": 55,
+    "real_redis": true,
+    "coverage": [
+      "whole-message matching and punctuation",
+      "Unicode and explicit aliases",
+      "normalization collision rejection",
+      "tenant/workflow/reply version keys",
+      "authoritative replies despite poisoned cache",
+      "bounded payload/read and one GET/fill deadline",
+      "actual TTL expiry",
+      "one attempt on immediate failures",
+      "cancellation propagation",
+      "worker replay and exact original input",
+      "optional readiness and owned connection cleanup",
+      "content-free journal"
+    ]
+  },
+  "isolation": {
+    "tests": 1389,
+    "exit_code": 0,
+    "code_matches_working_tree": true,
+    "note": "HEAD plus the listed files; only plan progress prose changed after the test snapshot."
+  },
+  "frontend": {
+    "unit_tests": 79,
+    "browser_tests": 12,
+    "typecheck": true,
+    "lint": true,
+    "build": true
+  },
+  "production": {
+    "scenarios_passed": 20,
+    "scenarios_total": 20,
+    "source_files_changed": [],
+    "report": "production/report.json"
+  },
+  "dependency_audit": {
+    "declared_packages": 67,
+    "known_vulnerabilities": 0,
+    "client": "redis==8.1.0",
+    "server": "redis:8.6.7-alpine3.23",
+    "server_digest": "sha256:ac2da09bc822f325a9f68f533120b86fa39c1b8db46b3aa7c1bbea7fdfd4fcba",
+    "server_review": "Official security release review; no OS-image vulnerability scan."
+  },
+  "mutation_tests": {
+    "caught": 9,
+    "total": 9,
+    "artifact": "mutations.json",
+    "note": "An initial slow-peer retry test was weak; the new immediate-disconnect test catches the retry mutant."
+  },
+  "independent_review": {
+    "critical": 0,
+    "important": 0,
+    "minor": 0,
+    "focused_tests_independently_passed": 136
+  },
+  "rulings": [
+    "Continue in the established feature checkout; unrelated evidence preserved; user commits/pushes.",
+    "Prepared reply provenance remains guessed/ineligible; authored replies are not extraction evidence.",
+    "GETRANGE bounds reads at 4097 bytes; only byte equality with the configured payload counts as a hit.",
+    "No URL query overrides; invalid optional cache configuration falls back locally.",
+    "Router/verifier handlers and the starter are deferred to their owning tasks.",
+    "An explicitly authored full business request can be a prepared message; no business/approval preset is provided.",
+    "Redis admin changes to expiry cannot alter current authoritative reply or admission.",
+    "Server security-release review is not an OS-image scan.",
+    "Hosted CI must be verified after the user pushes this task."
+  ],
+  "hosted_ci": "pending_user_commit_and_push",
+  "live_model_generation": "not rerun; no model handler/prompt/threshold change in this task"
+}

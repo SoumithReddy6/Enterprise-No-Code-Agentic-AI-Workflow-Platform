@@ -13,6 +13,17 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      common-replies:
+        image: redis:8.6.7-alpine3.23@sha256:ac2da09bc822f325a9f68f533120b86fa39c1b8db46b3aa7c1bbea7fdfd4fcba
+        ports:
+          - 56379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s --health-timeout 1s --health-retries 10
+    env:
+      # Only the integration test uses this URL, never a production/shared cache.
+      RELAY_TEST_REDIS_URL: redis://127.0.0.1:56379/0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

@@ -73,3 +73,6 @@ jsonschema==4.26.0
 # Local ONNX cross-encoder reranking (weights installed separately)
 onnxruntime==1.30.0
 tokenizers==0.23.2
+
+# Optional async cache for exact, configured prepared replies
+redis==8.1.0

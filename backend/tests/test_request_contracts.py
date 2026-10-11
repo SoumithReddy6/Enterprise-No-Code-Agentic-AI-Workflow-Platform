@@ -125,4 +125,4 @@ def test_verification_report_cannot_hide_failed_or_omitted_coverage():
 
 def test_future_handlers_are_not_registered():
     from backend.app.registry import REGISTRY
-    assert not {'greeting_cache', 'request_router', 'verify_extraction'} & REGISTRY.keys()
+    assert not {'request_router', 'verify_extraction'} & REGISTRY.keys()

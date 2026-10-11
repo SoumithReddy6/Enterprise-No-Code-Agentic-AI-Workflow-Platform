@@ -48,9 +48,14 @@ def run_truncation(workflow,values):
             'truncation_causes':causes}
 
 
+_CACHE_DEFAULT=object()
+
 class Worker:
-    def __init__(self,store,concurrency=4):
+    def __init__(self,store,concurrency=4,common_reply_cache=_CACHE_DEFAULT):
         self.store=store;self.owner=new_id();self.concurrency=concurrency;self.tools=ToolService(store);self.memory=MemoryService(store);self.kbs=KnowledgeServices()
+        from .common_replies import cache_from_env
+        self._owns_common_reply_cache=common_reply_cache is _CACHE_DEFAULT
+        self.common_reply_cache=cache_from_env() if self._owns_common_reply_cache else common_reply_cache
 
     async def execute(self,run):
         tokens=[(request_id,request_id.set(run.get('request_id'))),(run_id,run_id.set(run['id'])),(tenant_id,tenant_id.set(run.get('tenant_id')))]
@@ -106,6 +111,11 @@ class Worker:
             async def platform_resolver(action,*args):
                 tenant=self.store.run_tenant(id,owner)
                 try:
+                    if action=='common_reply':
+                        from .common_replies import common_reply_scope,lookup_common_reply
+                        message,config=args
+                        scope=common_reply_scope(tenant,run['workflow'],config)
+                        return await lookup_common_reply(message,config,scope,self.common_reply_cache),scope
                     if action=='tool':
                         node_type,settings,input_text,identity=args
                         if not isinstance(identity,ExecutionIdentity):
@@ -241,6 +251,8 @@ class Worker:
         finally:
             for task in active:task.cancel()
             await asyncio.gather(*active,return_exceptions=True)
+            if self._owns_common_reply_cache and self.common_reply_cache is not None:
+                await self.common_reply_cache.aclose()
 
 async def main():
     from dotenv import load_dotenv

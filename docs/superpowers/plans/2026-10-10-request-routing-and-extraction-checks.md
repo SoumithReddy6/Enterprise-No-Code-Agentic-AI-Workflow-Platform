@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for native execution; use superpowers:subagent-driven-development only if the user chooses delegation. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Task 1 committed as `79216b8`; all five hosted CI jobs passed (run `38148390994`). Task 2 implemented and independently reviewed in the working tree on 2026-10-11; awaiting the user's commit. Tasks 3–8 remain pending. No new router, cache, verification gate or enforcement has been enabled. See [Step 2 interfaces](../../request-contract-interfaces.md) and `evals/results/request-contracts-step2-2026-10-11/report.json` for scope and evidence.
+**Status:** Tasks 1 (`79216b8`) and 2 (`453dbb5`) committed; all five hosted CI jobs passed for each (runs `38148390994` and `38151170421`). Task 3's prepared-reply cache is implemented, independently reviewed and locally verified in the working tree on 2026-10-11; awaiting the user's commit/push and hosted CI. Tasks 4–8 remain pending. The router, extraction verification and business enforcement are not enabled; the editor's existing starter is unchanged. See [Step 2 interfaces](../../request-contract-interfaces.md) and `evals/results/request-contracts-step2-2026-10-11/report.json` for scope and evidence.
 
 **Goal:** Handle prepared greetings without an LLM, route other inputs by workflow purpose, and prevent unsupported extractions from authorising consequential actions.
 
@@ -83,7 +83,7 @@ Do not split graph semantics, retry policy or model accounting into competing im
 - [x] Test control nodes reject recovery without a branch, extra/missing edges and body/tool attachments. Re-run S08-style binding tests on both routes.
 - [x] Add contract-2 validation tests: entry chain required; a router accepted path cannot directly reach a write; required verification cannot be bypassed by an error edge or attachment. Invalid drafts remain saveable, invalid submissions create no run.
 - [x] Regenerate registry-backed browser fixtures for the additive fields and run compiler/workflow integrity/registry/type, fixture parity and browser tests. Independently review the seam; model calls inside attached loop bodies are included in decision dependency checks.
-- [ ] Commit the seam without new node handlers registered until their owning task implements them. The editor's contract-2 starter activates in Task 7 when the full path exists; Step 2 preserves contract versions but keeps today's starter runnable.
+- [x] Commit the seam without new node handlers registered until their owning task implements them. The editor's contract-2 starter activates in Task 7 when the full path exists; Step 2 preserves contract versions but keeps today's starter runnable.
 
 ### Task 3: Implement exact prepared-reply caching
 
@@ -96,12 +96,12 @@ Do not split graph semantics, retry policy or model accounting into competing im
 - `CommonReplyResult(branch: Literal['continue','reply'], reply: str, outcome: Literal['hit','filled','local_fallback','not_common'])`.
 - `CommonReplyCache.get(key: str) -> Awaitable[bytes | None]`, `set(key: str, value: bytes, ttl: int) -> Awaitable[None]`, `aclose() -> Awaitable[None]`.
 
-- [ ] Write tests for Hello/HELLO/hello!, whitespace, explicitly configured multilingual aliases, unknown messages, normalisation collisions and `Hello, buy 3 laptops` staying intact.
-- [ ] Test cache outage/timeout/expiry/wrong payload, an encoded reply exceeding the 4,096-byte cache limit, and cross-tenant/policy scope. Assert the exact configured greeting still replies with zero model calls, while non-greetings continue unchanged.
-- [ ] Run failing tests, then implement the exact configured-message map, cache adapter and local fallback. Verify cached text equals the current authoritative configured reply; cache data never determines permission to proceed.
-- [ ] Select compatible pinned Redis client/server releases, record the versions and audit them before adding them. Use async client calls and explicit shutdown; no dependency installation during plan drafting.
-- [ ] Add an isolated real-Redis test of TTL and tenant/version keys, using a controlled clock only for unit tests. Keep secrets/raw messages out of journal and readiness.
-- [ ] Run focused tests, dependency audit and readiness tests; commit with service configuration and operations documentation.
+- [x] Write tests for Hello/HELLO/hello!, whitespace, explicitly configured multilingual aliases, unknown messages, normalisation collisions and `Hello, buy 3 laptops` staying intact.
+- [x] Test cache outage/timeout/expiry/wrong payload, an encoded reply exceeding the 4,096-byte cache limit, and cross-tenant/policy scope. Assert the exact configured greeting still replies with zero model calls, while non-greetings continue unchanged.
+- [x] Run failing tests, then implement the exact configured-message map, cache adapter and local fallback. Verify cached text equals the current authoritative configured reply; cache data never determines permission to proceed.
+- [x] Select compatible pinned Redis client/server releases, record the versions and audit them before adding them. Use async client calls and explicit shutdown; no dependency installation during plan drafting.
+- [x] Add an isolated real-Redis test of TTL and tenant/version keys, using a controlled clock only for unit tests. Keep secrets/raw messages out of journal and readiness.
+- [ ] User commit/push with service configuration, operations documentation and the final evidence artifact. Hosted CI is checked on that new commit before Task 4.
 
 ### Task 4: Implement the LLM request router
 

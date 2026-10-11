@@ -249,3 +249,10 @@ class QueryConfig(LLMConfig,SearchConfig):
 from .platform_nodes import retrieve_node,query_node
 register(NodeDefinition('retrieve','Retrieve','Retrieval','Search a named knowledge base with configurable retrieval and fusion.',{'query':'string'},{'query':'string','context':'string','sources':'string'},SearchConfig,retrieve_node))
 register(NodeDefinition('query','Query','Retrieval','Retrieve evidence and generate a sourced answer using an enabled model.',{'query':'string'},{'text':'string','provider':'string','sources':'string','grounding':'string'},QueryConfig,query_node,('external_model_request',)))
+
+from .common_replies import greeting_cache_node
+from .request_contracts import GreetingCacheConfig
+register(NodeDefinition('greeting_cache','Greeting cache','Control',
+    'Reply to configured whole messages without a model; other requests continue unchanged.',
+    {'message':'string'},{'branch':'string','reply':'string','receipt':'string'},
+    GreetingCacheConfig,greeting_cache_node,branch_routes=('continue','reply')))

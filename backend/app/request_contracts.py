@@ -5,7 +5,6 @@ configuration/results only; constructing one does not authorise a downstream act
 """
 import json
 import re
-import unicodedata
 from typing import Annotated, Literal
 
 from pydantic import Field, StrictBool, StrictStr, field_validator, model_validator
@@ -59,7 +58,8 @@ class GreetingCacheConfig(StrictModel):
 
     @model_validator(mode='after')
     def unique_messages(self):
-        keys = [' '.join(unicodedata.normalize('NFC', e.message).casefold().split()) for e in self.entries]
+        from .common_replies import normalise_common_message
+        keys = [normalise_common_message(e.message) for e in self.entries]
         if len(set(keys)) != len(keys):raise ValueError('Prepared messages collide after lookup normalization.')
         return self
 
