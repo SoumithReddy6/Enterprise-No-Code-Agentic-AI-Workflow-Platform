@@ -1,0 +1,24 @@
+{
+  "reviewer": "fresh-context gpt-6-astra; read-only; no second reviewer",
+  "independent_tests": 144,
+  "critical": [],
+  "important": [
+    {
+      "finding": "Hardcoded temperature rejected authorized models that do not support optional sampling parameters.",
+      "location": "backend/app/request_router.py",
+      "reproduction": "Real shared OpenAI HTTP adapter enforced the unsupported parameter policy; router returned HTTP 400 while default LLM omitted temperature.",
+      "fix": "Use existing provider defaults; omit forced temperature/top-p.",
+      "regression": "test_router_initial_and_repair_do_not_force_unsupported_sampling_parameters",
+      "tdd": "RED: HTTP 400; GREEN: both initial and repair HTTP calls succeed, usage records two calls.",
+      "fixed": true
+    }
+  ],
+  "minor": [],
+  "declined_to_judge": [
+    "Runtime verification/receipt identity and approvals: Tasks 5\u20136/8, not claimed by Step 4.",
+    "Live semantic accuracy: author separately measured 4/7; scripted tests cannot certify it.",
+    "Redis infrastructure unchanged from Step 3; real adapter suite included in regression.",
+    "Complete palette/starter: Task 7; imported picker covered by author browser test.",
+    "Reviewer ran backend only; author separately ran browser and deployed tests."
+  ]
+}

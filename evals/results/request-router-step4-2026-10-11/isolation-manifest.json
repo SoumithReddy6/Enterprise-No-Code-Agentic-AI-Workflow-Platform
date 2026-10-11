@@ -1,0 +1,22 @@
+{
+  "base_commit": "953d4d20b8b8918ea3cb8e085b2472956b01e5cf",
+  "scratch": "/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/relay-step4-isolation-4agm_umu",
+  "files": {
+    "backend/app/request_router.py": "af3292406f3b1271d650a86b4affef1fa242bc2b142429a2e80f217b24be0253",
+    "backend/app/compiler.py": "dbd5da21a772a281e3a1f4020d1b6da60b527c6d508bd43f81c61a6270304099",
+    "backend/app/provenance.py": "fe509ca9b67d8c12ed6b00d6186030e84683ef28f761eed9f656fafdfd6fa932",
+    "backend/app/registry.py": "ddfd4a5f05cdf2274d632a9051f7507f40bc10b818c0ff4a8af4f1158a385269",
+    "backend/app/storage.py": "109ddabbff68c74da51beef78d0270d9d9f2969ec64fa43b076c8545afdff002",
+    "backend/tests/test_request_router.py": "49540f1993004d9d2fbf315d3a2c4f8b536e0042bc26dc3f940f8d2c8ba55309",
+    "backend/tests/test_request_contracts.py": "df5c24d1004ebfb227a0b84a4a4e718d1a94ca2a7cc12778513f3e1c6790b27d",
+    "backend/tests/test_common_replies.py": "68e78ee663b270508fafe8df74df01d858514a7e3a880826ec7846bb7014dd3a",
+    "frontend/components/workflow-editor.tsx": "0cc14295f3bf2e3f8e2a44101f1f8181aea90de2e12ca741d789e88f005b1c65",
+    "frontend/tests/browser/request-router.spec.ts": "b1a1b0b64a96e9fedd5a8ec7e1a9ca701654226e35b00d7ca58b0d41dfd123d3",
+    "frontend/tests/browser/request-router-node.json": "d51d172f9a1eb227d4d7e4117333363cc3c813f7fc26074b83716c952b1535d0",
+    "scripts/scenarios/request_routing.py": "2196899f68cc37d19a67ce0d0b0a305bc2602b7059b38c1e1284b69f8e1dd5ad",
+    "docs/operations.md": "35d4abcfb0fee2deec92a2d959fb87a134fed1d0977f8ed88adb0f675467290c",
+    "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md": "1d208d18667403ea33c52d18247d1f757d0359eb13ca6b8bad509535afb2c60d"
+  },
+  "backend_exit_code": 0,
+  "source_overlay_matches": true
+}

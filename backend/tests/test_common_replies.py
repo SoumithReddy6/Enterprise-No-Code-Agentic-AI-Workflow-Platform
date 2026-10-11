@@ -173,7 +173,8 @@ def test_scope_refuses_missing_identity_or_invalid_digests(changes):
 def admission_workflow(monkeypatch):
     from backend.app.registry import REGISTRY, NodeDefinition
     async def echo(inputs, config, ctx):
-        return {'branch': 'reply', 'reply': inputs['message'], 'decision': '{}'}
+        return {'branch': 'reply', 'reply': inputs['message'], 'decision': json.dumps({
+            'route': 'out_of_scope', 'reason': 'Test echo', 'missing_fields': [], 'reply': inputs['message']})}
     monkeypatch.setitem(REGISTRY, 'request_router', NodeDefinition('request_router', 'Test router', 'Control', '',
         {'message': 'string'}, {'branch': 'string', 'reply': 'string', 'decision': 'string'},
         RequestRouterConfig, echo, branch_routes=('continue', 'reply')))

@@ -425,6 +425,13 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     outputs=completed[node.id]
                     if control_routes(definition) and (not isinstance(outputs, dict) or outputs.get('branch') not in control_routes(definition)):
                         raise ValueError(f'{node.id} cannot be restored: its branch is not a declared control route.')
+                    if node.type=='request_router':
+                        from .request_router import checked_router_checkpoint
+                        source,_,port=node.inputs['message'].partition('.')
+                        original=state['values'].get(source,{}).get(port)
+                        try:checked_router_checkpoint(outputs,original,config)
+                        except ValueError:
+                            raise ValueError(f'{node.id} cannot be restored: its routing checkpoint no longer matches the original input, policy or decision. Start a new run.') from None
                     from .execution_policy import TRUNCATION_KEY,checked_truncation
                     if isinstance(outputs,dict) and TRUNCATION_KEY in outputs:
                         try:checked_truncation(outputs[TRUNCATION_KEY])
@@ -526,6 +533,10 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                           value={TRUNCATION_KEY:budget_truncation(node.id,outcome)} if outcome.budget_exhausted else {}
                           return {'values':{node.id:value}}
                       outputs=outcome.outputs
+                      if node.type=='request_router':
+                          from .request_router import ROUTING_KEY,routing_record
+                          # Runtime-created audit binding, never metadata supplied by the model/handler.
+                          outputs={**outputs,ROUTING_KEY:routing_record(outputs,inputs['message'],config)}
                       from . import provenance
                       body_type=next((n.type for n in full_workflow.nodes if n.id==getattr(config,'body',None)),None) if node.type=='for_each' else None
                       record=provenance.for_node(node,definition,inputs,outputs,state['values'],body_type)

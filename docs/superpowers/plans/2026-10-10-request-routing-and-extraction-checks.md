@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for native execution; use superpowers:subagent-driven-development only if the user chooses delegation. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Tasks 1 (`79216b8`) and 2 (`453dbb5`) committed; all five hosted CI jobs passed for each (runs `38148390994` and `38151170421`). Task 3's prepared-reply cache is implemented, independently reviewed and locally verified in the working tree on 2026-10-11; awaiting the user's commit/push and hosted CI. Tasks 4–8 remain pending. The router, extraction verification and business enforcement are not enabled; the editor's existing starter is unchanged. See [Step 2 interfaces](../../request-contract-interfaces.md) and `evals/results/request-contracts-step2-2026-10-11/report.json` for scope and evidence.
+**Status:** Tasks 1 (`79216b8`), 2 (`453dbb5`) and 3 (`953d4d2`) are committed; all five hosted CI jobs passed for each (runs `38148390994`, `38151170421`, `38155405292`). Task 4's router is implemented and locally verified on 2026-10-11; awaiting the user's commit/push and hosted CI. Its live-model smoke check matched 4 of 7 expected routes, so infrastructure success does not certify semantic routing accuracy. Tasks 5–8 remain pending. Extraction verification and business enforcement are not enabled; the editor's complete admission palette and starter remain unchanged. See `evals/results/request-router-step4-2026-10-11/report.json` for scope and evidence.
 
 **Goal:** Handle prepared greetings without an LLM, route other inputs by workflow purpose, and prevent unsupported extractions from authorising consequential actions.
 
@@ -101,7 +101,7 @@ Do not split graph semantics, retry policy or model accounting into competing im
 - [x] Run failing tests, then implement the exact configured-message map, cache adapter and local fallback. Verify cached text equals the current authoritative configured reply; cache data never determines permission to proceed.
 - [x] Select compatible pinned Redis client/server releases, record the versions and audit them before adding them. Use async client calls and explicit shutdown; no dependency installation during plan drafting.
 - [x] Add an isolated real-Redis test of TTL and tenant/version keys, using a controlled clock only for unit tests. Keep secrets/raw messages out of journal and readiness.
-- [ ] User commit/push with service configuration, operations documentation and the final evidence artifact. Hosted CI is checked on that new commit before Task 4.
+- [x] User committed/pushed Task 3 as `953d4d2`; all five hosted jobs passed in run `38155405292` before Task 4.
 
 ### Task 4: Implement the LLM request router
 
@@ -113,11 +113,13 @@ Do not split graph semantics, retry policy or model accounting into competing im
 - `async request_router_node(inputs: dict, config: RequestRouterConfig, ctx: Context) -> dict[str, str]` returns branch/reply/decision.
 - Initial/repair calls use existing authorised provider and spend persistence; no new retry/accounting loop.
 
-- [ ] Write tests for proceed/clarify/out_of_scope, missing purpose, malformed/extra fields, contradictory proceed payloads, invalid output twice, and no tools/delegation.
-- [ ] Assert router failure and token exhaustion cause no extraction or external call. Router acceptance remains model-derived, not source/verified metadata.
-- [ ] Run failing tests, then implement the prompt, one bounded repair and branch mapping. Keep the original extraction input bound to the trigger, not a router paraphrase.
-- [ ] Verify usage for both calls, model allowlist/credential enforcement, lease-loss/cancellation propagation, and saved-policy/input digests on replay with zero additional model calls.
-- [ ] Add deployed receiver tests: an out-of-scope request sends nothing; a deliberately wrong proceed still cannot bypass the later check. Commit the router independently.
+- [x] Write tests for proceed/clarify/out_of_scope, missing purpose, malformed/extra fields, contradictory proceed payloads, invalid output twice, and no tools/delegation.
+- [x] Assert router failure and token exhaustion cause no extraction or external call. Router acceptance remains model-derived, not source/verified metadata.
+- [x] Run failing tests, then implement the prompt, one bounded repair and branch mapping. Keep the original extraction input bound to the trigger, not a router paraphrase.
+- [x] Verify usage for both calls, model allowlist/credential enforcement, lease-loss/cancellation propagation, and saved-policy/input digests on replay with zero additional model calls.
+- [x] Add deployed receiver tests: an out-of-scope request sends nothing; a deliberately wrong proceed still cannot bypass the later check. The router commit is kept independent.
+
+- [ ] User commits/pushes the router independently, then hosted CI is checked before Task 5.
 
 ### Task 5: Implement deterministic extraction verification
 

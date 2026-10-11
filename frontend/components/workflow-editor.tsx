@@ -162,7 +162,7 @@ function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
         <MoreHorizontal size={17} className="muted" />
       </div>
       <p>
-        {['llm', 'agent', 'query'].includes(spec.type)
+        {['llm', 'agent', 'query', 'request_router'].includes(spec.type)
           ? spec.config.provider === 'demo'
             ? 'Demo provider'
             : String(spec.config.model)
@@ -705,7 +705,7 @@ function Editor() {
           .map(([k, p]) => [k, p.default]),
       ),
     };
-    if (['agent', 'query', 'llm'].includes(type)) {
+    if (['agent', 'query', 'llm', 'request_router'].includes(type)) {
       const model =
         allowedModels.find((m) => m.enabled && m.provider === 'ollama') ||
         allowedModels.find((m) => m.enabled);
@@ -1603,7 +1603,7 @@ function Editor() {
                         0 && (
                         <section className="settings-section">
                           <h3>CONFIGURATION</h3>
-                          {['llm', 'agent', 'query'].includes(chosen.type) && (
+                          {['llm', 'agent', 'query', 'request_router'].includes(chosen.type) && (
                             <label>
                               Model
                               <select
@@ -1686,7 +1686,7 @@ function Editor() {
                                   key === 'storage_path'
                                 ) &&
                                 !(
-                                  ['llm', 'agent', 'query'].includes(
+                                  ['llm', 'agent', 'query', 'request_router'].includes(
                                     chosen.type,
                                   ) &&
                                   [

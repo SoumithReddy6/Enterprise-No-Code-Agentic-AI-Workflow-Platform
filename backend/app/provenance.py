@@ -345,6 +345,10 @@ def for_node(node, definition, inputs, outputs, state_values, body_type=None, or
         eligible = origins if origins is not None else evidence_context(node, inputs, state_values)
         if eligible.complete and inputs.get('query') in eligible.eligible_texts:
             record['eligible_ports'] = ['query']
+    elif node.type == 'request_router':
+        # Admission remains a model judgment, including its branch and explanation.
+        # Nothing here can become evidence for extraction or a business decision.
+        record['ports'] = {p: GUESSED for p in ports}
     elif node.type in MODEL_NODES:
         # Model text is a guess; the other ports are Relay's own records of the call.
         record['ports'] = {p: (GUESSED if p in ('text', 'grounding') else SOURCE) for p in ports}

@@ -428,7 +428,7 @@ class Store:
         from .registry import LLMConfig
         errors=[]
         for node in workflow.nodes:
-            if node.type not in ('llm','grounded_answer','agent','query'):continue
+            if node.type not in ('llm','grounded_answer','agent','query','request_router'):continue
             try:
                 from .registry import REGISTRY
                 config=REGISTRY[node.type].config_model.model_validate(node.config)

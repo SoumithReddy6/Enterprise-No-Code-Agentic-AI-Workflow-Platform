@@ -1,0 +1,220 @@
+[
+  {
+    "type": "chat_input",
+    "name": "Chat input",
+    "version": 1,
+    "category": "Input",
+    "description": "Start with a message from the run panel.",
+    "inputs": {},
+    "optional_inputs": {},
+    "outputs": {
+      "message": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "EmptyConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
+    "type": "greeting_cache",
+    "name": "Greeting cache",
+    "version": 1,
+    "category": "Control",
+    "description": "Reply to configured whole messages without a model; other requests continue unchanged.",
+    "inputs": {
+      "message": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "branch": "string",
+      "reply": "string",
+      "receipt": "string"
+    },
+    "branch_routes": [
+      "continue",
+      "reply"
+    ],
+    "config_schema": {
+      "$defs": {
+        "CommonReply": {
+          "additionalProperties": false,
+          "properties": {
+            "message": {
+              "maxLength": 256,
+              "minLength": 1,
+              "title": "Message",
+              "type": "string"
+            },
+            "reply": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Reply",
+              "type": "string"
+            }
+          },
+          "required": [
+            "message",
+            "reply"
+          ],
+          "title": "CommonReply",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/$defs/CommonReply"
+          },
+          "maxItems": 100,
+          "title": "Entries",
+          "type": "array"
+        }
+      },
+      "title": "GreetingCacheConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
+    "type": "request_router",
+    "name": "Request router",
+    "version": 1,
+    "category": "Control",
+    "description": "Classify the original request using saved workflow rules; acceptance still requires extraction checks.",
+    "inputs": {
+      "message": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "branch": "string",
+      "reply": "string",
+      "decision": "string"
+    },
+    "branch_routes": [
+      "continue",
+      "reply"
+    ],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "purpose": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Purpose",
+          "type": "string"
+        },
+        "accepted_requests": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Accepted Requests",
+          "type": "array"
+        },
+        "exclusions": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Exclusions",
+          "type": "array"
+        },
+        "clarification_rules": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Clarification Rules",
+          "type": "array"
+        },
+        "examples": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Examples",
+          "type": "array"
+        },
+        "provider": {
+          "default": "demo",
+          "enum": [
+            "demo",
+            "openai",
+            "claude",
+            "ollama"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "default": "gpt-4.1-mini",
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "credential_id": {
+          "default": "",
+          "maxLength": 128,
+          "title": "Credential Id",
+          "type": "string"
+        },
+        "max_tokens": {
+          "default": 2048,
+          "maximum": 16384,
+          "minimum": 1,
+          "title": "Max Tokens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "purpose"
+      ],
+      "title": "RequestRouterConfig",
+      "type": "object"
+    },
+    "side_effects": [
+      "external_model_request"
+    ],
+    "hidden": false
+  },
+  {
+    "type": "response",
+    "name": "Response",
+    "version": 1,
+    "category": "Output",
+    "description": "Finish this path and return text.",
+    "inputs": {
+      "text": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string",
+      "sources": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "EmptyConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  }
+]

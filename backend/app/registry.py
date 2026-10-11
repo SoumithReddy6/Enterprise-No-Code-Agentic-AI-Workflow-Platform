@@ -256,3 +256,11 @@ register(NodeDefinition('greeting_cache','Greeting cache','Control',
     'Reply to configured whole messages without a model; other requests continue unchanged.',
     {'message':'string'},{'branch':'string','reply':'string','receipt':'string'},
     GreetingCacheConfig,greeting_cache_node,branch_routes=('continue','reply')))
+
+from .request_router import request_router_node
+from .request_contracts import RequestRouterConfig
+register(NodeDefinition('request_router','Request router','Control',
+    'Classify the original request using saved workflow rules; acceptance still requires extraction checks.',
+    {'message':'string'},{'branch':'string','reply':'string','decision':'string'},
+    RequestRouterConfig,request_router_node,side_effects=('external_model_request',),
+    branch_routes=('continue','reply')))

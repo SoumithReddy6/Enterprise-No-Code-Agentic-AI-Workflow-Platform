@@ -412,3 +412,47 @@ over.
 Provider-level retries inside a single model call are covered by the token ceiling
 checked before that call, not re-checked per retry; a call already in flight is allowed
 to complete.
+
+## Request router
+
+`request_router` is a contract-2 flow node after the greeting cache. Configure a purpose,
+accepted request descriptions, exclusions, clarification rules and examples, and select
+an enabled model belonging to the workspace. Demo mode cannot classify requests and
+fails with a model-selection instruction. The existing Agent `router` role continues
+to mean specialist delegation.
+
+The node sends the original message as separate user data and the saved brief as system
+rules. It has no tools, specialist delegation or write capability. `proceed` maps to
+`continue`; `clarify` and `out_of_scope` map to `reply`, which must terminate at a Response.
+All three public values (`branch`, `reply`, `decision`) remain model-derived guesses.
+A proceed verdict is admission to read-only extraction/checking, never approval of a
+purchase, refund or external write. Full verification and human review land separately;
+the editor's complete admission palette and new-workflow starter are not activated yet.
+
+The initial response and at most one structured repair use the existing provider,
+credential authorization, token ceiling and durable usage records. Both calls count
+toward tokens, with no separate router action budget. Sampling settings use provider
+defaults, so models that reject optional temperature/top-p parameters remain usable. Invalid output after repair,
+provider failure, token exhaustion, cancellation and lease loss do not default to proceed.
+The maximum legal saved brief is accepted by a private bounded call configuration;
+the public plain LLM node's prompt limits are unchanged.
+
+A router checkpoint carries runtime-created `_routing` metadata containing SHA256
+digests of the exact input, full router settings and validated decision. Replay checks
+those digests and the branch/reply consistency, then uses the saved decision without
+another model call. A missing, malformed or mismatched record refuses resume before
+downstream execution: start a new run. These digests are audit bindings, not verification
+receipts or evidence of semantic correctness. Routing verdicts are never stored in Redis.
+
+`request_router.decision` journals only the node and route code; `request_router.repair`
+records only `invalid_output`. Prompts, input text, replies, reasons and credentials are
+not added to structured journal lines. Normal run history still contains the configured
+workflow and its outputs as it does for other nodes.
+
+**Measured limitation.** The Step 4 exploratory `llama3.1:latest` smoke check matched
+4 of 7 expected routes: one complete greeting-prefixed request was sent to clarification,
+and two questions produced invalid decisions even after repair. Those invalid outputs
+failed without downstream execution. A separate repeat of one question succeeded, so
+these observations are not a deterministic accuracy guarantee. Full multi-workflow
+calibration is Task 8; deterministic extraction checks and business enforcement are
+Tasks 5–6. Do not treat the router alone as a correctness or authorization boundary.
