@@ -21,6 +21,7 @@ export type WorkflowEdge = {
 export type Issue = { node_id: string | null; message: string };
 export type Workflow = {
   version: 1;
+  contract?: 1 | 2;
   name: string;
   description: string;
   nodes: WorkflowNode[];
@@ -42,7 +43,9 @@ export type Definition = {
   category: string;
   description: string;
   inputs: Record<string, string>;
+  optional_inputs?: Record<string, string>;
   outputs: Record<string, string>;
+  branch_routes?: string[];
   config_schema: { properties: Record<string, ConfigProperty> };
 };
 export type RunEvent = {
@@ -89,6 +92,14 @@ export type Run = {
 };
 export type Credential = { id: string; name: string; provider: string };
 export type SavedWorkflow = { id: string; name: string; updated_at: string };
+
+export const controlRoutes = (definition?: Definition): string[] => definition?.branch_routes ?? [];
+export const inputPorts = (definition: Definition): Record<string, string> => ({ ...definition.inputs, ...definition.optional_inputs });
+export function setInputBinding(definition: Definition, bindings: Record<string, string>, port: string, value: string): Record<string, string> {
+  const next = { ...bindings, [port]: value };
+  if (!value && Object.hasOwn(definition.optional_inputs ?? {}, port)) delete next[port];
+  return next;
+}
 
 export const seed: Workflow = {
   version: 1,
@@ -225,6 +236,7 @@ export function sameExecutionGraph(a: Workflow, b: Workflow): boolean {
     return JSON.stringify(value) ?? 'null';
   };
   const executable = (w: Workflow) => ({
+    contract: w.contract ?? 1,
     nodes: w.nodes
       .map(({ id, type, version, inputs, config }) => ({
         id,

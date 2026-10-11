@@ -8,12 +8,14 @@
   "inputs": {
    "input": "string"
   },
+  "optional_inputs": {},
   "outputs": {
    "text": "string",
    "provider": "string",
    "sources": "string",
    "grounding": "string"
   },
+  "branch_routes": [],
   "config_schema": {
    "additionalProperties": false,
    "properties": {
@@ -146,9 +148,11 @@
   "inputs": {
    "value": "string"
   },
+  "optional_inputs": {},
   "outputs": {
    "text": "string"
   },
+  "branch_routes": [],
   "config_schema": {
    "additionalProperties": false,
    "properties": {
@@ -186,9 +190,11 @@
   "category": "Input",
   "description": "Start with a message from the run panel.",
   "inputs": {},
+  "optional_inputs": {},
   "outputs": {
    "message": "string"
   },
+  "branch_routes": [],
   "config_schema": {
    "additionalProperties": false,
    "properties": {},
@@ -207,9 +213,14 @@
   "inputs": {
    "value": "string"
   },
+  "optional_inputs": {},
   "outputs": {
    "branch": "string"
   },
+  "branch_routes": [
+   "true",
+   "false"
+  ],
   "config_schema": {
    "additionalProperties": false,
    "properties": {
@@ -314,9 +325,11 @@
   "inputs": {
    "message": "string"
   },
+  "optional_inputs": {},
   "outputs": {
    "text": "string"
   },
+  "branch_routes": [],
   "config_schema": {
    "additionalProperties": false,
    "properties": {
@@ -342,10 +355,12 @@
   "inputs": {
    "text": "string"
   },
+  "optional_inputs": {},
   "outputs": {
    "text": "string",
    "sources": "string"
   },
+  "branch_routes": [],
   "config_schema": {
    "additionalProperties": false,
    "properties": {},

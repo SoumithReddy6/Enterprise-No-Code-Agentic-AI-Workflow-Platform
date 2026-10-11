@@ -89,6 +89,9 @@ import {
   trustSummary,
   trustText,
   type Issue,
+  controlRoutes,
+  inputPorts,
+  setInputBinding,
 } from '@/lib/workflow';
 import '@xyflow/react/dist/style.css';
 import StudioDialog from './studio-dialog';
@@ -189,27 +192,14 @@ function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
           <span className="port-label right">specialists</span>
         </>
       )}
-      {spec.type === 'condition' ? (
-        <>
-          <Handle
-            type="source"
-            id="true"
-            position={Position.Bottom}
-            style={{ left: '30%' }}
-          />
-          <span className="port-label bottom" style={{ left: '25%' }}>
-            true
-          </span>
-          <Handle
-            type="source"
-            id="false"
-            position={Position.Bottom}
-            style={{ left: '75%' }}
-          />
-          <span className="port-label bottom" style={{ left: '70%' }}>
-            false
-          </span>
-        </>
+      {controlRoutes(definition).length ? (
+        controlRoutes(definition).map((route, index, routes) => (
+          <div key={route}>
+            <Handle type="source" id={route} position={Position.Bottom}
+              style={{ left: `${30 + index * 45 / (routes.length - 1)}%` }} />
+            <span className="port-label bottom" style={{ left: `${25 + index * 45 / (routes.length - 1)}%` }}>{route}</span>
+          </div>
+        ))
       ) : (
         spec.type !== 'response' && (
           <Handle type="source" position={Position.Bottom} />
@@ -234,6 +224,7 @@ function Editor() {
   >(seed.edges);
   const [name, setName] = useState(seed.name);
   const [description, setDescription] = useState(seed.description);
+  const [contract, setContract] = useState<1 | 2>(seed.contract ?? 1);
   const [workflowId, setWorkflowId] = useState<string>();
   const [workflowVersion, setWorkflowVersion] = useState<string>();
   const [saveConflict, setSaveConflict] = useState<{ id: string; workflow: Workflow; updated_at: string }>();
@@ -292,6 +283,7 @@ function Editor() {
   const documentToken = useRef(0);
   const workflow: Workflow = {
     version: 1,
+    contract,
     name,
     description,
     nodes: nodes.map((n) => ({ ...n.data.spec, position: n.position })),
@@ -398,6 +390,7 @@ function Editor() {
     setWarnings([]);
   }
   function apply(w: Workflow) {
+    setContract(w.contract ?? 1);
     setNodes(toCanvas(w));
     setEdges(w.edges);
     setName(w.name);
@@ -1552,7 +1545,7 @@ function Editor() {
                       />
                     </label>
                     {definition &&
-                      Object.keys(definition.inputs).length > 0 &&
+                      Object.keys(inputPorts(definition)).length > 0 &&
                       !edges.some(
                         (e) =>
                           (e.kind === 'tool' && e.source === chosen.id) ||
@@ -1572,18 +1565,15 @@ function Editor() {
                             </div>
                           )}
                           <h3>INPUT BINDINGS</h3>
-                          {Object.keys(definition.inputs).map((port) => (
+                          {Object.keys(inputPorts(definition)).map((port) => (
                             <label key={port}>
-                              {port}
+                              {port}{Object.hasOwn(definition.optional_inputs ?? {}, port) ? ' (optional)' : ''}
                               <select
                                 disabled={running}
                                 value={chosen.inputs[port] || ''}
                                 onChange={(e) =>
                                   modifyNode({
-                                    inputs: {
-                                      ...chosen.inputs,
-                                      [port]: e.target.value,
-                                    },
+                                    inputs: setInputBinding(definition, chosen.inputs, port, e.target.value),
                                   })
                                 }
                               >

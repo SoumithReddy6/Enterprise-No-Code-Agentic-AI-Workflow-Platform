@@ -1,5 +1,5 @@
 """Reusable node contracts and execution handlers. No business workflows live here."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Literal
 import asyncio
 import json
@@ -72,11 +72,14 @@ RESERVED_PORT_PREFIX='_'
 
 
 def check_port_names(definition):
-    for kind,ports in (('input',definition.inputs),('output',definition.outputs)):
+    for kind,ports in (('input',definition.inputs),('optional input',definition.optional_inputs),('output',definition.outputs)):
         reserved=sorted(str(name) for name in ports if not isinstance(name,str) or name.startswith(RESERVED_PORT_PREFIX))
         if reserved:
             raise ValueError(f"{definition.type}: {kind} port names cannot start with '{RESERVED_PORT_PREFIX}' "
                              f"({', '.join(reserved)}); that prefix is reserved for run metadata.")
+    if set(definition.inputs) & set(definition.optional_inputs):raise ValueError('Required and optional input names must be disjoint.')
+    from .request_contracts import control_routes
+    control_routes(definition)
 
 
 @dataclass
@@ -91,6 +94,8 @@ class NodeDefinition:
     handler: Callable[..., Awaitable[dict]]
     side_effects: tuple[str, ...] = ()
     hidden: bool = False
+    branch_routes: tuple[str, ...] = ()
+    optional_inputs: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
         check_port_names(self)
@@ -98,7 +103,8 @@ class NodeDefinition:
     def public(self):
         return {'type': self.type, 'name': self.name, 'version': 1,
                 'category': self.category, 'description': self.description,
-                'inputs': self.inputs, 'outputs': self.outputs,
+                'inputs': self.inputs, 'optional_inputs': self.optional_inputs, 'outputs': self.outputs,
+                'branch_routes': self.branch_routes,
                 'config_schema': self.config_model.model_json_schema(),
                 'side_effects': self.side_effects,'hidden':self.hidden}
 
@@ -206,7 +212,7 @@ for definition in [
     NodeDefinition('manual_input', 'Manual trigger', 'Input', 'Start a workflow on demand with a text payload.', {}, {'message':'string'}, EmptyConfig, input_node),
     NodeDefinition('prompt', 'Prompt template', 'Transform', 'Compose a prompt with {message}.', {'message':'string'}, {'text':'string'}, PromptConfig, prompt_node),
     NodeDefinition('llm', 'Language model', 'AI', 'Generate text with a model, or test with demo mode.', {'prompt':'string'}, {'text':'string','provider':'string'}, LLMConfig, llm_node, ('external_model_request',)),
-    NodeDefinition('condition', 'Condition', 'Control', 'Route to true or false by comparing a value: text, number, membership or empty.', {'value':'string'}, {'branch':'string'}, ConditionConfig, condition_node),
+    NodeDefinition('condition', 'Condition', 'Control', 'Route to true or false by comparing a value: text, number, membership or empty.', {'value':'string'}, {'branch':'string'}, ConditionConfig, condition_node, branch_routes=('true','false')),
     NodeDefinition('calculate', 'Calculate', 'Transform', 'Compute or check numbers from JSON fields exactly, in code rather than a model.', {'value':'string'}, {'text':'string'}, CalculateConfig, calculate_node),
     NodeDefinition('response', 'Response', 'Output', 'Finish this path and return text.', {'text':'string'}, {'text':'string','sources':'string'}, EmptyConfig, response_node),
 ]:

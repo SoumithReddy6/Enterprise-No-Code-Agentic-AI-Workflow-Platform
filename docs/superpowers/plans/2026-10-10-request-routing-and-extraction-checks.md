@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for native execution; use superpowers:subagent-driven-development only if the user chooses delegation. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Task 1 implemented and verified in the working tree on 2026-10-10; awaiting the user's commit. Tasks 2–8 remain pending. No router, cache, verification gate or enforcement has been enabled.
+**Status:** Task 1 committed as `79216b8`; all five hosted CI jobs passed (run `38148390994`). Task 2 implemented and independently reviewed in the working tree on 2026-10-11; awaiting the user's commit. Tasks 3–8 remain pending. No new router, cache, verification gate or enforcement has been enabled. See [Step 2 interfaces](../../request-contract-interfaces.md) and `evals/results/request-contracts-step2-2026-10-11/report.json` for scope and evidence.
 
 **Goal:** Handle prepared greetings without an LLM, route other inputs by workflow purpose, and prevent unsupported extractions from authorising consequential actions.
 
@@ -14,7 +14,7 @@
 
 ## Global Constraints
 
-- Baseline: `dad766e`; R01–R12 are reproduced, not yet fixed. Do not assume the green 1,195-test baseline closes them.
+- Audit baseline: `dad766e`; R01–R12 were reproduced and then repaired in Task 1 (`79216b8`). Its tests and hosted CI are recorded separately from the original 1,195-test baseline.
 - New workflows default to contract 2; no separate old-workflow conversion project.
 - Original messages remain unchanged. Router replies/examples/cache text never become extraction evidence.
 - Cache exact whole-message entries only; no cached acceptance, approval or write result.
@@ -65,7 +65,7 @@ Do not split graph semantics, retry policy or model accounting into competing im
 - [x] Add failing R05/R06 arithmetic tests, R08 coalesce/boolean short-circuit tests, R09 cached inspector receipt test, and R11 per-item/attached labels and resume tests.
 - [x] Fix selected-operator evaluation, exact sign handling, static certainty wording, replay receipts and shared labelling without changing the retry/lease boundary.
 - [x] Run focused tests and all backend/frontend tests affected. The old defect-probe script should now stop reproducing defects; its exit code alone is not the new acceptance test. Do not overwrite its original JSON artifact.
-- [ ] Commit the independently reviewed repair. Implementation ruling: supply one atomic commit for the tested shared v2 record/context contract, rather than intermediate combinations of graph and attached producers. A clean export of HEAD plus the exact file list is verified before handing the command to the user.
+- [x] Commit the independently reviewed repair (`79216b8`). Implementation ruling: supply one atomic commit for the tested shared v2 record/context contract, rather than intermediate combinations of graph and attached producers. A clean export of HEAD plus the exact file list is verified before handing the command to the user.
 
 ### Task 2: Declare contracts and control-flow interfaces
 
@@ -77,12 +77,13 @@ Do not split graph semantics, retry policy or model accounting into competing im
 - Add `NodeDefinition.branch_routes: tuple[str, ...] = ()` and `optional_inputs: dict[str, str]` with an empty default. Publish both additively. Existing Condition declares true/false; new entry/check nodes declare continue/reply.
 - `request_contracts.control_routes(definition) -> tuple[str, ...]` is used by compiler and registry-backed editor, rather than another hand-maintained node-type list.
 
-- [ ] Write tests for round trips, old documents omitting contract, unknown fields, exact limits, route-key consistency and reserved optional-port names.
-- [ ] Run them before adding the contracts; confirm the intended failures.
-- [ ] Implement strict schemas and two-handle controls. Optional inputs are optional bindings, not implicit source lookups; validate every provided reference with normal availability guarantees.
-- [ ] Test control nodes reject recovery without a branch, extra/missing edges and body/tool attachments. Re-run S08-style binding tests on both routes.
-- [ ] Add contract-2 validation tests: entry chain required; a router accepted path cannot directly reach a write; required verification cannot be bypassed by an error edge or attachment. Invalid drafts remain saveable, invalid submissions create no run.
-- [ ] Regenerate registry-backed browser fixtures for the additive fields, run compiler/workflow integrity/registry/type and fixture parity tests; commit the seam without new node handlers registered until their owning task implements them.
+- [x] Write tests for round trips, old documents omitting contract, unknown fields, exact limits, route-key consistency and reserved optional-port names.
+- [x] Run them before adding the contracts; confirm the intended failures.
+- [x] Implement strict schemas and two-handle controls. Optional inputs are optional bindings, not implicit source lookups; validate every provided reference with normal availability guarantees.
+- [x] Test control nodes reject recovery without a branch, extra/missing edges and body/tool attachments. Re-run S08-style binding tests on both routes.
+- [x] Add contract-2 validation tests: entry chain required; a router accepted path cannot directly reach a write; required verification cannot be bypassed by an error edge or attachment. Invalid drafts remain saveable, invalid submissions create no run.
+- [x] Regenerate registry-backed browser fixtures for the additive fields and run compiler/workflow integrity/registry/type, fixture parity and browser tests. Independently review the seam; model calls inside attached loop bodies are included in decision dependency checks.
+- [ ] Commit the seam without new node handlers registered until their owning task implements them. The editor's contract-2 starter activates in Task 7 when the full path exists; Step 2 preserves contract versions but keeps today's starter runnable.
 
 ### Task 3: Implement exact prepared-reply caching
 

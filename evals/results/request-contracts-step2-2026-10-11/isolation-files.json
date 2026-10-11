@@ -1,0 +1,22 @@
+{
+  "base": "79216b8d5a90a8362cbb8085c01d180737834ac1",
+  "files": [
+    "backend/app/compiler.py",
+    "backend/app/models.py",
+    "backend/app/platform_graph.py",
+    "backend/app/registry.py",
+    "backend/app/request_contracts.py",
+    "backend/tests/test_request_contract_validation.py",
+    "backend/tests/test_request_contracts.py",
+    "backend/tests/test_request_control_flow.py",
+    "docs/request-contract-interfaces.md",
+    "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md",
+    "frontend/components/workflow-editor.tsx",
+    "frontend/lib/workflow.ts",
+    "frontend/tests/browser/condition-node.json",
+    "frontend/tests/browser/example-catalog.json",
+    "frontend/tests/browser/request-control.spec.ts",
+    "frontend/tests/request-contracts.test.ts"
+  ],
+  "directory": "/private/tmp/relay-task2-isolation-g_dhjvz3"
+}

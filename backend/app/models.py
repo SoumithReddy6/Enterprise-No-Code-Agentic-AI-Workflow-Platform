@@ -1,6 +1,6 @@
 """Portable, versioned workflow representation, independent of the editor/runtime."""
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -37,7 +37,14 @@ class Edge(StrictModel):
 
 class Workflow(StrictModel):
     version: Literal[1] = 1
+    contract: Literal[1, 2] = 1
     name: str = Field(min_length=1, max_length=120)
     description: str = Field(default='', max_length=2000)
     nodes: list[Node] = Field(min_length=1, max_length=100)
     edges: list[Edge] = Field(default_factory=list, max_length=200)
+
+    @field_validator('contract', mode='before')
+    @classmethod
+    def exact_contract(cls, value):
+        if type(value) is not int:raise ValueError('Workflow contract must be the integer 1 or 2.')
+        return value

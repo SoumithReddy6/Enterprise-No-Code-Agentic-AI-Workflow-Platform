@@ -8,6 +8,7 @@ import time
 from langgraph.graph import StateGraph, START, END
 from pydantic import ValidationError
 from .models import Workflow
+from .request_contracts import control_routes
 from .registry import REGISTRY, RESERVED_PORT_PREFIX, Context, validate_template
 from . import exact_json
 from .approvals import ApprovalPause
@@ -128,7 +129,7 @@ def _validate_flow(workflow: Workflow) -> list[str]:
         try:
             config = definition.config_model.model_validate(node.config)
             if node.type == 'prompt': validate_template(config.template)
-            if node.type in ('llm','agent','query') and config.provider in ('openai','claude') and not config.credential_id:
+            if node.type in ('llm','agent','query','request_router') and config.provider in ('openai','claude') and not config.credential_id:
                 errors.append(f'{node.id}: choose a credential for {config.provider}.')
         except ValidationError as exc:
             if node.type in ('condition', 'calculate'):
@@ -139,25 +140,26 @@ def _validate_flow(workflow: Workflow) -> list[str]:
                 errors.append(f'{node.id}: invalid configuration. Check required fields and template syntax; inline credentials are not allowed.')
         except ValueError:
             errors.append(f'{node.id}: invalid configuration. Check required fields and template syntax; inline credentials are not allowed.')
-        if set(node.inputs) != set(definition.inputs):
+        routes = control_routes(definition)
+        if not set(definition.inputs) <= set(node.inputs) or set(node.inputs) - (set(definition.inputs) | set(definition.optional_inputs)):
             errors.append(f'{node.id}: required inputs are {", ".join(definition.inputs) or "none"}.')
         links = outgoing[node.id]
         if node.type in ('chat_input', 'manual_input') and incoming[node.id]:
             errors.append(f'{node.id}: trigger cannot have incoming edges.')
         if node.type == 'response':
             if links: errors.append(f'{node.id}: response must be a terminal node.')
-        elif node.type == 'condition':
-            if len(links) != 2 or {e.sourceHandle for e in links} != {'true', 'false'}:
-                errors.append(f'{node.id}: condition needs one true and one false edge.')
+        elif routes:
+            if len(links) != len(routes) or {e.sourceHandle for e in links} != set(routes):
+                errors.append(f'{node.id}: {node.type} needs exactly one edge for each control route: {", ".join(routes)}.')
             # Routing reads the branch, so recovering without one leaves no path to take.
             if node.on_error != 'fail':
-                errors.append(f"{node.id}: a condition cannot use on_error '{node.on_error}'; its branch is required to choose the next node.")
+                errors.append(f"{node.id}: a {node.type} cannot use on_error '{node.on_error}'; its branch is required to choose the next node.")
         elif node.on_error == 'route':
             if len(links) != 2 or {e.sourceHandle for e in links} != {None, 'error'} and {e.sourceHandle for e in links} != {'output', 'error'}:
                 errors.append(f'{node.id}: on_error route needs exactly one normal edge and one error edge.')
         elif len(links) != 1:
             errors.append(f'{node.id}: connect exactly one next node; parallel branches are not supported yet.')
-        if node.type != 'condition' and node.on_error != 'route' and any(e.sourceHandle not in (None, 'output') for e in links):
+        if not routes and node.on_error != 'route' and any(e.sourceHandle not in (None, 'output') for e in links):
             errors.append(f'{node.id}: invalid source handle.')
         if node.on_error != 'route' and any(e.sourceHandle == 'error' for e in links):
             errors.append(f"{node.id}: an error edge requires on_error 'route'.")
@@ -219,10 +221,115 @@ def _validate_flow(workflow: Workflow) -> list[str]:
 
 def validate_workflow(workflow: Workflow) -> list[str]:
     from .platform_graph import split_graph
-    flow,_,errors=split_graph(workflow)
+    flow,deps,errors=split_graph(workflow)
     if len({n.id for n in workflow.nodes})!=len(workflow.nodes):errors.append('Node IDs must be unique.')
     if len({e.id for e in workflow.edges})!=len(workflow.edges):errors.append('Edge IDs must be unique.')
-    return errors+_validate_flow(flow)
+    errors += _validate_flow(flow)
+    errors += request_contract_errors(workflow, flow, deps)
+    return errors
+
+
+def request_contract_errors(workflow, flow, deps):
+    """Structural prerequisites only. Value-bound runtime eligibility is a later boundary.
+
+    Availability is outcome-aware (including error routes). A checked value is a data
+    dependency, not permission granted by a guard's mere presence elsewhere in the DAG.
+    """
+    guards = {'greeting_cache', 'request_router', 'verify_extraction'}
+    if workflow.contract == 1:
+        return [f'{n.id}: request admission nodes require workflow contract 2.' for n in workflow.nodes if n.type in guards]
+    errors = []
+    order, arrivals, nodes = flow_order(flow)
+    _, available = binding_guarantees(order, arrivals, nodes)
+    full = {n.id: n for n in workflow.nodes}
+    outgoing = {id: [e for e in flow.edges if e.source == id] for id in nodes}
+    triggers = [n for n in flow.nodes if n.type in ('chat_input', 'manual_input')]
+    if len(triggers) != 1:return ['Contract 2 requires exactly one entry trigger.']
+    trigger = triggers[0]
+    original = trigger.id + '.message'
+    first = outgoing[trigger.id]
+    cache = nodes.get(first[0].target) if len(first) == 1 else None
+    router_edges = [e for e in outgoing.get(cache.id, []) if e.sourceHandle == 'continue'] if cache else []
+    router = nodes.get(router_edges[0].target) if len(router_edges) == 1 else None
+    if not cache or cache.type != 'greeting_cache' or not router or router.type != 'request_router':
+        errors.append('Contract 2 entry must be Input → Greeting cache → Request router on continue.')
+    for node in flow.nodes:
+        if node.type in guards:
+            for edge in outgoing[node.id]:
+                if edge.sourceHandle == 'reply' and nodes.get(edge.target) and nodes[edge.target].type != 'response':
+                    errors.append(f'{node.id}: reply must terminate at a Response; it cannot reach an action.')
+        if node.type in ('greeting_cache', 'request_router') and node.inputs.get('message') != original:
+            errors.append(f'{node.id}: bind the original trigger message; admission text is not extraction evidence.')
+        if node.type == 'request_router' and (not router or node.id != router.id):
+            errors.append(f'{node.id}: request router must be the declared entry router.')
+        if node.type == 'greeting_cache' and (not cache or node.id != cache.id):
+            errors.append(f'{node.id}: greeting cache must be the declared entry cache.')
+        if node.type == 'verify_extraction':
+            if node.inputs.get('original') != original:errors.append(f'{node.id}: verification requires the original trigger message.')
+            reference = node.inputs.get('reference')
+            rules = node.config.get('field_rules', [])
+            if isinstance(rules, list) and any(r.get('kind') == 'reference_member' for r in rules if isinstance(r, dict)) and not reference:
+                errors.append(f'{node.id}: reference_member rules require a reference binding.')
+            if reference and not independent_reference(reference, nodes):
+                errors.append(f'{node.id}: reference must come from an independent read, not a model, echo or transformation.')
+        if node.type == 'agent' and node.config.get('role') in ('extraction', 'classification') and node.inputs.get('input') != original:
+            errors.append(f'{node.id}: extraction must bind the original trigger message.')
+        model_inputs = any(unchecked_model_input(ref, full, deps) for ref in node.inputs.values())
+        consequential = is_write_node(node, REGISTRY.get(node.type)) or (model_inputs and (node.type == 'condition' or (node.type == 'calculate' and node.config.get('mode') == 'check')))
+        if consequential:
+            if not any(nodes[id].type == 'verify_extraction' for id in available.get(node.id, set())):
+                errors.append(f'{node.id}: consequential execution requires successful verification on every path.')
+            if model_inputs:
+                errors.append(f'{node.id}: bind verified values; a raw model output cannot bypass extraction checking.')
+            if is_write_node(node, REGISTRY.get(node.type)) and not any(checked_dependency(ref, nodes) for ref in node.inputs.values()):
+                errors.append(f'{node.id}: an external write must bind a verified value or its deterministic calculation.')
+        attached = set()
+        def visit(id):
+            for dep in deps.get(id, []):
+                if dep not in attached:attached.add(dep);visit(dep)
+        visit(node.id)
+        if any(is_write_node(full[id], REGISTRY.get(full[id].type)) for id in attached if id in full):
+            if not any(nodes[id].type == 'verify_extraction' for id in available.get(node.id, set())) or not any(checked_dependency(ref, nodes) for ref in node.inputs.values()):
+                errors.append(f'{node.id}: attached writes require verification before their caller; router acceptance is insufficient.')
+    return errors
+
+
+def independent_reference(ref, nodes):
+    source, sep, port = ref.partition('.')
+    node = nodes.get(source)
+    # Read configuration and binding are checked normally too. Independence of the
+    # returned records still requires the runtime evidence/receipt checks in Task 5.
+    return bool(sep and node and node.type in ('tool_jira', 'tool_confluence', 'tool_github', 'retrieve') and not is_write_node(node, REGISTRY.get(node.type)))
+
+
+def unchecked_model_input(ref, nodes, deps=None, seen=None):
+    source, sep, port = ref.partition('.')
+    node = nodes.get(source)
+    seen = set() if seen is None else seen
+    if not sep or not node or source in seen:return False
+    seen = seen | {source}
+    if node.type == 'verify_extraction' and port == 'text':return False
+    if node.type in ('agent', 'llm', 'query', 'request_router'):return True
+    # A loop's flow inputs do not describe what its attached body produces. Walk
+    # callable dependencies as well, including specialist/tool chains. Otherwise an
+    # attached Agent's guessed result would look like a deterministic Jira list.
+    dependencies = deps or {}
+    def calls_model(id, visited):
+        if id in visited or id not in nodes:return False
+        if nodes[id].type in ('agent', 'llm', 'query', 'request_router'):return True
+        return any(calls_model(child, visited | {id}) for child in dependencies.get(id, []))
+    return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
+        unchecked_model_input(value, nodes, dependencies, seen) for value in node.inputs.values())
+
+
+def checked_dependency(ref, nodes, seen=None):
+    source, sep, port = ref.partition('.')
+    node = nodes.get(source)
+    seen = set() if seen is None else seen
+    if not sep or not node or source in seen:return False
+    if node.type == 'verify_extraction':return port == 'text'
+    if node.type not in ('prompt', 'calculate'):return False
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
 
 
 def type_warnings(workflow: Workflow) -> list[str]:
@@ -233,12 +340,13 @@ def type_warnings(workflow: Workflow) -> list[str]:
     for node in workflow.nodes:
         target_def=REGISTRY.get(node.type)
         if target_def is None:continue
+        input_types={**target_def.inputs,**target_def.optional_inputs}
         for name,ref in node.inputs.items():
             source,separator,port=ref.partition('.')
             source_node=nodes.get(source)
             source_def=REGISTRY.get(source_node.type) if source_node else None
-            if not separator or source_def is None or port not in source_def.outputs or name not in target_def.inputs:continue
-            source_type=source_def.outputs[port];target_type=target_def.inputs[name]
+            if not separator or source_def is None or port not in source_def.outputs or name not in input_types:continue
+            source_type=source_def.outputs[port];target_type=input_types[name]
             result=compatibility(source_type,target_type)
             if result=='ok':continue
             action=('conversion to text would be required' if target_type=='string' else 'parsing or element validation would be required') if result=='coerce' else 'the declared structures are incompatible'
@@ -315,6 +423,8 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
             async def handler(state):
                 if completed and node.id in completed:
                     outputs=completed[node.id]
+                    if control_routes(definition) and (not isinstance(outputs, dict) or outputs.get('branch') not in control_routes(definition)):
+                        raise ValueError(f'{node.id} cannot be restored: its branch is not a declared control route.')
                     from .execution_policy import TRUNCATION_KEY,checked_truncation
                     if isinstance(outputs,dict) and TRUNCATION_KEY in outputs:
                         try:checked_truncation(outputs[TRUNCATION_KEY])
@@ -372,6 +482,8 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                       ports={name:value for name,value in outputs.items() if name!=TRUNCATION_KEY}
                       if set(ports) != set(definition.outputs) or any(not (isinstance(value,list) and all(isinstance(item,dict) for item in value)) if definition.outputs[name]=='array<object>' else not isinstance(value,str) for name,value in ports.items()):
                           raise ValueError('Node returned outputs that do not match its declared contract.')
+                      if control_routes(definition) and outputs.get('branch') not in control_routes(definition):
+                          raise ValueError('Node returned a branch outside its declared control routes.')
                       if TRUNCATION_KEY in outputs:
                           try:checked_truncation(outputs[TRUNCATION_KEY])
                           except ValueError:raise ValueError('Node returned outputs that do not match its declared contract.') from None
@@ -472,7 +584,7 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
     graph.add_edge(START, trigger)
     for node in sorted(workflow.nodes, key=lambda n: n.id):
         edges = sorted((e for e in workflow.edges if e.source == node.id), key=lambda e:e.id)
-        if node.type == 'condition':
+        if control_routes(REGISTRY[node.type]):
             def route(state, id=node.id): return state['values'][id]['branch']
             graph.add_conditional_edges(node.id, route, {e.sourceHandle:e.target for e in edges})
         elif node.on_error == 'route':

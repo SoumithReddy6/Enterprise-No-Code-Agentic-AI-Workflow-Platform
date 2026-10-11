@@ -7,9 +7,14 @@
   "inputs": {
     "value": "string"
   },
+  "optional_inputs": {},
   "outputs": {
     "branch": "string"
   },
+  "branch_routes": [
+    "true",
+    "false"
+  ],
   "config_schema": {
     "additionalProperties": false,
     "properties": {
