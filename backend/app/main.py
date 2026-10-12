@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.exceptions import RequestValidationError
-from pydantic import Field
+from pydantic import Field,StrictBool
 from .models import StrictModel, Workflow
 from .registry import REGISTRY
 from .compiler import validate_workflow,type_warnings,locate
@@ -32,6 +32,7 @@ class RunRequest(StrictModel):
 class ApprovalDecision(StrictModel):
     approval_id:str=Field(min_length=1,max_length=64)
     digest:str=Field(pattern=r'^[a-f0-9]{64}$')
+    choice:StrictBool|None=None
 
 class WorkflowUpdate(Workflow):
     updated_at:str|None=Field(default=None,max_length=64)
@@ -173,7 +174,7 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
         return approval_decision(id,body,tenant_id,'reject')
     def approval_decision(id,body,tenant_id,action):
         from .approvals import decide
-        try:return decide(store,id,tenant_id,body.approval_id,body.digest,action)
+        try:return decide(store,id,tenant_id,body.approval_id,body.digest,action,body.choice)
         except KeyError:raise HTTPException(404,'Approval not found') from None
         except ValueError as exc:raise HTTPException(409,str(exc)) from None
     @app.post('/api/runs/{id}/cancel')

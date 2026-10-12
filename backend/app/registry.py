@@ -65,6 +65,7 @@ class Context:
     run: dict | None = None  # Shared per run: {'evidence': [passages with unique citation labels]}
     input_origins: object | None = None  # Eligible data for this invocation, not shared run evidence.
     input_label: str | None = None
+    input_proofs: dict | None = None  # Runtime-created bindings, never model/handler metadata.
 
 # Ports named with this prefix would collide with run metadata carried in a node's graph
 # value (execution_policy.TRUNCATION_KEY), which must never be declared or bound.
@@ -264,3 +265,10 @@ register(NodeDefinition('request_router','Request router','Control',
     {'message':'string'},{'branch':'string','reply':'string','decision':'string'},
     RequestRouterConfig,request_router_node,side_effects=('external_model_request',),
     branch_routes=('continue','reply')))
+
+from .request_safety import verify_extraction_node
+from .request_contracts import ExtractionCheckConfig
+register(NodeDefinition('verify_extraction','Verify extraction','Control',
+    'Check exact facts against original input and configured rules; uncertain interpretations require review.',
+    {'original':'string','value':'string'},{'text':'string','branch':'string','reply':'string','report':'string'},
+    ExtractionCheckConfig,verify_extraction_node,branch_routes=('continue','reply'),optional_inputs={'reference':'string'}))

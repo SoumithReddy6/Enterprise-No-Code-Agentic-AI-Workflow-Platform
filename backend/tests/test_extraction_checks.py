@@ -228,9 +228,9 @@ def test_policy_digest_covers_every_rule_reference_pointer_and_tenant():
     assert verification_policy_digest(settings, dataclasses.replace(origins, tenant_id='other')) != digest
 
 
-def test_no_verifier_handler_or_output_metadata_is_enabled_in_this_task():
+def test_verifier_is_registered_with_explicit_continue_reply_routes():
     from backend.app.registry import REGISTRY
-    assert 'verify_extraction' not in REGISTRY
+    assert REGISTRY['verify_extraction'].branch_routes==('continue','reply')
 
 
 def test_schema_keyword_names_in_properties_are_data_and_need_no_regex():

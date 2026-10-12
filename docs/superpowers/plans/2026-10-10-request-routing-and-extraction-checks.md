@@ -139,7 +139,7 @@ Do not split graph semantics, retry policy or model accounting into competing im
 - [x] Test changed values, policy edits, another run's receipt, another tenant's reference, and human approval of only the displayed value cannot authorise a different value.
 - [x] Run focused verification/provenance/Calculate tests; keep the pure checking and receipt layer separate from continuation/review.
 
-- [ ] User commits/pushes this layer; hosted CI is checked before Task 6 enables runtime checking.
+- [x] User committed/pushed this layer as 46e65e7; hosted CI run 38273719543 passed all five jobs before Task 6.
 
 ### Task 6: Enforce checks and add durable review
 
@@ -151,13 +151,15 @@ Do not split graph semantics, retry policy or model accounting into competing im
 - Approval records gain kind; existing rows backfill to write. Typed decision reviews take true/false; verification reviews accept/reject the displayed interpretation.
 - Verification output only returns a continue branch after pass or a matching recorded human confirmation. Origin labels are not rewritten by approval.
 
-- [ ] Write tests for absent checks, router-proceed bypass, guessed business values, failed cross-checks, error routing and direct writes in contract 2. Assert zero receiver requests before eligibility or human confirmation. A handler/model/cache must not be able to mint its own verification receipt.
-- [ ] Add failing tests for pause before branch/write, released lease, mismatched digest, expiry, rejection, cancelled run, stale owner and second approve idempotence.
-- [ ] Implement the approval-kind migration with downgrade/reupgrade, adoption from the current head and empty autogenerate diff. Keep data-migration and schema authorities separate.
-- [ ] Implement checkpoint/pause/requeue using existing transactions and fencing. Add ReviewPause to the shared CONTROL_FLOW tuple and every caller's pause handling; it must never be converted into an item failure, retried or recovered. A reviewed interpretation's receipt is specific to run/value/policy; downstream derived eligibility uses only actual checked dependencies, not every expression field.
-- [ ] Verify cached resume restores review receipts/reasons, specialist and loop execution cannot escape the boundary, and changed outputs invalidate a prior receipt. Malformed restore fails before any downstream call.
-- [ ] Use subprocess SIGKILL at pause/confirmation/settlement windows against SQLite and isolated PostgreSQL. Preserve uncertain-write refusal and durable result replay; no duplicate sends.
-- [ ] Run focused worker/approval/migration suites and deployed boundary scenarios; commit independently of the editor.
+- [x] Write tests for absent checks, router-proceed bypass, guessed business values, failed cross-checks, error routing and direct writes in contract 2. Assert zero receiver requests before eligibility or human confirmation. A handler/model/cache must not be able to mint its own verification receipt.
+- [x] Add failing tests for pause before branch/write, released lease, mismatched digest, expiry, rejection, cancelled run, stale owner and second approve idempotence.
+- [x] Implement the approval-kind migration with downgrade/reupgrade, adoption from the current head and empty autogenerate diff. Keep data-migration and schema authorities separate.
+- [x] Implement checkpoint/pause/requeue using existing transactions and fencing. Add ReviewPause to the shared CONTROL_FLOW tuple and every caller's pause handling; it must never be converted into an item failure, retried or recovered. A reviewed interpretation's receipt is specific to run/value/policy; downstream derived eligibility uses only actual checked dependencies, not every expression field.
+- [x] Verify cached resume restores review receipts/reasons, specialist and loop execution cannot escape the boundary, and changed outputs invalidate a prior receipt. Malformed restore fails before any downstream call.
+- [x] Use subprocess SIGKILL at pause/confirmation/settlement windows against SQLite and isolated PostgreSQL. Preserve uncertain-write refusal and durable result replay; no duplicate sends.
+- [x] Run focused worker/approval/migration suites and deployed boundary scenarios; commit independently of the editor.
+
+Implementation verified on 2026-10-12. Hosted CI for Step 6 remains pending the user commit/push; check all five jobs before starting Task 7. Evidence: `evals/results/request-enforcement-step6-2026-10-12/report.json`.
 
 ### Task 7: Build the editor and user explanations
 

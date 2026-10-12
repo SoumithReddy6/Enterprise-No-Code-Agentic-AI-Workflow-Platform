@@ -99,6 +99,7 @@ grep '"request_id":"your-request-id"' relay.log
 | `runs_by_status` | Current statuses of runs created in the half-open `[start, end)` window |
 | `duration_seconds.p50/p95` | SQL nearest-rank percentiles among finished success/failed/cancelled runs; creation through final completion includes queue time and resumed attempts |
 | `tokens` | Reported prompt/completion tokens and measured calls grouped by provider and model, including failed/cancelled nodes when their usage event was durably recorded |
+| `human_reviews.by_kind` | Durable approval counts by `write`, `verification` or `decision` and current status; completed typed reviews are manual confirmations, not automatic model checks |
 | `abstention_rate` | Fraction of successful grounded runs with at least one grounded node that abstained; not necessarily final-response refusal |
 | `truncation_rate` | Fraction of successful runs flagged incomplete because an agent exhausted its budget |
 | `denominators` | Successful run counts and successful grounded run counts used by the rates |
@@ -124,7 +125,41 @@ The API endpoints `POST /api/runs/{id}/approve` and `/reject` require `approval_
 
 A connection changed after the pause cannot silently change the destination or credentials of the saved action. Start a new run and review the new request if the connection needs changing. Do not edit the stored snapshot. Structured journals include `approval.pending`, `approval.approved`, `approval.rejected`, `approval.expired` (worker sweep), `approval.pause_failure` and `run.awaiting_approval`; the run's approval events and persisted status are authoritative, including expiry enforced directly during a decision or dispatch.
 
-### Approval expiry
+### Verification and decision reviews (contract 2)
+
+Approvals expose `kind`. For `verification`, inspect the exact original request,
+extracted interpretation and field-check report in `payload_json`. Accept only that
+interpretation or reject the run. For `decision`, inspect its original request,
+resolved inputs and decision policy, then explicitly select the true or false route.
+These approvals grant no additional fact provenance; model guesses remain labelled
+as guesses. The editor's full typed-review controls are Step 7; Step 6 provides the API.
+
+Use the existing approve/reject endpoints with the displayed approval ID and SHA-256
+digest. Decision approval also requires `"choice": true` or `"choice": false`, a JSON
+boolean. Missing choice returns 409; string/number choices return 422. Verification
+and write approvals must omit choice. Duplicate matching confirmation is idempotent;
+trying to change an already confirmed decision is refused. A rejection is terminal.
+
+Both typed kinds checkpoint the earlier work, release the lease, and requeue after
+confirmation. Their TTL is the same `APPROVAL_TTL_SECONDS`. Expired confirmations cannot
+authorize a later restored decision or write, even when the earlier review completed.
+Input, interpretation, policy, run or tenant mismatch requires a new run and review.
+Never edit a checkpoint or approval row to force continuation. A pre-execution safety
+refusal sends nothing and needs no remote reconciliation; an uncertain external write
+still follows the reconciliation procedure below.
+
+Migration `0004_approval_kind` backfills earlier approvals as `write`, adds the allowed
+kind constraint and widens invocation IDs. Normal startup upgrades through Alembic.
+Downgrade refuses databases containing typed reviews or IDs over the former 300-character
+limit rather than treating a review as a write or losing its identity. Back up, export
+and archive affected records under a reviewed maintenance procedure first. The frozen
+baseline and data-backfill authority are unchanged.
+
+Content-free journals include `verification.result`, `review.confirmed` (manual, with
+kind), and the existing approval lifecycle. The operator metrics endpoint groups real
+approval rows by kind/status, so replay does not count another person or another review.
+
+### Approval expiry settings
 
 Set `APPROVAL_TTL_SECONDS` in the worker environment, then restart workers through the normal deployment procedure. The default is **86400 seconds (24 hours)**; supported integer values are **1–604800 (seven days)**. The TTL is read when a new approval is persisted and becomes an absolute `expires_at`. Changing the environment does not extend an existing approval or reset its clock when it is approved.
 

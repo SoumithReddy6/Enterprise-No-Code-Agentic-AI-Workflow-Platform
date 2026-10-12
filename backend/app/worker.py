@@ -111,6 +111,15 @@ class Worker:
             async def platform_resolver(action,*args):
                 tenant=self.store.run_tenant(id,owner)
                 try:
+                    if action in ('review','checked_review'):
+                        from .request_safety import UnsafeExecutionError
+                        try:
+                            if action=='checked_review':return approvals.checked_review(self.store,id,owner,*args)
+                            kind,payload,identity=args
+                            confirmed=approvals.consume_review(self.store,id,owner,identity.invocation_id+':review:'+kind,kind,payload)
+                            if confirmed is None:raise approvals.ReviewPause(identity,kind,payload)
+                            return confirmed
+                        except ValueError as exc:raise UnsafeExecutionError(str(exc)) from None
                     if action=='common_reply':
                         from .common_replies import common_reply_scope,lookup_common_reply
                         message,config=args
@@ -141,6 +150,7 @@ class Worker:
                             saved=approvals.resolve(self.store,id,owner,invocation)
                             if saved is None:
                                 raise approvals.ApprovalPause(node_id,checkpoint_owner,invocation,prepare_write())
+                            if saved['kind']!='write':raise ValueError('This approval is not an external write.')
                             candidate=prepare_write()
                             if candidate['payload']!=saved['prepared']['payload'] or candidate['connection_id']!=saved['prepared']['connection_id']:
                                 raise ValueError('The resumed action differs from the reviewed request. Start a new run.')
@@ -185,7 +195,7 @@ class Worker:
                 if isinstance(results,dict) and results.get('unavailable'):raise ValueError(results['unavailable'])
                 issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'))
                 if issues:raise ValueError('; '.join(issues))
-            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend,action_settled=action_settled).graph
+            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend,action_settled=action_settled,run_id=id,tenant_id=tenant_id).graph
             result=await graph.ainvoke({'values':{}},{'recursion_limit':150})
             return {'output':'\n\n'.join(result['values'][n.id]['text'] for n in workflow.nodes if n.type=='response' and n.id in result['values']),
                     **run_truncation(workflow,result['values'])}

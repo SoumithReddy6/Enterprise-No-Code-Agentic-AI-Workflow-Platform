@@ -10,7 +10,8 @@ import asyncio
 import random
 
 from .models import RetryPolicy
-from .approvals import ApprovalPause
+from .approvals import ApprovalPause,ReviewPause
+from .request_safety import UnsafeExecutionError
 from .tool_service import TransientToolError, UncertainWriteError
 from .storage import LeaseLost
 
@@ -18,7 +19,7 @@ from .storage import LeaseLost
 # recovered, or turned into an observation an agent can plan around. Every handler near
 # the policy seam re-raises these before any generic clause. It is one exported tuple
 # because four defects so far came from a hand-maintained list missing a member.
-CONTROL_FLOW=(ApprovalPause,UncertainWriteError,asyncio.CancelledError,LeaseLost)
+CONTROL_FLOW=(ApprovalPause,ReviewPause,UnsafeExecutionError,UncertainWriteError,asyncio.CancelledError,LeaseLost)
 from . import token_budget
 
 
@@ -175,7 +176,7 @@ def _debit_action(budget,key=None):
 async def execute_with_policy(operation,identity:ExecutionIdentity,retry:RetryPolicy,run,emit,
                               generic_error='Node execution failed.',action_budget=None,
                               charge_first_attempt=False,
-                              include_invocation_in_retry=True,delay_for=None,free_outcome=None):
+                              include_invocation_in_retry=True,delay_for=None,free_outcome=None,eligibility=None):
     """Invoke a resolved callable with common retry and budget rules.
 
     Only retrying events are emitted here. The caller receives a structured terminal
@@ -190,6 +191,10 @@ async def execute_with_policy(operation,identity:ExecutionIdentity,retry:RetryPo
     after every free path has had its chance to resolve. Checking it at this seam would
     block an abstention that needs no model call at all.
     """
+    # Eligibility is control flow, before reservations, retries or free provider paths.
+    if eligibility is not None:
+        confirmed=await eligibility()
+        if confirmed is not None:return ExecutionOutcome('success',confirmed,None,0,usage_for(run,identity))
     if free_outcome is not None:
         free=await free_outcome()
         if free is not None:return ExecutionOutcome('success',free,None,0,usage_for(run,identity))
@@ -253,6 +258,9 @@ async def invoke_attached(node,input_text,ctx,identity:ExecutionIdentity,emit,de
     child=replace(ctx,node_id=node.id,node_type=node.type,
                   checkpoint_owner=identity.checkpoint_owner,
                   execution_identity=identity)
+    from .request_safety import guard
+    confirmed=await guard(child,node,{'input':input_text},identity)
+    if confirmed is not None:return confirmed
     if node.type=='agent':
         outputs=await execute_agent(node.id,input_text,ctx.workflow,child,emit,depth,
                                     action_budget,identity.checkpoint_owner)

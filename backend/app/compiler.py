@@ -173,7 +173,9 @@ def _validate_flow(workflow: Workflow) -> list[str]:
                 source_def = REGISTRY.get(nodes[source].type) if source in nodes else None
                 if separator and source_def and port in source_def.outputs:
                     provided = source_def.outputs[port]
-                    if not provided.startswith('array'):
+                    schema=nodes[source].config.get('expected_schema')
+                    verified_array=nodes[source].type=='verify_extraction' and port=='text' and isinstance(schema,dict) and schema.get('type')=='array'
+                    if not provided.startswith('array') and not verified_array:
                         errors.append(f'{node.id}: items must come from a list; {ref} provides {provided}.')
         if node.on_error == 'continue':
             readers=[other.id for other in workflow.nodes
@@ -378,13 +380,15 @@ def restored_tokens(accounting):
     return tokens_spent({'usage':(accounting or {}).get('usage') or {}})
 
 
-def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None,accounting=None,accounting_sink=None,persist_accounting=None,persist_spend=None,action_settled=None):
+def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None,accounting=None,accounting_sink=None,persist_accounting=None,persist_spend=None,action_settled=None,run_id=None,tenant_id='local'):
     errors = validate_workflow(workflow)
     if errors: raise ValueError('\n'.join(errors))
     from .platform_graph import split_graph
     from .agent_runtime import execute_agent,evidence_from_outputs,run_budget
     from .evidence_registry import prepare_checkpoint_labels,emit_evidence_notice
     from .observability import journal
+    from . import request_safety,provenance
+    from .storage import new_id
     full_workflow=workflow
     workflow,_,_=split_graph(workflow)
     graph = StateGraph(State)
@@ -396,7 +400,8 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
     budget=dict(spent.get('action_budget') or {'remaining':ceiling,'counter':0,'ceiling':ceiling})
     budget['ceiling']=ceiling
     budget['remaining']=min(budget.get('remaining',ceiling),max(0,ceiling-budget.get('counter',0)))
-    run_state={'evidence':[],'citation_counter':citation_counter,'agent_frames':agent_frames or {},
+    run_state={'run_id':run_id or new_id(),'tenant_id':tenant_id,'contract':full_workflow.contract,
+               'evidence':[],'citation_counter':citation_counter,'agent_frames':agent_frames or {},
                'action_budget':budget,
                # Reporting starts empty each attempt; the ceiling carries the cumulative total.
                'usage':{},
@@ -421,6 +426,13 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
         config = definition.config_model.model_validate(node.config)
         def handler_factory(node, definition, config):
             async def handler(state):
+                identity=ExecutionIdentity(node.id,node.id,node.id)
+                inputs = {key: state['values'][ref.split('.')[0]][ref.split('.')[1]] for key, ref in node.inputs.items()}
+                node_ctx=replace(context,node_id=node.id,node_type=node.type,
+                    checkpoint_owner=node.id,execution_identity=identity,
+                    input_origins=provenance.evidence_context(node,inputs,state['values']),
+                    input_label=provenance.weakest(provenance.port_label(state['values'],ref) for ref in node.inputs.values()),
+                    input_proofs=request_safety.resolved_proofs(run_state,node.inputs,inputs))
                 if completed and node.id in completed:
                     outputs=completed[node.id]
                     if control_routes(definition) and (not isinstance(outputs, dict) or outputs.get('branch') not in control_routes(definition)):
@@ -458,16 +470,15 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                         outputs={**outputs,'summary':json.dumps(reconstructed_summary(node.id,items,config,outputs,body))}
                     validation=validate_cached(node,outputs)
                     if inspect.isawaitable(validation):await validation
+                    outputs=await request_safety.finalize(node_ctx,node,inputs,outputs,config,cached=True)
                     evidence_from_outputs(run_state,outputs)  # Restored evidence keeps its original labels.
                     await emit_evidence_notice(run_state,emit,node.id)
                     receipt=(outputs.get(PROVENANCE_KEY) or {}).get('decision')
                     await emit({'node_id':node.id,'status':'success','outputs':outputs,'cached':True,'duration_ms':0,
                                 **({'decision':receipt} if receipt is not None else {})})
                     return {'values':{node.id:outputs}}
-                inputs = {key: state['values'][ref.split('.')[0]][ref.split('.')[1]] for key, ref in node.inputs.items()}
                 started = time.perf_counter()
                 await emit({'node_id': node.id, 'status': 'running', 'inputs': inputs})
-                identity=ExecutionIdentity(node.id,node.id,node.id)
                 # Legacy prompt/LLM nodes must not bypass an upstream guard.
                 def guarded_dependency(identifier,seen):
                     if identifier in seen:return False
@@ -478,12 +489,10 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     upstream=next((n for n in workflow.nodes if n.id==identifier),None)
                     return bool(upstream and any(guarded_dependency(ref.split('.')[0],seen) for ref in upstream.inputs.values()))
                 async def invoke():
-                      from . import provenance
-                      outputs = await definition.handler(
-                          inputs,config,replace(context,node_id=node.id,node_type=node.type,
-                                                checkpoint_owner=node.id,execution_identity=identity,
-                                                input_origins=provenance.evidence_context(node,inputs,state['values']),
-                                                input_label=provenance.weakest(provenance.port_label(state['values'],ref) for ref in node.inputs.values())))
+                      # Only the runtime verifier can issue eligibility; a swapped registry
+                      # handler must not mint its own continue branch or receipt.
+                      implementation=request_safety.verify_extraction_node if node.type=='verify_extraction' else definition.handler
+                      outputs = await implementation(inputs,config,node_ctx)
                       # Run metadata may travel beside the declared ports under the reserved key.
                       from .execution_policy import TRUNCATION_KEY,checked_truncation
                       ports={name:value for name,value in outputs.items() if name!=TRUNCATION_KEY}
@@ -507,6 +516,7 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                       outcome=await execute_with_policy(
                           invoke,identity,node.retry,run_state,emit,
                           free_outcome=guard_refusal,
+                          eligibility=lambda:request_safety.guard(node_ctx,node,inputs),
                           action_budget=run_state.get('action_budget'),
                           charge_first_attempt=charges_action(node.type),
                           include_invocation_in_retry=False,
@@ -533,31 +543,37 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                           value={TRUNCATION_KEY:budget_truncation(node.id,outcome)} if outcome.budget_exhausted else {}
                           return {'values':{node.id:value}}
                       outputs=outcome.outputs
+                      outputs=await request_safety.finalize(node_ctx,node,inputs,outputs,config)
                       if node.type=='request_router':
                           from .request_router import ROUTING_KEY,routing_record
                           # Runtime-created audit binding, never metadata supplied by the model/handler.
                           outputs={**outputs,ROUTING_KEY:routing_record(outputs,inputs['message'],config)}
-                      from . import provenance
                       body_type=next((n.type for n in full_workflow.nodes if n.id==getattr(config,'body',None)),None) if node.type=='for_each' else None
                       record=provenance.for_node(node,definition,inputs,outputs,state['values'],body_type)
                       decision=None
                       if node.type=='condition':
-                          # Shadow mode: the branch is taken as before; the event records whether
-                          # the value it decided on was trusted, and would have needed a person.
+                          # Origins remain visible; contract 2 grants eligibility separately.
                           label,reason=provenance.value_label(state['values'],node.inputs['value'],config.field)
                           review=label==provenance.GUESSED
                           decision={'label':label,'would_review':review,**({'reason':reason} if review else {})}
                           record['ports']['branch']=provenance.GUESSED if review else provenance.CALCULATED
-                          if review:journal(event='decision.would_review',node_id=node.id,reason_code=reason)
                       elif node.type=='calculate' and config.mode=='check':
-                          # A failed check means the values disagree; a check on guessed values
-                          # proves nothing. Either would have needed a person (shadow mode).
+                          # A human choice is not proof that the original check succeeded.
                           label=record['ports']['text']
                           passed=exact_json.loads(outputs['text'])['result'] is True
+                          human=run_state.get('decision_reviews',{}).get(identity.invocation_id)
+                          if human:passed=human['payload']['check']['proposed_choice'] is True
                           reason=None if passed and label!=provenance.GUESSED else ('check_failed' if not passed else 'guessed')
                           decision={'label':label,'passed':passed,'would_review':reason is not None,**({'reason':reason} if reason else {})}
-                          if reason:journal(event='decision.would_review',node_id=node.id,reason_code=reason)
-                      if decision is not None:record['decision']=decision
+                      if decision is not None:
+                          human=outputs.get(request_safety.DECISION_KEY)
+                          if human:decision={**decision,'manual':True,'review_id':human['id']}
+                          elif full_workflow.contract==2 and await request_safety.binding_valid((node_ctx.input_proofs or {}).get('value'),inputs.get('value'),node_ctx):
+                              # Eligibility is separate from the model's origin label.
+                              decision={k:v for k,v in decision.items() if k!='reason'}
+                              decision['would_review']=False
+                          record['decision']=decision
+                          if decision['would_review']:journal(event='decision.would_review',node_id=node.id,reason_code=decision.get('reason','guessed'))
                       outputs={**outputs,provenance.PROVENANCE_KEY:provenance.checked(record)}
                       evidence_from_outputs(run_state,outputs)
                       await emit_evidence_notice(run_state,emit,node.id)
@@ -588,6 +604,8 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                           failure={'node_id':node.id,'status':'failed','error':error,**usage_fields}
                           await emit(failure)
                           raise ValueError(error) from None
+                      if isinstance(exc,request_safety.UnsafeExecutionError):
+                          await emit({'node_id':node.id,'status':'failed','error':error,**usage_fields})
                       raise
             return handler
         graph.add_node(node.id, handler_factory(node, definition, config))

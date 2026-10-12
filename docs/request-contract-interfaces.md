@@ -1,8 +1,8 @@
-# Request admission interfaces (Step 2)
+# Request admission interfaces and runtime checks (Steps 2–6)
 
-This step declares and validates interfaces. It does not install Redis, make routing
-model calls, verify extracted values, or enable human review. The three future node
-types are deliberately absent from the production registry until their handlers ship.
+The registry now includes Greeting cache, Request router and Verify extraction.
+Contract 2 enables runtime verification and typed human review. Editor setup and
+review presentation ship separately in Step 7; the current starter remains contract 1.
 
 `Workflow.contract` is the integer 1 or 2. Omitted values mean 1. Existing workflows
 remain runnable, and the editor preserves a loaded contract through editing, undo,
@@ -10,7 +10,7 @@ import and save. The starter remains contract 1 until the complete contract-2 pa
 available. Contract changes invalidate highlighting from an older execution.
 
 Node definitions publish `branch_routes` and `optional_inputs`. Condition declares
-`true`/`false`; admission nodes will declare `continue`/`reply`. Each route must have
+`true`/`false`; admission and verification nodes declare `continue`/`reply`. Each route must have
 exactly one edge. Control nodes cannot recover without a branch or be attached as a
 tool, specialist or loop body. Fresh and replayed branches must match the declaration.
 Optional inputs need no binding; supplied references receive the same output,
@@ -50,6 +50,54 @@ writes are checked at their caller, including transitive dependencies. Narrative
 does not need extraction verification merely to display an answer.
 
 These graph checks are prerequisites. They cannot prove semantic meaning or the
-independence of returned records. The later receipt and runtime execution boundary
-must enforce the exact run, value and policy before consequential execution. Invalid
+independence of returned records. The runtime receipt and execution boundary
+enforces the exact run, value and policy before consequential execution. Invalid
 drafts remain saveable; validation and run submission reject them before a run exists.
+
+## Runtime enforcement (Step 6)
+
+Verify extraction returns `text`, `branch`, `reply`, and `report`. Missing or invalid
+required facts take `reply`. Complete independent acceptance checks permit `continue`.
+Uncertain facts pause for a verification review before returning `continue`; the
+router's `proceed` judgment cannot authorize them. Quotation proves origin only.
+Configure a source-field equality, accepted enum or independent record membership to
+check suitability. An enum still needs independent origin. If those rules cannot
+prove the interpretation, a person must accept the displayed original, extracted
+value and per-field report. This does not claim general semantic validation by an LLM.
+
+The runtime creates `_verification` receipts and validates them again on resume against
+the exact run, original input, value, reference context, verifier identity and frozen
+workflow policy. A handler, model response or Redis entry cannot supply a grant.
+Human confirmation is also checked against the real tenant-scoped completed approval
+record. A label remains an origin label: accepting a guess does not relabel it source.
+
+One pre-attempt eligibility check covers graph nodes, loop bodies, attached Agent
+tools and specialists. It runs before action reservation or a network write. Prompt
+and Calculate outputs inherit eligibility only after their deterministic result is
+recomputed from checked inputs. Calculate evaluates actual dependencies, including
+coalesce's short circuit. A schema-declared verified root array can feed For each;
+each item receives authority only for that exact element. Agent-authored tool input
+must match its eligible bound input exactly; a paraphrase or changed amount is refused.
+
+A failed Calculate check or unchecked business decision requests a **decision** review.
+A person must explicitly choose `true` or `false`; an empty approval cannot default to
+true. Checkpoints store a compact choice/id/digest record, with the exact payload in
+the approval table. Both restored interpretations and restored choices must still
+match their actual confirmation. Refusals and review pauses cannot retry, recover via
+an error route, become loop-item failures, or become Agent observations.
+
+Ordinary Condition results are recomputed on fresh execution and checkpoint restore;
+a changed branch cannot contradict the checked value and configured comparison. Human
+control choices are revalidated independently of the action's data binding before
+later decisions or writes, including when the payload comes from another verifier.
+Expiry therefore cannot be bypassed by wiring around a review's result port. A manual
+override is recorded as a choice and never changes a failed automatic check into a pass.
+
+The PostgreSQL conformance CI job also runs the separate-process typed-review campaign
+on both disposable SQLite and PostgreSQL schemas. It kills workers after pause,
+confirmation and write settlement, and in the genuinely uncertain send window.
+
+Contract-1 behavior is retained. Activating contract 2 requires its complete graph and
+configured acceptance rules. This backend step does not automatically convert workflows
+or change the editor starter. New-workflow setup and full typed-review controls are
+the next separate step.

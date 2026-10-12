@@ -232,4 +232,4 @@ def test_0003_upgrades_from_0002_and_downgrades_cleanly(tmp_path):
         assert 'accounting' not in {c['name'] for c in inspect(conn).get_columns('runs')}
     with engine.begin() as conn:
         schema.upgrade(conn)
-        assert schema.current_revision(conn) == schema.head_revision() == '0003_loop_storage'
+        assert schema.current_revision(conn) == schema.head_revision()

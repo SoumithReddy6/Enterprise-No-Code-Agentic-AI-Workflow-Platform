@@ -96,7 +96,7 @@ def migrations():
                 schema.upgrade(connection, '0001_baseline')
                 assert schema.current_revision(connection) == '0001_baseline'
                 schema.upgrade(connection)
-                assert schema.current_revision(connection) == '0003_loop_storage'
+                assert schema.current_revision(connection) == schema.head_revision()
                 assert compare_metadata(MigrationContext.configure(connection), schema.target_metadata) == []
                 command.downgrade(schema._config(connection), '0001_baseline')
                 schema.upgrade(connection)

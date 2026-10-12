@@ -314,6 +314,11 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
         common={**identity.event_fields(),'transient':True}
         await emit({**common,'status':'running','inputs':{'input':task}})
         target_node=targets[target]
+        from dataclasses import replace
+        from .provenance import EvidenceContext,GUESSED
+        from .request_safety import guard
+        attached_ctx=replace(ctx,input_origins=EvidenceContext(complete=False),input_label=GUESSED,
+            execution_identity=identity,node_id=target_node.id,node_type=target_node.type)
         write_attempt=False
         try:
             if target_node.type.startswith('tool_'):
@@ -323,9 +328,6 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
                 try:
                     # An agent-authored task is not a new source, even if it repeats a
                     # number from elsewhere in the run. Specialists see only this task.
-                    from .provenance import EvidenceContext,GUESSED
-                    from dataclasses import replace
-                    attached_ctx=replace(ctx,input_origins=EvidenceContext(complete=False),input_label=GUESSED)
                     return await invoke_attached(target_node,task,attached_ctx,identity,emit,
                                                  depth+1 if target in specialists else depth,budget)
                 except (*CONTROL_FLOW, WriteNotSent):
@@ -338,6 +340,7 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
             outcome=await execute_with_policy(
                 invoke,identity,target_node.retry,ctx.run,emit,
                 generic_error='Attached node execution failed.',action_budget=budget,
+                eligibility=lambda:guard(attached_ctx,target_node,{'input':task},identity),
                 charge_first_attempt=not replay)
             if outcome.status=='failed':
                 failure={**common,'status':'failed','error':outcome.error,
@@ -376,7 +379,7 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
             if usage:failure['usage']=usage
             await emit(failure)
             raise
-        except LeaseLost:
+        except CONTROL_FLOW:
             # The worker no longer owns this run: nothing may be spent or planned on its
             # behalf, so this is not an observation for the model.
             raise

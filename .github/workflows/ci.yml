@@ -128,6 +128,7 @@ jobs:
       - run: >-
           python -u -m scripts.check_milestone_storage --out evals/results/postgres-ci
           --checks postgres-migrations postgres-four-workers postgres-stale-lease postgres-sigkill-loop
+      - run: python -u -m scripts.scenarios.request_enforcement --out evals/results/postgres-ci/request-reviews
       - uses: actions/upload-artifact@v4
         if: always()
         with:

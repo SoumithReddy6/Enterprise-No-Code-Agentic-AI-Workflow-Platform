@@ -45,7 +45,8 @@ def remember(run,node_id,index,result):
 def item_input(value):
     """Body callables take text. Objects are rendered as compact JSON, never str()."""
     if isinstance(value,str):return value
-    return json.dumps(value,ensure_ascii=False,separators=(',',':'),default=str)
+    from . import exact_json
+    return exact_json.dumps(value,compact=True)
 
 
 def serialized_bytes(value):
@@ -221,6 +222,9 @@ def record_progress(ctx,index,entry):
 
 async def for_each_node(inputs,config,ctx):
     items=inputs['items']
+    if isinstance(items,str) and (ctx.run or {}).get('contract')==2 and 'items' in (ctx.input_proofs or {}):
+        from . import exact_json
+        items=exact_json.loads(items,reject_duplicates=True)
     if not isinstance(items,list):raise ValueError('for_each expects a list; connect an array output to items.')
     body=next((n for n in (ctx.workflow.nodes if ctx.workflow else []) if n.id==config.body), None)
     if body is None:raise ValueError('for_each has no attached body to run.')
@@ -295,7 +299,9 @@ async def _run_item(ctx,body,emit,index,value):
     if isinstance(origins,provenance.EvidenceContext) and origins.complete and ctx.input_label in provenance.TRUSTED and origins.eligible_texts:
         source=origins.structured_sources[0] if origins.structured_sources else {}
         item_origins=provenance.source_context(source.get('node_id',ctx.node_id),source.get('port','items'),text)
-    item_ctx=replace(ctx,emit=item_emit,input_origins=item_origins,input_label=ctx.input_label)
+    from .request_safety import guard,item_proofs
+    item_ctx=replace(ctx,emit=item_emit,input_origins=item_origins,input_label=ctx.input_label,
+        input_proofs=item_proofs(ctx,index,text),execution_identity=identity,node_id=body.id,node_type=body.type)
     common={**identity.event_fields(),'transient':True}
     await item_emit({**common,'status':'running','inputs':{'input':text[:PREVIEW_CHARS]}})
     try:
@@ -304,6 +310,7 @@ async def _run_item(ctx,body,emit,index,value):
                                          action_budget=(ctx.run or {}).get('action_budget'))
         outcome=await execute_with_policy(
             invoke,identity,body.retry,ctx.run,item_emit,generic_error='Item execution failed.',
+            eligibility=lambda:guard(item_ctx,body,{'input':text},identity),
             action_budget=(ctx.run or {}).get('action_budget'),charge_first_attempt=charges_action(body.type))
         if outcome.budget_exhausted and not outcome.attempts:
             await item_emit({**common,'status':'not_run','reason':outcome.error})

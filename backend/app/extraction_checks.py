@@ -136,7 +136,7 @@ def verify_extraction(original: str, value: str, config: ExtractionCheckConfig,
         limited = str(exc) in ('coverage_limit', 'data_limit')
         return _bounded_report({'': ('unverified' if limited else 'failed',
             'coverage_limit' if limited else 'value_shape_invalid')}, complete=not limited, clarify=not limited)
-    if not isinstance(parsed, dict):return _bounded_report({'': ('failed', 'value_shape_invalid')}, clarify=True)
+    if not isinstance(parsed, (dict,list)):return _bounded_report({'': ('failed', 'value_shape_invalid')}, clarify=True)
     if not _schema_safe(config.expected_schema):return _bounded_report({'': ('unverified', 'schema_unavailable')}, complete=False)
     from referencing import Registry
     # An empty Registry has a fail-to-retrieve resolver. This independently prevents

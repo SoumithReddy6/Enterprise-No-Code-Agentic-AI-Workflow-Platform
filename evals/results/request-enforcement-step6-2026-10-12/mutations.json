@@ -1,0 +1,77 @@
+{
+  "rows": [
+    {
+      "name": "no pre-attempt eligibility",
+      "caught": true,
+      "exit_code": 1,
+      "tests": [
+        "backend/tests/test_request_safety_boundary.py::test_shared_seam_refuses_before_action_debit_operation_or_retry"
+      ]
+    },
+    {
+      "name": "attached dispatcher bypass",
+      "caught": true,
+      "exit_code": 1,
+      "tests": [
+        "backend/tests/test_request_safety_boundary.py::test_direct_attached_dispatch_cannot_bypass_the_shared_guard"
+      ]
+    },
+    {
+      "name": "denial becomes agent observation",
+      "caught": true,
+      "exit_code": 1,
+      "tests": [
+        "backend/tests/test_request_review.py::test_attached_agent_write_cannot_change_the_verified_value"
+      ]
+    },
+    {
+      "name": "contradictory Condition branch",
+      "caught": true,
+      "exit_code": 1,
+      "tests": [
+        "backend/tests/test_request_review.py::test_cached_automatic_condition_cannot_change_the_verified_branch"
+      ]
+    },
+    {
+      "name": "expired control path bypass",
+      "caught": true,
+      "exit_code": 1,
+      "tests": [
+        "backend/tests/test_request_review.py::test_expired_manual_control_cannot_authorize_an_independently_bound_write"
+      ]
+    },
+    {
+      "name": "confirmation validity skipped",
+      "caught": true,
+      "exit_code": 1,
+      "tests": [
+        "backend/tests/test_request_review.py::test_cached_verification_never_restores_damaged_authority[review]"
+      ]
+    },
+    {
+      "name": "review consumption loses fence",
+      "caught": true,
+      "exit_code": 1,
+      "tests": [
+        "backend/tests/test_request_review.py::test_review_consumption_and_restore_require_the_current_owner"
+      ]
+    },
+    {
+      "name": "derived value not recomputed",
+      "caught": true,
+      "exit_code": 1,
+      "tests": [
+        "backend/tests/test_request_review.py::test_cached_derivation_cannot_change_checked_values_and_coalesce_reads_only_its_branch"
+      ]
+    },
+    {
+      "name": "approval kind unconstrained",
+      "caught": true,
+      "exit_code": 1,
+      "tests": [
+        "backend/tests/test_request_review_migration.py::test_database_itself_rejects_unknown_approval_kinds"
+      ]
+    }
+  ],
+  "passed": true
+}

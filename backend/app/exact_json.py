@@ -97,14 +97,15 @@ def plain(value):
     return value
 
 
-def dumps(value):
+def dumps(value, *, compact=False):
     """json.dumps(value, ensure_ascii=False), writing Decimals as their exact digits."""
     if isinstance(value, Decimal):
         return str(value)
     if isinstance(value, dict):
-        return '{' + ', '.join(f'{json.dumps(k, ensure_ascii=False)}: {dumps(v)}' for k, v in value.items()) + '}'
+        comma,colon=(',',':') if compact else (', ',': ')
+        return '{' + comma.join(f'{json.dumps(k, ensure_ascii=False)}{colon}{dumps(v,compact=compact)}' for k, v in value.items()) + '}'
     if isinstance(value, list):
-        return '[' + ', '.join(dumps(v) for v in value) + ']'
+        return '[' + (',' if compact else ', ').join(dumps(v,compact=compact) for v in value) + ']'
     return json.dumps(value, ensure_ascii=False)
 
 

@@ -65,9 +65,13 @@ def migrate(conn):
     conn.execute(SchemaMigrationRecord.__table__.insert().values(version=version))
 
 def metrics(store,hours=168):
+    from .approvals import ApprovalRecord
     end=datetime.now(timezone.utc);start=end-timedelta(hours=hours)
     window=(RunRecord.created_at>=start.isoformat(),RunRecord.created_at<end.isoformat())
     with Session(store.engine) as session:
+        reviews={}
+        for kind,status,count in session.execute(select(ApprovalRecord.kind,ApprovalRecord.status,func.count()).join(RunRecord,RunRecord.id==ApprovalRecord.run_id).where(*window).group_by(ApprovalRecord.kind,ApprovalRecord.status)):
+            reviews.setdefault(kind,{})[status]=count
         guard_counts=dict(session.execute(select(GuardDecisionRecord.decision,func.count()).join(RunRecord,RunRecord.id==GuardDecisionRecord.run_id).where(*window).group_by(GuardDecisionRecord.decision)).all())
         guard_skips=dict(session.execute(select(GuardDecisionRecord.reason,func.count()).join(RunRecord,RunRecord.id==GuardDecisionRecord.run_id).where(*window,GuardDecisionRecord.decision=='skip').group_by(GuardDecisionRecord.reason)).all())
         counts=dict(session.execute(select(RunRecord.status,func.count()).where(*window).group_by(RunRecord.status)).all())
@@ -79,7 +83,7 @@ def metrics(store,hours=168):
         for name,p in (('p50',.5),('p95',.95)):
             percentiles[name]=session.scalar(select(func.min(ranked.c.duration)).where(ranked.c.rank>=ranked.c.n*p))
         tokens=[dict(row._mapping) for row in session.execute(select(RunTokenRecord.provider,RunTokenRecord.model,func.sum(RunTokenRecord.prompt_tokens).label('prompt_tokens'),func.sum(RunTokenRecord.completion_tokens).label('completion_tokens'),func.sum(RunTokenRecord.calls).label('calls')).join(RunRecord,RunRecord.id==RunTokenRecord.run_id).where(*window).group_by(RunTokenRecord.provider,RunTokenRecord.model).order_by(RunTokenRecord.provider,RunTokenRecord.model))]
-    return {'answerability_guard':{'decisions':guard_counts,'skipped_by_reason':guard_skips,'basis':'Uncached retrieval/query decisions across runs created in the window; not unique runs or model refusals'},'window':{'start':start.isoformat(),'end':end.isoformat(),'basis':'run_created_at'},'runs_by_status':counts,'duration_seconds':percentiles,'tokens':tokens,
+    return {'human_reviews':{'by_kind':reviews,'basis':'Durable approval rows by kind and current status for runs created in the window; completed decision/verification rows are human confirmations, not automatic checks'},'answerability_guard':{'decisions':guard_counts,'skipped_by_reason':guard_skips,'basis':'Uncached retrieval/query decisions across runs created in the window; not unique runs or model refusals'},'window':{'start':start.isoformat(),'end':end.isoformat(),'basis':'run_created_at'},'runs_by_status':counts,'duration_seconds':percentiles,'tokens':tokens,
             'abstention_rate':abstained/grounded if grounded else None,'truncation_rate':truncated/total if total else None,
             'truncated_runs_by_source':{'confirmed':(truncated or 0)-unverified,'legacy_checkpoint_unverified':unverified},
             'denominators':{'successful_runs':total,'successful_grounded_runs':grounded or 0},

@@ -123,7 +123,7 @@ def test_verification_report_cannot_hide_failed_or_omitted_coverage():
         fields=[{'field': '/'+str(i), 'status': 'unverified', 'reason': 'é'*300} for i in range(64)])
 
 
-def test_future_handlers_are_not_registered():
+def test_admission_and_verification_handlers_are_registered():
     from backend.app.registry import REGISTRY
     assert 'request_router' in REGISTRY
-    assert 'verify_extraction' not in REGISTRY
+    assert 'verify_extraction' in REGISTRY

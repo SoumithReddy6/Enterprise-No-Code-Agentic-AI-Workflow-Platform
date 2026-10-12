@@ -378,6 +378,12 @@ def for_node(node, definition, inputs, outputs, state_values, body_type=None, or
         eligible = origins if origins is not None else evidence_context(node, inputs, state_values)
         if eligible.complete and inputs.get('query') in eligible.eligible_texts:
             record['eligible_ports'] = ['query']
+    elif node.type == 'verify_extraction':
+        # Verification grants eligibility separately; echo the extraction's origins.
+        source,_,port=node.inputs['value'].partition('.')
+        previous=(state_values.get(source) or {}).get(PROVENANCE_KEY) or {}
+        record['ports']={p:(port_label(state_values,node.inputs['value']) if p=='text' else CALCULATED) for p in ports}
+        if port in previous.get('fields',{}):record['fields']={'text':previous['fields'][port]}
     elif node.type == 'request_router':
         # Admission remains a model judgment, including its branch and explanation.
         # Nothing here can become evidence for extraction or a business decision.
@@ -400,7 +406,8 @@ def for_node(node, definition, inputs, outputs, state_values, body_type=None, or
         results = weakest(item_label(item) for item in outputs.get('results', []))
         record['ports'] = {p: (results if p == 'results' else CALCULATED) for p in ports}
     elif node.type == 'calculate':
-        label, _ = calculation_label(node, inputs, state_values)
+        if '_decision_review' in outputs:label=GUESSED
+        else:label, _ = calculation_label(node, inputs, state_values)
         record['ports'] = {'text': label}
         record['v'] = 2
         record['fields'] = {'text': {'/result': label}}
@@ -483,10 +490,13 @@ def checked(record):
 
 
 def checked_decision(decision):
-    if not (isinstance(decision, dict) and set(decision) <= {'label', 'would_review', 'passed', 'reason'}
+    if not (isinstance(decision, dict) and set(decision) <= {'label', 'would_review', 'passed', 'reason','manual','review_id'}
             and isinstance(decision.get('label'), str) and decision['label'] in LABELS
             and type(decision.get('would_review')) is bool
             and ('passed' not in decision or type(decision['passed']) is bool)
+            and ('manual' not in decision or decision['manual'] is True)
+            and (('manual' in decision)==('review_id' in decision))
+            and ('review_id' not in decision or isinstance(decision['review_id'],str) and re.fullmatch(r'[A-Za-z0-9_-]{1,64}',decision['review_id']))
             and ('reason' not in decision or decision['reason'] in ('guessed', 'unlabelled', 'unrecorded_field', 'missing_field', 'check_failed'))):
         raise ValueError('malformed provenance decision')
     return decision
