@@ -1,0 +1,18 @@
+{
+  "base_commit": "724ece642872187b84fa5ebc5edf36b7fc0be39e",
+  "scratch": "/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/relay-step5-isolation-2epukhb8",
+  "files": {
+    "backend/app/extraction_checks.py": "ee12ef86b5ebf1ae67cf2a5d18b874728dc402fd98ff4bf6b43e3a0df089fbdf",
+    "backend/app/verification_receipts.py": "d16be54ca4fc9091c53e016279ab8cd83814eb30f3640462646156ba1cd32f8d",
+    "backend/app/exact_json.py": "9d827db8a3f0701bd6d7d2eeb630e2cc2fd49181802ef8883c3ee9d50f1febb9",
+    "backend/app/provenance.py": "3b20dc97998935c59214a82385ef0c0c64f45eba5afe22b794f44943f57f9ba6",
+    "backend/app/request_contracts.py": "436f6beaf98ce55a9780f976f9a8fb2453935e2479f040c7073742abff648821",
+    "backend/tests/test_extraction_checks.py": "898b248101683d0603979e774e29f00e5b5b2aa1b1a4f80c99399c07bda9df6d",
+    "backend/tests/test_verification_receipts.py": "04690d2ea3cc88166ba82918b56413967b69181f239e16095fc0c7068ca6c407",
+    "scripts/scenarios/extraction_verification.py": "f9a0c31b6ccb92aea9ad83be54a8af7f6fe1e8d4f4540f8083317412d3e2fd48",
+    "docs/operations.md": "ada93c2478b05ca206a55128f557c32f44b7984dc70ab033f0a3a7f403318a81",
+    "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md": "040c02d7fae33585824ccbff2f42c4fc69f6692fc9aaae9c7460efca1baa1c42"
+  },
+  "backend_exit_code": 0,
+  "source_overlay_matches": true
+}

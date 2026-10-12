@@ -108,6 +108,19 @@ def _leaves(value, key=None, depth=0, visits=None):
 
 
 @dataclass(frozen=True)
+class ReferenceEvidence:
+    """Ephemeral authority supplied by a tenant's record-read adapter, never model data.
+
+    This describes a resolved input binding, not a persisted authorization grant.
+    The runtime must construct it after authorizing that read in the current tenant.
+    """
+    node_id: str
+    port: str
+    tenant_id: str
+    text: str
+
+
+@dataclass(frozen=True)
 class EvidenceContext:
     """Only this invocation's eligible resolved data, never templates or run memory.
 
@@ -117,6 +130,26 @@ class EvidenceContext:
     eligible_texts: tuple[str, ...] = ()
     structured_sources: tuple[dict, ...] = ()
     complete: bool = True
+    tenant_id: str | None = None
+    reference_sources: tuple[ReferenceEvidence, ...] = ()
+
+
+def reference_context(node, port, text, *, tenant_id):
+    """Only explicit record reads can furnish independent reference data.
+
+    Triggers are original requests, not independent catalogues; arbitrary HTTP/Python
+    or model text can echo an invention. None of those qualifies here.
+    """
+    if not (isinstance(tenant_id, str) and 1 <= len(tenant_id) <= 64
+            and isinstance(port, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,63}', port)
+            and isinstance(text, str)):
+        raise ValueError('Reference context needs a tenant, public port and resolved text.')
+    independent = node.type not in SOURCE_NODES and independent_source(node)
+    if independent:
+        from .registry import REGISTRY
+        if port not in REGISTRY[node.type].outputs:raise ValueError('Reference port is not a declared record output.')
+    records = (ReferenceEvidence(node.id, port, tenant_id, text),) if independent else ()
+    return EvidenceContext(tenant_id=tenant_id, reference_sources=records)
 
 
 def source_context(node_id, port, value):

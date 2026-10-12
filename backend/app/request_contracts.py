@@ -164,7 +164,8 @@ class VerificationReport(StrictModel):
     @model_validator(mode='after')
     def honest_coverage(self):
         if len({f.field for f in self.fields}) != len(self.fields):raise ValueError('Report field Pointers must be unique.')
-        if self.verdict == 'passed' and (not self.complete or any(f.status != 'passed' for f in self.fields)):
+        if self.verdict == 'passed' and (not self.complete or not self.fields
+                or any(f.status != 'passed' or not f.field for f in self.fields)):
             raise ValueError('Incomplete or unsuccessful coverage cannot pass.')
         bounded_json(self.model_dump(), 8192, 'Verification report')
         return self

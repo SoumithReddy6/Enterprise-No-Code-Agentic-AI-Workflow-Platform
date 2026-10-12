@@ -1,0 +1,115 @@
+{
+  "recorded_at": "2026-10-11T22:26:17.309651+00:00",
+  "task": "Step 5: pure deterministic extraction checks and verification receipts",
+  "base_commit": "724ece642872187b84fa5ebc5edf36b7fc0be39e",
+  "branch": "codex/retrieval-answerability-safety",
+  "commit_state": "uncommitted implementation; user commit/push pending; agent did not commit or push",
+  "prior_ci": {
+    "commit": "724ece6",
+    "run": 38159805438,
+    "all_five_jobs": "passed"
+  },
+  "hosted_ci": "pending user commit/push",
+  "source_sha256": {
+    "backend/app/extraction_checks.py": "ee12ef86b5ebf1ae67cf2a5d18b874728dc402fd98ff4bf6b43e3a0df089fbdf",
+    "backend/app/verification_receipts.py": "d16be54ca4fc9091c53e016279ab8cd83814eb30f3640462646156ba1cd32f8d",
+    "backend/app/exact_json.py": "9d827db8a3f0701bd6d7d2eeb630e2cc2fd49181802ef8883c3ee9d50f1febb9",
+    "backend/app/provenance.py": "3b20dc97998935c59214a82385ef0c0c64f45eba5afe22b794f44943f57f9ba6",
+    "backend/app/request_contracts.py": "436f6beaf98ce55a9780f976f9a8fb2453935e2479f040c7073742abff648821",
+    "backend/tests/test_extraction_checks.py": "898b248101683d0603979e774e29f00e5b5b2aa1b1a4f80c99399c07bda9df6d",
+    "backend/tests/test_verification_receipts.py": "04690d2ea3cc88166ba82918b56413967b69181f239e16095fc0c7068ca6c407",
+    "scripts/scenarios/extraction_verification.py": "f9a0c31b6ccb92aea9ad83be54a8af7f6fe1e8d4f4540f8083317412d3e2fd48",
+    "docs/operations.md": "ada93c2478b05ca206a55128f557c32f44b7984dc70ab033f0a3a7f403318a81",
+    "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md": "040c02d7fae33585824ccbff2f42c4fc69f6692fc9aaae9c7460efca1baa1c42"
+  },
+  "tests": {
+    "pure_checks_and_receipts": {
+      "passed": 87,
+      "exit_code": 0
+    },
+    "focused_combined": {
+      "passed": 324,
+      "exit_code": 0
+    },
+    "backend": [
+      {
+        "seed": 0,
+        "passed": 1532,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "seconds": 68.856,
+        "junit": "backend-final-seed0.xml"
+      },
+      {
+        "seed": 1,
+        "passed": 1532,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "seconds": 68.958,
+        "junit": "backend-final-seed1.xml"
+      },
+      {
+        "seed": 2,
+        "passed": 1532,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "seconds": 73.334,
+        "junit": "backend-final-seed2.xml"
+      }
+    ],
+    "clean_export": {
+      "passed": 1532,
+      "exit_code": 0,
+      "source_overlay_matches": true,
+      "manifest": "isolation-manifest.json"
+    },
+    "deployed_regression": {
+      "passed": 20,
+      "total": 20,
+      "source_changes": [],
+      "artifact": "production/report.json"
+    },
+    "authorized_record_read": {
+      "passed": 6,
+      "total": 6,
+      "source_changes": [],
+      "artifact": "source-read/report.json",
+      "scope": "real API/worker/Jira adapter read; pure checker invoked after read, no runtime gate claimed"
+    },
+    "frontend": {
+      "unit_passed": 79,
+      "typecheck": "passed",
+      "exit_code": 0,
+      "browser_lint_build": "Not rerun: no frontend changes and no verifier exposed in node catalog/API."
+    },
+    "mutations": {
+      "caught": 15,
+      "total": 15,
+      "artifact": "mutations.json"
+    },
+    "independent_review": "review.json"
+  },
+  "scope": [
+    "Exact schema/Pointer validation with strict duplicates and bounded traversal.",
+    "Origin separated from suitability; quote alone does not approve meaning.",
+    "Independent tenant-scoped record references; model/echo/another-tenant inputs cannot furnish authority.",
+    "Arithmetic consistency and checked actual operands for derived targets.",
+    "Nonempty complete coverage, bounded reports/receipts, exact input/value/run/node/policy/reference bindings.",
+    "No new judge/model call, dependency, schema migration, handler registration or continuation path."
+  ],
+  "limitations": [
+    "Runtime creation/consumption and verification/review pause/authorization are Step 6.",
+    "Checksums are audit bindings, not signatures; arbitrary handler/model metadata is not authority.",
+    "Runtime must validate real review existence/expiry/ownership and supply expected verifier node_id.",
+    "Quotation/domain membership cannot universally prove natural-language intent or numeric roles; uncertainty remains review.",
+    "Local schema references supported; remote resolution and unbounded patterns are unavailable, never silently passed.",
+    "Schema formats remain existing validator annotations, not enforced business constraints.",
+    "Data capped at 262144 bytes each, traversal at 32 levels/4096 visits, reports/receipts at 64 fields/8192 bytes; excessive coverage cannot automatically pass.",
+    "Frozen multi-workflow model/whole-admission measurement remains Step 8."
+  ],
+  "python": "3.14.6",
+  "diff_check": "passed"
+}

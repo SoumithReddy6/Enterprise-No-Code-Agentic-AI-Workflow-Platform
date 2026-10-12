@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for native execution; use superpowers:subagent-driven-development only if the user chooses delegation. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Tasks 1 (`79216b8`), 2 (`453dbb5`) and 3 (`953d4d2`) are committed; all five hosted CI jobs passed for each (runs `38148390994`, `38151170421`, `38155405292`). Task 4's router is implemented and locally verified on 2026-10-11; awaiting the user's commit/push and hosted CI. Its live-model smoke check matched 4 of 7 expected routes, so infrastructure success does not certify semantic routing accuracy. Tasks 5–8 remain pending. Extraction verification and business enforcement are not enabled; the editor's complete admission palette and starter remain unchanged. See `evals/results/request-router-step4-2026-10-11/report.json` for scope and evidence.
+**Status:** Tasks 1–4 are committed; all five hosted CI jobs passed for the router commit `724ece6` (run `38159805438`). Task 5 implements the pure deterministic checking and receipt layer on 2026-10-11; final local verification and user commit/push precede hosted CI. Tasks 6–8 remain pending. No verifier handler, runtime review/continuation gate or complete admission starter is enabled yet. Router live accuracy remains uncertified (Step 4 smoke: 4/7); this layer invokes no judge model.
 
 **Goal:** Handle prepared greetings without an LLM, route other inputs by workflow purpose, and prevent unsupported extractions from authorising consequential actions.
 
@@ -119,7 +119,7 @@ Do not split graph semantics, retry policy or model accounting into competing im
 - [x] Verify usage for both calls, model allowlist/credential enforcement, lease-loss/cancellation propagation, and saved-policy/input digests on replay with zero additional model calls.
 - [x] Add deployed receiver tests: an out-of-scope request sends nothing; a deliberately wrong proceed still cannot bypass the later check. The router commit is kept independent.
 
-- [ ] User commits/pushes the router independently, then hosted CI is checked before Task 5.
+- [x] User committed/pushed router `724ece6`; all five hosted jobs passed in `38159805438` before Task 5.
 
 ### Task 5: Implement deterministic extraction verification
 
@@ -132,12 +132,14 @@ Do not split graph semantics, retry policy or model accounting into competing im
 - `checked_receipt(record: object) -> dict` and `receipt_matches(record: dict, *, run_id: str, original: str, value: str, policy_digest: str) -> bool`.
 - Reserved output key `_verification`; explicitly validate allowed metadata keys rather than accepting arbitrary underscore keys.
 
-- [ ] Write tests for invented zero, explicit zero, null/missing facts, booleans, negatives forbidden by schema, exact exponents, path collisions, malformed types and receipt overflow.
-- [ ] Test `item: "order"` with a real catalogue fixture is not an automatic pass, and a quotation-only rule leaves suitability unknown. Test yes/no from prose remains unverified; structured source equality/authoritative records can establish it.
-- [ ] Test independent references, wrong reference bindings, echo/model reference refusal, inconsistent total versus quantity × price, and missing required rules. No new judge model is called.
-- [ ] Run failures, then implement exact schema/Pointer rules and Calculate cross-checks using repaired existing helpers. Include complete rule/pointer/input/value digests; omitted coverage never passes.
-- [ ] Test changed values, policy edits, another run's receipt, another tenant's reference, and human approval of only the displayed value cannot authorise a different value.
-- [ ] Run focused verification/provenance/Calculate tests; commit the pure checking and receipt layer before enabling continuation or review.
+- [x] Write tests for invented zero, explicit zero, null/missing facts, booleans, negatives forbidden by schema, exact exponents, path collisions, malformed types and receipt overflow.
+- [x] Test `item: "order"` with a real catalogue fixture is not an automatic pass, and a quotation-only rule leaves suitability unknown. Test yes/no from prose remains unverified; structured source equality/authoritative records can establish it.
+- [x] Test independent references, wrong reference bindings, echo/model reference refusal, inconsistent total versus quantity × price, and missing required rules. No new judge model is called.
+- [x] Run failures, then implement exact schema/Pointer rules and Calculate cross-checks using repaired existing helpers. Include complete rule/pointer/input/value digests; omitted coverage never passes.
+- [x] Test changed values, policy edits, another run's receipt, another tenant's reference, and human approval of only the displayed value cannot authorise a different value.
+- [x] Run focused verification/provenance/Calculate tests; keep the pure checking and receipt layer separate from continuation/review.
+
+- [ ] User commits/pushes this layer; hosted CI is checked before Task 6 enables runtime checking.
 
 ### Task 6: Enforce checks and add durable review
 

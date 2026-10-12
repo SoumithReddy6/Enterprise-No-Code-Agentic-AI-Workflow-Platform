@@ -1,0 +1,39 @@
+{
+  "reviewer": "fresh-context gpt-6-astra; read-only; one review, no re-review",
+  "independent_tests": 198,
+  "critical": [],
+  "important": [
+    {
+      "finding": "Local schema reference can target remote/regex schema beneath arbitrary keys.",
+      "fixed": true,
+      "tdd": "Hidden remote and pattern tests RED\u2192GREEN; independent validator no-retrieval test RED\u2192GREEN.",
+      "fix": "Bounded cycle-aware local target traversal plus fail-to-retrieve Registry at the exact validator boundary."
+    },
+    {
+      "finding": "Empty passed reports can construct and match a receipt.",
+      "fixed": true,
+      "tdd": "Empty report constructor, mutable report and restore tests RED\u2192GREEN. Additional partial/unrelated coverage cases RED\u2192GREEN.",
+      "fix": "Require nonempty public field coverage and validate that successful receipt coverage actually covers the exact value."
+    }
+  ],
+  "additional_hardening": [
+    {
+      "finding": "Boolean leaf-name matching ignored original JSON Pointer.",
+      "fixed": true,
+      "tdd": "Unrelated same-name leaf and escaped Pointer RED\u2192GREEN."
+    },
+    {
+      "finding": "Reference helper accepted nonexistent record output port.",
+      "fixed": true,
+      "tdd": "Declared output check RED\u2192GREEN."
+    }
+  ],
+  "minor": [],
+  "declined_to_judge": [
+    "Runtime writes/verification review/approval existence and expiry remain Step 6.",
+    "Trusted context construction and actual runtime adapter tenant authorization remain Step 6; source-read author probe exercises the existing authorized adapter.",
+    "Attached Agents, loop replay and send deduplication remain Steps 1/6/8.",
+    "Greetings/cache internals unchanged; full regression includes them.",
+    "Semantic model accuracy remains Step 8; this checker calls no judge."
+  ]
+}

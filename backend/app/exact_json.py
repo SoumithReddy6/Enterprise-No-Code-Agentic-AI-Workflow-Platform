@@ -59,8 +59,17 @@ def _integer(text):
     return number
 
 
-def loads(text):
-    return json.loads(text, parse_float=_decimal, parse_int=_integer, parse_constant=_refuse)
+def _unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:raise ValueError('Duplicate JSON object keys are not supported.')
+        result[key] = value
+    return result
+
+
+def loads(text, *, reject_duplicates=False):
+    return json.loads(text, parse_float=_decimal, parse_int=_integer, parse_constant=_refuse,
+        **({'object_pairs_hook': _unique_object} if reject_duplicates else {}))
 
 
 # Integers beyond this many digits are refused rather than expanded when sending.
@@ -123,7 +132,7 @@ def _readable(match):
     return str(Decimal(f'{numerator * (10 ** places // denominator)}E-{places}'))
 
 
-def validate(value, schema):
+def validate(value, schema, *, registry=None):
     """Validate the exact value against the schema, with the schema's own numbers read
     exactly too, so bounds, const, enum, integer and multipleOf judge the number that is
     returned rather than a rounded copy. Raises jsonschema.ValidationError.
@@ -134,7 +143,8 @@ def validate(value, schema):
     import jsonschema
     from jsonschema import validators
     exact_schema = _exact_numbers(loads(json.dumps(schema)))
-    validator = validators.validator_for(exact_schema)(exact_schema)
+    validator = validators.validator_for(exact_schema)(exact_schema,
+        **({'registry': registry} if registry is not None else {}))
     error = jsonschema.exceptions.best_match(validator.iter_errors(_exact_numbers(value)))
     if error is not None:
         # Messages reach the model's repair prompt and the run error: show numbers as written.

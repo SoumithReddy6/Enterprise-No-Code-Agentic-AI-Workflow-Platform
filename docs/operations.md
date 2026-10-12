@@ -456,3 +456,48 @@ failed without downstream execution. A separate repeat of one question succeeded
 these observations are not a deterministic accuracy guarantee. Full multi-workflow
 calibration is Task 8; deterministic extraction checks and business enforcement are
 Tasks 5–6. Do not treat the router alone as a correctness or authorization boundary.
+
+## Deterministic extraction checking (pure layer)
+
+Step 5 provides `verify_extraction` and verification receipt helpers. It does **not**
+register a runnable verifier node, approve a write, or enable human review. Step 6 supplies
+those execution boundaries. A model/handler must never be allowed to provide its own
+`_verification` metadata or construct its own trusted evidence context.
+
+The checker parses exact JSON, rejects duplicate keys, and checks schema, origin and
+suitability separately. Missing required facts and malformed values yield `clarify`;
+unconfirmed origin, unsuitable values or incomplete checking yield `needs_review`.
+Only complete, successful field coverage yields `passed`. Quotation proves that a value
+was written, not its business meaning. For example, the word “order” cannot pass a product
+catalogue check merely because it appears in “order $450”. Yes/no inferred from prose
+remains unverified; structured boolean origin uses the exact JSON Pointer.
+
+`source_field` compares an exact Pointer in structured original input. `enum` checks a
+configured domain but also requires origin. `reference_member` requires the exact resolved
+reference from an explicit record-read adapter, scoped to the same tenant. Trigger data,
+arbitrary HTTP/Python results, model output and request echoes are not independent
+references. Runtime must authorize the read and construct this context; origin labels
+alone do not furnish reference authority. Unrelated/changed reference data never qualifies.
+
+Calculate checks establish consistency. An equality can establish a calculated target
+only when the actual operands already passed their field checks; it cannot repair a known
+source mismatch or establish the semantic roles of merely quoted operands.
+
+Each original/value/reference input is capped at 262,144 UTF-8 bytes; traversal is limited
+to 32 levels and 4,096 visits. Reports and receipts have at most 64 fields and 8,192
+serialized bytes. Omitted/oversized coverage is marked incomplete and cannot automatically
+qualify. Receipts bind exact original/value bytes, run, verifier node, policy rules and
+reference scope. Successful construction also checks that the fields cover the actual
+value. Empty successful reports are invalid. Consumers must pass the expected verifier
+node and independently validate real approval records; a supplied review id is not proof
+that approval occurred. Checksums are audit bindings, not cryptographic signatures.
+
+Schemas use exact existing number validation. Local references are checked with a bounded,
+cycle-aware traversal, including targets beneath arbitrary keys. Remote resolution is
+blocked independently at the validator registry. Regex `pattern`/`patternProperties`
+checks are unavailable because Python regex execution has no deadline; inline remote
+schemas under local definitions and use supported deterministic field rules. This is
+reported as unavailable checking, never silently ignored or converted to a pass.
+JSON Schema formats remain annotations under the existing validator; they are not a
+substitute for business suitability rules. Existing JSON schema numeric-bound precision
+limits at API parsing remain as documented in `typed-conditions.md`.
