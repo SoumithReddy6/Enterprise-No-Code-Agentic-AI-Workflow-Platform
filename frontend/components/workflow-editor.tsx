@@ -1,6 +1,9 @@
 'use client';
 import { approvalDecision, type RunApproval } from '@/lib/approvals';
 import ApprovalReview from './approval-review';
+import WorkflowSetup from './workflow-setup';
+import RequestChecks from './request-checks';
+import { createRequestWorkflow, requestTemplates, admissionDetails } from '@/lib/request-routing';
 
 import {
   useCallback,
@@ -265,7 +268,8 @@ function Editor() {
     } finally { setHistoryLoading(false); }
   }
   const [tab, setTab] = useState('output');
-  const [modal, setModal] = useState<'files' | 'help' | null>(null);
+  const [modal, setModal] = useState<'files' | 'help' | 'setup' | null>(null);
+  const [reviewError, setReviewError] = useState('');
   const [connected, setConnected] = useState(false);
   const [leftPanel, setLeftPanel] = useState<
     'nodes' | 'providers' | 'knowledge' | 'connections'
@@ -302,6 +306,7 @@ function Editor() {
   const chosen = nodes.find((n) => n.id === selected)?.data.spec;
   const definition = catalog.find((d) => d.type === chosen?.type);
   const activeRun = useRef<string | undefined>(undefined);
+  const runViewVersion = useRef(0);
 
   const initialModelChosen = useRef(false);
   const beginReload = useRef(latestRequestGuard());
@@ -332,7 +337,7 @@ function Editor() {
           toCanvas({
             ...seed,
             nodes: seed.nodes.map((n) =>
-              n.type === 'agent'
+              ['agent', 'request_router'].includes(n.type)
                 ? { ...n, config: modelConfig(n.config, first) }
                 : n,
             ),
@@ -427,11 +432,13 @@ function Editor() {
     );
   }
   function clearRun() {
+    runViewVersion.current += 1;
     source.current?.close();
     source.current = null;
     activeRun.current = undefined;
     setRun(undefined);
     setEvents([]);
+    setReviewError('');
   }
   function loadDocument(w: Workflow, id?: string, updatedAt?: string) {
     documentToken.current += 1;
@@ -444,7 +451,7 @@ function Editor() {
         w = {
           ...w,
           nodes: w.nodes.map((n) =>
-            n.type === 'agent'
+            ['agent', 'request_router'].includes(n.type)
               ? { ...n, config: modelConfig(n.config, first) }
               : n,
           ),
@@ -464,6 +471,14 @@ function Editor() {
     return (
       !dirty || window.confirm('Discard unsaved changes to this workflow?')
     );
+  }
+  function createDraft(draft: Workflow) {
+    const first = allowedModels.find(m => m.enabled && m.provider === 'ollama') || allowedModels.find(m => m.enabled);
+    const template = requestTemplates.find(t => createRequestWorkflow(t.id).name === draft.name);
+    if (first) draft = { ...draft, nodes: draft.nodes.map(n => ['agent', 'request_router', 'llm', 'query'].includes(n.type) ? { ...n, config: modelConfig(n.config, first) } : n) };
+    loadDocument(draft);
+    if (template) setMessage(template.sample);
+    setSelected('router');
   }
   async function load(id: string) {
     if (!discardAllowed()) return;
@@ -621,18 +636,24 @@ function Editor() {
       activeRun.current = undefined;
     }
   }
-  async function decideApproval(approval: RunApproval, action: 'approve' | 'reject') {
+  async function decideApproval(approval: RunApproval, action: 'approve' | 'reject', choice?: boolean) {
     if (!run) return;
     const runId = run.id;
+    const viewVersion = runViewVersion.current;
     setBusy(true);
+    setReviewError('');
     try {
-      const decision = await approvalDecision(approval);
+      const decision = await approvalDecision(approval, choice, action);
+      if (runViewVersion.current !== viewVersion) return;
       await api(`/runs/${runId}/${action}`, 'POST', decision);
+      if (runViewVersion.current !== viewVersion) return;
       activeRun.current = runId;
       setRunning(action === 'approve');
       await recoverRun(runId);
     } catch (e) {
+      if (runViewVersion.current !== viewVersion) return;
       setNotice((e as Error).message);
+      setReviewError((e as Error).message);
       activeRun.current = runId;
       await recoverRun(runId);
     } finally {
@@ -1393,13 +1414,15 @@ function Editor() {
                           </section>
                         );
                       })()}
+                      <RequestChecks run={run} events={events} />
+                      {reviewError && <section aria-label="Review feedback" className="review-feedback" role="alert">{reviewError}</section>}
                       {run?.status === 'awaiting_approval' && <button className="text-button" disabled={busy} onClick={() => void showRun(run.id)}>Refresh approval status</button>}
                       {run?.approvals?.filter((a) => a.status === 'pending').map((approval) => (
                         <ApprovalReview key={approval.id} approval={approval} disabled={busy || running}
-                          onDecision={(a, action) => void decideApproval(a, action)} />
+                          onDecision={(a, action, choice) => void decideApproval(a, action, choice)} />
                       ))}
                       {run?.output ? (
-                        <pre>{run.output}</pre>
+                        <pre data-run-answer>{run.output}</pre>
                       ) : run?.error ? (
                         <p className="error-text">{run.error}</p>
                       ) : (
@@ -1458,6 +1481,8 @@ function Editor() {
                             {note}
                           </p>
                         ))}
+                        {(() => { const node = run?.workflow.nodes.find(n => n.id === e.node_id);const detail = node ? admissionDetails(e, node.type) : null;
+                          return detail ? <p className="helper">{detail.title}: {detail.explanation}{detail.missingFields.length ? ' Missing: ' + detail.missingFields.join(', ') : ''}</p> : null; })()}
                         <pre>
                           {JSON.stringify(
                             e.inputs ||
@@ -1924,14 +1949,12 @@ function Editor() {
       />
       {modal && (
         <StudioDialog
-          title={modal === 'files' ? 'Saved workflows' : 'Quick guide'}
+          title={modal === 'files' ? 'Saved workflows' : modal === 'setup' ? 'Set up a new workflow' : 'Quick guide'}
           onClose={() => setModal(null)}
         >
           <div className="modal-heading">
             <h2>
-              {modal === 'files'
-                ? 'Your workflows'
-                : 'Build your first workflow'}
+              {modal === 'files' ? 'Your workflows' : modal === 'setup' ? 'Set up a new workflow' : 'Build your first workflow'}
             </h2>
             <button
               className="icon-button"
@@ -1947,7 +1970,7 @@ function Editor() {
                 className="button primary"
                 disabled={running}
                 onClick={() => {
-                  if (discardAllowed()) loadDocument(structuredClone(seed));
+                  if (discardAllowed()) setModal('setup');
                 }}
               >
                 <Plus size={16} /> New workflow
@@ -1974,6 +1997,7 @@ function Editor() {
               </div>
             </>
           )}
+          {modal === 'setup' && <WorkflowSetup disabled={running} onCreate={createDraft} />}
           {modal === 'help' && (
             <>
               <ol className="guide">

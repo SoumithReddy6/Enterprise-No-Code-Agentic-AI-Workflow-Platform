@@ -1,3 +1,5 @@
+import { createRequestWorkflow } from './request-routing.ts';
+
 export type WorkflowNode = {
   id: string;
   type: string;
@@ -89,9 +91,21 @@ export type Run = {
   events: RunEvent[];
   workflow: Workflow;
   message: string;
+  checkpoints?: Record<string, Record<string, unknown>>;
 };
 export type Credential = { id: string; name: string; provider: string };
 export type SavedWorkflow = { id: string; name: string; updated_at: string };
+
+/** Avoid JSON.stringify turning an overflowing editor number into a hidden null. */
+export function parseJsonSetting(text: string, type: string | undefined): unknown {
+  const value: unknown = JSON.parse(text, (_key, value: unknown) => {
+    if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('JSON settings require finite numbers.');
+    return value;
+  });
+  if (type === 'object' && (value === null || Array.isArray(value) || typeof value !== 'object')) throw new Error('Enter a JSON object.');
+  if (type === 'array' && !Array.isArray(value)) throw new Error('Enter a JSON array.');
+  return value;
+}
 
 export const controlRoutes = (definition?: Definition): string[] => definition?.branch_routes ?? [];
 export const inputPorts = (definition: Definition): Record<string, string> => ({ ...definition.inputs, ...definition.optional_inputs });
@@ -101,54 +115,7 @@ export function setInputBinding(definition: Definition, bindings: Record<string,
   return next;
 }
 
-export const seed: Workflow = {
-  version: 1,
-  name: 'My first AI workflow',
-  description: 'An agent answers an incoming message.',
-  nodes: [
-    {
-      id: 'input',
-      type: 'chat_input',
-      version: 1,
-      label: 'Chat input',
-      position: { x: 300, y: 40 },
-      inputs: {},
-      config: {},
-    },
-    {
-      id: 'agent',
-      type: 'agent',
-      version: 1,
-      label: 'Agent',
-      position: { x: 300, y: 250 },
-      inputs: { input: 'input.message' },
-      config: {
-        provider: 'ollama',
-        model: '',
-        credential_id: '',
-        role: 'reasoner',
-        system: 'You are a helpful assistant.',
-        user_prompt: '{input}',
-        max_tokens: 2048,
-        max_steps: 6,
-        memory_key: 'default',
-      },
-    },
-    {
-      id: 'response',
-      type: 'response',
-      version: 1,
-      label: 'Response',
-      position: { x: 300, y: 460 },
-      inputs: { text: 'agent.text' },
-      config: {},
-    },
-  ],
-  edges: [
-    { id: 'input-agent', source: 'input', target: 'agent' },
-    { id: 'agent-response', source: 'agent', target: 'response' },
-  ],
-};
+export const seed: Workflow = createRequestWorkflow('qa');
 
 export class ApiError extends Error {
   status: number;
@@ -323,6 +290,9 @@ export function paletteCategory(type: string): string | null {
         agent: 'Agent',
         condition: 'Control',
         calculate: 'Control',
+        greeting_cache: 'Control',
+        request_router: 'Control',
+        verify_extraction: 'Control',
         response: 'Output',
       } as Record<string, string>
     )[type] || null

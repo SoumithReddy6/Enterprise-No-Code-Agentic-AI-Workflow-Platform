@@ -1,0 +1,377 @@
+{
+  "version": 1,
+  "contract": 2,
+  "name": "Support / ticket draft",
+  "description": "Check a summary and category before routing a ticket draft. This example creates no ticket.",
+  "nodes": [
+    {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "Chat input",
+      "position": {
+        "x": 300,
+        "y": 40
+      },
+      "inputs": {},
+      "config": {}
+    },
+    {
+      "id": "cache",
+      "type": "greeting_cache",
+      "version": 1,
+      "label": "Prepared greetings",
+      "position": {
+        "x": 300,
+        "y": 210
+      },
+      "inputs": {
+        "message": "input.message"
+      },
+      "config": {
+        "entries": [
+          {
+            "message": "hello",
+            "reply": "Hello! Send your request and I will check whether this workflow can help."
+          },
+          {
+            "message": "hello!",
+            "reply": "Hello! Send your request and I will check whether this workflow can help."
+          }
+        ]
+      }
+    },
+    {
+      "id": "router",
+      "type": "request_router",
+      "version": 1,
+      "label": "Request router",
+      "position": {
+        "x": 300,
+        "y": 380
+      },
+      "inputs": {
+        "message": "input.message"
+      },
+      "config": {
+        "provider": "ollama",
+        "model": "",
+        "credential_id": "",
+        "max_tokens": 2048,
+        "purpose": "Draft support tickets with a summary and a category of billing, technical or account. General unrelated questions are outside this workflow.",
+        "accepted_requests": [
+          "Check a summary and category before routing a ticket draft. This example creates no ticket."
+        ],
+        "exclusions": [
+          "Unrelated questions, greetings without a request, and invented facts."
+        ],
+        "clarification_rules": [
+          "Ask for missing required facts; never fill them with guesses or zero defaults."
+        ],
+        "examples": [
+          "{\"summary\":\"Invoice download is broken\",\"category\":\"billing\"}"
+        ]
+      }
+    },
+    {
+      "id": "extract",
+      "type": "agent",
+      "version": 1,
+      "label": "Extract request facts",
+      "position": {
+        "x": 300,
+        "y": 550
+      },
+      "inputs": {
+        "input": "input.message"
+      },
+      "config": {
+        "provider": "ollama",
+        "model": "",
+        "credential_id": "",
+        "max_tokens": 2048,
+        "role": "extraction",
+        "system": "Return only a JSON object with these fields: summary, category. Copy only what the original request states; use null for absent facts. Never invent defaults. Do not approve anything or calculate totals.",
+        "user_prompt": "{input}",
+        "max_steps": 6,
+        "memory_key": "default",
+        "output_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "summary": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "category": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "summary",
+            "category"
+          ]
+        }
+      }
+    },
+    {
+      "id": "verify",
+      "type": "verify_extraction",
+      "version": 1,
+      "label": "Check extracted facts",
+      "position": {
+        "x": 300,
+        "y": 720
+      },
+      "inputs": {
+        "original": "input.message",
+        "value": "extract.text"
+      },
+      "config": {
+        "expected_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "summary": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "category": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "summary",
+            "category"
+          ]
+        },
+        "required_fields": [
+          "/summary",
+          "/category"
+        ],
+        "field_rules": [
+          {
+            "field": "/summary",
+            "kind": "source_field",
+            "source_pointer": "/summary"
+          },
+          {
+            "field": "/category",
+            "kind": "source_field",
+            "source_pointer": "/category"
+          },
+          {
+            "field": "/category",
+            "kind": "enum",
+            "allowed_values": [
+              "billing",
+              "technical",
+              "account"
+            ]
+          }
+        ],
+        "cross_checks": []
+      }
+    },
+    {
+      "id": "decision",
+      "type": "condition",
+      "version": 1,
+      "label": "Business condition",
+      "position": {
+        "x": 300,
+        "y": 890
+      },
+      "inputs": {
+        "value": "verify.text"
+      },
+      "config": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "billing"
+      }
+    },
+    {
+      "id": "yesText",
+      "type": "prompt",
+      "version": 1,
+      "label": "True branch explanation",
+      "position": {
+        "x": 70,
+        "y": 1060
+      },
+      "inputs": {
+        "message": "verify.text"
+      },
+      "config": {
+        "template": "Checked ticket draft: billing queue. No ticket has been created.\nChecked value: {message}"
+      }
+    },
+    {
+      "id": "yes",
+      "type": "response",
+      "version": 1,
+      "label": "True branch response",
+      "position": {
+        "x": 70,
+        "y": 1230
+      },
+      "inputs": {
+        "text": "yesText.text"
+      },
+      "config": {}
+    },
+    {
+      "id": "noText",
+      "type": "prompt",
+      "version": 1,
+      "label": "False branch explanation",
+      "position": {
+        "x": 580,
+        "y": 1060
+      },
+      "inputs": {
+        "message": "verify.text"
+      },
+      "config": {
+        "template": "Checked ticket draft: general support queue. No ticket has been created.\nChecked value: {message}"
+      }
+    },
+    {
+      "id": "no",
+      "type": "response",
+      "version": 1,
+      "label": "False branch response",
+      "position": {
+        "x": 580,
+        "y": 1230
+      },
+      "inputs": {
+        "text": "noText.text"
+      },
+      "config": {}
+    },
+    {
+      "id": "cacheReply",
+      "type": "response",
+      "version": 1,
+      "label": "Prepared reply",
+      "position": {
+        "x": -180,
+        "y": 300
+      },
+      "inputs": {
+        "text": "cache.reply"
+      },
+      "config": {}
+    },
+    {
+      "id": "routerReply",
+      "type": "response",
+      "version": 1,
+      "label": "Router reply",
+      "position": {
+        "x": -180,
+        "y": 470
+      },
+      "inputs": {
+        "text": "router.reply"
+      },
+      "config": {}
+    },
+    {
+      "id": "verifyReply",
+      "type": "response",
+      "version": 1,
+      "label": "Missing facts reply",
+      "position": {
+        "x": -180,
+        "y": 810
+      },
+      "inputs": {
+        "text": "verify.reply"
+      },
+      "config": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "input-cache",
+      "source": "input",
+      "target": "cache"
+    },
+    {
+      "id": "cache-router",
+      "source": "cache",
+      "target": "router",
+      "sourceHandle": "continue"
+    },
+    {
+      "id": "router-extract",
+      "source": "router",
+      "target": "extract",
+      "sourceHandle": "continue"
+    },
+    {
+      "id": "extract-verify",
+      "source": "extract",
+      "target": "verify"
+    },
+    {
+      "id": "verify-decision",
+      "source": "verify",
+      "target": "decision",
+      "sourceHandle": "continue"
+    },
+    {
+      "id": "decision-yesText",
+      "source": "decision",
+      "target": "yesText",
+      "sourceHandle": "true"
+    },
+    {
+      "id": "yesText-yes",
+      "source": "yesText",
+      "target": "yes"
+    },
+    {
+      "id": "decision-noText",
+      "source": "decision",
+      "target": "noText",
+      "sourceHandle": "false"
+    },
+    {
+      "id": "noText-no",
+      "source": "noText",
+      "target": "no"
+    },
+    {
+      "id": "cache-cacheReply",
+      "source": "cache",
+      "target": "cacheReply",
+      "sourceHandle": "reply"
+    },
+    {
+      "id": "router-routerReply",
+      "source": "router",
+      "target": "routerReply",
+      "sourceHandle": "reply"
+    },
+    {
+      "id": "verify-verifyReply",
+      "source": "verify",
+      "target": "verifyReply",
+      "sourceHandle": "reply"
+    }
+  ]
+}

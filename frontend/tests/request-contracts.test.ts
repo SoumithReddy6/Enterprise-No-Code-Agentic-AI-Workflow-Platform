@@ -24,6 +24,7 @@ void test('optional inputs appear but clearing them removes the binding', () => 
 });
 
 void test('contract changes invalidate execution highlighting; omitted contract is one', () => {
-  assert.equal(sameExecutionGraph(seed, { ...seed, contract: 1 }), true);
-  assert.equal(sameExecutionGraph(seed, { ...seed, contract: 2 }), false);
+  const { contract: _contract, ...legacy } = seed;
+  assert.equal(sameExecutionGraph(legacy, { ...legacy, contract: 1 }), true);
+  assert.equal(sameExecutionGraph(legacy, { ...legacy, contract: 2 }), false);
 });

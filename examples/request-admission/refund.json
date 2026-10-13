@@ -1,0 +1,400 @@
+{
+  "version": 1,
+  "contract": 2,
+  "name": "Refund request draft",
+  "description": "Check the order identifier and requested amount before applying the example amount policy. Order records must be connected or reviewed.",
+  "nodes": [
+    {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "Chat input",
+      "position": {
+        "x": 300,
+        "y": 40
+      },
+      "inputs": {},
+      "config": {}
+    },
+    {
+      "id": "cache",
+      "type": "greeting_cache",
+      "version": 1,
+      "label": "Prepared greetings",
+      "position": {
+        "x": 300,
+        "y": 210
+      },
+      "inputs": {
+        "message": "input.message"
+      },
+      "config": {
+        "entries": [
+          {
+            "message": "hello",
+            "reply": "Hello! Send your request and I will check whether this workflow can help."
+          },
+          {
+            "message": "hello!",
+            "reply": "Hello! Send your request and I will check whether this workflow can help."
+          }
+        ]
+      }
+    },
+    {
+      "id": "router",
+      "type": "request_router",
+      "version": 1,
+      "label": "Request router",
+      "position": {
+        "x": 300,
+        "y": 380
+      },
+      "inputs": {
+        "message": "input.message"
+      },
+      "config": {
+        "provider": "ollama",
+        "model": "",
+        "credential_id": "",
+        "max_tokens": 2048,
+        "purpose": "Draft refund request routing for a stated order identifier and amount. Request facts are separate from refund eligibility and payment authorization.",
+        "accepted_requests": [
+          "Check the order identifier and requested amount before applying the example amount policy. Order records must be connected or reviewed."
+        ],
+        "exclusions": [
+          "Unrelated questions, greetings without a request, and invented facts."
+        ],
+        "clarification_rules": [
+          "Ask for missing required facts; never fill them with guesses or zero defaults."
+        ],
+        "examples": [
+          "{\"order_id\":\"ORDER-1\",\"amount\":24}"
+        ]
+      }
+    },
+    {
+      "id": "records",
+      "type": "tool_jira",
+      "version": 1,
+      "label": "Read independent reference records",
+      "position": {
+        "x": 300,
+        "y": 550
+      },
+      "inputs": {
+        "input": "input.message"
+      },
+      "config": {
+        "connection_id": "",
+        "operation": "search",
+        "jql": "project = ORDERS",
+        "enable_writes": false
+      }
+    },
+    {
+      "id": "extract",
+      "type": "agent",
+      "version": 1,
+      "label": "Extract request facts",
+      "position": {
+        "x": 300,
+        "y": 720
+      },
+      "inputs": {
+        "input": "input.message"
+      },
+      "config": {
+        "provider": "ollama",
+        "model": "",
+        "credential_id": "",
+        "max_tokens": 2048,
+        "role": "extraction",
+        "system": "Return only a JSON object with these fields: order_id, amount. Copy only what the original request states; use null for absent facts. Never invent defaults. Do not approve anything or calculate totals.",
+        "user_prompt": "{input}",
+        "max_steps": 6,
+        "memory_key": "default",
+        "output_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "order_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "amount": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          "required": [
+            "order_id",
+            "amount"
+          ]
+        }
+      }
+    },
+    {
+      "id": "verify",
+      "type": "verify_extraction",
+      "version": 1,
+      "label": "Check extracted facts",
+      "position": {
+        "x": 300,
+        "y": 890
+      },
+      "inputs": {
+        "original": "input.message",
+        "value": "extract.text",
+        "reference": "records.text"
+      },
+      "config": {
+        "expected_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "order_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "amount": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          "required": [
+            "order_id",
+            "amount"
+          ]
+        },
+        "required_fields": [
+          "/order_id",
+          "/amount"
+        ],
+        "field_rules": [
+          {
+            "field": "/order_id",
+            "kind": "quoted"
+          },
+          {
+            "field": "/order_id",
+            "kind": "reference_member",
+            "reference_list": "/issues",
+            "reference_key": "/key"
+          },
+          {
+            "field": "/amount",
+            "kind": "source_field",
+            "source_pointer": "/amount"
+          }
+        ],
+        "cross_checks": []
+      }
+    },
+    {
+      "id": "decision",
+      "type": "condition",
+      "version": 1,
+      "label": "Business condition",
+      "position": {
+        "x": 300,
+        "y": 1060
+      },
+      "inputs": {
+        "value": "verify.text"
+      },
+      "config": {
+        "field": "amount",
+        "operator": "lte",
+        "compare_to": "100"
+      }
+    },
+    {
+      "id": "yesText",
+      "type": "prompt",
+      "version": 1,
+      "label": "True branch explanation",
+      "position": {
+        "x": 70,
+        "y": 1230
+      },
+      "inputs": {
+        "message": "verify.text"
+      },
+      "config": {
+        "template": "Checked refund request is within the example $100 review threshold. Eligibility is not established and no refund has been issued.\nChecked value: {message}"
+      }
+    },
+    {
+      "id": "yes",
+      "type": "response",
+      "version": 1,
+      "label": "True branch response",
+      "position": {
+        "x": 70,
+        "y": 1400
+      },
+      "inputs": {
+        "text": "yesText.text"
+      },
+      "config": {}
+    },
+    {
+      "id": "noText",
+      "type": "prompt",
+      "version": 1,
+      "label": "False branch explanation",
+      "position": {
+        "x": 580,
+        "y": 1230
+      },
+      "inputs": {
+        "message": "verify.text"
+      },
+      "config": {
+        "template": "Checked refund request exceeds the example $100 threshold. Follow the refund review policy; no refund has been issued.\nChecked value: {message}"
+      }
+    },
+    {
+      "id": "no",
+      "type": "response",
+      "version": 1,
+      "label": "False branch response",
+      "position": {
+        "x": 580,
+        "y": 1400
+      },
+      "inputs": {
+        "text": "noText.text"
+      },
+      "config": {}
+    },
+    {
+      "id": "cacheReply",
+      "type": "response",
+      "version": 1,
+      "label": "Prepared reply",
+      "position": {
+        "x": -180,
+        "y": 300
+      },
+      "inputs": {
+        "text": "cache.reply"
+      },
+      "config": {}
+    },
+    {
+      "id": "routerReply",
+      "type": "response",
+      "version": 1,
+      "label": "Router reply",
+      "position": {
+        "x": -180,
+        "y": 470
+      },
+      "inputs": {
+        "text": "router.reply"
+      },
+      "config": {}
+    },
+    {
+      "id": "verifyReply",
+      "type": "response",
+      "version": 1,
+      "label": "Missing facts reply",
+      "position": {
+        "x": -180,
+        "y": 980
+      },
+      "inputs": {
+        "text": "verify.reply"
+      },
+      "config": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "input-cache",
+      "source": "input",
+      "target": "cache"
+    },
+    {
+      "id": "cache-router",
+      "source": "cache",
+      "target": "router",
+      "sourceHandle": "continue"
+    },
+    {
+      "id": "router-records",
+      "source": "router",
+      "target": "records",
+      "sourceHandle": "continue"
+    },
+    {
+      "id": "records-extract",
+      "source": "records",
+      "target": "extract"
+    },
+    {
+      "id": "extract-verify",
+      "source": "extract",
+      "target": "verify"
+    },
+    {
+      "id": "verify-decision",
+      "source": "verify",
+      "target": "decision",
+      "sourceHandle": "continue"
+    },
+    {
+      "id": "decision-yesText",
+      "source": "decision",
+      "target": "yesText",
+      "sourceHandle": "true"
+    },
+    {
+      "id": "yesText-yes",
+      "source": "yesText",
+      "target": "yes"
+    },
+    {
+      "id": "decision-noText",
+      "source": "decision",
+      "target": "noText",
+      "sourceHandle": "false"
+    },
+    {
+      "id": "noText-no",
+      "source": "noText",
+      "target": "no"
+    },
+    {
+      "id": "cache-cacheReply",
+      "source": "cache",
+      "target": "cacheReply",
+      "sourceHandle": "reply"
+    },
+    {
+      "id": "router-routerReply",
+      "source": "router",
+      "target": "routerReply",
+      "sourceHandle": "reply"
+    },
+    {
+      "id": "verify-verifyReply",
+      "source": "verify",
+      "target": "verifyReply",
+      "sourceHandle": "reply"
+    }
+  ]
+}

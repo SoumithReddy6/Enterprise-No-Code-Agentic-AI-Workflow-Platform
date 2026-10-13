@@ -2304,6 +2304,24 @@ input[type='file']::file-selector-button {
   border-radius: 4px;
 }
 
+.request-checks, .approval-review, .review-feedback {
+  border: 1px solid #dce8e3;
+  background: #f5faf7;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.request-checks h3, .approval-review h3 { margin: 0 0 8px; font-size: 13px; }
+.request-checks > section + section { border-top: 1px solid #dce8e3; padding-top: 10px; margin-top: 10px; }
+.request-checks p, .approval-review p { font-size: 12px; line-height: 1.6; }
+.field-checks { padding-left: 18px; font-size: 12px; }
+.approval-review pre { padding: 10px; background: white; border-radius: 6px; }
+.review-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.review-feedback { background: #fff5ed; border-color: #edd8c5; }
+.workflow-setup { min-width: 0; }
+
 .validation-errors.validation-warnings {
   color: #854d0e;
   background: #fffbeb;

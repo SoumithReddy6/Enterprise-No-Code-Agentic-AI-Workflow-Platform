@@ -1,0 +1,1629 @@
+[
+  {
+    "type": "chat_input",
+    "name": "Chat input",
+    "version": 1,
+    "category": "Input",
+    "description": "Start with a message from the run panel.",
+    "inputs": {},
+    "optional_inputs": {},
+    "outputs": {
+      "message": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "EmptyConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
+    "type": "manual_input",
+    "name": "Manual trigger",
+    "version": 1,
+    "category": "Input",
+    "description": "Start a workflow on demand with a text payload.",
+    "inputs": {},
+    "optional_inputs": {},
+    "outputs": {
+      "message": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "EmptyConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
+    "type": "prompt",
+    "name": "Prompt template",
+    "version": 1,
+    "category": "Transform",
+    "description": "Compose a prompt with {message}.",
+    "inputs": {
+      "message": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "template": {
+          "default": "{message}",
+          "maxLength": 20000,
+          "title": "Template",
+          "type": "string"
+        }
+      },
+      "title": "PromptConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": true
+  },
+  {
+    "type": "llm",
+    "name": "Language model",
+    "version": 1,
+    "category": "AI",
+    "description": "Generate text with a model, or test with demo mode.",
+    "inputs": {
+      "prompt": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string",
+      "provider": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "default": "demo",
+          "enum": [
+            "demo",
+            "openai",
+            "claude",
+            "ollama"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "default": "gpt-4.1-mini",
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "credential_id": {
+          "default": "",
+          "maxLength": 128,
+          "title": "Credential Id",
+          "type": "string"
+        },
+        "system": {
+          "default": "You are a helpful assistant.",
+          "maxLength": 20000,
+          "title": "System",
+          "type": "string"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "maximum": 2,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temperature"
+        },
+        "top_p": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top P"
+        },
+        "max_tokens": {
+          "default": 2048,
+          "maximum": 16384,
+          "minimum": 1,
+          "title": "Max Tokens",
+          "type": "integer"
+        }
+      },
+      "title": "LLMConfig",
+      "type": "object"
+    },
+    "side_effects": [
+      "external_model_request"
+    ],
+    "hidden": true
+  },
+  {
+    "type": "condition",
+    "name": "Condition",
+    "version": 1,
+    "category": "Control",
+    "description": "Route to true or false by comparing a value: text, number, membership or empty.",
+    "inputs": {
+      "value": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "branch": "string"
+    },
+    "branch_routes": [
+      "true",
+      "false"
+    ],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "operator": {
+          "default": "contains",
+          "description": "contains: text includes a phrase. eq / ne: equal or not equal. gt, gte, lt, lte: numeric comparison. in: equals one of several options. empty: nothing there.",
+          "enum": [
+            "contains",
+            "eq",
+            "ne",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "in",
+            "empty"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "field": {
+          "default": "",
+          "description": "Optional. Read this key, or a dotted path such as order.amount, from a JSON object value - for example the output of an extraction agent.",
+          "maxLength": 520,
+          "title": "Field",
+          "type": "string"
+        },
+        "contains": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contains"
+        },
+        "compare_to": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Compare to"
+        },
+        "options": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 100,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A JSON list, for example [\"high\", \"urgent\"].",
+          "title": "Options"
+        },
+        "compare_as": {
+          "default": "text",
+          "description": "For eq, ne and in. Ordering operators always compare numbers.",
+          "enum": [
+            "text",
+            "number"
+          ],
+          "title": "Compare as",
+          "type": "string"
+        },
+        "case_sensitive": {
+          "default": false,
+          "title": "Case Sensitive",
+          "type": "boolean"
+        }
+      },
+      "title": "ConditionConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
+    "type": "calculate",
+    "name": "Calculate",
+    "version": 1,
+    "category": "Transform",
+    "description": "Compute or check numbers from JSON fields exactly, in code rather than a model.",
+    "inputs": {
+      "value": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "expression": {
+          "description": "Fields of the bound JSON object with + - * / ( ), min, max, abs, round(x, places) and coalesce. Check mode compares: == != < <= > >=, and, or, not.",
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Expression",
+          "type": "string"
+        },
+        "mode": {
+          "default": "compute",
+          "description": "compute returns a number; check returns whether the comparison holds.",
+          "enum": [
+            "compute",
+            "check"
+          ],
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expression"
+      ],
+      "title": "CalculateConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
+    "type": "response",
+    "name": "Response",
+    "version": 1,
+    "category": "Output",
+    "description": "Finish this path and return text.",
+    "inputs": {
+      "text": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string",
+      "sources": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "EmptyConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
+    "type": "for_each",
+    "name": "For each",
+    "version": 1,
+    "category": "Control",
+    "description": "Run one attached callable once per element of a list.",
+    "inputs": {
+      "items": "array"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "results": "array<object>",
+      "failed": "string",
+      "summary": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "default": "",
+          "maxLength": 64,
+          "title": "Body",
+          "type": "string"
+        },
+        "max_items": {
+          "default": 100,
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Max Items",
+          "type": "integer"
+        },
+        "on_item_error": {
+          "default": "continue",
+          "enum": [
+            "continue",
+            "stop"
+          ],
+          "title": "On Item Error",
+          "type": "string"
+        }
+      },
+      "title": "ForEachConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
+    "type": "agent",
+    "name": "Agent node",
+    "version": 1,
+    "category": "Agent",
+    "description": "Configure a role, attach tools and delegate to specialist agents.",
+    "inputs": {
+      "input": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string",
+      "provider": "string",
+      "sources": "string",
+      "grounding": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "default": "demo",
+          "enum": [
+            "demo",
+            "openai",
+            "claude",
+            "ollama"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "default": "gpt-4.1-mini",
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "credential_id": {
+          "default": "",
+          "maxLength": 128,
+          "title": "Credential Id",
+          "type": "string"
+        },
+        "system": {
+          "default": "You are a helpful assistant.",
+          "maxLength": 20000,
+          "title": "System",
+          "type": "string"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "maximum": 2,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temperature"
+        },
+        "top_p": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top P"
+        },
+        "max_tokens": {
+          "default": 2048,
+          "maximum": 16384,
+          "minimum": 1,
+          "title": "Max Tokens",
+          "type": "integer"
+        },
+        "role": {
+          "default": "reasoner",
+          "enum": [
+            "planner",
+            "reasoner",
+            "reflection",
+            "critic",
+            "router",
+            "memory",
+            "summarizer",
+            "extraction",
+            "classification"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "user_prompt": {
+          "default": "{input}",
+          "maxLength": 20000,
+          "title": "User Prompt",
+          "type": "string"
+        },
+        "max_steps": {
+          "default": 6,
+          "maximum": 12,
+          "minimum": 1,
+          "title": "Max Steps",
+          "type": "integer"
+        },
+        "memory_key": {
+          "default": "default",
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Memory Key",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Description",
+          "type": "string"
+        },
+        "output_schema": {
+          "additionalProperties": true,
+          "description": "When set, the answer must be JSON matching this schema; extraction and classification roles always require a JSON object.",
+          "title": "Output JSON schema",
+          "type": "object"
+        }
+      },
+      "title": "AgentConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
+    "type": "tool_http",
+    "name": "HTTP / REST API",
+    "version": 1,
+    "category": "Tools",
+    "description": "Execute a configured tool with explicit operation and connection.",
+    "inputs": {
+      "input": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "connection_id": {
+          "default": "",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "enable_writes": {
+          "default": false,
+          "title": "Enable Writes",
+          "type": "boolean"
+        },
+        "approval": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Require human approval before sending. Unset defaults on for authenticated writes.",
+          "title": "Approval"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Description",
+          "type": "string"
+        },
+        "method": {
+          "default": "GET",
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "path": {
+          "default": "/",
+          "maxLength": 2000,
+          "title": "Path",
+          "type": "string"
+        },
+        "body": {
+          "default": "",
+          "maxLength": 64000,
+          "title": "Body",
+          "type": "string"
+        }
+      },
+      "title": "HTTPConfig",
+      "type": "object"
+    },
+    "side_effects": [
+      "external_write",
+      "configured_tool_request"
+    ],
+    "hidden": false
+  },
+  {
+    "type": "tool_email",
+    "name": "Email",
+    "version": 1,
+    "category": "Tools",
+    "description": "Execute a configured tool with explicit operation and connection.",
+    "inputs": {
+      "input": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "connection_id": {
+          "default": "",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "enable_writes": {
+          "default": false,
+          "title": "Enable Writes",
+          "type": "boolean"
+        },
+        "approval": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Require human approval before sending. Unset defaults on for authenticated writes.",
+          "title": "Approval"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Description",
+          "type": "string"
+        },
+        "to": {
+          "default": "",
+          "maxLength": 1000,
+          "title": "To",
+          "type": "string"
+        },
+        "subject": {
+          "default": "Agent message",
+          "maxLength": 300,
+          "title": "Subject",
+          "type": "string"
+        },
+        "body": {
+          "default": "{input}",
+          "maxLength": 64000,
+          "title": "Body",
+          "type": "string"
+        }
+      },
+      "title": "EmailConfig",
+      "type": "object"
+    },
+    "side_effects": [
+      "external_write",
+      "configured_tool_request"
+    ],
+    "hidden": false
+  },
+  {
+    "type": "tool_jira",
+    "name": "Jira",
+    "version": 1,
+    "category": "Tools",
+    "description": "Execute a configured tool with explicit operation and connection.",
+    "inputs": {
+      "input": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string",
+      "items": "array<object>"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "connection_id": {
+          "default": "",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "enable_writes": {
+          "default": false,
+          "title": "Enable Writes",
+          "type": "boolean"
+        },
+        "approval": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Require human approval before sending. Unset defaults on for authenticated writes.",
+          "title": "Approval"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Description",
+          "type": "string"
+        },
+        "operation": {
+          "default": "search",
+          "enum": [
+            "search",
+            "get_issue",
+            "create_issue",
+            "comment"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "project": {
+          "default": "",
+          "title": "Project",
+          "type": "string"
+        },
+        "issue_key": {
+          "default": "",
+          "title": "Issue Key",
+          "type": "string"
+        },
+        "jql": {
+          "default": "",
+          "title": "Jql",
+          "type": "string"
+        }
+      },
+      "title": "JiraConfig",
+      "type": "object"
+    },
+    "side_effects": [
+      "external_write",
+      "configured_tool_request"
+    ],
+    "hidden": false
+  },
+  {
+    "type": "tool_confluence",
+    "name": "Confluence",
+    "version": 1,
+    "category": "Tools",
+    "description": "Execute a configured tool with explicit operation and connection.",
+    "inputs": {
+      "input": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "connection_id": {
+          "default": "",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "enable_writes": {
+          "default": false,
+          "title": "Enable Writes",
+          "type": "boolean"
+        },
+        "approval": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Require human approval before sending. Unset defaults on for authenticated writes.",
+          "title": "Approval"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Description",
+          "type": "string"
+        },
+        "operation": {
+          "default": "search",
+          "enum": [
+            "search",
+            "get_page",
+            "create_page"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "space": {
+          "default": "",
+          "title": "Space",
+          "type": "string"
+        },
+        "page_id": {
+          "default": "",
+          "title": "Page Id",
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "title": "Title",
+          "type": "string"
+        },
+        "query": {
+          "default": "",
+          "title": "Query",
+          "type": "string"
+        }
+      },
+      "title": "ConfluenceConfig",
+      "type": "object"
+    },
+    "side_effects": [
+      "external_write",
+      "configured_tool_request"
+    ],
+    "hidden": false
+  },
+  {
+    "type": "tool_github",
+    "name": "GitHub",
+    "version": 1,
+    "category": "Tools",
+    "description": "Execute a configured tool with explicit operation and connection.",
+    "inputs": {
+      "input": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "connection_id": {
+          "default": "",
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "enable_writes": {
+          "default": false,
+          "title": "Enable Writes",
+          "type": "boolean"
+        },
+        "approval": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Require human approval before sending. Unset defaults on for authenticated writes.",
+          "title": "Approval"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Description",
+          "type": "string"
+        },
+        "operation": {
+          "default": "list_issues",
+          "enum": [
+            "get_issue",
+            "list_issues",
+            "create_issue",
+            "comment"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "repository": {
+          "default": "",
+          "title": "Repository",
+          "type": "string"
+        },
+        "issue_number": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Issue Number",
+          "type": "integer"
+        },
+        "title": {
+          "default": "",
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "title": "GithubConfig",
+      "type": "object"
+    },
+    "side_effects": [
+      "external_write",
+      "configured_tool_request"
+    ],
+    "hidden": false
+  },
+  {
+    "type": "tool_python",
+    "name": "Python",
+    "version": 1,
+    "category": "Tools",
+    "description": "Execute a configured tool with explicit operation and connection.",
+    "inputs": {
+      "input": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "default": "print(input_text)",
+          "maxLength": 32000,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "default": 10,
+          "maximum": 30,
+          "minimum": 1,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "title": "PythonConfig",
+      "type": "object"
+    },
+    "side_effects": [
+      "sandbox_execution"
+    ],
+    "hidden": false
+  },
+  {
+    "type": "retrieve",
+    "name": "Retrieve",
+    "version": 1,
+    "category": "Retrieval",
+    "description": "Search a named knowledge base with configurable retrieval and fusion.",
+    "inputs": {
+      "query": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "query": "string",
+      "context": "string",
+      "sources": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "default": "similarity",
+          "enum": [
+            "similarity",
+            "keyword",
+            "hybrid",
+            "rrf"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "top_k": {
+          "default": 4,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Top K",
+          "type": "integer"
+        },
+        "candidate_k": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Candidate K",
+          "type": "integer"
+        },
+        "reranker": {
+          "default": "none",
+          "enum": [
+            "none",
+            "local_cross_encoder"
+          ],
+          "title": "Reranker",
+          "type": "string"
+        },
+        "score_threshold": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score Threshold"
+        },
+        "rrf_k": {
+          "default": 60,
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Rrf K",
+          "type": "integer"
+        },
+        "vector_weight": {
+          "default": 0.5,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Vector Weight",
+          "type": "number"
+        },
+        "filter": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Filter",
+          "type": "object"
+        },
+        "answerability_guard": {
+          "default": false,
+          "description": "Opt in to the local answerability reader before generation. Missing weights skip the check; inspect guard decisions in run events.",
+          "title": "Answerability Guard",
+          "type": "boolean"
+        },
+        "knowledge_base_id": {
+          "default": "",
+          "maxLength": 64,
+          "title": "Knowledge Base Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Description",
+          "type": "string"
+        },
+        "storage_path": {
+          "default": "",
+          "maxLength": 64,
+          "title": "Storage Path",
+          "type": "string"
+        }
+      },
+      "title": "SearchConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
+    "type": "query",
+    "name": "Query",
+    "version": 1,
+    "category": "Retrieval",
+    "description": "Retrieve evidence and generate a sourced answer using an enabled model.",
+    "inputs": {
+      "query": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string",
+      "provider": "string",
+      "sources": "string",
+      "grounding": "string"
+    },
+    "branch_routes": [],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "default": "similarity",
+          "enum": [
+            "similarity",
+            "keyword",
+            "hybrid",
+            "rrf"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "top_k": {
+          "default": 4,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Top K",
+          "type": "integer"
+        },
+        "candidate_k": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Candidate K",
+          "type": "integer"
+        },
+        "reranker": {
+          "default": "none",
+          "enum": [
+            "none",
+            "local_cross_encoder"
+          ],
+          "title": "Reranker",
+          "type": "string"
+        },
+        "score_threshold": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score Threshold"
+        },
+        "rrf_k": {
+          "default": 60,
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Rrf K",
+          "type": "integer"
+        },
+        "vector_weight": {
+          "default": 0.5,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Vector Weight",
+          "type": "number"
+        },
+        "filter": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Filter",
+          "type": "object"
+        },
+        "answerability_guard": {
+          "default": false,
+          "description": "Opt in to the local answerability reader before generation. Missing weights skip the check; inspect guard decisions in run events.",
+          "title": "Answerability Guard",
+          "type": "boolean"
+        },
+        "knowledge_base_id": {
+          "default": "",
+          "maxLength": 64,
+          "title": "Knowledge Base Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Description",
+          "type": "string"
+        },
+        "storage_path": {
+          "default": "",
+          "maxLength": 64,
+          "title": "Storage Path",
+          "type": "string"
+        },
+        "provider": {
+          "default": "demo",
+          "enum": [
+            "demo",
+            "openai",
+            "claude",
+            "ollama"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "default": "gpt-4.1-mini",
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "credential_id": {
+          "default": "",
+          "maxLength": 128,
+          "title": "Credential Id",
+          "type": "string"
+        },
+        "system": {
+          "default": "You are a helpful assistant.",
+          "maxLength": 20000,
+          "title": "System",
+          "type": "string"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "maximum": 2,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temperature"
+        },
+        "top_p": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top P"
+        },
+        "max_tokens": {
+          "default": 2048,
+          "maximum": 16384,
+          "minimum": 1,
+          "title": "Max Tokens",
+          "type": "integer"
+        }
+      },
+      "title": "QueryConfig",
+      "type": "object"
+    },
+    "side_effects": [
+      "external_model_request"
+    ],
+    "hidden": false
+  },
+  {
+    "type": "greeting_cache",
+    "name": "Greeting cache",
+    "version": 1,
+    "category": "Control",
+    "description": "Reply to configured whole messages without a model; other requests continue unchanged.",
+    "inputs": {
+      "message": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "branch": "string",
+      "reply": "string",
+      "receipt": "string"
+    },
+    "branch_routes": [
+      "continue",
+      "reply"
+    ],
+    "config_schema": {
+      "$defs": {
+        "CommonReply": {
+          "additionalProperties": false,
+          "properties": {
+            "message": {
+              "maxLength": 256,
+              "minLength": 1,
+              "title": "Message",
+              "type": "string"
+            },
+            "reply": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Reply",
+              "type": "string"
+            }
+          },
+          "required": [
+            "message",
+            "reply"
+          ],
+          "title": "CommonReply",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/$defs/CommonReply"
+          },
+          "maxItems": 100,
+          "title": "Entries",
+          "type": "array"
+        }
+      },
+      "title": "GreetingCacheConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
+    "type": "request_router",
+    "name": "Request router",
+    "version": 1,
+    "category": "Control",
+    "description": "Classify the original request using saved workflow rules; acceptance still requires extraction checks.",
+    "inputs": {
+      "message": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "branch": "string",
+      "reply": "string",
+      "decision": "string"
+    },
+    "branch_routes": [
+      "continue",
+      "reply"
+    ],
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "purpose": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Purpose",
+          "type": "string"
+        },
+        "accepted_requests": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Accepted Requests",
+          "type": "array"
+        },
+        "exclusions": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Exclusions",
+          "type": "array"
+        },
+        "clarification_rules": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Clarification Rules",
+          "type": "array"
+        },
+        "examples": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Examples",
+          "type": "array"
+        },
+        "provider": {
+          "default": "demo",
+          "enum": [
+            "demo",
+            "openai",
+            "claude",
+            "ollama"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "default": "gpt-4.1-mini",
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "credential_id": {
+          "default": "",
+          "maxLength": 128,
+          "title": "Credential Id",
+          "type": "string"
+        },
+        "max_tokens": {
+          "default": 2048,
+          "maximum": 16384,
+          "minimum": 1,
+          "title": "Max Tokens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "purpose"
+      ],
+      "title": "RequestRouterConfig",
+      "type": "object"
+    },
+    "side_effects": [
+      "external_model_request"
+    ],
+    "hidden": false
+  },
+  {
+    "type": "verify_extraction",
+    "name": "Verify extraction",
+    "version": 1,
+    "category": "Control",
+    "description": "Check exact facts against original input and configured rules; uncertain interpretations require review.",
+    "inputs": {
+      "original": "string",
+      "value": "string"
+    },
+    "optional_inputs": {
+      "reference": "string"
+    },
+    "outputs": {
+      "text": "string",
+      "branch": "string",
+      "reply": "string",
+      "report": "string"
+    },
+    "branch_routes": [
+      "continue",
+      "reply"
+    ],
+    "config_schema": {
+      "$defs": {
+        "FieldRule": {
+          "additionalProperties": false,
+          "properties": {
+            "field": {
+              "maxLength": 128,
+              "title": "Field",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "quoted",
+                "source_field",
+                "enum",
+                "reference_member"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "source_pointer": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Source Pointer"
+            },
+            "allowed_values": {
+              "anyOf": [
+                {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "maxItems": 100,
+                  "minItems": 1,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Allowed Values"
+            },
+            "reference_list": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Reference List"
+            },
+            "reference_key": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Reference Key"
+            }
+          },
+          "required": [
+            "field",
+            "kind"
+          ],
+          "title": "FieldRule",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "expected_schema": {
+          "additionalProperties": true,
+          "title": "Expected Schema",
+          "type": "object"
+        },
+        "required_fields": {
+          "items": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Required Fields",
+          "type": "array"
+        },
+        "field_rules": {
+          "items": {
+            "$ref": "#/$defs/FieldRule"
+          },
+          "maxItems": 64,
+          "title": "Field Rules",
+          "type": "array"
+        },
+        "cross_checks": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Cross Checks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "expected_schema"
+      ],
+      "title": "ExtractionCheckConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  }
+]

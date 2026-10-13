@@ -1,0 +1,194 @@
+[
+  {
+    "name": "contract_disabled",
+    "caught": true,
+    "exit_code": 1,
+    "log": "mutation-contract_disabled.log",
+    "tail": [
+      "      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {",
+      "    generatedMessage: true,",
+      "    code: 'ERR_ASSERTION',",
+      "    actual: 1,",
+      "    expected: 2,",
+      "    operator: 'strictEqual',",
+      "    diff: 'simple'",
+      "  }"
+    ]
+  },
+  {
+    "name": "nonfinite_json_allowed",
+    "caught": true,
+    "exit_code": 1,
+    "log": "mutation-nonfinite_json_allowed.log",
+    "tail": [
+      "      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {",
+      "    generatedMessage: false,",
+      "    code: 'ERR_ASSERTION',",
+      "    actual: undefined,",
+      "    expected: /finite/i,",
+      "    operator: 'throws',",
+      "    diff: 'simple'",
+      "  }"
+    ]
+  },
+  {
+    "name": "expiry_ignored",
+    "caught": true,
+    "exit_code": 1,
+    "log": "mutation-expiry_ignored.log",
+    "tail": [
+      "      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {",
+      "    generatedMessage: true,",
+      "    code: 'ERR_ASSERTION',",
+      "    actual: true,",
+      "    expected: false,",
+      "    operator: 'strictEqual',",
+      "    diff: 'simple'",
+      "  }"
+    ]
+  },
+  {
+    "name": "missing_choice_allowed",
+    "caught": true,
+    "exit_code": 1,
+    "log": "mutation-missing_choice_allowed.log",
+    "tail": [
+      "      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {",
+      "    generatedMessage: false,",
+      "    code: 'ERR_ASSERTION',",
+      "    actual: undefined,",
+      "    expected: /explicit.*true.*false/i,",
+      "    operator: 'rejects',",
+      "    diff: 'simple'",
+      "  }"
+    ]
+  },
+  {
+    "name": "payload_reserialized",
+    "caught": true,
+    "exit_code": 1,
+    "log": "mutation-payload_reserialized.log",
+    "tail": [
+      "      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {",
+      "    generatedMessage: true,",
+      "    code: 'ERR_ASSERTION',",
+      "    actual: { approval_id: 'one', digest: '3847f582856be87582754a9df4e3724b4084987e6bb7f1f037333d920fadfc6e' },",
+      "    expected: { approval_id: 'one', digest: 'b13d26576f062f4e2a0dcd0c548ef3e89b17946ff80a6f04654077c69ae4050b' },",
+      "    operator: 'deepStrictEqual',",
+      "    diff: 'simple'",
+      "  }"
+    ]
+  },
+  {
+    "name": "manual_undisclosed",
+    "caught": true,
+    "exit_code": 1,
+    "log": "mutation-manual_undisclosed.log",
+    "tail": [
+      "  TypeError: Cannot read properties of null (reading 'manual')",
+      "      at TestContext.<anonymous> (file:///private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/relay-step7-export-6jo6jtmi/frontend/tests/request-routing.test.ts:297:26)",
+      "      at Test.runInAsyncScope (node:async_hooks:228:14)",
+      "      at Test.run (node:internal/test_runner/test:1118:25)",
+      "      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)",
+      "      at Test.postRun (node:internal/test_runner/test:1247:19)",
+      "      at Test.run (node:internal/test_runner/test:1175:12)",
+      "      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)"
+    ]
+  },
+  {
+    "name": "template_defaults_shared",
+    "caught": true,
+    "exit_code": 1,
+    "log": "mutation-template_defaults_shared.log",
+    "tail": [
+      "      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {",
+      "    generatedMessage: true,",
+      "    code: 'ERR_ASSERTION',",
+      "    actual: '/other',",
+      "    expected: '/item',",
+      "    operator: 'strictEqual',",
+      "    diff: 'simple'",
+      "  }"
+    ]
+  },
+  {
+    "name": "false_branch_sent_true",
+    "caught": true,
+    "exit_code": 1,
+    "log": "mutation-false_branch_sent_true.log",
+    "tail": [
+      "    Usage:",
+      "",
+      "        npx playwright show-trace test-results/request-routing-human-deci-4929b--complete-displayed-payload/trace.zip",
+      "",
+      "    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "",
+      "  1 failed",
+      "    tests/browser/request-routing.spec.ts:176:3 \u203a human decision sends explicit false and the digest of the complete displayed payload "
+    ]
+  },
+  {
+    "name": "stale_json_retained",
+    "caught": true,
+    "exit_code": 1,
+    "log": "mutation-stale_json_retained.log",
+    "tail": [
+      "    Usage:",
+      "",
+      "        npx playwright show-trace test-results/request-routing-a-second-w-5cb65-router-JSON-draft-on-screen/trace.zip",
+      "",
+      "    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "",
+      "  1 failed",
+      "    tests/browser/request-routing.spec.ts:331:1 \u203a a second workflow cannot retain an earlier router JSON draft on screen "
+    ]
+  },
+  {
+    "name": "comparison_missing",
+    "caught": true,
+    "exit_code": 1,
+    "log": "mutation-comparison_missing.log",
+    "tail": [
+      "    Usage:",
+      "",
+      "        npx playwright show-trace test-results/request-routing-interpreta-f2804-nly-the-exact-review-digest/trace.zip",
+      "",
+      "    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "",
+      "  1 failed",
+      "    tests/browser/request-routing.spec.ts:212:3 \u203a interpretation review confirm sends only the exact review digest "
+    ]
+  },
+  {
+    "name": "stale_run_success",
+    "caught": true,
+    "exit_code": 1,
+    "log": "mutation-stale_run_success.log",
+    "tail": [
+      "    Usage:",
+      "",
+      "        npx playwright show-trace test-results/request-routing-delayed-re-05868--replace-another-opened-run/trace.zip",
+      "",
+      "    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "",
+      "  1 failed",
+      "    tests/browser/request-routing.spec.ts:285:3 \u203a delayed review success cannot replace another opened run "
+    ]
+  },
+  {
+    "name": "stale_run_failure",
+    "caught": true,
+    "exit_code": 1,
+    "log": "mutation-stale_run_failure.log",
+    "tail": [
+      "    Usage:",
+      "",
+      "        npx playwright show-trace test-results/request-routing-delayed-re-43e5e--replace-another-opened-run/trace.zip",
+      "",
+      "    \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "",
+      "  1 failed",
+      "    tests/browser/request-routing.spec.ts:285:3 \u203a delayed review failure cannot replace another opened run "
+    ]
+  }
+]

@@ -85,7 +85,7 @@ test('an invalid Options edit is never validated or run as the previous list', a
 
   const before = validated.length;
   await options.fill('["urgent",');
-  await expect(page.getByText('Enter valid JSON before leaving this field.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Enter the required JSON shape with finite numbers before validating or running.', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Validate', exact: true }).click();
   await expect(page.getByText(/: Options is not valid JSON yet\. Fix it before validating or running\./)).toBeVisible();
   await expect(page.getByText('Workflow is valid and ready to run.')).toHaveCount(0);

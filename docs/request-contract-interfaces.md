@@ -1,13 +1,15 @@
-# Request admission interfaces and runtime checks (Steps 2–6)
+# Request admission interfaces, runtime checks and editor (Steps 2–7)
 
 The registry now includes Greeting cache, Request router and Verify extraction.
-Contract 2 enables runtime verification and typed human review. Editor setup and
-review presentation ship separately in Step 7; the current starter remains contract 1.
+Contract 2 enables runtime verification and typed human review. New workflow setup
+and typed-review presentation are available in the editor; the new narrative starter
+uses contract 2. Saved contract-1 workflows retain their behavior. See
+[workflow setup and review](request-workflow-setup.md). Live semantic accuracy is Step 8.
 
 `Workflow.contract` is the integer 1 or 2. Omitted values mean 1. Existing workflows
 remain runnable, and the editor preserves a loaded contract through editing, undo,
-import and save. The starter remains contract 1 until the complete contract-2 path is
-available. Contract changes invalidate highlighting from an older execution.
+import and save. The new starter uses the complete contract-2 admission path.
+Contract changes invalidate highlighting from an older execution.
 
 Node definitions publish `branch_routes` and `optional_inputs`. Condition declares
 `true`/`false`; admission and verification nodes declare `continue`/`reply`. Each route must have
@@ -97,7 +99,7 @@ The PostgreSQL conformance CI job also runs the separate-process typed-review ca
 on both disposable SQLite and PostgreSQL schemas. It kills workers after pause,
 confirmation and write settlement, and in the genuinely uncertain send window.
 
-Contract-1 behavior is retained. Activating contract 2 requires its complete graph and
-configured acceptance rules. This backend step does not automatically convert workflows
-or change the editor starter. New-workflow setup and full typed-review controls are
-the next separate step.
+Contract-1 behavior is retained. Contract 2 requires its complete graph and configured
+acceptance rules. Step 7 adds new-workflow setup and typed-review controls without
+converting saved workflows. Business drafts configure no writes and require real
+reference connections where applicable. Step 8 separately measures live model quality.

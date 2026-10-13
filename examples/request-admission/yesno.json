@@ -1,0 +1,398 @@
+{
+  "version": 1,
+  "contract": 2,
+  "name": "Yes / no eligibility draft",
+  "description": "Keep a model classification separate from a human decision. Eligibility requires suitable record evidence or review.",
+  "nodes": [
+    {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "Chat input",
+      "position": {
+        "x": 300,
+        "y": 40
+      },
+      "inputs": {},
+      "config": {}
+    },
+    {
+      "id": "cache",
+      "type": "greeting_cache",
+      "version": 1,
+      "label": "Prepared greetings",
+      "position": {
+        "x": 300,
+        "y": 210
+      },
+      "inputs": {
+        "message": "input.message"
+      },
+      "config": {
+        "entries": [
+          {
+            "message": "hello",
+            "reply": "Hello! Send your request and I will check whether this workflow can help."
+          },
+          {
+            "message": "hello!",
+            "reply": "Hello! Send your request and I will check whether this workflow can help."
+          }
+        ]
+      }
+    },
+    {
+      "id": "router",
+      "type": "request_router",
+      "version": 1,
+      "label": "Request router",
+      "position": {
+        "x": 300,
+        "y": 380
+      },
+      "inputs": {
+        "message": "input.message"
+      },
+      "config": {
+        "provider": "ollama",
+        "model": "",
+        "credential_id": "",
+        "max_tokens": 2048,
+        "purpose": "Draft a yes/no eligibility decision for a named record. A model inference from prose is not proof of eligibility; confirm unknown interpretations with a person.",
+        "accepted_requests": [
+          "Keep a model classification separate from a human decision. Eligibility requires suitable record evidence or review."
+        ],
+        "exclusions": [
+          "Unrelated questions, greetings without a request, and invented facts."
+        ],
+        "clarification_rules": [
+          "Ask for missing required facts; never fill them with guesses or zero defaults."
+        ],
+        "examples": [
+          "Is record MEMBER-1 eligible?"
+        ]
+      }
+    },
+    {
+      "id": "records",
+      "type": "tool_jira",
+      "version": 1,
+      "label": "Read independent reference records",
+      "position": {
+        "x": 300,
+        "y": 550
+      },
+      "inputs": {
+        "input": "input.message"
+      },
+      "config": {
+        "connection_id": "",
+        "operation": "search",
+        "jql": "project = MEMBERS",
+        "enable_writes": false
+      }
+    },
+    {
+      "id": "extract",
+      "type": "agent",
+      "version": 1,
+      "label": "Extract request facts",
+      "position": {
+        "x": 300,
+        "y": 720
+      },
+      "inputs": {
+        "input": "input.message"
+      },
+      "config": {
+        "provider": "ollama",
+        "model": "",
+        "credential_id": "",
+        "max_tokens": 2048,
+        "role": "classification",
+        "system": "Return only a JSON object with these fields: record_id, eligible. Copy only what the original request states; use null for absent facts. Never invent defaults. Do not approve anything or calculate totals.",
+        "user_prompt": "{input}",
+        "max_steps": 6,
+        "memory_key": "default",
+        "output_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "record_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "eligible": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "record_id",
+            "eligible"
+          ]
+        }
+      }
+    },
+    {
+      "id": "verify",
+      "type": "verify_extraction",
+      "version": 1,
+      "label": "Check extracted facts",
+      "position": {
+        "x": 300,
+        "y": 890
+      },
+      "inputs": {
+        "original": "input.message",
+        "value": "extract.text",
+        "reference": "records.text"
+      },
+      "config": {
+        "expected_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "record_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "eligible": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "record_id",
+            "eligible"
+          ]
+        },
+        "required_fields": [
+          "/record_id",
+          "/eligible"
+        ],
+        "field_rules": [
+          {
+            "field": "/record_id",
+            "kind": "quoted"
+          },
+          {
+            "field": "/record_id",
+            "kind": "reference_member",
+            "reference_list": "/issues",
+            "reference_key": "/key"
+          },
+          {
+            "field": "/eligible",
+            "kind": "quoted"
+          }
+        ],
+        "cross_checks": []
+      }
+    },
+    {
+      "id": "decision",
+      "type": "condition",
+      "version": 1,
+      "label": "Business condition",
+      "position": {
+        "x": 300,
+        "y": 1060
+      },
+      "inputs": {
+        "value": "verify.text"
+      },
+      "config": {
+        "field": "eligible",
+        "operator": "eq",
+        "compare_to": "true",
+        "compare_as": "text"
+      }
+    },
+    {
+      "id": "yesText",
+      "type": "prompt",
+      "version": 1,
+      "label": "True branch explanation",
+      "position": {
+        "x": 70,
+        "y": 1230
+      },
+      "inputs": {
+        "message": "verify.text"
+      },
+      "config": {
+        "template": "Checked or manually confirmed interpretation: yes. No entitlement has been granted.\nChecked value: {message}"
+      }
+    },
+    {
+      "id": "yes",
+      "type": "response",
+      "version": 1,
+      "label": "True branch response",
+      "position": {
+        "x": 70,
+        "y": 1400
+      },
+      "inputs": {
+        "text": "yesText.text"
+      },
+      "config": {}
+    },
+    {
+      "id": "noText",
+      "type": "prompt",
+      "version": 1,
+      "label": "False branch explanation",
+      "position": {
+        "x": 580,
+        "y": 1230
+      },
+      "inputs": {
+        "message": "verify.text"
+      },
+      "config": {
+        "template": "Checked or manually confirmed interpretation: no. No external action has been sent.\nChecked value: {message}"
+      }
+    },
+    {
+      "id": "no",
+      "type": "response",
+      "version": 1,
+      "label": "False branch response",
+      "position": {
+        "x": 580,
+        "y": 1400
+      },
+      "inputs": {
+        "text": "noText.text"
+      },
+      "config": {}
+    },
+    {
+      "id": "cacheReply",
+      "type": "response",
+      "version": 1,
+      "label": "Prepared reply",
+      "position": {
+        "x": -180,
+        "y": 300
+      },
+      "inputs": {
+        "text": "cache.reply"
+      },
+      "config": {}
+    },
+    {
+      "id": "routerReply",
+      "type": "response",
+      "version": 1,
+      "label": "Router reply",
+      "position": {
+        "x": -180,
+        "y": 470
+      },
+      "inputs": {
+        "text": "router.reply"
+      },
+      "config": {}
+    },
+    {
+      "id": "verifyReply",
+      "type": "response",
+      "version": 1,
+      "label": "Missing facts reply",
+      "position": {
+        "x": -180,
+        "y": 980
+      },
+      "inputs": {
+        "text": "verify.reply"
+      },
+      "config": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "input-cache",
+      "source": "input",
+      "target": "cache"
+    },
+    {
+      "id": "cache-router",
+      "source": "cache",
+      "target": "router",
+      "sourceHandle": "continue"
+    },
+    {
+      "id": "router-records",
+      "source": "router",
+      "target": "records",
+      "sourceHandle": "continue"
+    },
+    {
+      "id": "records-extract",
+      "source": "records",
+      "target": "extract"
+    },
+    {
+      "id": "extract-verify",
+      "source": "extract",
+      "target": "verify"
+    },
+    {
+      "id": "verify-decision",
+      "source": "verify",
+      "target": "decision",
+      "sourceHandle": "continue"
+    },
+    {
+      "id": "decision-yesText",
+      "source": "decision",
+      "target": "yesText",
+      "sourceHandle": "true"
+    },
+    {
+      "id": "yesText-yes",
+      "source": "yesText",
+      "target": "yes"
+    },
+    {
+      "id": "decision-noText",
+      "source": "decision",
+      "target": "noText",
+      "sourceHandle": "false"
+    },
+    {
+      "id": "noText-no",
+      "source": "noText",
+      "target": "no"
+    },
+    {
+      "id": "cache-cacheReply",
+      "source": "cache",
+      "target": "cacheReply",
+      "sourceHandle": "reply"
+    },
+    {
+      "id": "router-routerReply",
+      "source": "router",
+      "target": "routerReply",
+      "sourceHandle": "reply"
+    },
+    {
+      "id": "verify-verifyReply",
+      "source": "verify",
+      "target": "verifyReply",
+      "sourceHandle": "reply"
+    }
+  ]
+}

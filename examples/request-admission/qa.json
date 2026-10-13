@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "contract": 2,
+  "name": "My first AI workflow",
+  "description": "Answer broad questions. Narrative replies do not authorize business actions.",
+  "nodes": [
+    {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "Chat input",
+      "position": {
+        "x": 300,
+        "y": 40
+      },
+      "inputs": {},
+      "config": {}
+    },
+    {
+      "id": "cache",
+      "type": "greeting_cache",
+      "version": 1,
+      "label": "Prepared greetings",
+      "position": {
+        "x": 300,
+        "y": 210
+      },
+      "inputs": {
+        "message": "input.message"
+      },
+      "config": {
+        "entries": [
+          {
+            "message": "hello",
+            "reply": "Hello! Send your request and I will check whether this workflow can help."
+          },
+          {
+            "message": "hello!",
+            "reply": "Hello! Send your request and I will check whether this workflow can help."
+          }
+        ]
+      }
+    },
+    {
+      "id": "router",
+      "type": "request_router",
+      "version": 1,
+      "label": "Request router",
+      "position": {
+        "x": 300,
+        "y": 380
+      },
+      "inputs": {
+        "message": "input.message"
+      },
+      "config": {
+        "provider": "ollama",
+        "model": "",
+        "credential_id": "",
+        "max_tokens": 2048,
+        "purpose": "Answer general questions and help explain topics. Accept broad questions; request clarification when there is no question or request.",
+        "accepted_requests": [
+          "General questions, explanations and requests for help."
+        ],
+        "exclusions": [
+          "Requests to perform external actions or approve business transactions."
+        ],
+        "clarification_rules": [
+          "Ask for missing required facts; never fill them with guesses or zero defaults."
+        ],
+        "examples": [
+          "How do AI workflows work?"
+        ]
+      }
+    },
+    {
+      "id": "agent",
+      "type": "agent",
+      "version": 1,
+      "label": "Agent",
+      "position": {
+        "x": 300,
+        "y": 550
+      },
+      "inputs": {
+        "input": "input.message"
+      },
+      "config": {
+        "provider": "ollama",
+        "model": "",
+        "credential_id": "",
+        "max_tokens": 2048,
+        "role": "reasoner",
+        "system": "Answer the user question clearly. Ask for clarification when needed. Do not claim to have taken external actions.",
+        "user_prompt": "{input}",
+        "max_steps": 6,
+        "memory_key": "default"
+      }
+    },
+    {
+      "id": "response",
+      "type": "response",
+      "version": 1,
+      "label": "Response",
+      "position": {
+        "x": 300,
+        "y": 720
+      },
+      "inputs": {
+        "text": "agent.text"
+      },
+      "config": {}
+    },
+    {
+      "id": "cacheReply",
+      "type": "response",
+      "version": 1,
+      "label": "Prepared reply",
+      "position": {
+        "x": -180,
+        "y": 300
+      },
+      "inputs": {
+        "text": "cache.reply"
+      },
+      "config": {}
+    },
+    {
+      "id": "routerReply",
+      "type": "response",
+      "version": 1,
+      "label": "Router reply",
+      "position": {
+        "x": -180,
+        "y": 470
+      },
+      "inputs": {
+        "text": "router.reply"
+      },
+      "config": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "input-cache",
+      "source": "input",
+      "target": "cache"
+    },
+    {
+      "id": "cache-router",
+      "source": "cache",
+      "target": "router",
+      "sourceHandle": "continue"
+    },
+    {
+      "id": "router-agent",
+      "source": "router",
+      "target": "agent",
+      "sourceHandle": "continue"
+    },
+    {
+      "id": "agent-response",
+      "source": "agent",
+      "target": "response"
+    },
+    {
+      "id": "cache-cacheReply",
+      "source": "cache",
+      "target": "cacheReply",
+      "sourceHandle": "reply"
+    },
+    {
+      "id": "router-routerReply",
+      "source": "router",
+      "target": "routerReply",
+      "sourceHandle": "reply"
+    }
+  ]
+}

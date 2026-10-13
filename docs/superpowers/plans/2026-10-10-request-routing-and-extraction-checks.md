@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for native execution; use superpowers:subagent-driven-development only if the user chooses delegation. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Tasks 1–4 are committed; all five hosted CI jobs passed for the router commit `724ece6` (run `38159805438`). Task 5 implements the pure deterministic checking and receipt layer on 2026-10-11; final local verification and user commit/push precede hosted CI. Tasks 6–8 remain pending. No verifier handler, runtime review/continuation gate or complete admission starter is enabled yet. Router live accuracy remains uncertified (Step 4 smoke: 4/7); this layer invokes no judge model.
+**Status:** Tasks 1–6 are committed; all five hosted jobs passed for Step 6 commit `6cb595e` (run `38288903621`). Task 7 editor/setup/review implementation is locally verified on 2026-10-13 and awaits user commit/push and hosted CI. Task 8 live-model measurement remains pending.
 
 **Goal:** Handle prepared greetings without an LLM, route other inputs by workflow purpose, and prevent unsupported extractions from authorising consequential actions.
 
@@ -167,12 +167,14 @@ Implementation verified on 2026-10-12. Hosted CI for Step 6 remains pending the 
 
 **Interfaces:** Registry-backed continue/reply handles, strict JSON config editors, contract-2 new workflow seed, typed review panels consuming stored receipts/approval kind.
 
-- [ ] Write unit/browser tests before wiring: new flow contains cache/router/check; purpose and rules are visible; invalid JSON blocks Validate/Run while remaining saveable.
-- [ ] Implement purpose/accepted examples/exclusions and extraction field-rule settings. For a generic Q&A seed, configure a broad Q&A brief; require extraction checks where model-derived business facts are used, not on every narrative response.
-- [ ] Show prepared cached replies versus model routing, missing fields, actual per-field evidence/check outcomes and manual review. Never label router proceed as approval.
-- [ ] Build purchase, support/ticket, refund and yes/no examples using generic nodes. Examples needing authoritative records use explicit source fixtures; unavailable evidence causes review, not invented defaults.
-- [ ] Test review digest/expiry feedback, cached replay explanations, all result branches, and long reasons/answers at 1280 and 768 px. Assert response area remains scrollable and nonzero.
-- [ ] Run frontend units, typecheck, lint, build and Playwright; verify registry fixture parity; commit the UI/examples.
+- [x] Write unit/browser tests before wiring: new flow contains cache/router/check; purpose and rules are visible; invalid JSON blocks Validate/Run while remaining saveable.
+- [x] Implement purpose/accepted examples/exclusions and extraction field-rule settings. For a generic Q&A seed, configure a broad Q&A brief; require extraction checks where model-derived business facts are used, not on every narrative response.
+- [x] Show prepared cached replies versus model routing, missing fields, actual per-field evidence/check outcomes and manual review. Never label router proceed as approval.
+- [x] Build purchase, support/ticket, refund and yes/no examples using generic nodes. Examples needing authoritative records use explicit source fixtures; unavailable evidence causes review, not invented defaults.
+- [x] Test review digest/expiry feedback, cached replay explanations, all result branches, and long reasons/answers at 1280 and 768 px. Assert response area remains scrollable and nonzero.
+- [x] Run frontend units, typecheck, lint, build and Playwright; verify registry fixture parity; commit the UI/examples.
+
+Implementation verified locally on 2026-10-13. Step 6 commit `6cb595e` passed all five hosted jobs in run `38288903621`. Step 7 user commit/push and hosted CI remain pending; Step 8 model accuracy is not certified. Evidence: `evals/results/request-editor-step7-2026-10-13/report.json`.
 
 ### Task 8: Measure the full path and document release evidence
 

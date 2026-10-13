@@ -33,7 +33,7 @@ void test('KB name conflicts expose the service message and original name', asyn
 
 void test('server normalization and layout changes preserve execution highlighting', () => {
   const normalized = structuredClone(seed);
-  normalized.edges.forEach((e) => (e.sourceHandle = null));
+  normalized.edges.filter(e => !e.sourceHandle).forEach((e) => (e.sourceHandle = null));
   normalized.nodes[0].position = { x: 999, y: 999 };
   normalized.name = 'Renamed';
   assert.equal(sameExecutionGraph(seed, normalized), true);
@@ -96,6 +96,8 @@ void test('import preserves a draft with known nodes for repair in the editor', 
       'llm',
       'agent',
       'response',
+      'greeting_cache',
+      'request_router',
     ]),
     draft,
   );
@@ -110,13 +112,12 @@ void test('attachment kinds and target handles affect execution identity', () =>
   };
   assert.equal(sameExecutionGraph(seed, changed), false);
 });
-void test('new starter is a vertical input agent response flow', () => {
-  assert.deepEqual(
-    seed.nodes.map((n) => n.type),
-    ['chat_input', 'agent', 'response'],
-  );
-  assert.equal(seed.nodes[1].inputs.input, 'input.message');
-  assert.ok(seed.nodes[0].position.y < seed.nodes[1].position.y);
+void test('new starter preserves original input through admission to a narrative Agent', () => {
+  const agent = seed.nodes.find(n => n.type === 'agent')!;
+  const router = seed.nodes.find(n => n.type === 'request_router')!;
+  assert.equal(agent.inputs.input, 'input.message');
+  assert.ok(seed.edges.some(e => e.source === router.id && e.target === agent.id && e.sourceHandle === 'continue'));
+  assert.ok(seed.nodes[0].position.y < router.position.y && router.position.y < agent.position.y);
 });
 
 import { connectionKind, paletteCategory } from '../lib/workflow.ts';
@@ -135,7 +136,7 @@ void test('retrieval flow binds evidence envelope to Agent', async () => {
   const { flowBinding, paletteCategory, seed } =
     await import('../lib/workflow.ts');
   const from = { ...seed.nodes[0], type: 'retrieve' };
-  const target = { ...seed.nodes[1], inputs: {} };
+  const target = { ...seed.nodes.find(n => n.type === 'agent')!, inputs: {} };
   const definition = {
     type: 'retrieve',
     name: '',

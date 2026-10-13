@@ -1,0 +1,33 @@
+{
+  "head": "6cb595e68bf453ee4c33071eecdd1d090900a618",
+  "export": "/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/relay-step7-export-fa8aq4lx",
+  "overlay": {
+    "backend/tests/test_request_examples.py": "00b1e93852a3edaaf9ff2e59b112065df3372d71a300c3f114492a397f523c10",
+    "docs/request-contract-interfaces.md": "f6d0a0d14a7fb1dec87c9bd720c97786e5c80923613a5af69bd42570a7c50d69",
+    "docs/request-workflow-setup.md": "c8bc3950b56d0cb7ee98bb4ab04bf7d44b851d3221e12654091ab409552c5627",
+    "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md": "631d9c0399e36993e87a79e9d439df7f3e1a9fb756271ecdf0c9ef1c848f7118",
+    "examples/request-admission/README.md": "174de18e5641b0f6016c649a5961ab49f93c2e696817647bd87da49480f64494",
+    "examples/request-admission/purchase.json": "b41e4a0ec35a7fd9af62eaf8ee27be6f211c8c40dbb723477a9d6a7517b14bd7",
+    "examples/request-admission/qa.json": "01afc1dd9441e58921e872f4842f10ba6dca58a8c6ede7bdd8d2bde8f7ab93e6",
+    "examples/request-admission/reference-fixtures.json": "ba8f16c43869ee15f650bdff1795605077561b5bd96d017dbc70a0e6d8f0b1a4",
+    "examples/request-admission/refund.json": "fcd27fb4b5dcdfb9180889488a6dbfc16fd56f16842063e04b87a6b232a6c2d2",
+    "examples/request-admission/support.json": "d6f9ca55d28fddba766cb85071ba59fab40eaf9842b12f8f207ed3770c37c192",
+    "examples/request-admission/yesno.json": "8dbcc6581aea2376541b0ed757d0fe0ec719f435421179a8f3a779591f06e172",
+    "frontend/app/globals.css": "9333d6167c8ebde576388e921c31dd66953a59be2579da1a4b69e54fd9767aca",
+    "frontend/components/approval-review.tsx": "2c170ab2bfae4a1dee47e91f294df5dafe3640418372f836c86394ce3daad1f5",
+    "frontend/components/platform-settings.tsx": "d08b05d11ae3a360db27549be9df2b14b85a17ccd859859fbe85368a0e3fa488",
+    "frontend/components/request-checks.tsx": "7e550cd9b2e49445fb378486a670828991b304b09c4425b344b078aaa0354296",
+    "frontend/components/workflow-editor.tsx": "af684340fa79f5628531b53840265649ba2b196e4187a7a6d50bc59a42ee962f",
+    "frontend/components/workflow-setup.tsx": "185f45326f79b31974d8696a3c87efcac0e82005fec774fad73ebd2febf6abce",
+    "frontend/lib/approvals.ts": "7198ebf3307e69e9c62c13fb09cd06d81fcda0ad821cb55d7868fe5dd8310626",
+    "frontend/lib/request-routing.ts": "70c905f41c20f1844364e3391b8551182a57c451f974b49ee5c69134890e42e4",
+    "frontend/lib/workflow.ts": "ce5c8bc7e24936b89a9c33738f2081867cd55fcec6c6f257ee0bceae7e58f1db",
+    "frontend/tests/browser/condition-inspector.spec.ts": "a5b3f0ca7561d30ec34bc1ade3bb8f41ecc7636bc387dbcfb4dbdfa315240301",
+    "frontend/tests/browser/request-nodes.json": "bbc053f867b13e283ceb850d964f23dc9a2a68d96cd19e6d09665ce4b087bf0b",
+    "frontend/tests/browser/request-routing.spec.ts": "f2b026c38bac3a64a2f5b2fb7183570791c02ead402e06530438edc27aac2733",
+    "frontend/tests/request-contracts.test.ts": "27c8905d6e42f8b2f41f6a9e515d6ae24183cd51502bde8e3678de8ee80b0a06",
+    "frontend/tests/request-routing.test.ts": "cc63a7350cd79bd69f5106fe1c2e9dfedd7ffe07e5f8b5818ed6f15ef6d6ee1b",
+    "frontend/tests/workflow.test.ts": "97dbd84846609d7babca5edc427e27321958498559e03d5c2fc29e2f10423f34"
+  },
+  "compiler_import": "/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/relay-step7-export-fa8aq4lx/backend/app/compiler.py"
+}
