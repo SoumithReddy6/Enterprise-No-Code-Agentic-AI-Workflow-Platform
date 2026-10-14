@@ -1,0 +1,348 @@
+{
+  "status": "measurement_implemented_release_rejected",
+  "recorded_at": "2026-10-14T14:32:31.478253+00:00",
+  "base_commit": "e1e158ec0d275861f1ff07ceb0aaf924d4d56f97",
+  "prior_hosted_ci": {
+    "run_id": 38462767646,
+    "sha": "e1e158ec0d275861f1ff07ceb0aaf924d4d56f97",
+    "jobs": [
+      "backend",
+      "frontend",
+      "native-macos",
+      "browser-layout",
+      "postgres-conformance"
+    ],
+    "all_passed": true
+  },
+  "implementation_commit": "pending user commit/push; Step 8 hosted CI not yet run",
+  "suite_sha256": "d4d8f48b1902a839c1be95814df6df4e42af081ac2b41f5e810323cce1974100",
+  "expectations_sha256": "3d4ce6cec9ee27389ea2f70445773cbb50b7885b0d9de25f2234263f98ab3cf5",
+  "live": {
+    "artifact": "live-release/report.json",
+    "gate": "live-release/gate.json",
+    "summary": {
+      "valid_total": 20,
+      "valid_admitted": 9,
+      "valid_request_rejected": 11,
+      "review_on_valid_requests": 8,
+      "false_router_acceptances": 0,
+      "routing_errors": 22,
+      "failed_runs": 2,
+      "manual_decisions": 0,
+      "manual_deliveries": 0,
+      "automatic_decisions": 0,
+      "automatic_deliveries": 0,
+      "unsafe_automatic_actions": 0,
+      "prepared_total": 10,
+      "prepared_correct": 10,
+      "prepared_model_calls": 0,
+      "n": 60,
+      "valid_request_proceed_rate": 0.45,
+      "cache_outcomes": {
+        "not_common": 50,
+        "local_fallback": 10
+      },
+      "routes": {
+        "out_of_scope": 21,
+        "proceed": 9,
+        "clarify": 18,
+        "error": 2,
+        "prepared_reply": 10
+      },
+      "statuses": {
+        "success": 50,
+        "awaiting_approval": 8,
+        "failed": 2
+      },
+      "verification_verdicts": {
+        "needs_review": 8,
+        "clarify": 1
+      },
+      "tokens": 28926,
+      "latency_seconds": {
+        "p50": 4.462941832956858,
+        "p95": 8.100426958990283
+      },
+      "notes": [
+        "Manual actions excluded from automatic-safety numerator.",
+        "Review on a valid request is not necessarily unnecessary: admission does not prove extracted meaning.",
+        "Zero unsafe actions on 60 cases is finite evidence, not universal semantic correctness."
+      ]
+    },
+    "accepted": false
+  },
+  "fault": {
+    "artifact": "fault-current/report.json",
+    "non_greeting_cases_at_review": 50,
+    "positive_deliveries": 3,
+    "model_calls_for_prepared": 0,
+    "source_files_changed": []
+  },
+  "checks": {
+    "backend": [
+      {
+        "seed": 0,
+        "exit_code": 0,
+        "seconds": 111.91493179206736,
+        "passed": 1637,
+        "skipped": 1
+      },
+      {
+        "seed": 1,
+        "exit_code": 0,
+        "seconds": 99.12018454202916,
+        "passed": 1637,
+        "skipped": 1
+      },
+      {
+        "seed": 2,
+        "exit_code": 0,
+        "seconds": 216.11113020800985,
+        "passed": 1637,
+        "skipped": 1
+      },
+      {
+        "seed": 3,
+        "exit_code": 0,
+        "seconds": 160.36179474997334,
+        "passed": 1637,
+        "skipped": 1
+      },
+      {
+        "seed": 4,
+        "exit_code": 0,
+        "seconds": 117.22382499999367,
+        "passed": 1637,
+        "skipped": 1
+      }
+    ],
+    "frontend_unit_tests": 93,
+    "browser_tests": 31,
+    "typecheck": true,
+    "lint": true,
+    "build": true,
+    "production": {
+      "stages": 27,
+      "passed": true,
+      "source_files_changed": []
+    },
+    "postgres_and_process_reviews": [
+      {
+        "name": "postgres-final",
+        "command": [
+          ".venv/bin/python",
+          "-u",
+          "-m",
+          "scripts.check_postgres"
+        ],
+        "exit_code": 0,
+        "seconds": 4.4533992080250755
+      },
+      {
+        "name": "process-reviews-final",
+        "command": [
+          ".venv/bin/python",
+          "-u",
+          "-m",
+          "scripts.scenarios.request_enforcement",
+          "--out",
+          "evals/results/request-admission-step8-2026-10-14/process-reviews-final"
+        ],
+        "exit_code": 0,
+        "seconds": 95.48242833395489
+      },
+      {
+        "name": "storage-process-final",
+        "command": [
+          ".venv/bin/python",
+          "-u",
+          "-m",
+          "scripts.check_milestone_storage",
+          "--out",
+          "evals/results/request-admission-step8-2026-10-14/storage-process-final",
+          "--checks",
+          "postgres-migrations",
+          "postgres-four-workers",
+          "postgres-stale-lease",
+          "postgres-sigkill-loop"
+        ],
+        "exit_code": 0,
+        "seconds": 79.5416074169334
+      },
+      {
+        "name": "redis-integration",
+        "command": [
+          ".venv/bin/python",
+          "-m",
+          "pytest",
+          "backend/tests/test_common_replies_redis.py",
+          "backend/tests/test_common_replies.py",
+          "-q"
+        ],
+        "exit_code": 0,
+        "seconds": 7.485583750065416
+      }
+    ],
+    "redis_tests": 55,
+    "grounding": {
+      "count": 53,
+      "accepted": true,
+      "summary": {
+        "model": "llama3.1:latest",
+        "mode": "hybrid",
+        "n": 53,
+        "answer_substring_match_rate": 0.848,
+        "answer_retrieved": 0.879,
+        "substring_match_when_answer_retrieved": 0.966,
+        "false_abstention": 0.061,
+        "false_abstention_when_answer_retrieved": 0.0,
+        "heuristic_abstention_on_unanswerable": 0.7,
+        "citation_rate": 0.939,
+        "citation_document_match": 1.0,
+        "unsupported_references": 0,
+        "errors": 0,
+        "mean_seconds": 3.885,
+        "contract_compliance_rate": {
+          "first_attempt": 0.974,
+          "after_repair": 0.026,
+          "failed": 0.0,
+          "attempted": 38,
+          "not_called": 15,
+          "unavailable": 0,
+          "counts": {
+            "first_attempt": 37,
+            "after_repair": 1,
+            "failed": 0,
+            "not_called": 15,
+            "unavailable": 0
+          }
+        },
+        "uncited_answerable_rows": 2,
+        "product_answerability_guard": {
+          "enabled": true,
+          "decisions": {
+            "allow": 38,
+            "abstain": 15,
+            "skip": 0
+          }
+        }
+      }
+    },
+    "mutations": [
+      {
+        "name": "duplicate-send",
+        "caught": true,
+        "exit_code": 1
+      },
+      {
+        "name": "wrong-destination",
+        "caught": true,
+        "exit_code": 1
+      },
+      {
+        "name": "wrong-value",
+        "caught": true,
+        "exit_code": 1
+      },
+      {
+        "name": "missing-confirmation",
+        "caught": true,
+        "exit_code": 1
+      },
+      {
+        "name": "missing-manifest",
+        "caught": true,
+        "exit_code": 1
+      },
+      {
+        "name": "fault-not-exercised",
+        "caught": true,
+        "exit_code": 1
+      },
+      {
+        "name": "missing-controls",
+        "caught": true,
+        "exit_code": 1
+      },
+      {
+        "name": "missing-worker-tags",
+        "caught": true,
+        "exit_code": 1
+      }
+    ],
+    "clean_export": {
+      "files_sha256": {
+        ".github/workflows/ci.yml": "2349053bcacc4b3e2fa648d448e5f93756e1e2b4cf57f39ec46794efa5701d3d",
+        "backend/app/compiler.py": "36d050b4d8f355a0da0bb44a5dbafe1375e838d20a31754e4f21dc40f6d89ac4",
+        "backend/app/operator_metrics.py": "45feefd0abe5047bc8da9716c4e1074851dd3ed07fd755d52b1eb1ca6c703f19",
+        "backend/app/storage.py": "4bf90056a0b527a50a188debd2020f325239c39eaf960cba242e2abfb0103112",
+        "backend/migrations/versions/0005_admission_metrics.py": "e0390fda76bf5686220d0e31bc3610c840b4e4752f9ca20cf8b5081e867ca09b",
+        "backend/tests/test_request_admission_eval.py": "3eccd501230c8f4ec3c4c8433e5bc25a833f263758aa8843be525ea8e81612b3",
+        "backend/tests/test_request_admission_metrics.py": "4a843ed9f51b92c47cc6d57ea91e834ad447cf9211a12ddba368d16f371232eb",
+        "backend/tests/test_request_review_migration.py": "c276bd9d47a315960248c2dc5e91e12726bd816ef5b561b53d74eb4da61eaebe",
+        "docs/operations.md": "fb7bb4dc7e8745b0d433c12933831dca52c1dcc3ebefbc619657a49281cc0950",
+        "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md": "a234220d3ed5f92980708632974fce318ecdbafc21a60f7004692466b09d6a59",
+        "evals/request-admission/expectations.json": "3d4ce6cec9ee27389ea2f70445773cbb50b7885b0d9de25f2234263f98ab3cf5",
+        "frontend/tests/browser/request-routing.spec.ts": "719eaee8766d078ebc701a24693420a9253ec302e07ba806dbde737fe62842e3",
+        "scripts/check_request_admission_eval.py": "aa45f73967245ca90884481f18d7df61acda8f6f0cdd8b74608deb232a921d43",
+        "scripts/eval_request_admission.py": "d9a642a6a53e6e18cb7109dca0ac8979bb129789087ce91f05c4368a9e507bea"
+      },
+      "commands": [
+        {
+          "name": "backend",
+          "exit_code": 0,
+          "seconds": 151.57001683302224
+        },
+        {
+          "name": "frontend-units",
+          "exit_code": 0,
+          "seconds": 1.804494792013429
+        },
+        {
+          "name": "typecheck",
+          "exit_code": 0,
+          "seconds": 4.890659000026062
+        },
+        {
+          "name": "lint",
+          "exit_code": 0,
+          "seconds": 0.8761700419709086
+        },
+        {
+          "name": "build",
+          "exit_code": 0,
+          "seconds": 4.870265208068304
+        }
+      ],
+      "passed": true
+    },
+    "dependency_audit": "Passed with six high accepted braces findings, GHSA-vfj7-8cjw-p6xm, expires 2026-12-04; not a clean audit"
+  },
+  "review": {
+    "important_findings": 4,
+    "fixed": 4,
+    "critical": 0,
+    "minor": 0,
+    "fix_evidence": "Six new negative paths RED then GREEN, final evaluator/metric suite 31; focused closing suite 61"
+  },
+  "preserved_failures": [
+    "live (5/20 admitted), live-final (9/20)",
+    "early fault profiles with incomplete catalogue product field",
+    "backend initial seeds 0/1: 0004 test assumed current head",
+    "browser early selection/async request-record failures",
+    "audit invoked from wrong cwd",
+    "PG connection refused at default port",
+    "production source-change rejection while evaluator hardened",
+    "initial missing-controls mutant survived; explicit gate assertion now detects it"
+  ],
+  "limits": [
+    "60 finite cases, 24 held out; zero unsafe cases does not establish universal semantics.",
+    "Live profile retained defaults but omitted router examples uniformly and configured nine exact greeting aliases. It is an explicit measured policy, not every possible workflow.",
+    "Natural-language role mapping may require manual interpretation; 8/20 valid requests paused after admission.",
+    "No manual approval of live frozen cases. Human resume/delivery is measured separately in SQLite/PostgreSQL SIGKILL profiles.",
+    "Reference records and deliveries are local synthetic fixtures; no real entitlements/refunds or external Jira certified.",
+    "Metrics begin at revision 0005, with no historical backfill.",
+    "Full backend profiles skip optional Redis case when URL absent; dedicated disposable real Redis suite passed 55.",
+    "Step 8 CI must be checked only after the user commits/pushes. No release recommendation until >=18/20 admitted without lowering the gate."
+  ]
+}

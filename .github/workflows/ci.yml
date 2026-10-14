@@ -38,6 +38,15 @@ jobs:
       # Hash randomisation catches assertions that depend on set iteration order.
       - run: PYTHONHASHSEED=1 python -m pytest backend/tests -q
       - run: python -m pytest backend/tests/test_schema_migrations.py -q
+      # Synthetic model HTTP + real API/worker/local receiver: proves the boundary,
+      # never substitutes for the separately recorded live-model admission gate.
+      - run: python -u -m scripts.eval_request_admission --profile fault --out evals/results/request-admission-ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: request-admission-boundary-report
+          path: evals/results/request-admission-ci/
+          retention-days: 14
   # onnxruntime's embedded telemetry worker is only observable on macOS wheels, where it
   # aborted test processes at exit. Ubuntu skips the native check, so it runs here: the
   # test identifies the worker thread by symbol in a control process and requires it to

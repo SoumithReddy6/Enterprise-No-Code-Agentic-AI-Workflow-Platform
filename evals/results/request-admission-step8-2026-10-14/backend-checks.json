@@ -1,0 +1,27 @@
+[
+  {
+    "seed": 0,
+    "exit_code": 1,
+    "seconds": 154.14098558400292
+  },
+  {
+    "seed": 1,
+    "exit_code": 1,
+    "seconds": 115.33929883292876
+  },
+  {
+    "seed": 2,
+    "exit_code": 0,
+    "seconds": 99.247080540983
+  },
+  {
+    "seed": 3,
+    "exit_code": 0,
+    "seconds": 111.34155875002034
+  },
+  {
+    "seed": 4,
+    "exit_code": 0,
+    "seconds": 112.10465258301701
+  }
+]

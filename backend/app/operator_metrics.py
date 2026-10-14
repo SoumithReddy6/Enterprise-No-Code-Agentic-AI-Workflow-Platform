@@ -1,9 +1,34 @@
 """Indexed, SQL-computed operator summaries; no prompts or outputs are returned."""
 import json
 from datetime import datetime,timezone,timedelta
-from sqlalchemy import Column,String,Integer,select,func,case
+from sqlalchemy import Column,String,Integer,Boolean,select,func,case
 from sqlalchemy.orm import Session
 from .storage import Base,RunRecord,RunEventRecord,SchemaMigrationRecord
+
+class RunAdmissionRecord(Base):
+    __tablename__='run_admission_metrics'
+    run_id=Column(String(64),primary_key=True)
+    seq=Column(Integer,primary_key=True)
+    stage=Column(String(24),nullable=False)
+    status=Column(String(16),nullable=False)
+    outcome=Column(String(24),nullable=False)
+    replay=Column(Boolean,nullable=False)
+
+
+def admission_values(event):
+    stage=event.get('request_stage');status=event.get('status')
+    if stage not in ('greeting_cache','request_router','verify_extraction') or status not in ('success','failed','paused'):return None
+    outcome='error' if status=='failed' else 'needs_review' if status=='paused' else 'unavailable'
+    outputs=event.get('outputs') or {}
+    try:
+        if status=='success':
+            if stage=='greeting_cache':outcome=json.loads(outputs['receipt'])['outcome']
+            elif stage=='request_router':outcome=json.loads(outputs['decision'])['route']
+            else:outcome=json.loads(outputs['report'])['verdict']
+    except (ValueError,KeyError,TypeError):pass
+    allowed={'hit','filled','local_fallback','not_common','proceed','clarify','out_of_scope','passed','needs_review','error','unavailable'}
+    if not isinstance(outcome,str) or outcome not in allowed:outcome='unavailable'
+    return {'stage':stage,'status':status,'outcome':outcome,'replay':event.get('cached') is True}
 
 class GuardDecisionRecord(Base):
     __tablename__='run_guard_decisions'
@@ -69,6 +94,8 @@ def metrics(store,hours=168):
     end=datetime.now(timezone.utc);start=end-timedelta(hours=hours)
     window=(RunRecord.created_at>=start.isoformat(),RunRecord.created_at<end.isoformat())
     with Session(store.engine) as session:
+        admission=[dict(r._mapping) for r in session.execute(select(RunAdmissionRecord.stage,RunAdmissionRecord.status,RunAdmissionRecord.outcome,func.count().label('count')).join(RunRecord,RunRecord.id==RunAdmissionRecord.run_id).where(*window,RunAdmissionRecord.replay.is_(False)).group_by(RunAdmissionRecord.stage,RunAdmissionRecord.status,RunAdmissionRecord.outcome).order_by(RunAdmissionRecord.stage,RunAdmissionRecord.status,RunAdmissionRecord.outcome))]
+        replays=session.scalar(select(func.count()).select_from(RunAdmissionRecord).join(RunRecord,RunRecord.id==RunAdmissionRecord.run_id).where(*window,RunAdmissionRecord.replay.is_(True)))
         reviews={}
         for kind,status,count in session.execute(select(ApprovalRecord.kind,ApprovalRecord.status,func.count()).join(RunRecord,RunRecord.id==ApprovalRecord.run_id).where(*window).group_by(ApprovalRecord.kind,ApprovalRecord.status)):
             reviews.setdefault(kind,{})[status]=count
@@ -83,7 +110,7 @@ def metrics(store,hours=168):
         for name,p in (('p50',.5),('p95',.95)):
             percentiles[name]=session.scalar(select(func.min(ranked.c.duration)).where(ranked.c.rank>=ranked.c.n*p))
         tokens=[dict(row._mapping) for row in session.execute(select(RunTokenRecord.provider,RunTokenRecord.model,func.sum(RunTokenRecord.prompt_tokens).label('prompt_tokens'),func.sum(RunTokenRecord.completion_tokens).label('completion_tokens'),func.sum(RunTokenRecord.calls).label('calls')).join(RunRecord,RunRecord.id==RunTokenRecord.run_id).where(*window).group_by(RunTokenRecord.provider,RunTokenRecord.model).order_by(RunTokenRecord.provider,RunTokenRecord.model))]
-    return {'human_reviews':{'by_kind':reviews,'basis':'Durable approval rows by kind and current status for runs created in the window; completed decision/verification rows are human confirmations, not automatic checks'},'answerability_guard':{'decisions':guard_counts,'skipped_by_reason':guard_skips,'basis':'Uncached retrieval/query decisions across runs created in the window; not unique runs or model refusals'},'window':{'start':start.isoformat(),'end':end.isoformat(),'basis':'run_created_at'},'runs_by_status':counts,'duration_seconds':percentiles,'tokens':tokens,
+    return {'request_admission':{'outcomes':admission,'checkpoint_replays':replays,'basis':'Uncached stage outcomes from revision 0005 onward; no historical backfill. Review pauses and human confirmations are separate.'},'human_reviews':{'by_kind':reviews,'basis':'Durable approval rows by kind and current status for runs created in the window; completed decision/verification rows are human confirmations, not automatic checks'},'answerability_guard':{'decisions':guard_counts,'skipped_by_reason':guard_skips,'basis':'Uncached retrieval/query decisions across runs created in the window; not unique runs or model refusals'},'window':{'start':start.isoformat(),'end':end.isoformat(),'basis':'run_created_at'},'runs_by_status':counts,'duration_seconds':percentiles,'tokens':tokens,
             'abstention_rate':abstained/grounded if grounded else None,'truncation_rate':truncated/total if total else None,
             'truncated_runs_by_source':{'confirmed':(truncated or 0)-unverified,'legacy_checkpoint_unverified':unverified},
             'denominators':{'successful_runs':total,'successful_grounded_runs':grounded or 0},

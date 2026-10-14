@@ -1,0 +1,51 @@
+{
+  "files_sha256": {
+    ".github/workflows/ci.yml": "2349053bcacc4b3e2fa648d448e5f93756e1e2b4cf57f39ec46794efa5701d3d",
+    "backend/app/compiler.py": "36d050b4d8f355a0da0bb44a5dbafe1375e838d20a31754e4f21dc40f6d89ac4",
+    "backend/app/operator_metrics.py": "45feefd0abe5047bc8da9716c4e1074851dd3ed07fd755d52b1eb1ca6c703f19",
+    "backend/app/storage.py": "4bf90056a0b527a50a188debd2020f325239c39eaf960cba242e2abfb0103112",
+    "backend/migrations/versions/0005_admission_metrics.py": "e0390fda76bf5686220d0e31bc3610c840b4e4752f9ca20cf8b5081e867ca09b",
+    "backend/tests/test_request_admission_eval.py": "3eccd501230c8f4ec3c4c8433e5bc25a833f263758aa8843be525ea8e81612b3",
+    "backend/tests/test_request_admission_metrics.py": "4a843ed9f51b92c47cc6d57ea91e834ad447cf9211a12ddba368d16f371232eb",
+    "backend/tests/test_request_review_migration.py": "c276bd9d47a315960248c2dc5e91e12726bd816ef5b561b53d74eb4da61eaebe",
+    "docs/operations.md": "fb7bb4dc7e8745b0d433c12933831dca52c1dcc3ebefbc619657a49281cc0950",
+    "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md": "a234220d3ed5f92980708632974fce318ecdbafc21a60f7004692466b09d6a59",
+    "evals/request-admission/expectations.json": "3d4ce6cec9ee27389ea2f70445773cbb50b7885b0d9de25f2234263f98ab3cf5",
+    "frontend/tests/browser/request-routing.spec.ts": "719eaee8766d078ebc701a24693420a9253ec302e07ba806dbde737fe62842e3",
+    "scripts/check_request_admission_eval.py": "aa45f73967245ca90884481f18d7df61acda8f6f0cdd8b74608deb232a921d43",
+    "scripts/eval_request_admission.py": "d9a642a6a53e6e18cb7109dca0ac8979bb129789087ce91f05c4368a9e507bea"
+  },
+  "commands": [
+    {
+      "name": "backend",
+      "exit_code": 0,
+      "seconds": 151.57001683302224
+    },
+    {
+      "name": "frontend-units",
+      "exit_code": 0,
+      "seconds": 1.804494792013429
+    },
+    {
+      "name": "typecheck",
+      "exit_code": 0,
+      "seconds": 4.890659000026062
+    },
+    {
+      "name": "lint",
+      "exit_code": 0,
+      "seconds": 0.8761700419709086
+    },
+    {
+      "name": "build",
+      "exit_code": 0,
+      "seconds": 4.870265208068304
+    }
+  ],
+  "passed": true,
+  "documentation_sha256_at_close": {
+    "docs/operations.md": "fb7bb4dc7e8745b0d433c12933831dca52c1dcc3ebefbc619657a49281cc0950",
+    "docs/reviews/request-admission-step8-2026-10-14.md": "489edcad9da4df6043641a2fd5d893a7fe25485d8f1a6ea5b4c02fdd0117da2d",
+    "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md": "4e858664c2bc09259690d420ec711afeb35a462ce8b63c7b5a60c03e3bdf82d8"
+  }
+}

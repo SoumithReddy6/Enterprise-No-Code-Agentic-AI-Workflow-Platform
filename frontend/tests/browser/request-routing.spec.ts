@@ -84,6 +84,7 @@ test('new business setup saves the displayed purpose and strict rules; invalid d
     .click();
   await expect(page.locator('[data-id="verify"]')).toBeVisible();
   await page.getByRole('button', { name: 'Validate', exact: true }).click();
+  await expect(page.getByText('Workflow is valid and ready to run.', { exact: true })).toBeVisible();
   const saved = calls.at(-1)!.body as Workflow;
   expect(saved.contract).toBe(2);
   expect(
@@ -95,7 +96,8 @@ test('new business setup saves the displayed purpose and strict rules; invalid d
   expect(saved.nodes.find((n) => n.type === 'agent')!.config.model).toBe(
     'fixture',
   );
-  await page.locator('[data-id="verify"]').click();
+  await page.locator('[data-id="verify"]').getByText('Check extracted facts', { exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Verify extraction', exact: true })).toBeVisible();
   await page.getByLabel(/^Field rules/i).fill('[broken');
   const before = calls.length;
   await page.getByRole('button', { name: 'Validate', exact: true }).click();

@@ -1,0 +1,122 @@
+[
+  {
+    "name": "production",
+    "command": [
+      ".venv/bin/python",
+      "-u",
+      "-m",
+      "scripts.check_production_scenarios",
+      "--all",
+      "--live-models",
+      "--out",
+      "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/evals/results/request-admission-step8-2026-10-14/production"
+    ],
+    "environment": {},
+    "exit_code": 1,
+    "seconds": 239.33760916697793
+  },
+  {
+    "name": "knowledge",
+    "command": [
+      ".venv/bin/python",
+      "-u",
+      "-m",
+      "scripts.check_knowledge_services"
+    ],
+    "environment": {},
+    "exit_code": 0,
+    "seconds": 9.934374165954068
+  },
+  {
+    "name": "postgres",
+    "command": [
+      ".venv/bin/python",
+      "-u",
+      "-m",
+      "scripts.check_postgres"
+    ],
+    "environment": {
+      "AUTH_REGISTRATION_MODE": "open"
+    },
+    "exit_code": 1,
+    "seconds": 1.504696917021647
+  },
+  {
+    "name": "process-reviews",
+    "command": [
+      ".venv/bin/python",
+      "-u",
+      "-m",
+      "scripts.scenarios.request_enforcement",
+      "--out",
+      "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/evals/results/request-admission-step8-2026-10-14/process-reviews"
+    ],
+    "environment": {},
+    "exit_code": 1,
+    "seconds": 18.548401792068034
+  },
+  {
+    "name": "storage-process",
+    "command": [
+      ".venv/bin/python",
+      "-u",
+      "-m",
+      "scripts.check_milestone_storage",
+      "--out",
+      "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/evals/results/request-admission-step8-2026-10-14/storage-process",
+      "--checks",
+      "postgres-migrations",
+      "postgres-four-workers",
+      "postgres-stale-lease",
+      "postgres-sigkill-loop"
+    ],
+    "environment": {},
+    "exit_code": 1,
+    "seconds": 0.6810440830886364
+  },
+  {
+    "name": "grounding-evaluation",
+    "command": [
+      ".venv/bin/python",
+      "-u",
+      "-m",
+      "scripts.eval_retrieval",
+      "--corpus",
+      "evals/real",
+      "--questions",
+      "evals/real/questions-expanded.json",
+      "--chunking",
+      "section",
+      "--modes",
+      "hybrid",
+      "--candidate-k",
+      "50",
+      "--reranker",
+      "local_cross_encoder",
+      "--generate",
+      "llama3.1:latest",
+      "--generate-mode",
+      "hybrid",
+      "--product-answerability-guard",
+      "--out",
+      "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/evals/results/request-admission-step8-2026-10-14/grounding.json"
+    ],
+    "environment": {
+      "ANSWERABILITY_MODEL_DIR": "/private/tmp/relay-step8-answerability"
+    },
+    "exit_code": 0,
+    "seconds": 277.5679661670001
+  },
+  {
+    "name": "grounding-gate",
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "scripts.check_grounding_eval",
+      "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/evals/results/request-admission-step8-2026-10-14/grounding.json"
+    ],
+    "environment": {},
+    "exit_code": 0,
+    "seconds": 0.059264375013299286
+  }
+]

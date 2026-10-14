@@ -38,10 +38,10 @@ def test_database_itself_rejects_unknown_approval_kinds(tmp_path):
 def test_downgrade_refuses_to_reinterpret_or_truncate_approval_records(tmp_path,kind,invocation):
     engine=create_engine('sqlite:///'+str(tmp_path/'refuse.db'))
     with engine.begin() as conn:
-        schema.upgrade(conn)
+        schema.upgrade(conn,'0004_approval_kind')
         conn.execute(text("INSERT INTO run_approvals (id,run_id,tenant_id,node_id,checkpoint_owner,invocation,kind,payload,digest,execution,status,created_at,expires_at,owns_marker) VALUES ('a','r','local','verify','verify',:invocation,:kind,'{}','digest','encrypted','pending',1,100,0)"),{'invocation':invocation,'kind':kind})
     with engine.begin() as conn:
         with pytest.raises(RuntimeError,match='Export/archive'):command.downgrade(schema._config(conn),'0003_loop_storage')
-        assert schema.current_revision(conn)==schema.head_revision()
+        assert schema.current_revision(conn)=='0004_approval_kind'
         assert conn.execute(text('SELECT kind,invocation FROM run_approvals')).one()==(kind,invocation)
     engine.dispose()

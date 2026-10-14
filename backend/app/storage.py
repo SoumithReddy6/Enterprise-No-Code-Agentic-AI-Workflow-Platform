@@ -534,6 +534,9 @@ class Store:
         from .operator_metrics import RunTokenRecord,usage_rows
         for usage in usage_rows(event,row.data.get('workflow',{})):
             s.add(RunTokenRecord(run_id=row.id,seq=0 if last is None else last+1,**usage))
+        from .operator_metrics import RunAdmissionRecord,admission_values
+        admission=admission_values(event)
+        if admission:s.add(RunAdmissionRecord(run_id=row.id,seq=0 if last is None else last+1,**admission))
 
     @staticmethod
     def _compact_loop(s,row,node_id,outputs):

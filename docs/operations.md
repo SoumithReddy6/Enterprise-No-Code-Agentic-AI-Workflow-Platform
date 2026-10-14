@@ -536,3 +536,32 @@ reported as unavailable checking, never silently ignored or converted to a pass.
 JSON Schema formats remain annotations under the existing validator; they are not a
 substitute for business suitability rules. Existing JSON schema numeric-bound precision
 limits at API parsing remain as documented in `typed-conditions.md`.
+
+## Request admission observations
+
+Revision `0005_admission_metrics` stores only stage/status/outcome/replay codes in
+`run_admission_metrics`, in the same fenced transaction as the event. Operator metrics
+return deployment-wide `request_admission.outcomes` and `checkpoint_replays`. Counts
+start with this revision; historical events are not backfilled. Cached checkpoint
+replay is separate from a Redis prepared-reply hit. Human confirmations remain in
+`human_reviews.by_kind` and never turn model-origin fields into source evidence.
+No original message, reply, extracted field, credential or Redis URL is returned.
+
+The request measurement uses isolated API/worker processes and synthetic local
+reference/receiver systems. Run the frozen live suite with:
+
+```bash
+.venv/bin/python -m scripts.eval_request_admission --profile live --out evals/results/request-admission-new-run
+.venv/bin/python -m scripts.check_request_admission_eval evals/results/request-admission-new-run/report.json
+```
+
+`--profile fault` uses a model HTTP fixture and proves verification boundaries with
+three real positive delivery controls. CI runs this profile, which cannot certify
+live model accuracy. A live release requires zero unsafe automatic cases, all ten
+configured whole-message greetings without model calls, and at least 18/20 expected
+valid requests admitted. The suite, companion fact labels, model and policy hashes
+are retained; model replies/failed runs are never discarded to make a score pass.
+Interpretation or business-decision confirmation must match the exact saved run and
+consumed checkpoint. Writes are checked for exact body, case/branch destination and
+no duplication. These remain finite-sample tests. Low admission means no production
+release recommendation, even if safety tests pass; do not lower the gate.

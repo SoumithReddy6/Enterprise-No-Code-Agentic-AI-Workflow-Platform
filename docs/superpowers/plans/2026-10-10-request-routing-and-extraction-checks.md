@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for native execution; use superpowers:subagent-driven-development only if the user chooses delegation. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Tasks 1–6 are committed; all five hosted jobs passed for Step 6 commit `6cb595e` (run `38288903621`). Task 7 editor/setup/review implementation is locally verified on 2026-10-13 and awaits user commit/push and hosted CI. Task 8 live-model measurement remains pending.
+**Status:** Tasks 1–7 are committed; all five hosted jobs passed for Step 7 `e1e158e` (run `38462767646`). Task 8 measurement/tooling is locally complete on 2026-10-14, pending user commit/push and CI. The frozen live gate rejects 9/20 admission; release activation is withheld. See `docs/reviews/request-admission-step8-2026-10-14.md`.
 
 **Goal:** Handle prepared greetings without an LLM, route other inputs by workflow purpose, and prevent unsupported extractions from authorising consequential actions.
 
@@ -182,13 +182,13 @@ Implementation verified locally on 2026-10-13. Step 6 commit `6cb595e` passed al
 
 **Interfaces:** Saved case expectations are immutable during a run; summary separately reports cache handling, routing errors, verification errors, manual decisions, unsafe automatic actions, latency and tokens. Gate fails on unsafe automatic action, missing required result/provenance, or valid-request proceed rate below the predeclared 0.90, without changing existing grounding thresholds.
 
-- [ ] Load the suite frozen in Task 1: at least 20 proceed, 20 clarify, 10 out_of_scope and 10 prepared-reply cases, spanning purchases, support, refunds and yes/no. Preserve at least 20 held-out cases excluded from router prompt examples and tuning. Verify labels for routing, available facts and safe action independently; add new regressions separately rather than relabelling the fixed suite.
-- [ ] Add deterministic wrong-router/wrong-extraction faults and repeat each approval/crash boundary with a real receiver. Exclude manually approved actions from the automatic-safety numerator and report them explicitly.
-- [ ] Run fresh live LLM cases and retain all outcomes, including unnecessary clarification/review and accepted-but-unverified requests. Zero unsafe automatic actions on the fixed suite is required; disclose finite sample size and model versions.
-- [ ] Run backend at five hash seeds with JUnit, frontend/unit/typecheck/lint/build/browser, unchanged deployed and live production campaigns, knowledge checks, schema/PostgreSQL conformance and unchanged 53-question grounding gate. Preserve genuine failures; do not relax gates to fit results.
-- [ ] Record commit, source/case/policy hashes, model digest, environment, timestamps, exit codes and receiver counts. Verify clean-checkout reproducibility. Use isolated databases/accounts/Redis; leave real workspace history and earlier audit artifacts untouched.
-- [ ] Document cache fallback, router limits, review/expiry/reconciliation, privacy-safe metrics and acceptance results. Add CI Redis integration tests and check all hosted jobs on the exact pushed revision.
-- [ ] Commit evidence and release recommendation only after reviewing the results. Activate contract-2 enforcement for the new templates only when the boundary and measurement gates pass.
+- [x] Load the suite frozen in Task 1: at least 20 proceed, 20 clarify, 10 out_of_scope and 10 prepared-reply cases, spanning purchases, support, refunds and yes/no. Preserve at least 20 held-out cases excluded from router prompt examples and tuning. Verify labels for routing, available facts and safe action independently; add new regressions separately rather than relabelling the fixed suite.
+- [x] Add deterministic wrong-router/wrong-extraction faults and repeat each approval/crash boundary with a real receiver. Exclude manually approved actions from the automatic-safety numerator and report them explicitly.
+- [x] Run fresh live LLM cases and retain all outcomes, including unnecessary clarification/review and accepted-but-unverified requests. Zero unsafe automatic actions on the fixed suite is required; disclose finite sample size and model versions.
+- [x] Run backend at five hash seeds with JUnit, frontend/unit/typecheck/lint/build/browser, unchanged deployed and live production campaigns, knowledge checks, schema/PostgreSQL conformance and unchanged 53-question grounding gate. Preserve genuine failures; do not relax gates to fit results.
+- [x] Record commit, source/case/policy hashes, model digest, environment, timestamps, exit codes and receiver counts. Verify clean-checkout reproducibility. Use isolated databases/accounts/Redis; leave real workspace history and earlier audit artifacts untouched.
+- [x] Document cache fallback, router limits, review/expiry/reconciliation, privacy-safe metrics and acceptance results. Add CI Redis integration tests and check all hosted jobs on the exact pushed revision.
+- [x] Review evidence and record a **negative** release recommendation. User commit/push and hosted CI remain pending. Existing draft templates retain their safety guards; no release activation is claimed because the live measurement gate failed.
 
 ## Draft self-review
 

@@ -425,7 +425,10 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
         definition = REGISTRY[node.type]
         config = definition.config_model.model_validate(node.config)
         def handler_factory(node, definition, config):
+            async def request_emit(event):
+                await emit({**event,'request_stage':node.type} if node.type in ('greeting_cache','request_router','verify_extraction') else event)
             async def handler(state):
+                emit=request_emit
                 identity=ExecutionIdentity(node.id,node.id,node.id)
                 inputs = {key: state['values'][ref.split('.')[0]][ref.split('.')[1]] for key, ref in node.inputs.items()}
                 node_ctx=replace(context,node_id=node.id,node_type=node.type,
