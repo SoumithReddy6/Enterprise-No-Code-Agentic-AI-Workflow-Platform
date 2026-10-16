@@ -206,18 +206,20 @@ def verify_extraction(original: str, value: str, config: ExtractionCheckConfig,
         for path in (f for group in config.required_any for f in group):
             if results.get(path, (None,))[0] == 'absent':results[path] = ('absent', 'required_absent')
     for expression in config.cross_checks:
-        # A check over a field the request does not state has nothing to compare.
-        if any(results.get(provenance.pointer(p.split('.')), (None,))[0] == 'absent'
-               for p in calculate.paths(calculate.parse(expression))):continue
+        used = []
         try:
-            passed, used = calculate.run(expression, value, 'check')
+            tree = calculate.parse(expression)
+            if not calculate.is_check(tree):raise calculate.CalculationError('not a check')
+            passed = calculate.evaluate(tree, parsed, used)
             used_paths = list(dict.fromkeys(provenance.pointer(p.split('.')) for p in used))
         except calculate.CalculationError:
+            # A check that could not compare because a field it actually read is not stated
+            # has nothing to compare. Fields coalesce did not need never disable a check.
+            if any(results.get(provenance.pointer(p.split('.')), (None,))[0] == 'absent' for p in used):continue
             results[''] = ('unverified', 'cross_check_unavailable');continue
         if passed is not True:
             for path in used_paths or ['']:results[path] = ('failed', 'cross_check_failed');hard_failure.add(path)
             continue
-        tree = calculate.parse(expression)
         if tree.kind == 'compare' and tree.value == '==' and tree.args[0].kind == 'path':
             target = provenance.pointer(tree.args[0].value.split('.'))
             operands = [p for p in used_paths if p != target]

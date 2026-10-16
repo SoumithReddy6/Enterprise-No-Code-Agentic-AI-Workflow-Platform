@@ -256,8 +256,11 @@ def request_contract_errors(workflow, flow, deps):
     router = nodes.get(router_edges[0].target) if len(router_edges) == 1 else None
     # The reader entry: Input → Request reader, optionally through independent record reads
     # that supply its reference. No model and no transformation runs before the reader.
-    reader, step = None, cache
+    reader, step, seen = None, cache, set()
     while step is not None and step.type != 'request_reader' and independent_reference(step.id + '.text', nodes):
+        # A cycle of reads never reaches a reader; the flow validator reports the cycle.
+        if step.id in seen:step = None;break
+        seen.add(step.id)
         nxt = outgoing.get(step.id, [])
         step = nodes.get(nxt[0].target) if len(nxt) == 1 else None
     if step is not None and step.type == 'request_reader':reader = step

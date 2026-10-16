@@ -8,7 +8,8 @@
 > 1. Section 6.3 was dropped. An unchecked field could flow downstream, so every field still
 >    needs a rule; the editor's suggestions add an `accept_quoted` rule for each new field.
 > 2. An optional field the request does not state may pass as `absent`, only beside at least
->    one passed field. A cross-check that reads it is not applied.
+>    one passed field. A cross-check that cannot compare because a field it actually reads
+>    is absent is not applied; fields that `coalesce` does not reach never disable it.
 > 3. New rule: when a field passes by `accept_quoted`, every number in the request must be
 >    read (`unread_number`). Added after a live run showed a hidden contradiction.
 > 4. The reader has a fifth output, `reading`. A review pause keeps the reading, so resuming

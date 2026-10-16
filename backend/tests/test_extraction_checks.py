@@ -440,3 +440,38 @@ def test_the_unread_number_rule_needs_an_accept_quoted_pass():
     settings = config([source()], ['/amount'])
     original = '{"amount":5,"note":"order 7"}'
     assert run(original, '{"amount":5}', settings).verdict == 'passed'
+
+
+def discounted(**changes):
+    schema = {'type': 'object', 'properties': {f: {'type': ['number', 'null']} for f in ('quantity', 'unit_price', 'discounted_price', 'total')}}
+    settings = dict(expected_schema=schema, required_fields=['/quantity', '/unit_price', '/total'],
+        field_rules=[accept('/' + f) for f in ('quantity', 'unit_price', 'discounted_price', 'total')],
+        cross_checks=['total == quantity * coalesce(discounted_price, unit_price)'])
+    return ExtractionCheckConfig(**{**settings, **changes})
+
+
+@pytest.mark.parametrize('original,value,expected', [
+    # coalesce falls back to unit_price: the unused null never disables the check.
+    ('3 at $450 each, total $1,000', {'quantity': 3, 'unit_price': 450, 'discounted_price': None, 'total': 1000}, 'needs_review'),
+    ('3 at $450 each, total $1,350', {'quantity': 3, 'unit_price': 450, 'discounted_price': None, 'total': 1350}, 'passed'),
+    ('3 at $450, discounted $400, total $1,200', {'quantity': 3, 'unit_price': 450, 'discounted_price': 400, 'total': 1200}, 'passed'),
+])
+def test_a_cross_check_follows_the_fields_it_actually_reads(original, value, expected):
+    report = run(original, json.dumps(value), discounted())
+    assert report.verdict == expected, fields(report)
+    if expected == 'needs_review':
+        assert fields(report)['/total'] == ('failed', 'cross_check_failed')
+
+
+def test_a_cross_check_is_skipped_only_when_a_field_it_reads_is_not_stated():
+    settings = discounted(required_fields=['/quantity', '/unit_price'],
+                          cross_checks=['total == quantity * unit_price'])
+    report = run('3 at $450 each', '{"quantity":3,"unit_price":450,"discounted_price":null,"total":null}', settings)
+    assert report.verdict == 'passed', fields(report)
+
+
+def test_a_check_that_fails_for_another_reason_is_never_skipped_for_an_unread_null():
+    # coalesce never reaches discounted_price, so its null cannot excuse the division error.
+    settings = discounted(cross_checks=['total / quantity == coalesce(unit_price, discounted_price)'])
+    report = run('total $1,000 for 0 items at $450', '{"quantity":0,"unit_price":450,"discounted_price":null,"total":1000}', settings)
+    assert report.verdict == 'needs_review' and fields(report)[''] == ('unverified', 'cross_check_unavailable')

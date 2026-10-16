@@ -327,3 +327,24 @@ async def test_null_values_and_reply_mean_nothing_stated(model):
     values, _ = await run('Tell me a joke.', json.dumps({'type': 'unrelated', 'values': None, 'reply': None}), model=model)
     assert len(model[0]) == 1 and values['reader']['branch'] == 'reply'
     assert values['replied']['text'] == 'This request needs more details: item; total or quantity and unit price. Send it again with these details.'
+
+
+def test_a_cycle_of_record_reads_before_the_reader_ends_validation():
+    import multiprocessing
+    workflow = flow().model_dump(mode='json')
+    jira = lambda id: {'id': id, 'type': 'tool_jira', 'inputs': {'input': 'input.message'},
+        'config': {'connection_id': 'c1', 'operation': 'search', 'jql': 'project = A', 'enable_writes': False}}
+    workflow['nodes'][1:1] = [jira('a'), jira('b')]
+    workflow['edges'][0]['target'] = 'a'
+    workflow['edges'] += [{'id': 'ab', 'source': 'a', 'target': 'b'}, {'id': 'ba', 'source': 'b', 'target': 'a'}]
+    # A separate process: a hang must fail this test, not stop the whole suite.
+    process = multiprocessing.get_context('spawn').Process(target=_validate, args=(workflow,))
+    process.start();process.join(20)
+    hung = process.is_alive()
+    if hung:process.kill();process.join()
+    assert not hung and process.exitcode == 0
+
+
+def _validate(workflow):
+    errors = validate_workflow(Workflow.model_validate(workflow))
+    assert any('Contract 2 entry must be Input → Request reader' in e for e in errors), errors

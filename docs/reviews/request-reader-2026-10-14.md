@@ -122,3 +122,15 @@ same gate and kept its default. This is a decision for review (section 8).
 | live/rows.json | `1e00ac32e5945d2071f4997b97bfd29e20212a43174c25427bb938c2da39f486` |
 | fault/report.json | `f2bca2861983454a7de735b1c0c4ec156444d0a819224ea02ff15b941d7f42eb` |
 | fault/rows.json | `9ed102ee915825f90b47171b5b5cd20c1e4b144d59c231d71d1593c6958d01c8` |
+
+## 10. Audit fixes after `c55a02a`
+
+| Finding | Fix | Proof |
+| --- | --- | --- |
+| A cycle of record reads before the reader (`Input → A → B → A`) hung validation. | The entry walk stops at a repeated node; the entry error is reported. | Test in a child process with a 20 s limit; fails on `c55a02a`, passes now. Mutant without the stop hangs and fails. |
+| A null field that `coalesce` never needs disabled a cross-check (`total == quantity * coalesce(discounted_price, unit_price)` with total $1,000 for 3 × $450 passed). | A check is skipped only when it cannot compare because a field it actually read is absent. A check that fails for any other reason gives `cross_check_unavailable`. | 3 tests fail on `c55a02a` and pass now; 2 mutants killed. |
+
+After the fixes: backend `PYTHONHASHSEED` 0–4 pass, 1,714 tests each; the fault-profile gate
+passes. The recorded live measurement ran on `c55a02a` code and was not repeated. These
+fixes affect only workflows with cycles or with checks that use `coalesce`, and the
+measured templates have neither.
