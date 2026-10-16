@@ -1,6 +1,10 @@
 'use client';
 import { useState } from 'react';
-import { createRequestWorkflow, requestTemplates } from '@/lib/request-routing';
+import {
+  ACCEPT_QUOTED_RISK,
+  createRequestWorkflow,
+  requestTemplates,
+} from '@/lib/request-routing';
 import type { Workflow } from '@/lib/workflow';
 import { ConfigField } from './platform-settings';
 
@@ -13,8 +17,7 @@ export default function WorkflowSetup({
 }) {
   const [template, setTemplate] = useState('qa');
   const [draft, setDraft] = useState(() => createRequestWorkflow('qa'));
-  const router = draft.nodes.find((n) => n.type === 'request_router')!;
-  const check = draft.nodes.find((n) => n.type === 'verify_extraction');
+  const reader = draft.nodes.find((n) => n.type === 'request_reader')!;
   const update = (id: string, key: string, value: unknown) =>
     setDraft((previous) => ({
       ...previous,
@@ -31,9 +34,9 @@ export default function WorkflowSetup({
       }}
     >
       <p className="helper">
-        Configure what this workflow accepts. The router admits a request;
-        business facts still need their own checks. These are draft examples,
-        not certified model accuracy.
+        Configure what this workflow accepts. The Request reader asks one model
+        to read the request, then checks every value in code; code chooses the
+        branch. These are draft examples, not certified model accuracy.
       </p>
       <label>
         Workflow template
@@ -61,16 +64,16 @@ export default function WorkflowSetup({
           required
           maxLength={2000}
           disabled={disabled}
-          value={String(router.config.purpose)}
-          onChange={(e) => update(router.id, 'purpose', e.target.value)}
+          value={String(reader.config.purpose)}
+          onChange={(e) => update(reader.id, 'purpose', e.target.value)}
         />
       </label>
       {(
         [
           'accepted_requests',
           'examples',
-          'exclusions',
-          'clarification_rules',
+          'excluded_requests',
+          'prepared_replies',
         ] as const
       ).map((key) => (
         <ConfigField
@@ -81,20 +84,23 @@ export default function WorkflowSetup({
             title: {
               accepted_requests: 'Accepted requests',
               examples: 'Valid request examples',
-              exclusions: 'Exclusions',
-              clarification_rules: 'Clarification rules',
+              excluded_requests: 'Excluded requests',
+              prepared_replies: 'Prepared replies',
             }[key],
             description:
-              'JSON list of descriptions. Missing business facts must also be required by extraction checks.',
+              key === 'prepared_replies'
+                ? 'JSON list of {"message", "reply"}. An exact message gets its reply with no model call.'
+                : 'JSON list of descriptions. Required facts are set below, not here.',
           }}
-          value={router.config[key]}
+          value={reader.config[key]}
           disabled={disabled}
-          onChange={(v) => update(router.id, key, v)}
+          onChange={(v) => update(reader.id, key, v)}
         />
       ))}
-      {check && (
+      {
         <section aria-label="Extraction acceptance rules">
           <h3>Required facts and checks</h3>
+          <p className="helper">{ACCEPT_QUOTED_RISK}</p>
           <p className="helper">
             Quotation proves where a value appeared, not what it means. Where
             this template includes a reference-record read, select its real
@@ -104,6 +110,7 @@ export default function WorkflowSetup({
           {(
             [
               'required_fields',
+              'required_any',
               'field_rules',
               'expected_schema',
               'cross_checks',
@@ -116,18 +123,19 @@ export default function WorkflowSetup({
                 type: key === 'expected_schema' ? 'object' : 'array',
                 title: {
                   required_fields: 'Required fields',
+                  required_any: 'Required, one group of',
                   field_rules: 'Field rules',
                   expected_schema: 'Expected JSON schema',
                   cross_checks: 'Cross checks',
                 }[key],
               }}
-              value={check.config[key]}
+              value={reader.config[key]}
               disabled={disabled}
-              onChange={(v) => update(check.id, key, v)}
+              onChange={(v) => update(reader.id, key, v)}
             />
           ))}
         </section>
-      )}
+      }
       <p className="helper">
         You can save an unfinished draft. Invalid JSON or missing rules must be
         corrected before Validate or Run.
@@ -135,7 +143,7 @@ export default function WorkflowSetup({
       <button
         className="button primary"
         type="submit"
-        disabled={disabled || !String(router.config.purpose).trim()}
+        disabled={disabled || !String(reader.config.purpose).trim()}
       >
         Create workflow
       </button>

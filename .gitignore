@@ -26,3 +26,8 @@ evals/results/**/*.xml
 evals/results/**/runs.json
 evals/results/junit/
 evals/results/production-ci/
+
+# From the request reader campaign onward, commit summaries, hashes and gate results
+# only. Full reports and rows stay local; summary.json records their SHA-256.
+evals/results/request-reader-*/**/report.json
+evals/results/request-reader-*/**/rows.json

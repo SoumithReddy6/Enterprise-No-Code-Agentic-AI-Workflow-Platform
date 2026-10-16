@@ -106,7 +106,7 @@ class RouterDecision(StrictModel):
 
 class FieldRule(StrictModel):
     field: Pointer
-    kind: Literal['quoted', 'source_field', 'enum', 'reference_member']
+    kind: Literal['quoted', 'accept_quoted', 'source_field', 'enum', 'reference_member']
     source_pointer: Pointer | None = None
     allowed_values: list[str | int | float | bool | None] | None = Field(default=None, min_length=1, max_length=100)
     reference_list: Pointer | None = None
@@ -115,7 +115,7 @@ class FieldRule(StrictModel):
 
     @model_validator(mode='after')
     def parameters(self):
-        expected = {'quoted': set(), 'source_field': {'source_pointer'}, 'enum': {'allowed_values'},
+        expected = {'quoted': set(), 'accept_quoted': set(), 'source_field': {'source_pointer'}, 'enum': {'allowed_values'},
                     'reference_member': {'reference_list', 'reference_key'}}[self.kind]
         provided = {name for name in ('source_pointer', 'allowed_values', 'reference_list', 'reference_key') if getattr(self, name) is not None}
         if provided != expected:raise ValueError(f'{self.kind} requires exactly {sorted(expected)} parameters.')
@@ -127,6 +127,8 @@ class FieldRule(StrictModel):
 class ExtractionCheckConfig(StrictModel):
     expected_schema: dict
     required_fields: list[Pointer] = Field(default_factory=list, max_length=64)
+    # Alternatives: the request is complete when every field of at least one group is present.
+    required_any: list[Annotated[list[Pointer], Field(min_length=1, max_length=8)]] = Field(default_factory=list, max_length=8)
     field_rules: list[FieldRule] = Field(default_factory=list, max_length=64)
     cross_checks: list[Brief] = Field(default_factory=list, max_length=20)
 
@@ -142,6 +144,13 @@ class ExtractionCheckConfig(StrictModel):
             if field == '':raise ValueError('Required fields must use non-root Pointers.')
         if len(set(self.required_fields)) != len(self.required_fields):raise ValueError('Required fields must be unique.')
         if set(self.required_fields) - {rule.field for rule in self.field_rules}:raise ValueError('Each required field needs an acceptance rule.')
+        for group in self.required_any:
+            for field in group:
+                checked_pointer(field)
+                if field == '':raise ValueError('Required groups must use non-root Pointers.')
+            if len(set(group)) != len(group):raise ValueError('Fields in a required group must be unique.')
+            if set(group) - {rule.field for rule in self.field_rules}:raise ValueError('Each field in a required group needs an acceptance rule.')
+        if len({tuple(sorted(g)) for g in self.required_any}) != len(self.required_any):raise ValueError('Required groups must be unique.')
         encoded = [rule.model_dump_json() for rule in self.field_rules]
         if len(set(encoded)) != len(encoded):raise ValueError('Duplicate field rules are not allowed.')
         for expression in self.cross_checks:CalculateConfig(mode='check', expression=expression)
@@ -164,8 +173,9 @@ class VerificationReport(StrictModel):
     @model_validator(mode='after')
     def honest_coverage(self):
         if len({f.field for f in self.fields}) != len(self.fields):raise ValueError('Report field Pointers must be unique.')
-        if self.verdict == 'passed' and (not self.complete or not self.fields
-                or any(f.status != 'passed' or not f.field for f in self.fields)):
+        # An optional field the request does not state may be absent, never unchecked.
+        if self.verdict == 'passed' and (not self.complete or not any(f.status == 'passed' for f in self.fields)
+                or any(not f.field or f.status != 'passed' and (f.status, f.reason) != ('absent', 'value_absent') for f in self.fields)):
             raise ValueError('Incomplete or unsuccessful coverage cannot pass.')
         bounded_json(self.model_dump(), 8192, 'Verification report')
         return self

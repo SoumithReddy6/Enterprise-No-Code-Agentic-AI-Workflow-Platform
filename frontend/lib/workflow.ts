@@ -278,8 +278,18 @@ export const paletteCategories = [
   'Output',
 ];
 export function paletteCategory(type: string): string | null {
-  // Prompt template and Language model stay loadable for saved workflows but are not offered.
-  if (['prompt', 'llm'].includes(type)) return null;
+  // These stay loadable for saved workflows but are not offered. The Request reader
+  // replaces the greeting cache, router and separate extraction check.
+  if (
+    [
+      'prompt',
+      'llm',
+      'greeting_cache',
+      'request_router',
+      'verify_extraction',
+    ].includes(type)
+  )
+    return null;
   if (type.startsWith('tool_')) return 'Tools';
   if (['retrieve', 'query'].includes(type)) return 'Retrieval';
   return (
@@ -290,9 +300,7 @@ export function paletteCategory(type: string): string | null {
         agent: 'Agent',
         condition: 'Control',
         calculate: 'Control',
-        greeting_cache: 'Control',
-        request_router: 'Control',
-        verify_extraction: 'Control',
+        request_reader: 'Control',
         response: 'Output',
       } as Record<string, string>
     )[type] || null

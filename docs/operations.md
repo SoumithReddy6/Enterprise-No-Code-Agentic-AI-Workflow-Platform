@@ -24,53 +24,27 @@ curl -i http://127.0.0.1:8000/api/ready
 
 Use liveness for process restarts and readiness for traffic routing. Expect readiness to fail until KB services and a worker are running.
 
-## Prepared replies and the optional Redis cache
+## Prepared replies
 
-The `greeting_cache` entry node handles only messages explicitly configured in its
-`entries` list. Whole-message lookup uses Unicode NFC, case folding and collapsed
-whitespace. Punctuation stays significant: configure `hello!` separately from `hello`.
-`Hello, buy 3 laptops` continues with the original trigger input, unchanged. No preset
-includes yes/no or approval commands. The node and admission chain require contract 2;
-the router and verification handlers are separate implementation steps, so the editor's
-new-workflow starter has not changed yet.
+The **Request reader** (and, in older saved workflows, the `greeting_cache` node) replies
+to messages that are explicitly configured as prepared replies. The lookup matches the
+whole message after Unicode NFC, case folding and collapsed whitespace. Punctuation
+stays significant: configure `hello!` separately from `hello`. `Hello, buy 3 laptops`
+does not match; it continues to the model reading with the original input, unchanged.
+No preset includes yes/no or approval commands.
 
-Redis is optional. With `COMMON_REPLY_REDIS_URL` unset, prepared replies work locally
-without a model. To enable the disposable local service:
+The reply always comes from the saved workflow configuration. There is no cache and no
+external service: the lookup is an in-memory comparison, so it cannot time out or fail.
+Relay no longer uses Redis for prepared replies; `COMMON_REPLY_REDIS_URL` is ignored and
+readiness has no `common_reply_cache` check. Redis can return in roadmap step B2 for
+shared budgets and rate limits, not for replies.
 
-```sh
-docker compose --profile common-replies up -d common-replies
-# Set this in the API and worker environments, then restart those processes:
-COMMON_REPLY_REDIS_URL=redis://127.0.0.1:56379/0
-```
-
-The service is bound to loopback, capped at 64 MB, and does not persist cache data.
-The client is pinned to redis-py 8.1.0; the server to Redis 8.6.7-alpine3.23 and its
-image digest. The client was audited before installation; the server's official
-[8.6.7 security release](https://github.com/redis/redis/releases/tag/8.6.7) was reviewed.
-This release review is not an OS-level image vulnerability scan. Remote services should
-use authenticated `rediss://` URLs and network access controls. URL query overrides are
-refused so they cannot weaken timeouts or enable retries. URLs never enter workflow
-documents, journals, or readiness responses.
-
-The workflow configuration is authoritative. Cache entries contain only versioned
-prepared replies; tenant, workflow content, reply-set content and whole-message digests
-scope the keys. Each value is at most 4,096 bytes and expires after 3,600 seconds.
-GET/fill together have a 200 ms deadline with no client retry. Oversized configured
-replies stay exact locally. Missing, expired, malformed or altered entries are replaced
-with the current configured reply; timeouts/outages use it locally. Bounded reads also
-prevent a poisoned large cache value from being downloaded in full.
-
-`checks.common_reply_cache` reports `ok`, `unavailable`, or `disabled`, always with
-`required: false`. Its failure never makes an otherwise healthy API return 503. API
-and standalone worker shutdown close their owned async connections. The content-free
-`common_reply.lookup` journal line uses `reason_code` values `hit`, `filled`,
-`local_fallback`, or `not_common`; the node's checkpointed `receipt` records that
-outcome and the content digests. Checkpoint replay reuses the saved result rather than
-looking up Redis again. Prepared reply text is not eligible extraction evidence.
-
-Redis holds no request-router decisions, approvals, leases, action results or business
-permission. Those remain in the workflow database. CI tests use a separate Redis
-service and unique disposable namespaces via `RELAY_TEST_REDIS_URL`.
+A prepared reply makes no model call and issues no verification receipt; it can only
+take the `reply` branch. The content-free `request_reader.prepared` and
+`common_reply.lookup` journal lines record that a prepared reply was used. Checkpoint
+replay reuses the saved result. Older run records can show the outcomes `hit` or
+`filled` from the earlier Redis cache; they meant the same configured reply. Prepared
+reply text is not eligible extraction evidence.
 
 ## Request and run correlation
 

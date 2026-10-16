@@ -62,7 +62,8 @@ def _bounded_report(results, *, complete=True, clarify=False):
     while True:
         selected = entries if complete else [e for e in entries[:63] if e.field != ''] + [
             FieldResult(field='', status='unverified', reason='coverage_limit')]
-        verdict = 'clarify' if clarify else 'passed' if complete and selected and all(e.status == 'passed' for e in selected) else 'needs_review'
+        verdict = 'clarify' if clarify else 'passed' if complete and any(e.status == 'passed' for e in selected) and all(
+            e.status == 'passed' or (e.status, e.reason) == ('absent', 'value_absent') for e in selected) else 'needs_review'
         try:return VerificationReport(verdict=verdict, complete=complete, fields=selected)
         except ValueError:
             if not entries:raise
@@ -146,8 +147,8 @@ def verify_extraction(original: str, value: str, config: ExtractionCheckConfig,
         # Schema/resolution failures are not model content and never grant a pass.
         return _bounded_report({'': ('failed', 'schema_invalid')}, clarify=True)
     actual = list(_walk(parsed)); paths = list(dict.fromkeys([*actual, *config.required_fields,
-        *(rule.field for rule in config.field_rules)]))
-    if not parsed and not config.required_fields:return _bounded_report({'': ('unverified', 'no_fields')}, complete=False)
+        *(f for group in config.required_any for f in group), *(rule.field for rule in config.field_rules)]))
+    if not parsed and not config.required_fields and not config.required_any:return _bounded_report({'': ('unverified', 'no_fields')}, complete=False)
     eligible = isinstance(origins, provenance.EvidenceContext) and origins.complete and original in origins.eligible_texts
     try:original_value = _read(original) if eligible else MISSING
     except (ValueError, TypeError, RecursionError, UnicodeError):
@@ -173,6 +174,11 @@ def verify_extraction(original: str, value: str, config: ExtractionCheckConfig,
         for rule in [*applicable, *inherited]:
             checked_value = at_pointer(parsed, rule.field)
             if rule.kind == 'quoted':continue
+            if rule.kind == 'accept_quoted':
+                # Opt-in: the exact value is written in the trusted original. This proves
+                # where the value is written, not its role; cross-checks address the role.
+                if origin:suitable = True
+                continue
             if rule.kind == 'source_field':
                 observed = at_pointer(original_value, rule.source_pointer) if original_value is not MISSING else MISSING
                 if observed is MISSING:unknown = 'source_unavailable'
@@ -195,7 +201,14 @@ def verify_extraction(original: str, value: str, config: ExtractionCheckConfig,
         elif not origin:results[path] = ('unverified', 'origin_unconfirmed');derived_candidates.add(path)
         elif not suitable:results[path] = ('unverified', 'suitability_unverified')
         else:results[path] = ('passed', 'source_checked')
+    group_met = any(all(results.get(p, (None,))[0] != 'absent' for p in group) for group in config.required_any)
+    if config.required_any and not group_met:
+        for path in (f for group in config.required_any for f in group):
+            if results.get(path, (None,))[0] == 'absent':results[path] = ('absent', 'required_absent')
     for expression in config.cross_checks:
+        # A check over a field the request does not state has nothing to compare.
+        if any(results.get(provenance.pointer(p.split('.')), (None,))[0] == 'absent'
+               for p in calculate.paths(calculate.parse(expression))):continue
         try:
             passed, used = calculate.run(expression, value, 'check')
             used_paths = list(dict.fromkeys(provenance.pointer(p.split('.')) for p in used))
@@ -214,5 +227,16 @@ def verify_extraction(original: str, value: str, config: ExtractionCheckConfig,
                     and tree.args[0].value not in calculate.paths(tree.args[1])
                     and all(results.get(p, (None,))[0] == 'passed' for p in operands)):
                 results[target] = ('passed', 'calculated_checked')
-    missing_required = any(results.get(p, (None,))[0] == 'absent' for p in config.required_fields)
+    # accept_quoted proves where a value is written, not its role. A reading that leaves
+    # out a stated number can hide a contradiction ("3 at $450, total $1,000" read without
+    # the 3), so every number in the request must appear among the read values.
+    accepted = {r.field for r in config.field_rules if r.kind == 'accept_quoted'}
+    if eligible and '' not in results and any(results.get(p, (None,))[0] == 'passed' for p in accepted):
+        read = set()
+        for path in actual:
+            leaf = at_pointer(parsed, path)
+            if isinstance(leaf, (int, Decimal)) and not isinstance(leaf, bool):read.add(Decimal(leaf))
+            elif isinstance(leaf, str):read |= provenance.numbers_in(leaf)
+        if provenance.numbers_in(original) - read:results[''] = ('unverified', 'unread_number')
+    missing_required = any(results.get(p, (None,))[0] == 'absent' for p in config.required_fields) or bool(config.required_any and not group_met)
     return _bounded_report(results, clarify=missing_required)

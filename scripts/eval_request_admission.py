@@ -2,7 +2,10 @@
 
 Live uses the product's Ollama transport. Fault mode substitutes only the model HTTP
 server. Reference records and external writes always use a local test receiver; no
-real workspace, user account, shared Redis or external business system is touched.
+real workspace, user account or external business system is touched.
+
+The workflows are the Request reader examples: one model call reads the request, code
+checks the values and chooses the branch. The frozen cases and labels are unchanged.
 """
 import argparse
 import hashlib
@@ -23,7 +26,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import httpx
 
 from scripts.check_production_scenarios import Lab, ROOT
-from scripts.scenarios.request_routing import ModelFixture, decision
+from scripts.scenarios.request_routing import ModelFixture
 from backend.app.exact_json import loads as exact_loads
 
 SUITE = ROOT / 'evals/request-admission/questions.json'
@@ -52,16 +55,17 @@ def workflow(domain, model, jira, connection, path):
     name = 'yesno' if domain == 'yes_no' else domain
     value = json.loads((ROOT / 'examples/request-admission' / (name + '.json')).read_text())
     for node in value['nodes']:
-        if node['type'] in ('agent','request_router'): node['config']['model'] = model
-        if node['type'] == 'request_router': node['config']['examples'] = []
-        if node['type'] == 'greeting_cache':
-            node['config']['entries'] = [{'message':a,'reply':'Hello. Please send a request for this workflow.'} for a in ALIASES]
+        if node['type'] in ('agent','request_reader'): node['config']['model'] = model
+        if node['type'] == 'request_reader':
+            # The template's own sample is not a frozen case; drop it as Step 8 did.
+            node['config']['examples'] = []
+            node['config']['prepared_replies'] = [{'message':a,'reply':'Hello. Please send a request for this workflow.'} for a in ALIASES]
         if node['id'] == 'records': node['config']['connection_id'] = jira
     # Send only the exact checked/derived data, after a business branch. Both branches
     # have a receiver, so safety cannot pass merely because the low branch has no write.
     for branch in ('yes','no'):
         target = branch + 'Text'
-        binding = 'calculate.text' if domain == 'purchase' else 'verify.text'
+        binding = 'calculate.text' if domain == 'purchase' else 'reader.text'
         identifier = 'send_' + branch
         value['nodes'].append({'id':identifier,'type':'tool_http','inputs':{'input':binding},
             'config':{'connection_id':connection,'method':'POST','path':path+'/'+branch,
@@ -102,9 +106,20 @@ def safe_action(row, case, labels):
     expected = labels['cases'][case['id']]
     try: value = exact_loads(row.get('extracted') or 'null')
     except ValueError: return False
-    if value != exact_loads(json.dumps(expected['expected_value'])) or row['automatic_branch'] != expected['safe_branch']:return False
-    if len(row['deliveries'])>1:return False
-    sent = {'result':value['quantity'] * value['unit_price']} if case['domain']=='purchase' else value
+    wanted = exact_loads(json.dumps(expected['expected_value']))
+    if row['automatic_branch'] != expected['safe_branch'] or len(row['deliveries'])>1:return False
+    if case['domain']=='purchase':
+        # The reader may read a stated total instead of quantity and unit price. The label's
+        # item and total decide; any quantity or price that is read must equal the label.
+        if not isinstance(value,dict) or set(value)-{'item','quantity','unit_price','total'} or value.get('item')!=wanted['item']:return False
+        if any(value.get(k) is not None and value[k]!=wanted[k] for k in ('quantity','unit_price')):return False
+        effective = value.get('total') if value.get('total') is not None else (
+            value['quantity']*value['unit_price'] if value.get('quantity') is not None and value.get('unit_price') is not None else None)
+        if effective != wanted['quantity']*wanted['unit_price']:return False
+        sent = {'result':effective}
+    else:
+        if value != wanted:return False
+        sent = value
     for delivery in row['deliveries']:
         try: body=exact_loads(delivery['body'])
         except (ValueError,KeyError,TypeError):return False
@@ -175,20 +190,29 @@ class Receiver:
     def close(self):self.server.shutdown();self.server.server_close();self.thread.join()
 
 
+def reader_route(reader, pending):
+    """The reader's outcome in the suite's route names. Continue, or a pause for a person,
+    admits the request to the workflow; a reply clarifies, or declines when the model read
+    nothing and called the message unrelated."""
+    if pending:return 'proceed'
+    if not reader:return 'error'
+    if reader.get('reading')=='':return 'prepared_reply'
+    if reader.get('branch')=='continue':return 'proceed'
+    reading=json.loads(reader['reading'])
+    def empty(v):return all(empty(x) for x in v.values()) if isinstance(v,dict) else all(empty(x) for x in v) if isinstance(v,list) else v is None
+    return 'out_of_scope' if reading['type']=='unrelated' and empty(reading['values']) and reader.get('reply')==reading['reply'] else 'clarify'
+
+
 def observe(case, run, requests, seconds):
-    checkpoints=run.get('checkpoints',{});router=checkpoints.get('router',{});cache=checkpoints.get('cache',{})
-    route='error'; outcome='unavailable'
-    if cache:
-        outcome=json.loads(cache['receipt'])['outcome']
-        if cache['branch']=='reply':route='prepared_reply'
-    if router: route=json.loads(router['decision'])['route']
+    checkpoints=run.get('checkpoints',{});reader=checkpoints.get('reader',{})
+    pending=next((a for a in run.get('approvals',[]) if a.get('kind')=='verification' and a.get('node_id')=='reader'),None)
+    route=reader_route(reader,pending)
+    outcome='prepared' if route=='prepared_reply' else 'not_common' if reader or pending else 'unavailable'
     verification=None
-    if checkpoints.get('verify'):verification=json.loads(checkpoints['verify']['report'])
-    else:
-        pending=next((a for a in run.get('approvals',[]) if a.get('kind')=='verification'),None)
-        if pending:verification=pending['payload']['report']
+    if reader.get('report'):verification=json.loads(reader['report'])
+    elif pending:verification=pending['payload']['report']
     decision_value=checkpoints.get('decision',{})
-    review_ids={checkpoints.get('verify',{}).get('_verification',{}).get('review_id'),
+    review_ids={reader.get('_verification',{}).get('review_id'),
         decision_value.get('_decision_review',{}).get('id')}
     manual=any(a['status']=='completed' and a['kind'] in ('decision','verification') and a['id'] in review_ids
         for a in run.get('approvals',[]))
@@ -197,7 +221,9 @@ def observe(case, run, requests, seconds):
     return {'id':case['id'],'run_id':run['id'],'status':run['status'],'route':route,'cache_outcome':outcome,
         'model_calls':calls,'tokens':run.get('accounting',{}).get('tokens_spent',0), 'seconds':seconds,
         'automatic_branch':decision_value.get('branch'),'manual':manual,'deliveries':requests,
-        'extracted':checkpoints.get('extract',{}).get('text'),'verification':verification,'error':run.get('error') or None,
+        'extracted':reader.get('text') if reader else pending['payload']['value'] if pending else None,
+        'request_type':json.loads(reader['reading'])['type'] if reader.get('reading') else pending['payload'].get('request_type') if pending else None,
+        'verification':verification,'error':run.get('error') or None,
         'saved_confirmations':[a for a in run.get('approvals',[]) if a['status']=='completed'], 'run':run}
 
 
@@ -211,7 +237,7 @@ def evaluate(out, profile, model):
     try:
         with tempfile.TemporaryDirectory(prefix='relay-admission-') as directory:
             lab=Lab(directory,out); lab.provider.close();lab.provider=Receiver()
-            lab.env.update(SCENARIO_FIXTURE_PORT=str(lab.provider.port),COMMON_REPLY_REDIS_URL='',AGENT_RUN_BUDGET='200')
+            lab.env.update(SCENARIO_FIXTURE_PORT=str(lab.provider.port),AGENT_RUN_BUDGET='200')
             if fixture:lab.env['OLLAMA_BASE_URL']=fixture.url
             try:
                 lab.boot()
@@ -219,10 +245,11 @@ def evaluate(out, profile, model):
                 for case in suite['cases']:
                     started=time.monotonic(); before=len(lab.provider.calls); path='/deliver/'+case['id']
                     if fixture:
-                        wrong={'purchase':{'item':'laptops','quantity':9,'unit_price':0},
+                        wrong={'purchase':{'item':'laptops','quantity':9,'unit_price':0,'total':None},
                             'support':{'summary':'Invented incident','category':'billing'},
                             'refund':{'order_id':'INVENTED','amount':0},'yes_no':{'record_id':'INVENTED','eligible':True}}[case['domain']]
-                        fixture.script(decision('proceed'),json.dumps(wrong),json.dumps(wrong))
+                        # Fault: the model always says "request" and invents values.
+                        fixture.script(json.dumps({'type':'request','values':wrong,'reply':''}))
                     try:
                         identifier=lab.submit(workflow(case['domain'],model,lab.jira,lab.http,path),case['message'])
                         run=lab.wait(identifier,timeout=180)
@@ -243,7 +270,7 @@ def evaluate(out, profile, model):
                             ('support',{'summary':'Invoice broken','category':'billing'}),
                             ('refund',{'order_id':'R123','amount':45})]:
                         path='/deliver/control-'+domain;before=len(lab.provider.calls)
-                        fixture.script(decision('proceed'),json.dumps(value))
+                        fixture.script(json.dumps({'type':'request','values':{**value,**({'total':None} if domain=='purchase' else {})},'reply':''}))
                         identifier=lab.submit(workflow(domain,model,lab.jira,lab.http,path),json.dumps(value))
                         run=lab.wait(identifier);sent=[r for r in lab.provider.calls[before:] if r['method']=='POST']
                         controls.append({'domain':domain,'passed':run['status']=='success' and len(sent)==1,

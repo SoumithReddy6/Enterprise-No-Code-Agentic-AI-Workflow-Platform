@@ -14,6 +14,8 @@ from .extraction_checks import verify_extraction
 from .verification_receipts import make_receipt,checked_receipt,receipt_matches,verification_policy_digest,digest
 
 DECISION_KEY='_decision_review'
+# Nodes that issue verification receipts. Both are runtime-owned handlers.
+VERIFIERS=frozenset({'verify_extraction','request_reader'})
 
 
 class UnsafeExecutionError(ValueError):
@@ -75,6 +77,12 @@ def _origins(ctx,node,inputs):
     return origins
 
 
+def _checked_inputs(node,inputs,outputs):
+    """The (original, value) pair a verifier checks. The reader checks its own reading."""
+    if node.type!='request_reader':return inputs
+    return {'original':inputs['message'],'value':outputs['text'],**({'reference':inputs['reference']} if 'reference' in inputs else {})}
+
+
 def _verification(ctx,node,inputs,config):
     if inputs['original']!=ctx.message:raise UnsafeExecutionError('Verification does not match this run original input.')
     origins=_origins(ctx,node,inputs)
@@ -96,6 +104,12 @@ def _verification(ctx,node,inputs,config):
     return report,policy,payload
 
 
+def _reader_verification(ctx,node,inputs,value,config,answer):
+    report,policy,payload=_verification(ctx,node,_checked_inputs(node,inputs,{'text':value}),config.checks())
+    # The model's reading type is part of what a person confirms.
+    return report,policy,{**payload,'request_type':answer.type}
+
+
 async def _review(ctx,kind,payload):
     if ctx.platform is None:raise ReviewPause(ctx.execution_identity,kind,payload)
     return await ctx.platform('review',kind,payload,ctx.execution_identity)
@@ -115,6 +129,42 @@ async def verify_extraction_node(inputs,config,ctx):
     return {'text':inputs['value'],'branch':branch,'reply':
         'Missing or invalid facts. Submit a new request with the required information.' if branch=='reply' else '',
         'report':report.model_dump_json()}
+
+
+async def request_reader_node(inputs,config,ctx):
+    from .request_reader import prepared_reply,read_request,outcome,reading_text,PREPARED
+    from .observability import journal
+    node=next(n for n in ctx.workflow.nodes if n.id==ctx.node_id)
+    if inputs['message']!=ctx.message:raise UnsafeExecutionError('The request reader does not match this run original input.')
+    reply=prepared_reply(inputs['message'],config)
+    if reply is not None:
+        journal(event='request_reader.prepared',node_id=node.id,reason_code='prepared')
+        return {'text':'','branch':'reply','reply':reply,'report':'','reading':PREPARED}
+    # A review pause keeps the validated reading, so resuming never asks the model again.
+    from .request_reader import validate_reading,reading_record
+    from .approvals import ApprovalPause
+    frame_key=node.id+':reader'
+    frame=(ctx.run.get('agent_frames') or {}).pop(frame_key,None)
+    answer=None
+    if isinstance(frame,dict) and frame.get('checkpoint_owner')==node.id:
+        try:
+            answer=validate_reading(frame.get('reading'),config)
+            if frame.get('record')!=reading_record({'reading':frame['reading']},inputs['message'],config):answer=None
+        except ValueError:answer=None
+    if answer is None:answer=await read_request(inputs['message'],config,ctx)
+    value=exact_json.dumps(answer.values)
+    report,policy,payload=_reader_verification(ctx,node,inputs,value,config,answer)
+    branch,reply,person=outcome(answer,report,config)
+    try:review=(await _review(ctx,'verification',payload))['id'] if person else None
+    except ApprovalPause as exc:
+        text=reading_text(answer)
+        exc.frames[frame_key]={'checkpoint_owner':node.id,'reading':text,
+            'record':reading_record({'reading':text},inputs['message'],config)}
+        raise
+    receipt=make_receipt(ctx.run['run_id'],node.id,inputs['message'],value,policy,report,review)
+    ctx.run.setdefault('issued_verification',{})[ctx.execution_identity.invocation_id]=Grant(receipt,inputs['message'],value,policy,node.id,payload)
+    journal(event='verification.result',node_id=node.id,reason_code=report.verdict,manual=review is not None)
+    return {'text':value,'branch':branch,'reply':reply,'report':report.model_dump_json(),'reading':reading_text(answer)}
 
 
 def _decision_payload(ctx,node,inputs):
@@ -185,25 +235,48 @@ async def finalize(ctx,node,inputs,outputs,config,*,cached=False):
     if ctx.run.get('contract')!=2:return outputs
     allowed={'_provenance','_truncation'}
     if node.type=='request_router':allowed.add('_routing')
-    if node.type=='verify_extraction':allowed.add('_verification')
+    if node.type in VERIFIERS:allowed.add('_verification')
+    if node.type=='request_reader':allowed.add('_reading')
     if node.type in ('condition','calculate'):allowed.add(DECISION_KEY)
     if any(k.startswith('_') and k not in allowed for k in outputs):raise UnsafeExecutionError('Unexpected reserved checkpoint metadata.')
     if cached and node.type in provenance.SOURCE_NODES and outputs.get('message')!=ctx.message:
         raise UnsafeExecutionError(f'{node.id} cannot be restored: its trigger no longer matches this run original input.')
-    if node.type=='verify_extraction':
+    answer=None
+    if node.type=='request_reader':
+        from .request_reader import PREPARED,prepared_reply,validate_reading,outcome
+        if inputs['message']!=ctx.message:raise UnsafeExecutionError('The request reader does not match this run original input.')
+        if outputs.get('reading')==PREPARED:
+            # A prepared reply asks no model and issues no receipt: it can only reply.
+            reply=prepared_reply(inputs['message'],config)
+            if reply is None or '_verification' in outputs or ctx.run.get('issued_verification',{}).get(ctx.execution_identity.invocation_id) or any(
+                    outputs.get(k)!=v for k,v in {'text':'','branch':'reply','reply':reply,'report':''}.items()):
+                raise UnsafeExecutionError('Prepared reply does not match the saved configuration.')
+            return outputs
+        try:answer=validate_reading(outputs.get('reading'),config)
+        except ValueError:raise UnsafeExecutionError('Request reader outputs do not hold a valid reading.') from None
+        if outputs.get('text')!=exact_json.dumps(answer.values):raise UnsafeExecutionError('Request reader values differ from its reading.')
+    if node.type in VERIFIERS:
+        checked=_checked_inputs(node,inputs,outputs)
         if cached:
-            report,policy,payload=_verification(ctx,node,inputs,config)
+            report,policy,payload=_reader_verification(ctx,node,inputs,outputs['text'],config,answer) if answer else _verification(ctx,node,inputs,config)
             record=checked_receipt(outputs.get('_verification'))
-            if record['run_id']!=ctx.run['run_id'] or record['report']!=report.model_dump(mode='json') or record['node_id']!=node.id or record['policy_digest']!=policy or record['input_digest']!=digest(inputs['original']) or record['value_digest']!=digest(inputs['value']):
+            if record['run_id']!=ctx.run['run_id'] or record['report']!=report.model_dump(mode='json') or record['node_id']!=node.id or record['policy_digest']!=policy or record['input_digest']!=digest(checked['original']) or record['value_digest']!=digest(checked['value']):
                 raise UnsafeExecutionError('Verification checkpoint no longer matches input, value or policy.')
-            grant=Grant(record,inputs['original'],inputs['value'],policy,node.id,payload)
+            grant=Grant(record,checked['original'],checked['value'],policy,node.id,payload)
         else:
             grant=ctx.run.get('issued_verification',{}).pop(ctx.execution_identity.invocation_id,None)
             if grant is None:raise UnsafeExecutionError('Verifier did not issue a runtime receipt.')
             outputs={**outputs,'_verification':grant.record}
         expected='reply' if grant.record['report']['verdict']=='clarify' else 'continue'
-        if outputs.get('branch')!=expected or outputs.get('text')!=inputs['value'] or outputs.get('report')!=report_json(grant.record['report']):
+        if outputs.get('branch')!=expected or outputs.get('text')!=checked['value'] or outputs.get('report')!=report_json(grant.record['report']):
             raise UnsafeExecutionError('Verification outputs disagree with their checked result.')
+        if answer is not None:
+            from .request_reader import outcome
+            from .request_contracts import VerificationReport
+            branch,reply,person=outcome(answer,VerificationReport.model_validate(grant.record['report']),config)
+            if (branch,reply)!=(outputs['branch'],outputs['reply']):raise UnsafeExecutionError('Request reader outputs disagree with its decision table.')
+            # The model's type alone never continues a request a person must confirm.
+            if person and not grant.record['review_id']:raise UnsafeExecutionError('This request requires a person to confirm it.')
         if expected=='continue':
             binding=VerifiedBinding(outputs['text'],(grant,))
             if not await binding_valid(binding,outputs['text'],ctx):raise UnsafeExecutionError('Verification confirmation is unavailable.')

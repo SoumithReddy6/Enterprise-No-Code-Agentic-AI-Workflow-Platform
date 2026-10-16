@@ -303,3 +303,140 @@ def test_boolean_enum_origin_under_escaped_pointer_is_found_correctly():
     pointer = '/a~1b/~0eligible'
     settings = config([{'field':pointer,'kind':'enum','allowed_values':[True,False]}], [pointer])
     assert run(text,text,settings).verdict == 'passed'
+
+
+# ------------------------------------------------- required groups and accept_quoted
+
+def accept(field):
+    return {'field': field, 'kind': 'accept_quoted'}
+
+
+PURCHASE_SCHEMA = {'type': 'object', 'additionalProperties': False, 'properties': {
+    'item': {'type': ['string', 'null']}, 'quantity': {'type': ['number', 'null']},
+    'unit_price': {'type': ['number', 'null']}, 'total': {'type': ['number', 'null']}}}
+
+
+def purchase(**overrides):
+    settings = dict(expected_schema=PURCHASE_SCHEMA, required_fields=['/item'],
+        required_any=[['/total'], ['/quantity', '/unit_price']],
+        field_rules=[accept('/item'), accept('/quantity'), accept('/unit_price'), accept('/total')],
+        cross_checks=['total == quantity * unit_price'])
+    return ExtractionCheckConfig(**{**settings, **overrides})
+
+
+def order(item='laptops', quantity=None, unit_price=None, total=None):
+    return json.dumps({'item': item, 'quantity': quantity, 'unit_price': unit_price, 'total': total})
+
+
+@pytest.mark.parametrize('original,value', [
+    ('3 laptops at $450 each.', order(quantity=3, unit_price=450)),
+    ('three laptops at $450 each', order(quantity=3, unit_price=450)),
+    ('laptops for a total of $1,350', order(total=1350)),
+    ('3 laptops at $450 each, $1,350 in total', order(quantity=3, unit_price=450, total=1350)),
+])
+def test_one_complete_group_of_quoted_facts_passes(original, value):
+    report = run(original, value, purchase())
+    assert report.verdict == 'passed' and report.complete, fields(report)
+    assert all(status in ('passed', 'absent') for status, _ in fields(report).values())
+    assert {reason for status, reason in fields(report).values() if status == 'absent'} <= {'value_absent'}
+
+
+@pytest.mark.parametrize('value,absent', [
+    (order(), ['/quantity', '/unit_price', '/total']),
+    (order(quantity=3), ['/unit_price', '/total']),
+])
+def test_no_complete_group_asks_for_the_missing_facts(value, absent):
+    report = run('I need 3 laptops', value, purchase())
+    assert report.verdict == 'clarify'
+    assert [p for p, (s, r) in fields(report).items() if (s, r) == ('absent', 'required_absent')] == absent
+
+
+def test_a_missing_required_field_still_asks_when_a_group_is_complete():
+    report = run('3 at $450 each', order(item=None, quantity=3, unit_price=450), purchase())
+    assert report.verdict == 'clarify' and fields(report)['/item'] == ('absent', 'required_absent')
+
+
+@pytest.mark.parametrize('value,field', [
+    (order(quantity=4, unit_price=450), '/quantity'),       # invented number
+    (order(item='desktops', quantity=3, unit_price=450), '/item'),  # invented text
+])
+def test_accept_quoted_never_passes_a_value_not_written_in_the_request(value, field):
+    report = run('3 laptops at $450 each.', value, purchase())
+    assert report.verdict == 'needs_review'
+    assert fields(report)[field] == ('unverified', 'origin_unconfirmed')
+
+
+def test_a_quoted_total_that_disagrees_with_the_cross_check_fails():
+    report = run('3 laptops at $450 each, $1,000 in total', order(quantity=3, unit_price=450, total=1000), purchase())
+    assert report.verdict == 'needs_review'
+    assert fields(report)['/total'] == ('failed', 'cross_check_failed')
+
+
+def test_accept_quoted_on_a_boolean_needs_a_structured_source():
+    settings = ExtractionCheckConfig(expected_schema={'type': 'object'}, required_fields=['/eligible'],
+        field_rules=[accept('/eligible')])
+    assert run('Yes, eligible.', '{"eligible":true}', settings).verdict == 'needs_review'
+    assert run('{"eligible":true}', '{"eligible":true}', settings).verdict == 'passed'
+
+
+def test_quoted_rules_keep_their_meaning():
+    # quoted proves origin only; it never makes a field pass on its own.
+    report = run('3 laptops at $450 each.', order(quantity=3, unit_price=450),
+        purchase(field_rules=[quoted('/item'), quoted('/quantity'), quoted('/unit_price'), quoted('/total')]))
+    assert report.verdict == 'needs_review'
+    assert fields(report)['/quantity'] == ('unverified', 'suitability_unverified')
+
+
+def test_absent_optional_fields_alone_never_pass():
+    settings = ExtractionCheckConfig(expected_schema={'type': 'object'}, field_rules=[accept('/amount')])
+    report = run('No amount here.', '{"amount":null}', settings)
+    assert report.verdict == 'needs_review'
+
+
+def test_a_report_cannot_claim_a_pass_over_missing_or_unchecked_fields():
+    from backend.app.request_contracts import VerificationReport
+    ok = {'field': '/item', 'status': 'passed', 'reason': 'source_checked'}
+    VerificationReport(verdict='passed', complete=True, fields=[ok, {'field': '/total', 'status': 'absent', 'reason': 'value_absent'}])
+    for other in ({'field': '/total', 'status': 'absent', 'reason': 'required_absent'},
+                  {'field': '/total', 'status': 'unverified', 'reason': 'rule_missing'}):
+        with pytest.raises(ValueError):
+            VerificationReport(verdict='passed', complete=True, fields=[ok, other])
+    with pytest.raises(ValueError):
+        VerificationReport(verdict='passed', complete=True, fields=[{'field': '/total', 'status': 'absent', 'reason': 'value_absent'}])
+
+
+@pytest.mark.parametrize('settings', [
+    {'required_any': [['/total'], ['/missing_rule']]},
+    {'required_any': [['']]},
+    {'required_any': [['/total', '/total']]},
+    {'required_any': [['/total'], ['/total']]},
+    {'required_any': [['/total']] * 9},
+    {'required_any': [[]]},
+    {'field_rules': [{'field': '/total', 'kind': 'accept_quoted', 'source_pointer': '/total'}]},
+])
+def test_invalid_required_groups_and_rules_are_refused(settings):
+    with pytest.raises(ValueError):
+        purchase(**settings)
+
+
+@pytest.mark.parametrize('original,value,expected', [
+    # The stated quantity is left out, so the contradiction with the total is hidden.
+    ('Buy 3 laptops at $450, total $1,000.', order(unit_price=450, total=1000), 'needs_review'),
+    ('Buy 3 laptops at $450 each, $1,350 total.', order(unit_price=450, total=1350), 'needs_review'),
+    ('Buy 3 laptops at $450 each, $1,350 total.', order(quantity=3, unit_price=450, total=1350), 'passed'),
+    ('three laptops at $450 each', order(quantity=3, unit_price=450), 'passed'),
+    ('3 laptops at $450 each for project 2027', order(quantity=3, unit_price=450), 'needs_review'),
+    # A number inside a read text value is accounted for.
+    ('3 laptops 15 inch at $450 each', order(item='laptops 15 inch', quantity=3, unit_price=450), 'passed'),
+])
+def test_every_stated_number_must_be_read_when_quotes_are_accepted(original, value, expected):
+    report = run(original, value, purchase())
+    assert report.verdict == expected, fields(report)
+    if expected == 'needs_review':
+        assert fields(report)[''] == ('unverified', 'unread_number')
+
+
+def test_the_unread_number_rule_needs_an_accept_quoted_pass():
+    settings = config([source()], ['/amount'])
+    original = '{"amount":5,"note":"order 7"}'
+    assert run(original, '{"amount":5}', settings).verdict == 'passed'

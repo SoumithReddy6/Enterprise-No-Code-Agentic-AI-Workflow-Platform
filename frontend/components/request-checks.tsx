@@ -26,7 +26,7 @@ export default function RequestChecks({
             {node.label || node.id} · {detail.title}
           </strong>
           <p>{detail.explanation}</p>
-          {node.type === 'verify_extraction' && (
+          {['verify_extraction', 'request_reader'].includes(node.type) && (
             <>
               <details>
                 <summary>Original input for these checks</summary>

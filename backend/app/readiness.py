@@ -30,8 +30,8 @@ def database_probe(store):
     return time.time() if live_lease else latest
 
 class Readiness:
-    def __init__(self,store,services,common_reply_cache=None):
-        self.store=store;self.services=services;self.pending=None;self.common_reply_cache=common_reply_cache
+    def __init__(self,store,services):
+        self.store=store;self.services=services;self.pending=None
     async def database(self):
         # Never enqueue another synchronous probe while a timed-out driver is still blocked.
         if self.pending is None or self.pending.done():
@@ -50,15 +50,13 @@ class Readiness:
             try:state=await asyncio.wait_for(sandbox.status(),PROBE_SECONDS)
             except Exception:state={'status':'unavailable','reason':'probe_timeout'}
             return {'status':state['status'],'required':sandbox.required(),**({'reason':state['reason']} if state.get('reason') else {})}
-        from .common_replies import cache_health
-        results,sandbox_check,reply_cache_check=await asyncio.gather(
+        results,sandbox_check=await asyncio.gather(
             asyncio.gather(probe('database',self.database),probe('management',self.services.management.health),probe('search',self.services.index.health)),
-            python_sandbox(),cache_health(self.common_reply_cache))
+            python_sandbox())
         checks={name:state for name,state,_ in results}
         latest=results[0][2]
         checks['worker']={'status':'ok' if latest is not None and 0<=time.time()-latest<=WORKER_MAX_AGE else 'unavailable'}
         checks['python_sandbox']=sandbox_check
-        checks['common_reply_cache']=reply_cache_check
         # The sandbox only runs Python tools: optional unless the deployment requires it.
         healthy=all(c['status']=='ok' for name,c in checks.items() if c.get('required',True))
         return {'status':'ready' if healthy else 'not_ready','checks':checks},200 if healthy else 503

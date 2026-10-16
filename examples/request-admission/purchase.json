@@ -17,70 +17,13 @@
       "config": {}
     },
     {
-      "id": "cache",
-      "type": "greeting_cache",
-      "version": 1,
-      "label": "Prepared greetings",
-      "position": {
-        "x": 300,
-        "y": 210
-      },
-      "inputs": {
-        "message": "input.message"
-      },
-      "config": {
-        "entries": [
-          {
-            "message": "hello",
-            "reply": "Hello! Send your request and I will check whether this workflow can help."
-          },
-          {
-            "message": "hello!",
-            "reply": "Hello! Send your request and I will check whether this workflow can help."
-          }
-        ]
-      }
-    },
-    {
-      "id": "router",
-      "type": "request_router",
-      "version": 1,
-      "label": "Request router",
-      "position": {
-        "x": 300,
-        "y": 380
-      },
-      "inputs": {
-        "message": "input.message"
-      },
-      "config": {
-        "provider": "ollama",
-        "model": "",
-        "credential_id": "",
-        "max_tokens": 2048,
-        "purpose": "Draft purchase decisions for requests with a named product, quantity and unit price. Product identity must be checked against a catalogue or confirmed by a person.",
-        "accepted_requests": [
-          "Read an item, quantity and unit price, check them, then calculate the total. Product records must be connected or reviewed."
-        ],
-        "exclusions": [
-          "Unrelated questions, greetings without a request, and invented facts."
-        ],
-        "clarification_rules": [
-          "Ask for missing required facts; never fill them with guesses or zero defaults."
-        ],
-        "examples": [
-          "3 laptops at $450 each."
-        ]
-      }
-    },
-    {
       "id": "records",
       "type": "tool_jira",
       "version": 1,
       "label": "Read independent reference records",
       "position": {
         "x": 300,
-        "y": 550
+        "y": 210
       },
       "inputs": {
         "input": "input.message"
@@ -93,75 +36,39 @@
       }
     },
     {
-      "id": "extract",
-      "type": "agent",
+      "id": "reader",
+      "type": "request_reader",
       "version": 1,
-      "label": "Extract request facts",
+      "label": "Request reader",
       "position": {
         "x": 300,
-        "y": 720
+        "y": 380
       },
       "inputs": {
-        "input": "input.message"
-      },
-      "config": {
-        "provider": "ollama",
-        "model": "",
-        "credential_id": "",
-        "max_tokens": 2048,
-        "role": "extraction",
-        "system": "Return only a JSON object with these fields: item, quantity, unit_price. Copy only what the original request states; use null for absent facts. Never invent defaults. Do not approve anything or calculate totals.",
-        "user_prompt": "{input}",
-        "max_steps": 6,
-        "memory_key": "default",
-        "output_schema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "item": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "quantity": {
-              "type": [
-                "number",
-                "null"
-              ],
-              "exclusiveMinimum": 0
-            },
-            "unit_price": {
-              "type": [
-                "number",
-                "null"
-              ],
-              "minimum": 0
-            }
-          },
-          "required": [
-            "item",
-            "quantity",
-            "unit_price"
-          ]
-        }
-      }
-    },
-    {
-      "id": "verify",
-      "type": "verify_extraction",
-      "version": 1,
-      "label": "Check extracted facts",
-      "position": {
-        "x": 300,
-        "y": 890
-      },
-      "inputs": {
-        "original": "input.message",
-        "value": "extract.text",
+        "message": "input.message",
         "reference": "records.text"
       },
       "config": {
+        "purpose": "Draft purchase decisions for requests with a named product and either a total or a quantity and unit price. Product identity must be checked against a catalogue or confirmed by a person.",
+        "accepted_requests": [
+          "Orders with an item and a price."
+        ],
+        "excluded_requests": [
+          "Questions about past orders, and general questions."
+        ],
+        "examples": [
+          "3 laptops at $450 each."
+        ],
+        "prepared_replies": [
+          {
+            "message": "hello",
+            "reply": "Hello! Send your request and I will check whether this workflow can help."
+          },
+          {
+            "message": "hello!",
+            "reply": "Hello! Send your request and I will check whether this workflow can help."
+          }
+        ],
         "expected_schema": {
           "type": "object",
           "additionalProperties": false,
@@ -185,23 +92,38 @@
                 "null"
               ],
               "minimum": 0
+            },
+            "total": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
             }
           },
           "required": [
             "item",
             "quantity",
-            "unit_price"
+            "unit_price",
+            "total"
           ]
         },
         "required_fields": [
-          "/item",
-          "/quantity",
-          "/unit_price"
+          "/item"
+        ],
+        "required_any": [
+          [
+            "/total"
+          ],
+          [
+            "/quantity",
+            "/unit_price"
+          ]
         ],
         "field_rules": [
           {
             "field": "/item",
-            "kind": "quoted"
+            "kind": "accept_quoted"
           },
           {
             "field": "/item",
@@ -211,16 +133,24 @@
           },
           {
             "field": "/quantity",
-            "kind": "source_field",
-            "source_pointer": "/quantity"
+            "kind": "accept_quoted"
           },
           {
             "field": "/unit_price",
-            "kind": "source_field",
-            "source_pointer": "/unit_price"
+            "kind": "accept_quoted"
+          },
+          {
+            "field": "/total",
+            "kind": "accept_quoted"
           }
         ],
-        "cross_checks": []
+        "cross_checks": [
+          "total == quantity * unit_price"
+        ],
+        "provider": "ollama",
+        "model": "",
+        "credential_id": "",
+        "max_tokens": 2048
       }
     },
     {
@@ -230,14 +160,14 @@
       "label": "Calculate total in code",
       "position": {
         "x": 300,
-        "y": 1060
+        "y": 550
       },
       "inputs": {
-        "value": "verify.text"
+        "value": "reader.text"
       },
       "config": {
         "mode": "compute",
-        "expression": "quantity * unit_price"
+        "expression": "coalesce(total, quantity * unit_price)"
       }
     },
     {
@@ -247,7 +177,7 @@
       "label": "Business condition",
       "position": {
         "x": 300,
-        "y": 1230
+        "y": 720
       },
       "inputs": {
         "value": "calculate.text"
@@ -265,7 +195,7 @@
       "label": "True branch explanation",
       "position": {
         "x": 70,
-        "y": 1400
+        "y": 890
       },
       "inputs": {
         "message": "calculate.text"
@@ -281,7 +211,7 @@
       "label": "True branch response",
       "position": {
         "x": 70,
-        "y": 1570
+        "y": 1060
       },
       "inputs": {
         "text": "yesText.text"
@@ -295,7 +225,7 @@
       "label": "False branch explanation",
       "position": {
         "x": 580,
-        "y": 1400
+        "y": 890
       },
       "inputs": {
         "message": "calculate.text"
@@ -311,7 +241,7 @@
       "label": "False branch response",
       "position": {
         "x": 580,
-        "y": 1570
+        "y": 1060
       },
       "inputs": {
         "text": "noText.text"
@@ -319,79 +249,34 @@
       "config": {}
     },
     {
-      "id": "cacheReply",
+      "id": "readerReply",
       "type": "response",
       "version": 1,
-      "label": "Prepared reply",
-      "position": {
-        "x": -180,
-        "y": 300
-      },
-      "inputs": {
-        "text": "cache.reply"
-      },
-      "config": {}
-    },
-    {
-      "id": "routerReply",
-      "type": "response",
-      "version": 1,
-      "label": "Router reply",
+      "label": "Reader reply",
       "position": {
         "x": -180,
         "y": 470
       },
       "inputs": {
-        "text": "router.reply"
-      },
-      "config": {}
-    },
-    {
-      "id": "verifyReply",
-      "type": "response",
-      "version": 1,
-      "label": "Missing facts reply",
-      "position": {
-        "x": -180,
-        "y": 980
-      },
-      "inputs": {
-        "text": "verify.reply"
+        "text": "reader.reply"
       },
       "config": {}
     }
   ],
   "edges": [
     {
-      "id": "input-cache",
+      "id": "input-records",
       "source": "input",
-      "target": "cache"
+      "target": "records"
     },
     {
-      "id": "cache-router",
-      "source": "cache",
-      "target": "router",
-      "sourceHandle": "continue"
-    },
-    {
-      "id": "router-records",
-      "source": "router",
-      "target": "records",
-      "sourceHandle": "continue"
-    },
-    {
-      "id": "records-extract",
+      "id": "records-reader",
       "source": "records",
-      "target": "extract"
+      "target": "reader"
     },
     {
-      "id": "extract-verify",
-      "source": "extract",
-      "target": "verify"
-    },
-    {
-      "id": "verify-calculate",
-      "source": "verify",
+      "id": "reader-calculate",
+      "source": "reader",
       "target": "calculate",
       "sourceHandle": "continue"
     },
@@ -423,21 +308,9 @@
       "target": "no"
     },
     {
-      "id": "cache-cacheReply",
-      "source": "cache",
-      "target": "cacheReply",
-      "sourceHandle": "reply"
-    },
-    {
-      "id": "router-routerReply",
-      "source": "router",
-      "target": "routerReply",
-      "sourceHandle": "reply"
-    },
-    {
-      "id": "verify-verifyReply",
-      "source": "verify",
-      "target": "verifyReply",
+      "id": "reader-readerReply",
+      "source": "reader",
+      "target": "readerReply",
       "sourceHandle": "reply"
     }
   ]

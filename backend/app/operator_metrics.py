@@ -17,16 +17,17 @@ class RunAdmissionRecord(Base):
 
 def admission_values(event):
     stage=event.get('request_stage');status=event.get('status')
-    if stage not in ('greeting_cache','request_router','verify_extraction') or status not in ('success','failed','paused'):return None
+    if stage not in ('greeting_cache','request_router','verify_extraction','request_reader') or status not in ('success','failed','paused'):return None
     outcome='error' if status=='failed' else 'needs_review' if status=='paused' else 'unavailable'
     outputs=event.get('outputs') or {}
     try:
         if status=='success':
             if stage=='greeting_cache':outcome=json.loads(outputs['receipt'])['outcome']
             elif stage=='request_router':outcome=json.loads(outputs['decision'])['route']
+            elif stage=='request_reader' and outputs.get('reading')=='':outcome='prepared'
             else:outcome=json.loads(outputs['report'])['verdict']
     except (ValueError,KeyError,TypeError):pass
-    allowed={'hit','filled','local_fallback','not_common','proceed','clarify','out_of_scope','passed','needs_review','error','unavailable'}
+    allowed={'hit','filled','local_fallback','not_common','prepared','proceed','clarify','out_of_scope','passed','needs_review','error','unavailable'}
     if not isinstance(outcome,str) or outcome not in allowed:outcome='unavailable'
     return {'stage':stage,'status':status,'outcome':outcome,'replay':event.get('cached') is True}
 

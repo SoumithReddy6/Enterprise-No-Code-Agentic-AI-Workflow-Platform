@@ -289,7 +289,7 @@ async def test_real_worker_persists_both_calls_and_replays_after_downstream_fail
     try:
         store.allow_model('ollama', 'fixture')
         saved = store.create_run(flow().model_dump(mode='json'), original)
-        worker = Worker(store, common_reply_cache=None)
+        worker = Worker(store)
         job = store.claim_next(worker.owner)
         await worker.execute(job)
         first = store.run(saved['id'])
@@ -318,7 +318,7 @@ async def test_worker_rechecks_revoked_router_model_before_any_call(tmp_path, mo
         model = store.allow_model('ollama', 'fixture')
         saved = store.create_run(flow().model_dump(mode='json'), 'order')
         store.set_model_enabled(model['id'], False)
-        worker = Worker(store, common_reply_cache=None)
+        worker = Worker(store)
         await worker.execute(store.claim_next(worker.owner))
         result = store.run(saved['id'])
         assert result['status'] == 'failed' and 'not enabled' in result['error']

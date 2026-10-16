@@ -65,7 +65,9 @@ def make_receipt(run_id: str, node_id: str, original: str, value: str, policy_di
         try:
             parsed = _read(value)
             covered = [f['field'] for f in result['fields']]
-            if any(at_pointer(parsed, p) is MISSING or at_pointer(parsed, p) is None for p in covered):raise ValueError('missing checked field')
+            # A passed field must hold a value; an absent optional field must hold none.
+            for f in result['fields']:
+                if (at_pointer(parsed, f['field']) in (MISSING, None)) != (f['status'] == 'absent'):raise ValueError('missing checked field')
             if any(not any(p == c or p.startswith(c+'/') for c in covered) for p in _walk(parsed)):
                 raise ValueError('omitted coverage')
         except (ValueError, TypeError, RecursionError, UnicodeError):

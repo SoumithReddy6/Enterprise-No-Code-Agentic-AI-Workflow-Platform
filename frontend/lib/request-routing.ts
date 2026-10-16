@@ -57,39 +57,66 @@ const source = (field: string) => ({
   source_pointer: '/' + field,
 });
 const quoted = (field: string) => ({ field: '/' + field, kind: 'quoted' });
+// Passes when the exact value is written in the request. It proves where the value is
+// written, not its role, so numbers also get a cross-check where one exists.
+const accept = (field: string) => ({
+  field: '/' + field,
+  kind: 'accept_quoted',
+});
 const member = (field: string, key: string) => ({
   field: '/' + field,
   kind: 'reference_member',
   reference_list: '/issues',
   reference_key: key,
 });
-const plans: Record<
-  string,
-  {
-    purpose: string;
-    properties: Record<string, unknown>;
-    rules: unknown[];
-    expression?: string;
-    condition: Record<string, unknown>;
-    yes: string;
-    no: string;
-  }
-> = {
+type Plan = {
+  purpose: string;
+  accepted: string[];
+  excluded: string[];
+  properties: Record<string, unknown>;
+  required: string[];
+  requiredAny?: string[][];
+  rules: unknown[];
+  crossChecks?: string[];
+  expression?: string;
+  condition?: Record<string, unknown>;
+  yes?: string;
+  no?: string;
+};
+const plans: Record<string, Plan> = {
+  qa: {
+    purpose:
+      'Answer general questions and help explain topics. A greeting or a message with no question gets a reply.',
+    accepted: ['General questions, explanations and requests for help.'],
+    excluded: [
+      'Requests to perform external actions or approve business transactions.',
+    ],
+    properties: { question: nullable('string') },
+    required: ['question'],
+    rules: [accept('question')],
+  },
   purchase: {
     purpose:
-      'Draft purchase decisions for requests with a named product, quantity and unit price. Product identity must be checked against a catalogue or confirmed by a person.',
+      'Draft purchase decisions for requests with a named product and either a total or a quantity and unit price. Product identity must be checked against a catalogue or confirmed by a person.',
+    accepted: ['Orders with an item and a price.'],
+    excluded: ['Questions about past orders, and general questions.'],
     properties: {
       item: nullable('string'),
       quantity: { ...nullable('number'), exclusiveMinimum: 0 },
       unit_price: { ...nullable('number'), minimum: 0 },
+      total: { ...nullable('number'), minimum: 0 },
     },
+    required: ['item'],
+    requiredAny: [['total'], ['quantity', 'unit_price']],
     rules: [
-      quoted('item'),
+      accept('item'),
       member('item', '/fields/product'),
-      source('quantity'),
-      source('unit_price'),
+      accept('quantity'),
+      accept('unit_price'),
+      accept('total'),
     ],
-    expression: 'quantity * unit_price',
+    crossChecks: ['total == quantity * unit_price'],
+    expression: 'coalesce(total, quantity * unit_price)',
     condition: { field: 'result', operator: 'gt', compare_to: '1000' },
     yes: 'Checked purchase exceeds $1,000. Follow the purchase review policy.',
     no: 'Checked purchase is $1,000 or less. No external action has been sent.',
@@ -97,7 +124,10 @@ const plans: Record<
   support: {
     purpose:
       'Draft support tickets with a summary and a category of billing, technical or account. General unrelated questions are outside this workflow.',
+    accepted: ['Support problems with a summary and a category.'],
+    excluded: ['Unrelated questions and greetings without a request.'],
     properties: { summary: nullable('string'), category: nullable('string') },
+    required: ['summary', 'category'],
     rules: [
       source('summary'),
       source('category'),
@@ -114,10 +144,13 @@ const plans: Record<
   refund: {
     purpose:
       'Draft refund request routing for a stated order identifier and amount. Request facts are separate from refund eligibility and payment authorization.',
+    accepted: ['Refund requests with an order identifier and an amount.'],
+    excluded: ['Unrelated questions and greetings without a request.'],
     properties: {
       order_id: nullable('string'),
       amount: { ...nullable('number'), minimum: 0 },
     },
+    required: ['order_id', 'amount'],
     rules: [quoted('order_id'), member('order_id', '/key'), source('amount')],
     condition: { field: 'amount', operator: 'lte', compare_to: '100' },
     yes: 'Checked refund request is within the example $100 review threshold. Eligibility is not established and no refund has been issued.',
@@ -126,10 +159,13 @@ const plans: Record<
   yesno: {
     purpose:
       'Draft a yes/no eligibility decision for a named record. A model inference from prose is not proof of eligibility; confirm unknown interpretations with a person.',
+    accepted: ['Eligibility questions about a named record.'],
+    excluded: ['Unrelated questions and greetings without a request.'],
     properties: {
       record_id: nullable('string'),
       eligible: nullable('boolean'),
     },
+    required: ['record_id', 'eligible'],
     // Membership can identify a record, but cannot prove a boolean belongs to that
     // particular record. This generic example requires a person for eligibility.
     rules: [
@@ -148,10 +184,45 @@ const plans: Record<
   },
 };
 
+/** The Request reader settings of a template: the workflow's request contract. */
+export function readerConfig(template: string): Record<string, unknown> {
+  const plan = plans[template];
+  const meta = requestTemplates.find((t) => t.id === template);
+  if (!plan || !meta) throw new Error('Unknown workflow template.');
+  return {
+    purpose: plan.purpose,
+    accepted_requests: plan.accepted,
+    excluded_requests: plan.excluded,
+    examples: [meta.sample],
+    prepared_replies: [
+      {
+        message: 'hello',
+        reply:
+          'Hello! Send your request and I will check whether this workflow can help.',
+      },
+      {
+        message: 'hello!',
+        reply:
+          'Hello! Send your request and I will check whether this workflow can help.',
+      },
+    ],
+    expected_schema: object(plan.properties),
+    required_fields: plan.required.map((f) => '/' + f),
+    required_any: (plan.requiredAny ?? []).map((g) => g.map((f) => '/' + f)),
+    field_rules: plan.rules,
+    cross_checks: plan.crossChecks ?? [],
+    provider: 'ollama',
+    model: '',
+    credential_id: '',
+    max_tokens: 2048,
+  };
+}
+
 /** Draft templates carry policy, never authoritative fixture data or executable approval. */
 export function createRequestWorkflow(template: string = 'qa'): Workflow {
   const meta = requestTemplates.find((t) => t.id === template);
   if (!meta) throw new Error('Unknown workflow template.');
+  const plan = plans[template];
   const nodes: WorkflowNode[] = [],
     edges: WorkflowEdge[] = [];
   const node = (
@@ -183,63 +254,43 @@ export function createRequestWorkflow(template: string = 'qa'): Workflow {
       target,
       ...(sourceHandle ? { sourceHandle } : {}),
     });
-  const model = {
-    provider: 'ollama',
-    model: '',
-    credential_id: '',
-    max_tokens: 2048,
-  };
   node('input', 'chat_input', 'Chat input', {});
-  node(
-    'cache',
-    'greeting_cache',
-    'Prepared greetings',
-    { message: 'input.message' },
-    {
-      entries: [
-        {
-          message: 'hello',
-          reply:
-            'Hello! Send your request and I will check whether this workflow can help.',
-        },
-        {
-          message: 'hello!',
-          reply:
-            'Hello! Send your request and I will check whether this workflow can help.',
-        },
-      ],
-    },
+  const reference = plan.rules.some(
+    (rule) => (rule as { kind: string }).kind === 'reference_member',
   );
+  if (reference) {
+    // Independent records the reader checks values against. They are read before the
+    // reader, because the graph allows one flow edge out of the input.
+    node(
+      'records',
+      'tool_jira',
+      'Read independent reference records',
+      { input: 'input.message' },
+      {
+        connection_id: '',
+        operation: 'search',
+        jql:
+          template === 'purchase'
+            ? 'project = CATALOG'
+            : template === 'refund'
+              ? 'project = ORDERS'
+              : 'project = MEMBERS',
+        enable_writes: false,
+      },
+    );
+    edge('input', 'records');
+  }
   node(
-    'router',
-    'request_router',
-    'Request router',
-    { message: 'input.message' },
+    'reader',
+    'request_reader',
+    'Request reader',
     {
-      ...model,
-      purpose:
-        plans[template]?.purpose ??
-        'Answer general questions and help explain topics. Accept broad questions; request clarification when there is no question or request.',
-      accepted_requests:
-        template === 'qa'
-          ? ['General questions, explanations and requests for help.']
-          : [meta.description],
-      exclusions:
-        template === 'qa'
-          ? [
-              'Requests to perform external actions or approve business transactions.',
-            ]
-          : [
-              'Unrelated questions, greetings without a request, and invented facts.',
-            ],
-      clarification_rules: [
-        'Ask for missing required facts; never fill them with guesses or zero defaults.',
-      ],
-      examples: [meta.sample],
+      message: 'input.message',
+      ...(reference ? { reference: 'records.text' } : {}),
     },
+    readerConfig(template),
   );
-  edge('input', 'cache');
-  edge('cache', 'router', 'continue');
+  edge(reference ? 'records' : 'input', 'reader');
   if (template === 'qa') {
     node(
       'agent',
@@ -247,7 +298,10 @@ export function createRequestWorkflow(template: string = 'qa'): Workflow {
       'Agent',
       { input: 'input.message' },
       {
-        ...model,
+        provider: 'ollama',
+        model: '',
+        credential_id: '',
+        max_tokens: 2048,
         role: 'reasoner',
         system:
           'Answer the user question clearly. Ask for clarification when needed. Do not claim to have taken external actions.',
@@ -257,72 +311,11 @@ export function createRequestWorkflow(template: string = 'qa'): Workflow {
       },
     );
     node('response', 'response', 'Response', { text: 'agent.text' });
-    edge('router', 'agent', 'continue');
+    edge('reader', 'agent', 'continue');
     edge('agent', 'response');
   } else {
-    const plan = plans[template];
-    const reference = plan.rules.some(
-      (rule) => (rule as { kind: string }).kind === 'reference_member',
-    );
-    if (reference) {
-      node(
-        'records',
-        'tool_jira',
-        'Read independent reference records',
-        { input: 'input.message' },
-        {
-          connection_id: '',
-          operation: 'search',
-          jql:
-            template === 'purchase'
-              ? 'project = CATALOG'
-              : template === 'refund'
-                ? 'project = ORDERS'
-                : 'project = MEMBERS',
-          enable_writes: false,
-        },
-      );
-      edge('router', 'records', 'continue');
-    }
-    node(
-      'extract',
-      'agent',
-      'Extract request facts',
-      { input: 'input.message' },
-      {
-        ...model,
-        role: template === 'yesno' ? 'classification' : 'extraction',
-        system: `Return only a JSON object with these fields: ${Object.keys(plan.properties).join(', ')}. Copy only what the original request states; use null for absent facts. Never invent defaults. Do not approve anything or calculate totals.`,
-        user_prompt: '{input}',
-        max_steps: 6,
-        memory_key: 'default',
-        output_schema: object(plan.properties),
-      },
-    );
-    node(
-      'verify',
-      'verify_extraction',
-      'Check extracted facts',
-      {
-        original: 'input.message',
-        value: 'extract.text',
-        ...(reference ? { reference: 'records.text' } : {}),
-      },
-      {
-        expected_schema: object(plan.properties),
-        required_fields: Object.keys(plan.properties).map((f) => '/' + f),
-        field_rules: plan.rules,
-        cross_checks: [],
-      },
-    );
-    edge(
-      reference ? 'records' : 'router',
-      'extract',
-      reference ? undefined : 'continue',
-    );
-    edge('extract', 'verify');
-    let value = 'verify.text',
-      previous = 'verify';
+    let value = 'reader.text',
+      previous = 'reader';
     if (plan.expression) {
       node(
         'calculate',
@@ -331,7 +324,7 @@ export function createRequestWorkflow(template: string = 'qa'): Workflow {
         { value },
         { mode: 'compute', expression: plan.expression },
       );
-      edge('verify', 'calculate', 'continue');
+      edge('reader', 'calculate', 'continue');
       value = 'calculate.text';
       previous = 'calculate';
     }
@@ -342,7 +335,7 @@ export function createRequestWorkflow(template: string = 'qa'): Workflow {
       { value },
       plan.condition,
     );
-    edge(previous, 'decision', previous === 'verify' ? 'continue' : undefined);
+    edge(previous, 'decision', previous === 'reader' ? 'continue' : undefined);
     const branchY = nodes.find((n) => n.id === 'decision')!.position.y + 170;
     node(
       'yesText',
@@ -385,26 +378,16 @@ export function createRequestWorkflow(template: string = 'qa'): Workflow {
     edge('decision', 'noText', 'false');
     edge('noText', 'no');
   }
-  for (const source of [
-    'cache',
-    'router',
-    ...(template === 'qa' ? [] : ['verify']),
-  ]) {
-    node(
-      source + 'Reply',
-      'response',
-      source === 'cache'
-        ? 'Prepared reply'
-        : source === 'router'
-          ? 'Router reply'
-          : 'Missing facts reply',
-      { text: source + '.reply' },
-      {},
-      -180,
-      nodes.find((n) => n.id === source)!.position.y + 90,
-    );
-    edge(source, source + 'Reply', 'reply');
-  }
+  node(
+    'readerReply',
+    'response',
+    'Reader reply',
+    { text: 'reader.reply' },
+    {},
+    -180,
+    nodes.find((n) => n.id === 'reader')!.position.y + 90,
+  );
+  edge('reader', 'readerReply', 'reply');
   const workflow: Workflow = {
     version: 1,
     contract: 2,
@@ -461,7 +444,14 @@ export function admissionDetails(
       manual: true,
     };
   }
-  if (!['greeting_cache', 'request_router', 'verify_extraction'].includes(type))
+  if (
+    ![
+      'greeting_cache',
+      'request_router',
+      'verify_extraction',
+      'request_reader',
+    ].includes(type)
+  )
     return null;
   const detail: AdmissionDetail = {
     title: 'Request check',
@@ -472,24 +462,32 @@ export function admissionDetails(
     manual: false,
   };
   const outputs = event.outputs ?? {};
+  if (type === 'request_reader' && outputs.reading === '') {
+    detail.title = 'Prepared reply';
+    detail.explanation =
+      'Prepared reply from the saved configuration; no model call.' +
+      (event.cached ? ' Restored from this run checkpoint.' : '');
+    return detail;
+  }
   if (type === 'greeting_cache') {
     const receipt = parsed(outputs.receipt);
     detail.title =
       outputs.branch === 'reply'
         ? 'Prepared reply'
         : 'Prepared messages: continue';
+    // hit and filled appear only in runs recorded while a Redis copy existed.
     const outcomes: Record<string, string> = {
-      hit: 'Prepared reply from the saved configuration (Redis hit); no model call.',
+      hit: 'Prepared reply from the saved configuration (older run: Redis copy); no model call.',
       filled:
-        'Prepared reply from the saved configuration; Redis populated, no model call.',
+        'Prepared reply from the saved configuration (older run: Redis copy stored); no model call.',
       local_fallback:
-        'Prepared reply from local configuration; Redis was not used, no model call.',
+        'Prepared reply from the saved configuration; no model call.',
       not_common:
         'No configured whole-message match. The original message continues unchanged.',
     };
     if (event.cached)
       detail.explanation =
-        'Restored from this run checkpoint; no new Redis lookup or model call.';
+        'Restored from this run checkpoint; no new lookup or model call.';
     else if (
       receipt &&
       typeof receipt.outcome === 'string' &&
@@ -564,10 +562,99 @@ export function admissionDetails(
         : report.verdict === 'clarify'
           ? 'Submit a new request with the required facts. This path ends here.'
           : 'Unknown meaning requires a person; it is not an automatic pass.';
+    if (type === 'request_reader') {
+      const reading = parsed(outputs.reading);
+      const kind = reading?.type;
+      if (['request', 'unclear', 'unrelated'].includes(String(kind)))
+        detail.explanation += ` The model read this message as "${String(kind)}"; code checked the values and chose the branch.`;
+    }
     if (event.cached)
       detail.explanation += ' Restored from this run checkpoint.';
   }
   return detail;
+}
+
+/** Shown next to accept_quoted rules: what the rule proves and what it does not. */
+export const ACCEPT_QUOTED_RISK =
+  'An accept_quoted rule passes a value that is written in the request. It proves where the value is written, not its role: "3 at $450" holds two numbers. Add a cross-check for numbers, and prefer a reference_member rule against real records for text.';
+
+export type FieldSuggestion = {
+  field: string;
+  number: boolean;
+  readers: string[];
+};
+const CALCULATE_WORDS = new Set([
+  'min',
+  'max',
+  'abs',
+  'round',
+  'coalesce',
+  'and',
+  'or',
+  'not',
+  'true',
+  'false',
+  'null',
+]);
+/** Fields of a node's text output that later Conditions and Calculations read. */
+export function fieldsReadDownstream(
+  workflow: Workflow,
+  nodeId: string,
+): FieldSuggestion[] {
+  const found = new Map<string, FieldSuggestion>();
+  const add = (path: string, reader: string, number: boolean) => {
+    const field = path.split('.')[0];
+    if (!field) return;
+    const entry = found.get(field) ?? { field, number: false, readers: [] };
+    entry.number ||= number;
+    if (!entry.readers.includes(reader)) entry.readers.push(reader);
+    found.set(field, entry);
+  };
+  for (const node of workflow.nodes) {
+    if (!Object.values(node.inputs).includes(nodeId + '.text')) continue;
+    const reader = node.label || node.id;
+    if (node.type === 'condition' && typeof node.config.field === 'string')
+      add(
+        node.config.field,
+        reader,
+        ['gt', 'gte', 'lt', 'lte'].includes(String(node.config.operator)),
+      );
+    if (node.type === 'calculate' && typeof node.config.expression === 'string')
+      for (const match of node.config.expression.matchAll(
+        /(?<![\w.])([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\b(?!\s*\()/g,
+      ))
+        if (!CALCULATE_WORDS.has(match[1])) add(match[1], reader, true);
+  }
+  return [...found.values()].sort((a, b) => a.field.localeCompare(b.field));
+}
+
+/** Add suggested fields the author accepted: a nullable property and an accept_quoted rule
+ * for each new field. Required fields stay the author's choice. */
+export function withSuggestedFields(
+  config: Record<string, unknown>,
+  suggestions: FieldSuggestion[],
+): Record<string, unknown> {
+  const schema = (
+    config.expected_schema && typeof config.expected_schema === 'object'
+      ? structuredClone(config.expected_schema)
+      : { type: 'object', additionalProperties: false, properties: {} }
+  ) as { type?: string; properties?: Record<string, unknown> };
+  schema.type = 'object';
+  const properties = (schema.properties ??= {});
+  const rules = Array.isArray(config.field_rules)
+    ? [...(config.field_rules as { field: string }[])]
+    : [];
+  for (const s of suggestions) {
+    if (!Object.hasOwn(properties, s.field))
+      properties[s.field] = {
+        type: s.number
+          ? ['number', 'null']
+          : ['string', 'number', 'boolean', 'null'],
+      };
+    if (!rules.some((r) => r.field === '/' + s.field))
+      rules.push({ field: '/' + s.field, kind: 'accept_quoted' } as never);
+  }
+  return { ...config, expected_schema: schema, field_rules: rules };
 }
 
 export function reviewState(

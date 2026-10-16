@@ -384,6 +384,21 @@ def for_node(node, definition, inputs, outputs, state_values, body_type=None, or
         previous=(state_values.get(source) or {}).get(PROVENANCE_KEY) or {}
         record['ports']={p:(port_label(state_values,node.inputs['value']) if p=='text' else CALCULATED) for p in ports}
         if port in previous.get('fields',{}):record['fields']={'text':previous['fields'][port]}
+    elif node.type == 'request_reader':
+        # The values are the model's reading, labelled field by field against the original
+        # message only. The receipt, not this label, grants eligibility downstream.
+        reply = GUESSED if outputs.get('reading') and outputs.get('reply') else CALCULATED
+        record['ports'] = {p: (reply if p == 'reply' else GUESSED if p in ('text', 'reading') else CALCULATED) for p in ports}
+        try:
+            parsed = exact_json.loads(outputs.get('text') or '{}')
+        except (ValueError, RecursionError):
+            parsed = None
+        if isinstance(parsed, dict) and parsed:
+            message = inputs.get('message')
+            labels, truncated = field_labels(parsed, Evidence(EvidenceContext((message,)) if isinstance(message, str) else EvidenceContext(complete=False)))
+            record['fields'] = {'text': labels}
+            if truncated:
+                record['truncated'] = True
     elif node.type == 'request_router':
         # Admission remains a model judgment, including its branch and explanation.
         # Nothing here can become evidence for extraction or a business decision.
@@ -531,6 +546,8 @@ def static_label(nodes, ref, field='', seen=None):
         if port == 'query' or port == 'context' and field == 'question': return query
         if port == 'context' and not field: return query
         return STATIC_TRUSTED
+    if node.type == 'request_reader':
+        return STATIC_RUNTIME if port == 'text' and field else STATIC_GUESSED if port in ('text', 'reading', 'reply') else STATIC_TRUSTED
     if node.type in MODEL_NODES:
         if port not in ('text', 'grounding'):
             return STATIC_TRUSTED

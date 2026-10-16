@@ -7,28 +7,33 @@ import {
   requestTemplates,
   admissionDetails,
   reviewState,
+  fieldsReadDownstream,
+  withSuggestedFields,
+  ACCEPT_QUOTED_RISK,
 } from '../lib/request-routing.ts';
 
-void test('new narrative workflow has admission control without pretending narrative text is a verified business fact', () => {
+void test('new narrative workflow starts with a request reader without pretending narrative text is a verified business fact', () => {
   assert.equal(seed.contract, 2);
   assert.deepEqual(
-    seed.nodes.slice(0, 3).map((n) => n.type),
-    ['chat_input', 'greeting_cache', 'request_router'],
+    seed.nodes.slice(0, 2).map((n) => n.type),
+    ['chat_input', 'request_reader'],
   );
   assert.ok(seed.nodes.some((n) => n.type === 'agent'));
-  assert.ok(!seed.nodes.some((n) => n.type === 'verify_extraction'));
-  const router = seed.nodes.find((n) => n.type === 'request_router')!;
-  assert.match(String(router.config.purpose), /questions/i);
+  for (const old of ['greeting_cache', 'request_router', 'verify_extraction'])
+    assert.ok(!seed.nodes.some((n) => n.type === old));
+  const reader = seed.nodes.find((n) => n.type === 'request_reader')!;
+  assert.match(String(reader.config.purpose), /questions/i);
   assert.ok(
     seed.edges.some(
-      (e) => e.source === router.id && e.sourceHandle === 'reply',
+      (e) => e.source === reader.id && e.sourceHandle === 'reply',
     ),
   );
 });
 
-void test('all admission nodes are available in the control palette', () => {
+void test('the palette offers the request reader and hides the replaced admission nodes', () => {
+  assert.equal(paletteCategory('request_reader'), 'Control');
   for (const type of ['greeting_cache', 'request_router', 'verify_extraction'])
-    assert.equal(paletteCategory(type), 'Control');
+    assert.equal(paletteCategory(type), null);
 });
 
 void test('JSON settings refuse overflowing numbers instead of silently saving null', () => {
@@ -91,70 +96,93 @@ void test('rejecting a decision ends the run without selecting either branch', a
   );
 });
 
-void test('business templates have an explicit check, original-input binding and terminating reply branches', () => {
-  for (const template of requestTemplates.filter((t) => t.id !== 'qa')) {
+void test('business templates read the original input once and terminate the reply branch', () => {
+  for (const template of requestTemplates) {
     const flow = createRequestWorkflow(template.id);
     assert.equal(flow.contract, 2);
-    const check = flow.nodes.find((n) => n.type === 'verify_extraction')!;
-    assert.ok(check, template.id);
-    assert.equal(check.inputs.original, 'input.message');
+    const reader = flow.nodes.find((n) => n.type === 'request_reader')!;
+    assert.ok(reader, template.id);
+    assert.equal(reader.inputs.message, 'input.message');
     assert.ok(
-      Array.isArray(check.config.required_fields) &&
-        check.config.required_fields.length > 0,
+      (reader.config.required_fields as unknown[]).length > 0 ||
+        (reader.config.required_any as unknown[]).length > 0,
     );
-    for (const control of flow.nodes.filter((n) =>
-      ['greeting_cache', 'request_router', 'verify_extraction'].includes(
-        n.type,
-      ),
-    )) {
-      const replies = flow.edges.filter(
-        (e) => e.source === control.id && e.sourceHandle === 'reply',
-      );
-      assert.equal(replies.length, 1);
-      assert.equal(
-        flow.nodes.find((n) => n.id === replies[0].target)!.type,
-        'response',
-      );
-    }
+    const replies = flow.edges.filter(
+      (e) => e.source === reader.id && e.sourceHandle === 'reply',
+    );
+    assert.equal(replies.length, 1);
+    assert.equal(
+      flow.nodes.find((n) => n.id === replies[0].target)!.type,
+      'response',
+    );
     assert.ok(
       !flow.nodes.some((n) => n.config.enable_writes === true),
       'draft examples configure no external writes',
     );
+    // Every extracted field has a rule, so no field is left unchecked.
+    const fields = Object.keys(
+      (reader.config.expected_schema as { properties: object }).properties,
+    );
+    const ruled = (reader.config.field_rules as { field: string }[]).map(
+      (r) => r.field,
+    );
+    assert.deepEqual(
+      fields.filter((f) => !ruled.includes('/' + f)),
+      [],
+      template.id,
+    );
     if (
-      (check.config.field_rules as { kind: string }[]).some(
+      (reader.config.field_rules as { kind: string }[]).some(
         (r) => r.kind === 'reference_member',
       )
     ) {
-      assert.equal(check.inputs.reference, 'records.text');
+      assert.equal(reader.inputs.reference, 'records.text');
       assert.equal(
         flow.nodes.find((n) => n.id === 'records')!.config.operation,
         'search',
+      );
+      assert.ok(
+        flow.edges.some((e) => e.source === 'input' && e.target === 'records'),
       );
     }
   }
 });
 
+void test('the purchase template accepts a total or a quantity with a unit price', () => {
+  const reader = createRequestWorkflow('purchase').nodes.find(
+    (n) => n.type === 'request_reader',
+  )!;
+  assert.deepEqual(reader.config.required_fields, ['/item']);
+  assert.deepEqual(reader.config.required_any, [
+    ['/total'],
+    ['/quantity', '/unit_price'],
+  ]);
+  assert.deepEqual(reader.config.cross_checks, [
+    'total == quantity * unit_price',
+  ]);
+});
+
 void test('each new template is independent and no preset treats yes/no as a greeting', () => {
   const first = createRequestWorkflow('purchase');
-  first.nodes[1].config.entries = [];
-  const firstCheck = first.nodes.find((n) => n.type === 'verify_extraction')!;
-  (firstCheck.config.field_rules as { field: string }[])[0].field = '/other';
+  const firstReader = first.nodes.find((n) => n.type === 'request_reader')!;
+  firstReader.config.prepared_replies = [];
+  (firstReader.config.field_rules as { field: string }[])[0].field = '/other';
   (
-    firstCheck.config.expected_schema as {
+    firstReader.config.expected_schema as {
       properties: { quantity: { exclusiveMinimum: number } };
     }
   ).properties.quantity.exclusiveMinimum = -100;
   first.nodes.find((n) => n.type === 'condition')!.config.compare_to = '-1';
   const second = createRequestWorkflow('purchase');
-  assert.ok((second.nodes[1].config.entries as unknown[]).length > 0);
-  const secondCheck = second.nodes.find((n) => n.type === 'verify_extraction')!;
+  const secondReader = second.nodes.find((n) => n.type === 'request_reader')!;
+  assert.ok((secondReader.config.prepared_replies as unknown[]).length > 0);
   assert.equal(
-    (secondCheck.config.field_rules as { field: string }[])[0].field,
+    (secondReader.config.field_rules as { field: string }[])[0].field,
     '/item',
   );
   assert.equal(
     (
-      secondCheck.config.expected_schema as {
+      secondReader.config.expected_schema as {
         properties: { quantity: { exclusiveMinimum: number } };
       }
     ).properties.quantity.exclusiveMinimum,
@@ -165,14 +193,78 @@ void test('each new template is independent and no preset treats yes/no as a gre
     '1000',
   );
   assert.ok(
-    !(second.nodes[1].config.entries as { message: string }[]).some((e) =>
-      /^(yes|no)$/i.test(e.message),
+    !(secondReader.config.prepared_replies as { message: string }[]).some(
+      (e) => /^(yes|no)$/i.test(e.message),
     ),
   );
   assert.throws(
     () => createRequestWorkflow('unrecognised'),
     /unknown.*template/i,
   );
+});
+
+void test('field suggestions come from later Conditions and Calculations, never from unrelated nodes', () => {
+  const flow = createRequestWorkflow('purchase');
+  const suggestions = fieldsReadDownstream(flow, 'reader');
+  assert.deepEqual(
+    suggestions.map((s) => [s.field, s.number, s.readers]),
+    [
+      ['quantity', true, ['Calculate total in code']],
+      ['total', true, ['Calculate total in code']],
+      ['unit_price', true, ['Calculate total in code']],
+    ],
+  );
+  // The condition reads the calculation, not the reader: result is not a reader field.
+  assert.ok(!suggestions.some((s) => s.field === 'result'));
+  const support = fieldsReadDownstream(createRequestWorkflow('support'), 'reader');
+  assert.deepEqual(
+    support.map((s) => [s.field, s.number]),
+    [['category', false]],
+  );
+  const calc = createRequestWorkflow('purchase');
+  calc.nodes.find((n) => n.id === 'calculate')!.config.expression =
+    'round(max(order.total, 1e5), 2) + abs(fee)';
+  assert.deepEqual(
+    fieldsReadDownstream(calc, 'reader').map((s) => s.field),
+    ['fee', 'order'],
+  );
+});
+
+void test('accepting suggestions adds a nullable field and an accept_quoted rule, and never sets Required', () => {
+  const config = {
+    purpose: 'Orders',
+    expected_schema: {
+      type: 'object',
+      properties: { item: { type: ['string', 'null'] } },
+    },
+    required_fields: ['/item'],
+    field_rules: [{ field: '/item', kind: 'accept_quoted' }],
+  };
+  const next = withSuggestedFields(config, [
+    { field: 'item', number: false, readers: ['x'] },
+    { field: 'total', number: true, readers: ['x'] },
+  ]);
+  assert.deepEqual(
+    (next.expected_schema as { properties: object }).properties,
+    {
+      item: { type: ['string', 'null'] },
+      total: { type: ['number', 'null'] },
+    },
+  );
+  assert.deepEqual(next.field_rules, [
+    { field: '/item', kind: 'accept_quoted' },
+    { field: '/total', kind: 'accept_quoted' },
+  ]);
+  assert.deepEqual(next.required_fields, ['/item']);
+  assert.equal(
+    (config.expected_schema.properties as Record<string, unknown>).total,
+    undefined,
+  );
+});
+
+void test('the accept_quoted risk note says it proves location, not role', () => {
+  assert.match(ACCEPT_QUOTED_RISK, /not its role/);
+  assert.match(ACCEPT_QUOTED_RISK, /cross-check/);
 });
 
 const event = (outputs: Record<string, unknown>, cached = false) => ({
@@ -184,7 +276,7 @@ const event = (outputs: Record<string, unknown>, cached = false) => ({
   cached,
 });
 
-void test('prepared replies distinguish Redis hit, fill, local fallback and checkpoint replay', () => {
+void test('prepared replies from configuration, older Redis records and checkpoint replay stay distinct', () => {
   for (const outcome of ['hit', 'filled', 'local_fallback']) {
     const details = admissionDetails(
       event({ branch: 'reply', receipt: JSON.stringify({ v: 1, outcome }) }),
@@ -194,10 +286,10 @@ void test('prepared replies distinguish Redis hit, fill, local fallback and chec
     assert.match(
       details.explanation,
       outcome === 'hit'
-        ? /Redis hit/i
+        ? /older run: Redis copy\)/i
         : outcome === 'filled'
-          ? /Redis populated/i
-          : /local configuration/i,
+          ? /Redis copy stored/i
+          : /^Prepared reply from the saved configuration; no model call\.$/,
     );
   }
   assert.match(
@@ -211,7 +303,7 @@ void test('prepared replies distinguish Redis hit, fill, local fallback and chec
     event({ branch: 'reply', receipt: '{"v":1,"outcome":"hit"}' }, true),
     'greeting_cache',
   )!;
-  assert.match(replay.explanation, /checkpoint.*no new Redis/i);
+  assert.match(replay.explanation, /checkpoint.*no new lookup or model call/i);
 });
 
 void test('router proceed is admission only; reply and missing-field explanations remain model-labelled', () => {
@@ -267,6 +359,32 @@ void test('verification shows actual field outcomes and manual confirmation with
     )!.fields[0].status,
     'absent',
   );
+});
+
+void test('reader details separate a prepared reply, the model reading and the code decision', () => {
+  const prepared = admissionDetails(
+    event({ branch: 'reply', reading: '', report: '' }),
+    'request_reader',
+  )!;
+  assert.equal(prepared.title, 'Prepared reply');
+  assert.match(prepared.explanation, /no model call/i);
+  const fields = [
+    { field: '/item', status: 'passed', reason: 'source_checked' },
+    { field: '/total', status: 'absent', reason: 'value_absent' },
+  ];
+  const checked = admissionDetails(
+    event({
+      branch: 'continue',
+      reading: JSON.stringify({ type: 'unrelated', values: {}, reply: '' }),
+      report: JSON.stringify({ verdict: 'passed', complete: true, fields }),
+      _verification: { review_id: 'human-review' },
+    }),
+    'request_reader',
+  )!;
+  assert.equal(checked.manual, true);
+  assert.match(checked.explanation, /read this message as "unrelated"/);
+  assert.match(checked.explanation, /code checked the values and chose the branch/);
+  assert.deepEqual(checked.missingFields, ['/total']);
 });
 
 void test('malformed or previewed reports are visible as unavailable, never as a verified pass', () => {

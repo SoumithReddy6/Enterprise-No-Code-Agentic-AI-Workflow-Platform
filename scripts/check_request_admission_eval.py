@@ -58,7 +58,8 @@ def check(report):
         'prepared_replies_without_models':summary['prepared_correct']==10 and summary['prepared_model_calls']==0,
         'measurements_complete':not any(r.get('measurement_error') for r in rows),
         'faults_reached_verification':report['profile']!='fault' or all(
-            r['route']=='proceed' and r['status']=='awaiting_approval' and r['model_calls']==2
+            # One reader call per case (Step 8: router and extraction, two calls).
+            r['route']=='proceed' and r['status']=='awaiting_approval' and r['model_calls']==1
             and isinstance(r['verification'],dict) and r['verification'].get('verdict')=='needs_review'
             and r['verification'].get('complete') is True and bool(r['verification'].get('fields'))
             and r['automatic_branch'] is None and not r['manual'] and not r['deliveries']
@@ -69,7 +70,7 @@ def check(report):
 
 def matching_confirmation(row,case):
     checkpoints=(row.get('run') or {}).get('checkpoints',{})
-    ids={'verification':checkpoints.get('verify',{}).get('_verification',{}).get('review_id'),
+    ids={'verification':checkpoints.get('reader',{}).get('_verification',{}).get('review_id'),
         'decision':checkpoints.get('decision',{}).get('_decision_review',{}).get('id')}
     for approval in row.get('saved_confirmations',[]):
         try:

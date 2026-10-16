@@ -9,6 +9,7 @@ from langgraph.graph import StateGraph, START, END
 from pydantic import ValidationError
 from .models import Workflow
 from .request_contracts import control_routes
+from .request_safety import VERIFIERS
 from .registry import REGISTRY, RESERVED_PORT_PREFIX, Context, validate_template
 from . import exact_json
 from .approvals import ApprovalPause
@@ -129,7 +130,7 @@ def _validate_flow(workflow: Workflow) -> list[str]:
         try:
             config = definition.config_model.model_validate(node.config)
             if node.type == 'prompt': validate_template(config.template)
-            if node.type in ('llm','agent','query','request_router') and config.provider in ('openai','claude') and not config.credential_id:
+            if node.type in ('llm','agent','query','request_router','request_reader') and config.provider in ('openai','claude') and not config.credential_id:
                 errors.append(f'{node.id}: choose a credential for {config.provider}.')
         except ValidationError as exc:
             if node.type in ('condition', 'calculate'):
@@ -174,7 +175,7 @@ def _validate_flow(workflow: Workflow) -> list[str]:
                 if separator and source_def and port in source_def.outputs:
                     provided = source_def.outputs[port]
                     schema=nodes[source].config.get('expected_schema')
-                    verified_array=nodes[source].type=='verify_extraction' and port=='text' and isinstance(schema,dict) and schema.get('type')=='array'
+                    verified_array=nodes[source].type in VERIFIERS and port=='text' and isinstance(schema,dict) and schema.get('type')=='array'
                     if not provided.startswith('array') and not verified_array:
                         errors.append(f'{node.id}: items must come from a list; {ref} provides {provided}.')
         if node.on_error == 'continue':
@@ -237,7 +238,7 @@ def request_contract_errors(workflow, flow, deps):
     Availability is outcome-aware (including error routes). A checked value is a data
     dependency, not permission granted by a guard's mere presence elsewhere in the DAG.
     """
-    guards = {'greeting_cache', 'request_router', 'verify_extraction'}
+    guards = {'greeting_cache', 'request_router', *VERIFIERS}
     if workflow.contract == 1:
         return [f'{n.id}: request admission nodes require workflow contract 2.' for n in workflow.nodes if n.type in guards]
     errors = []
@@ -253,21 +254,31 @@ def request_contract_errors(workflow, flow, deps):
     cache = nodes.get(first[0].target) if len(first) == 1 else None
     router_edges = [e for e in outgoing.get(cache.id, []) if e.sourceHandle == 'continue'] if cache else []
     router = nodes.get(router_edges[0].target) if len(router_edges) == 1 else None
-    if not cache or cache.type != 'greeting_cache' or not router or router.type != 'request_router':
-        errors.append('Contract 2 entry must be Input → Greeting cache → Request router on continue.')
+    # The reader entry: Input → Request reader, optionally through independent record reads
+    # that supply its reference. No model and no transformation runs before the reader.
+    reader, step = None, cache
+    while step is not None and step.type != 'request_reader' and independent_reference(step.id + '.text', nodes):
+        nxt = outgoing.get(step.id, [])
+        step = nodes.get(nxt[0].target) if len(nxt) == 1 else None
+    if step is not None and step.type == 'request_reader':reader = step
+    legacy = bool(cache and cache.type == 'greeting_cache' and router and router.type == 'request_router')
+    if not legacy and not reader:
+        errors.append('Contract 2 entry must be Input → Request reader (or Input → Greeting cache → Request router on continue).')
     for node in flow.nodes:
         if node.type in guards:
             for edge in outgoing[node.id]:
                 if edge.sourceHandle == 'reply' and nodes.get(edge.target) and nodes[edge.target].type != 'response':
                     errors.append(f'{node.id}: reply must terminate at a Response; it cannot reach an action.')
-        if node.type in ('greeting_cache', 'request_router') and node.inputs.get('message') != original:
+        if node.type in ('greeting_cache', 'request_router', 'request_reader') and node.inputs.get('message') != original:
             errors.append(f'{node.id}: bind the original trigger message; admission text is not extraction evidence.')
         if node.type == 'request_router' and (not router or node.id != router.id):
             errors.append(f'{node.id}: request router must be the declared entry router.')
         if node.type == 'greeting_cache' and (not cache or node.id != cache.id):
             errors.append(f'{node.id}: greeting cache must be the declared entry cache.')
-        if node.type == 'verify_extraction':
-            if node.inputs.get('original') != original:errors.append(f'{node.id}: verification requires the original trigger message.')
+        if node.type == 'request_reader' and (not reader or node.id != reader.id):
+            errors.append(f'{node.id}: the request reader must be the declared entry reader.')
+        if node.type in VERIFIERS:
+            if node.type == 'verify_extraction' and node.inputs.get('original') != original:errors.append(f'{node.id}: verification requires the original trigger message.')
             reference = node.inputs.get('reference')
             rules = node.config.get('field_rules', [])
             if isinstance(rules, list) and any(r.get('kind') == 'reference_member' for r in rules if isinstance(r, dict)) and not reference:
@@ -279,7 +290,7 @@ def request_contract_errors(workflow, flow, deps):
         model_inputs = any(unchecked_model_input(ref, full, deps) for ref in node.inputs.values())
         consequential = is_write_node(node, REGISTRY.get(node.type)) or (model_inputs and (node.type == 'condition' or (node.type == 'calculate' and node.config.get('mode') == 'check')))
         if consequential:
-            if not any(nodes[id].type == 'verify_extraction' for id in available.get(node.id, set())):
+            if not any(nodes[id].type in VERIFIERS for id in available.get(node.id, set())):
                 errors.append(f'{node.id}: consequential execution requires successful verification on every path.')
             if model_inputs:
                 errors.append(f'{node.id}: bind verified values; a raw model output cannot bypass extraction checking.')
@@ -291,7 +302,7 @@ def request_contract_errors(workflow, flow, deps):
                 if dep not in attached:attached.add(dep);visit(dep)
         visit(node.id)
         if any(is_write_node(full[id], REGISTRY.get(full[id].type)) for id in attached if id in full):
-            if not any(nodes[id].type == 'verify_extraction' for id in available.get(node.id, set())) or not any(checked_dependency(ref, nodes) for ref in node.inputs.values()):
+            if not any(nodes[id].type in VERIFIERS for id in available.get(node.id, set())) or not any(checked_dependency(ref, nodes) for ref in node.inputs.values()):
                 errors.append(f'{node.id}: attached writes require verification before their caller; router acceptance is insufficient.')
     return errors
 
@@ -310,15 +321,15 @@ def unchecked_model_input(ref, nodes, deps=None, seen=None):
     seen = set() if seen is None else seen
     if not sep or not node or source in seen:return False
     seen = seen | {source}
-    if node.type == 'verify_extraction' and port == 'text':return False
-    if node.type in ('agent', 'llm', 'query', 'request_router'):return True
+    if node.type in VERIFIERS and port == 'text':return False
+    if node.type in ('agent', 'llm', 'query', 'request_router', 'request_reader'):return True
     # A loop's flow inputs do not describe what its attached body produces. Walk
     # callable dependencies as well, including specialist/tool chains. Otherwise an
     # attached Agent's guessed result would look like a deterministic Jira list.
     dependencies = deps or {}
     def calls_model(id, visited):
         if id in visited or id not in nodes:return False
-        if nodes[id].type in ('agent', 'llm', 'query', 'request_router'):return True
+        if nodes[id].type in ('agent', 'llm', 'query', 'request_router', 'request_reader'):return True
         return any(calls_model(child, visited | {id}) for child in dependencies.get(id, []))
     return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
         unchecked_model_input(value, nodes, dependencies, seen) for value in node.inputs.values())
@@ -329,7 +340,7 @@ def checked_dependency(ref, nodes, seen=None):
     node = nodes.get(source)
     seen = set() if seen is None else seen
     if not sep or not node or source in seen:return False
-    if node.type == 'verify_extraction':return port == 'text'
+    if node.type in VERIFIERS:return port == 'text'
     if node.type not in ('prompt', 'calculate'):return False
     return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
 
@@ -426,7 +437,7 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
         config = definition.config_model.model_validate(node.config)
         def handler_factory(node, definition, config):
             async def request_emit(event):
-                await emit({**event,'request_stage':node.type} if node.type in ('greeting_cache','request_router','verify_extraction') else event)
+                await emit({**event,'request_stage':node.type} if node.type in ('greeting_cache','request_router',*request_safety.VERIFIERS) else event)
             async def handler(state):
                 emit=request_emit
                 identity=ExecutionIdentity(node.id,node.id,node.id)
@@ -447,6 +458,12 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                         try:checked_router_checkpoint(outputs,original,config)
                         except ValueError:
                             raise ValueError(f'{node.id} cannot be restored: its routing checkpoint no longer matches the original input, policy or decision. Start a new run.') from None
+                    if node.type=='request_reader':
+                        from .request_reader import checked_reading_checkpoint
+                        source,_,port=node.inputs['message'].partition('.')
+                        try:checked_reading_checkpoint(outputs,state['values'].get(source,{}).get(port),config)
+                        except ValueError:
+                            raise ValueError(f'{node.id} cannot be restored: its reading checkpoint no longer matches the original input, policy or reading. Start a new run.') from None
                     from .execution_policy import TRUNCATION_KEY,checked_truncation
                     if isinstance(outputs,dict) and TRUNCATION_KEY in outputs:
                         try:checked_truncation(outputs[TRUNCATION_KEY])
@@ -494,7 +511,8 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                 async def invoke():
                       # Only the runtime verifier can issue eligibility; a swapped registry
                       # handler must not mint its own continue branch or receipt.
-                      implementation=request_safety.verify_extraction_node if node.type=='verify_extraction' else definition.handler
+                      implementation={'verify_extraction':request_safety.verify_extraction_node,
+                                      'request_reader':request_safety.request_reader_node}.get(node.type,definition.handler)
                       outputs = await implementation(inputs,config,node_ctx)
                       # Run metadata may travel beside the declared ports under the reserved key.
                       from .execution_policy import TRUNCATION_KEY,checked_truncation
@@ -551,6 +569,9 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                           from .request_router import ROUTING_KEY,routing_record
                           # Runtime-created audit binding, never metadata supplied by the model/handler.
                           outputs={**outputs,ROUTING_KEY:routing_record(outputs,inputs['message'],config)}
+                      if node.type=='request_reader':
+                          from .request_reader import READING_KEY,reading_record
+                          outputs={**outputs,READING_KEY:reading_record(outputs,inputs['message'],config)}
                       body_type=next((n.type for n in full_workflow.nodes if n.id==getattr(config,'body',None)),None) if node.type=='for_each' else None
                       record=provenance.for_node(node,definition,inputs,outputs,state['values'],body_type)
                       decision=None

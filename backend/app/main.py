@@ -52,21 +52,16 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     sandbox.required()  # An invalid PYTHON_SANDBOX_REQUIRED fails at startup, not at the first readiness poll.
     directory=Path(os.environ.get('DATA_DIR','.data'));directory.mkdir(mode=0o700,parents=True,exist_ok=True)
     store=Store(database_url or os.environ.get('DATABASE_URL',f'sqlite:///{directory}/workflows.db'),encryption_key or local_key(directory))
-    from .common_replies import cache_from_env
-    common_reply_cache=cache_from_env()
     if embedded_worker is None:embedded_worker=os.environ.get('RELAY_EMBEDDED_WORKER','true').lower()=='true'
     @asynccontextmanager
     async def lifespan(app):
-        worker=asyncio.create_task(Worker(store,common_reply_cache=common_reply_cache).serve()) if embedded_worker else None
+        worker=asyncio.create_task(Worker(store).serve()) if embedded_worker else None
         try:yield
         finally:
             if worker:worker.cancel();await asyncio.gather(worker,return_exceptions=True)
-            try:
-                if common_reply_cache is not None:await common_reply_cache.aclose()
-            finally:store.engine.dispose()
+            store.engine.dispose()
     app=FastAPI(title='Relay Workflow API',version='0.2.0',lifespan=lifespan)
     app.state.store=store
-    app.state.common_reply_cache=common_reply_cache
     app.add_middleware(TrustedHostMiddleware,allowed_hosts=['localhost','127.0.0.1','testserver','backend'])
     app.add_middleware(CORSMiddleware,allow_origins=['http://127.0.0.1:3000','http://localhost:3000'],allow_credentials=True,allow_methods=['GET','POST','PUT'],allow_headers=['Content-Type','X-Request-ID'],expose_headers=['X-Request-ID'])
     app.add_middleware(RequestJournalMiddleware)
@@ -75,7 +70,7 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     app.state.tools=ToolService(store)
     install_tool_routes(app,app.state.tools,tenant)
     install_kb_routes(app,store,tenant,knowledge_services)
-    app.state.readiness=Readiness(store,app.state.knowledge_services,common_reply_cache)
+    app.state.readiness=Readiness(store,app.state.knowledge_services)
     async def submission_errors(workflow,tenant_id,checkpoints=None,dependencies=None):
         return validate_workflow(workflow)+store.model_errors(workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id,checkpoints,dependencies)+await sandbox.preflight_errors(workflow)
 

@@ -17,6 +17,10 @@ def test_admission_metrics_count_codes_without_reading_or_returning_run_content(
         {'request_stage':'verify_extraction','status':'paused'},
         {'request_stage':'request_router','status':'failed','error':'PRIVATE ERROR'},
         {'request_stage':'request_router','status':'success','cached':True,'outputs':{'decision':'{"route":"proceed"}'}},
+        {'request_stage':'request_reader','status':'success','outputs':{'reading':'','reply':'PRIVATE REPLY'}},
+        {'request_stage':'request_reader','status':'success','outputs':{'reading':'{"type":"request","values":{"a":"PRIVATE"},"reply":""}',
+            'report':'{"verdict":"passed","complete":true,"fields":[]}','text':'PRIVATE VALUE'}},
+        {'request_stage':'request_reader','status':'paused'},
     ]
     for item in events:store.worker_event(run['id'],'worker',{'node_id':'custom-name',**item})
     store.finish_run(run['id'],'worker','success')
@@ -25,6 +29,9 @@ def test_admission_metrics_count_codes_without_reading_or_returning_run_content(
     report=metrics(store)
     assert report['request_admission']['outcomes'] == [
         {'stage':'greeting_cache','status':'success','outcome':'local_fallback','count':1},
+        {'stage':'request_reader','status':'paused','outcome':'needs_review','count':1},
+        {'stage':'request_reader','status':'success','outcome':'passed','count':1},
+        {'stage':'request_reader','status':'success','outcome':'prepared','count':1},
         {'stage':'request_router','status':'failed','outcome':'error','count':1},
         {'stage':'request_router','status':'success','outcome':'proceed','count':1},
         {'stage':'verify_extraction','status':'paused','outcome':'needs_review','count':1},
@@ -40,10 +47,10 @@ async def test_real_worker_tags_admission_events_for_metrics(tmp_path):
     from backend.app.worker import Worker
     from backend.tests.test_request_examples import load
     store=Store(f'sqlite:///{tmp_path}/worker.db',Fernet.generate_key());store.allow_model('ollama','fixture')
-    worker=Worker(store,common_reply_cache=None)
+    worker=Worker(store)
     row=store.create_run(load('qa').model_dump(mode='json'),'Hello!')
     await worker.execute(store.claim_next(worker.owner))
     assert store.run(row['id'])['status']=='success'
     assert metrics(store)['request_admission']['outcomes']==[
-        {'stage':'greeting_cache','status':'success','outcome':'local_fallback','count':1}]
+        {'stage':'request_reader','status':'success','outcome':'prepared','count':1}]
     store.engine.dispose()

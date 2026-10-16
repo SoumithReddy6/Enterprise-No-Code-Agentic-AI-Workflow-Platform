@@ -82,22 +82,22 @@ test('new business setup saves the displayed purpose and strict rules; invalid d
   await page
     .getByRole('button', { name: 'Create workflow', exact: true })
     .click();
-  await expect(page.locator('[data-id="verify"]')).toBeVisible();
+  await expect(page.locator('[data-id="reader"]')).toBeVisible();
   await page.getByRole('button', { name: 'Validate', exact: true }).click();
   await expect(page.getByText('Workflow is valid and ready to run.', { exact: true })).toBeVisible();
   const saved = calls.at(-1)!.body as Workflow;
   expect(saved.contract).toBe(2);
   expect(
-    saved.nodes.find((n) => n.type === 'request_router')!.config,
+    saved.nodes.find((n) => n.type === 'request_reader')!.config,
   ).toMatchObject({
     purpose: 'Draft purchase decisions using checked facts',
     model: 'fixture',
+    required_any: [['/total'], ['/quantity', '/unit_price']],
   });
-  expect(saved.nodes.find((n) => n.type === 'agent')!.config.model).toBe(
-    'fixture',
-  );
-  await page.locator('[data-id="verify"]').getByText('Check extracted facts', { exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Verify extraction', exact: true })).toBeVisible();
+  for (const old of ['greeting_cache', 'request_router', 'verify_extraction', 'agent'])
+    expect(saved.nodes.some((n) => n.type === old)).toBe(false);
+  await page.locator('[data-id="reader"]').getByText('Request reader', { exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Request reader', exact: true })).toBeVisible();
   await page.getByLabel(/^Field rules/i).fill('[broken');
   const before = calls.length;
   await page.getByRole('button', { name: 'Validate', exact: true }).click();
@@ -109,7 +109,7 @@ test('new business setup saves the displayed purpose and strict rules; invalid d
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(() => calls.length).toBe(before + 1);
   expect(
-    (calls.at(-1)!.body as Workflow).nodes.find((n) => n.id === 'verify')!
+    (calls.at(-1)!.body as Workflow).nodes.find((n) => n.id === 'reader')!
       .config.field_rules,
   ).toBe('[broken');
 });
@@ -157,7 +157,7 @@ function reviewRun(
     approvals: [
       {
         id: 'approval',
-        node_id: 'verify',
+        node_id: 'reader',
         kind,
         status: 'pending',
         expires_at: expires,
@@ -330,11 +330,11 @@ for (const failure of [
     ).toHaveCount(0);
   });
 
-test('a second workflow cannot retain an earlier router JSON draft on screen', async ({
+test('a second workflow cannot retain an earlier reader JSON draft on screen', async ({
   page,
 }) => {
   const calls = await fixture(page);
-  await page.locator('[data-id="router"]').click();
+  await page.locator('[data-id="reader"]').click();
   await page.getByLabel(/^Examples/).fill('[broken');
   await page.getByRole('button', { name: 'Workflows', exact: true }).click();
   await page.getByRole('button', { name: 'New workflow', exact: true }).click();
@@ -348,7 +348,7 @@ test('a second workflow cannot retain an earlier router JSON draft on screen', a
   await page.getByRole('button', { name: 'Validate', exact: true }).click();
   await expect.poll(() => calls.length).toBe(1);
   expect(
-    (calls[0].body as Workflow).nodes.find((n) => n.id === 'router')!.config
+    (calls[0].body as Workflow).nodes.find((n) => n.id === 'reader')!.config
       .examples,
   ).toEqual(displayed);
 });
@@ -367,7 +367,7 @@ test('overflowing JSON numbers stay raw in the draft and cannot become a hidden 
   await expect(
     page.getByRole('textbox', { name: 'Workflow name' }),
   ).toHaveValue('Purchase request draft');
-  await page.locator('[data-id="verify"]').click();
+  await page.locator('[data-id="reader"]').click();
   const raw = '{"type":"object","properties":{"amount":{"maximum":1e309}}}';
   await page.getByLabel(/^Expected Schema/i).fill(raw);
   const before = calls.length;
@@ -379,7 +379,7 @@ test('overflowing JSON numbers stay raw in the draft and cannot become a hidden 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(() => calls.length).toBe(before + 1);
   expect(
-    (calls.at(-1)!.body as Workflow).nodes.find((n) => n.id === 'verify')!
+    (calls.at(-1)!.body as Workflow).nodes.find((n) => n.id === 'reader')!
       .config.expected_schema,
   ).toBe(raw);
 });
@@ -426,27 +426,31 @@ test('write approvals still show the full outgoing request and do not use interp
   expect(Object.keys(calls[0].body).sort()).toEqual(['approval_id', 'digest']);
 });
 
-for (const route of ['clarify', 'out_of_scope'])
-  test(`router ${route} shows missing facts and a model-generated reply`, async ({
+for (const kind of ['request', 'unrelated'])
+  test(`reader reply after a "${kind}" reading names the missing facts from code`, async ({
     page,
   }) => {
     const run: Run = {
       ...reviewRun('verification'),
       status: 'success',
       approvals: [],
-      output: 'Please supply quantity.',
+      output: 'This request needs more details: total or quantity and unit price.',
       events: [
         {
           seq: 0,
-          node_id: 'router',
+          node_id: 'reader',
           status: 'success',
           timestamp: '',
           outputs: {
-            decision: JSON.stringify({
-              route,
-              reason: 'No suitable request',
-              missing_fields: ['quantity'],
-              reply: 'Please supply quantity.',
+            branch: 'reply',
+            reading: JSON.stringify({ type: kind, values: { item: 'laptops' }, reply: '' }),
+            report: JSON.stringify({
+              verdict: 'clarify',
+              complete: true,
+              fields: [
+                { field: '/item', status: 'unverified', reason: 'reference_unverified' },
+                { field: '/quantity', status: 'absent', reason: 'required_absent' },
+              ],
             }),
           },
         },
@@ -455,9 +459,63 @@ for (const route of ['clarify', 'out_of_scope'])
     await fixture(page, [run]);
     await openReview(page);
     const checks = page.getByRole('region', { name: 'Request checks' });
-    await expect(checks).toContainText('model-generated');
-    await expect(checks).toContainText('Missing fields: quantity');
+    await expect(checks).toContainText('Missing or malformed facts');
+    await expect(checks).toContainText(`read this message as "${kind}"`);
+    await expect(checks).toContainText('Missing fields: /quantity');
   });
+
+test('a prepared reply is shown as configuration with no model call', async ({
+  page,
+}) => {
+  const run: Run = {
+    ...reviewRun('verification'),
+    status: 'success',
+    approvals: [],
+    output: 'Hello!',
+    events: [
+      {
+        seq: 0,
+        node_id: 'reader',
+        status: 'success',
+        timestamp: '',
+        outputs: { branch: 'reply', reading: '', report: '', reply: 'Hello!', text: '' },
+      },
+    ],
+  };
+  await fixture(page, [run]);
+  await openReview(page);
+  const checks = page.getByRole('region', { name: 'Request checks' });
+  await expect(checks).toContainText('Prepared reply');
+  await expect(checks).toContainText('no model call');
+});
+
+test('the reader suggests fields that later nodes read and adds them only when accepted', async ({
+  page,
+}) => {
+  const calls = await fixture(page);
+  await page.getByRole('button', { name: 'Workflows', exact: true }).click();
+  await page.getByRole('button', { name: 'New workflow', exact: true }).click();
+  await page.getByLabel('Workflow template', { exact: true }).selectOption('purchase');
+  await page.getByRole('button', { name: 'Create workflow', exact: true }).click();
+  await page.locator('[data-id="calculate"]').click();
+  await page.getByLabel(/^Expression/).fill('coalesce(total, quantity * unit_price) + shipping_fee');
+  await page.locator('[data-id="reader"]').getByText('Request reader', { exact: true }).click();
+  const help = page.getByRole('region', { name: 'Request contract help' });
+  await expect(help).toContainText('not its role');
+  await expect(help).toContainText('shipping_fee (read by Calculate total in code)');
+  await page.getByRole('button', { name: 'Validate', exact: true }).click();
+  await expect.poll(() => calls.length).toBe(1);
+  const before = (calls[0].body as Workflow).nodes.find((n) => n.id === 'reader')!.config;
+  expect(Object.keys((before.expected_schema as { properties: object }).properties)).not.toContain('shipping_fee');
+  await help.getByRole('button', { name: 'Add 1 suggested field', exact: true }).click();
+  await expect(help.getByRole('button', { name: /suggested field/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Validate', exact: true }).click();
+  await expect.poll(() => calls.length).toBe(2);
+  const after = (calls[1].body as Workflow).nodes.find((n) => n.id === 'reader')!.config;
+  expect((after.expected_schema as { properties: Record<string, unknown> }).properties.shipping_fee).toEqual({ type: ['number', 'null'] });
+  expect(after.field_rules).toContainEqual({ field: '/shipping_fee', kind: 'accept_quoted' });
+  expect(after.required_fields).toEqual(['/item']);
+});
 
 for (const width of [1280, 768])
   test(`long checks, reviews and answer stay scrollable at ${width}px`, async ({
@@ -471,31 +529,12 @@ for (const width of [1280, 768])
     run.events = [
       {
         seq: 0,
-        node_id: 'cache',
+        node_id: 'reader',
         status: 'success',
         timestamp: '',
-        cached: true,
         outputs: {
           branch: 'continue',
-          receipt: '{"v":1,"outcome":"not_common"}',
-        },
-      },
-      {
-        seq: 1,
-        node_id: 'router',
-        status: 'success',
-        timestamp: '',
-        outputs: {
-          decision:
-            '{"route":"proceed","reason":"A request","missing_fields":[],"reply":""}',
-        },
-      },
-      {
-        seq: 2,
-        node_id: 'verify',
-        status: 'success',
-        timestamp: '',
-        outputs: {
+          reading: '{"type":"request","values":{},"reply":""}',
           report: JSON.stringify({
             verdict: 'needs_review',
             complete: true,
@@ -517,7 +556,7 @@ for (const width of [1280, 768])
     });
     await expect(
       page.getByRole('region', { name: 'Request checks', exact: true }),
-    ).toContainText('not verification or business approval');
+    ).toContainText('code checked the values and chose the branch');
     await expect
       .poll(() => region.evaluate((e) => e.clientHeight))
       .toBeGreaterThan(0);

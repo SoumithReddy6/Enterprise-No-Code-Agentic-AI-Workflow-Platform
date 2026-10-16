@@ -3,7 +3,7 @@ import { approvalDecision, type RunApproval } from '@/lib/approvals';
 import ApprovalReview from './approval-review';
 import WorkflowSetup from './workflow-setup';
 import RequestChecks from './request-checks';
-import { createRequestWorkflow, requestTemplates, admissionDetails } from '@/lib/request-routing';
+import { createRequestWorkflow, requestTemplates, admissionDetails, ACCEPT_QUOTED_RISK, fieldsReadDownstream, withSuggestedFields } from '@/lib/request-routing';
 
 import {
   useCallback,
@@ -165,7 +165,7 @@ function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
         <MoreHorizontal size={17} className="muted" />
       </div>
       <p>
-        {['llm', 'agent', 'query', 'request_router'].includes(spec.type)
+        {['llm', 'agent', 'query', 'request_router', 'request_reader'].includes(spec.type)
           ? spec.config.provider === 'demo'
             ? 'Demo provider'
             : String(spec.config.model)
@@ -337,7 +337,7 @@ function Editor() {
           toCanvas({
             ...seed,
             nodes: seed.nodes.map((n) =>
-              ['agent', 'request_router'].includes(n.type)
+              ['agent', 'request_router', 'request_reader'].includes(n.type)
                 ? { ...n, config: modelConfig(n.config, first) }
                 : n,
             ),
@@ -451,7 +451,7 @@ function Editor() {
         w = {
           ...w,
           nodes: w.nodes.map((n) =>
-            ['agent', 'request_router'].includes(n.type)
+            ['agent', 'request_router', 'request_reader'].includes(n.type)
               ? { ...n, config: modelConfig(n.config, first) }
               : n,
           ),
@@ -475,10 +475,10 @@ function Editor() {
   function createDraft(draft: Workflow) {
     const first = allowedModels.find(m => m.enabled && m.provider === 'ollama') || allowedModels.find(m => m.enabled);
     const template = requestTemplates.find(t => createRequestWorkflow(t.id).name === draft.name);
-    if (first) draft = { ...draft, nodes: draft.nodes.map(n => ['agent', 'request_router', 'llm', 'query'].includes(n.type) ? { ...n, config: modelConfig(n.config, first) } : n) };
+    if (first) draft = { ...draft, nodes: draft.nodes.map(n => ['agent', 'request_router', 'request_reader', 'llm', 'query'].includes(n.type) ? { ...n, config: modelConfig(n.config, first) } : n) };
     loadDocument(draft);
     if (template) setMessage(template.sample);
-    setSelected('router');
+    setSelected('reader');
   }
   async function load(id: string) {
     if (!discardAllowed()) return;
@@ -726,7 +726,7 @@ function Editor() {
           .map(([k, p]) => [k, p.default]),
       ),
     };
-    if (['agent', 'query', 'llm', 'request_router'].includes(type)) {
+    if (['agent', 'query', 'llm', 'request_router', 'request_reader'].includes(type)) {
       const model =
         allowedModels.find((m) => m.enabled && m.provider === 'ollama') ||
         allowedModels.find((m) => m.enabled);
@@ -1623,12 +1623,47 @@ function Editor() {
                           ))}
                         </section>
                       )}
+                    {chosen.type === 'request_reader' &&
+                      (() => {
+                        const properties = (chosen.config.expected_schema as { properties?: Record<string, unknown> } | undefined)?.properties ?? {};
+                        const suggestions = fieldsReadDownstream(workflow, chosen.id);
+                        const fresh = suggestions.filter((f) => !Object.hasOwn(properties, f.field));
+                        return (
+                          <section className="settings-section" aria-label="Request contract help">
+                            <h3>REQUEST CONTRACT</h3>
+                            <p className="helper">{ACCEPT_QUOTED_RISK}</p>
+                            {suggestions.length > 0 ? (
+                              <p className="helper">
+                                Suggested from this workflow:{' '}
+                                {suggestions.map((f, i) => (
+                                  <span key={f.field}>
+                                    {i ? ', ' : ''}
+                                    <span className="mono">{f.field}</span> (read by {f.readers.join(', ')})
+                                  </span>
+                                ))}
+                                .
+                              </p>
+                            ) : (
+                              <p className="helper">No later Condition or Calculate node reads a field of this reader yet.</p>
+                            )}
+                            {fresh.length > 0 && (
+                              <button
+                                className="text-button"
+                                disabled={running}
+                                onClick={() => modifyNode({ config: withSuggestedFields(chosen.config, fresh) })}
+                              >
+                                Add {fresh.length} suggested field{fresh.length === 1 ? '' : 's'}
+                              </button>
+                            )}
+                          </section>
+                        );
+                      })()}
                     {definition &&
                       Object.keys(definition.config_schema.properties).length >
                         0 && (
                         <section className="settings-section">
                           <h3>CONFIGURATION</h3>
-                          {['llm', 'agent', 'query', 'request_router'].includes(chosen.type) && (
+                          {['llm', 'agent', 'query', 'request_router', 'request_reader'].includes(chosen.type) && (
                             <label>
                               Model
                               <select
@@ -1711,9 +1746,13 @@ function Editor() {
                                   key === 'storage_path'
                                 ) &&
                                 !(
-                                  ['llm', 'agent', 'query', 'request_router'].includes(
-                                    chosen.type,
-                                  ) &&
+                                  [
+                                    'llm',
+                                    'agent',
+                                    'query',
+                                    'request_router',
+                                    'request_reader',
+                                  ].includes(chosen.type) &&
                                   [
                                     'provider',
                                     'model',

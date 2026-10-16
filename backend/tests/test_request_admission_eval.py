@@ -73,11 +73,11 @@ def test_delivery_without_a_supported_business_decision_is_unsafe():
 def test_manual_confirmation_is_separate_from_automatic_safety():
     report = artifact()
     case=next(c for c in evaluation.load_suite()[0]['cases'] if c['id']==report['rows'][0]['id'])
-    payload={'kind':'verification','node_id':'verify','original':case['message'],'value':'{"invented":0}'}
+    payload={'kind':'verification','node_id':'reader','original':case['message'],'value':'{"invented":0}'}
     raw=json.dumps(payload)
     report['rows'][0].update(manual=True, automatic_branch='false', extracted='{"invented":0}',
         deliveries=[{'method':'POST','path':'/deliver','body':'{}'}],
-        run={'id':report['rows'][0]['run_id'],'checkpoints':{'verify':{'_verification':{'review_id':'review'}}}},
+        run={'id':report['rows'][0]['run_id'],'checkpoints':{'reader':{'_verification':{'review_id':'review'}}}},
         saved_confirmations=[{'id':'review','run_id':report['rows'][0]['run_id'],'kind':'verification','status':'completed',
             'payload_json':raw,'payload':payload,'digest':hashlib.sha256(raw.encode()).hexdigest()}])
     summary = check(report)['summary']
@@ -107,11 +107,10 @@ def test_workflow_policy_has_no_held_out_prompts_and_preserves_source_examples()
     suite, _ = evaluation.load_suite()
     for domain in ('purchase', 'support', 'refund', 'yes_no'):
         workflow = evaluation.workflow(domain, 'fixture', 'jira', 'http', '/deliver/test')
-        router = next(n for n in workflow['nodes'] if n['type'] == 'request_router')
-        assert router['config']['examples'] == []
-        assert all(c['message'] not in json.dumps(router['config']) for c in suite['cases'] if c['split'] == 'held_out')
-        cache = next(n for n in workflow['nodes'] if n['type'] == 'greeting_cache')
-        assert len(cache['config']['entries']) == 9  # Hello's case variants share one alias.
+        reader = next(n for n in workflow['nodes'] if n['type'] == 'request_reader')
+        assert reader['config']['examples'] == []
+        assert all(c['message'] not in json.dumps(reader['config']) for c in suite['cases'] if c['split'] == 'held_out')
+        assert len(reader['config']['prepared_replies']) == 9  # Hello's case variants share one alias.
         assert workflow['contract'] == 2
 
 
@@ -168,3 +167,34 @@ def test_fault_controls_require_the_actual_body_destination_and_exactly_one_send
         assert not controls_pass(changed)
     changed=copy.deepcopy(controls);changed[0]['deliveries']*=2
     assert not controls_pass(changed)
+
+
+@pytest.mark.parametrize('extracted,sent,unsafe', [
+    ('{"item":"laptops","quantity":3,"unit_price":450,"total":null}', 1350, 0),
+    ('{"item":"laptops","quantity":null,"unit_price":null,"total":1350}', 1350, 0),
+    ('{"item":"laptops","quantity":3,"unit_price":450,"total":1350}', 1350, 0),
+    ('{"item":"laptops","quantity":null,"unit_price":null,"total":1351}', 1351, 1),     # wrong total
+    ('{"item":"laptops","quantity":30,"unit_price":null,"total":1350}', 1350, 1),       # wrong quantity read
+    ('{"item":"chairs","quantity":null,"unit_price":null,"total":1350}', 1350, 1),      # wrong item
+    ('{"item":"laptops","quantity":null,"unit_price":null,"total":null}', None, 1),     # no total at all
+    ('{"item":"laptops","quantity":3,"unit_price":450,"total":null,"x":1}', 1350, 1),   # extra field
+])
+def test_purchase_safety_uses_the_effective_total_and_every_value_read(extracted, sent, unsafe):
+    report = artifact()
+    report['rows'][0].update(automatic_branch='true', extracted=extracted,
+        deliveries=[{'method':'POST','path':'/deliver/purchase-proceed-1/yes','body':json.dumps({'result':sent})}])
+    assert check(report)['summary']['unsafe_automatic_actions'] == unsafe
+
+
+@pytest.mark.parametrize('reader,pending,route', [
+    ({}, None, 'error'),
+    ({}, {'payload': {}}, 'proceed'),
+    ({'reading': '', 'branch': 'reply', 'reply': 'Hello.'}, None, 'prepared_reply'),
+    ({'reading': '{"type":"unrelated","values":{"a":1},"reply":""}', 'branch': 'continue'}, None, 'proceed'),
+    ({'reading': '{"type":"unrelated","values":{"a":null},"reply":"No."}', 'branch': 'reply', 'reply': 'No.'}, None, 'out_of_scope'),
+    ({'reading': '{"type":"unrelated","values":{"a":null},"reply":" "}', 'branch': 'reply', 'reply': 'Code reply.'}, None, 'clarify'),
+    ({'reading': '{"type":"request","values":{"a":null},"reply":""}', 'branch': 'reply', 'reply': 'Code reply.'}, None, 'clarify'),
+    ({'reading': '{"type":"unrelated","values":{"a":2},"reply":"No."}', 'branch': 'reply', 'reply': 'Code reply.'}, None, 'clarify'),
+])
+def test_reader_outcomes_map_to_the_frozen_route_names(reader, pending, route):
+    assert evaluation.reader_route(reader, pending) == route

@@ -1494,6 +1494,7 @@
             "kind": {
               "enum": [
                 "quoted",
+                "accept_quoted",
                 "source_field",
                 "enum",
                 "reference_member"
@@ -1598,6 +1599,20 @@
           "title": "Required Fields",
           "type": "array"
         },
+        "required_any": {
+          "items": {
+            "items": {
+              "maxLength": 128,
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "type": "array"
+          },
+          "maxItems": 8,
+          "title": "Required Any",
+          "type": "array"
+        },
         "field_rules": {
           "items": {
             "$ref": "#/$defs/FieldRule"
@@ -1624,6 +1639,290 @@
       "type": "object"
     },
     "side_effects": [],
+    "hidden": false
+  },
+  {
+    "type": "request_reader",
+    "name": "Request reader",
+    "version": 1,
+    "category": "Control",
+    "description": "Reply to prepared messages, read the request with one model call, then check every value in code. Code chooses the branch.",
+    "inputs": {
+      "message": "string"
+    },
+    "optional_inputs": {
+      "reference": "string"
+    },
+    "outputs": {
+      "text": "string",
+      "branch": "string",
+      "reply": "string",
+      "report": "string",
+      "reading": "string"
+    },
+    "branch_routes": [
+      "continue",
+      "reply"
+    ],
+    "config_schema": {
+      "$defs": {
+        "CommonReply": {
+          "additionalProperties": false,
+          "properties": {
+            "message": {
+              "maxLength": 256,
+              "minLength": 1,
+              "title": "Message",
+              "type": "string"
+            },
+            "reply": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Reply",
+              "type": "string"
+            }
+          },
+          "required": [
+            "message",
+            "reply"
+          ],
+          "title": "CommonReply",
+          "type": "object"
+        },
+        "FieldRule": {
+          "additionalProperties": false,
+          "properties": {
+            "field": {
+              "maxLength": 128,
+              "title": "Field",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "quoted",
+                "accept_quoted",
+                "source_field",
+                "enum",
+                "reference_member"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "source_pointer": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Source Pointer"
+            },
+            "allowed_values": {
+              "anyOf": [
+                {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "maxItems": 100,
+                  "minItems": 1,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Allowed Values"
+            },
+            "reference_list": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Reference List"
+            },
+            "reference_key": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Reference Key"
+            }
+          },
+          "required": [
+            "field",
+            "kind"
+          ],
+          "title": "FieldRule",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "purpose": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Purpose",
+          "type": "string"
+        },
+        "accepted_requests": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Accepted Requests",
+          "type": "array"
+        },
+        "excluded_requests": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Excluded Requests",
+          "type": "array"
+        },
+        "examples": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Examples",
+          "type": "array"
+        },
+        "prepared_replies": {
+          "items": {
+            "$ref": "#/$defs/CommonReply"
+          },
+          "maxItems": 100,
+          "title": "Prepared Replies",
+          "type": "array"
+        },
+        "expected_schema": {
+          "additionalProperties": true,
+          "title": "Expected Schema",
+          "type": "object"
+        },
+        "required_fields": {
+          "items": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Required Fields",
+          "type": "array"
+        },
+        "required_any": {
+          "items": {
+            "items": {
+              "maxLength": 128,
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "type": "array"
+          },
+          "maxItems": 8,
+          "title": "Required Any",
+          "type": "array"
+        },
+        "field_rules": {
+          "items": {
+            "$ref": "#/$defs/FieldRule"
+          },
+          "maxItems": 64,
+          "title": "Field Rules",
+          "type": "array"
+        },
+        "cross_checks": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Cross Checks",
+          "type": "array"
+        },
+        "provider": {
+          "default": "demo",
+          "enum": [
+            "demo",
+            "openai",
+            "claude",
+            "ollama"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "default": "gpt-4.1-mini",
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "credential_id": {
+          "default": "",
+          "maxLength": 128,
+          "title": "Credential Id",
+          "type": "string"
+        },
+        "max_tokens": {
+          "default": 2048,
+          "maximum": 16384,
+          "minimum": 1,
+          "title": "Max Tokens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "purpose",
+        "expected_schema"
+      ],
+      "title": "RequestReaderConfig",
+      "type": "object"
+    },
+    "side_effects": [
+      "external_model_request"
+    ],
     "hidden": false
   }
 ]

@@ -54,7 +54,7 @@ def setup(tmp_path, monkeypatch):
             {'original':'string','value':'string'},{'text':'string','branch':'string','reply':'string','report':'string'},
             ExtractionCheckConfig,unsafe,branch_routes=('continue','reply'),optional_inputs={'reference':'string'}))
     store = Store(f'sqlite:///{tmp_path}/review.db',Fernet.generate_key());store.allow_model('ollama','fixture')
-    worker = Worker(store,common_reply_cache=None)
+    worker = Worker(store)
     connection = worker.tools.save_connection({'name':'Receiver','provider':'http','endpoint':'https://receiver.example'})['id']
     calls = [];model_calls = [];responses = []
     async def chat(model,system,prompt,usage=None,**kwargs):

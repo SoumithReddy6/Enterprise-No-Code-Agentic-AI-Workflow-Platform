@@ -272,3 +272,11 @@ register(NodeDefinition('verify_extraction','Verify extraction','Control',
     'Check exact facts against original input and configured rules; uncertain interpretations require review.',
     {'original':'string','value':'string'},{'text':'string','branch':'string','reply':'string','report':'string'},
     ExtractionCheckConfig,verify_extraction_node,branch_routes=('continue','reply'),optional_inputs={'reference':'string'}))
+
+from .request_safety import request_reader_node
+from .request_reader import RequestReaderConfig
+register(NodeDefinition('request_reader','Request reader','Control',
+    'Reply to prepared messages, read the request with one model call, then check every value in code. Code chooses the branch.',
+    {'message':'string'},{'text':'string','branch':'string','reply':'string','report':'string','reading':'string'},
+    RequestReaderConfig,request_reader_node,side_effects=('external_model_request',),
+    branch_routes=('continue','reply'),optional_inputs={'reference':'string'}))

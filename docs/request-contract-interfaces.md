@@ -1,7 +1,8 @@
 # Request admission interfaces, runtime checks and editor (Steps 2–7)
 
-The registry now includes Greeting cache, Request router and Verify extraction.
-Contract 2 enables runtime verification and typed human review. New workflow setup
+The registry includes the Request reader. It replaces Greeting cache, Request router
+and Verify extraction in new workflows; those three stay loadable for saved workflows
+but are not in the palette (see [Request reader](#request-reader)). Contract 2 enables runtime verification and typed human review. New workflow setup
 and typed-review presentation are available in the editor; the new narrative starter
 uses contract 2. Saved contract-1 workflows retain their behavior. See
 [workflow setup and review](request-workflow-setup.md). Live semantic accuracy is Step 8.
@@ -25,13 +26,17 @@ of 500 characters in each list. Router decisions require all four fields: route,
 reason, missing_fields and reply. Proceed requires empty missing_fields and reply;
 clarify/out_of_scope require a nonblank reply. A decision is not authorization.
 
-Extraction configuration uses `expected_schema`, `required_fields`, `field_rules`,
-and `cross_checks`. Fields are JSON Pointers (up to 128 characters), with at most 64
-required fields and 64 rules; every required field needs a rule. Rule parameters are:
+Extraction configuration uses `expected_schema`, `required_fields`, `required_any`,
+`field_rules`, and `cross_checks`. Fields are JSON Pointers (up to 128 characters), with
+at most 64 required fields and 64 rules; every required field needs a rule.
+`required_any` holds up to 8 groups of up to 8 fields: the request is complete when every
+field of at least one group is present, and every field in a group needs a rule. Rule
+parameters are:
 
 | kind | required parameters besides field/kind |
 |---|---|
 | quoted | none |
+| accept_quoted | none |
 | source_field | source_pointer |
 | enum | allowed_values (1–100 JSON scalars) |
 | reference_member | reference_list and reference_key (JSON Pointers) |
@@ -39,11 +44,14 @@ required fields and 64 rules; every required field needs a rule. Rule parameters
 Cross-checks are up to 20 expressions in the existing Calculate check language.
 The whole configuration is limited to 20,000 UTF-8 serialized bytes. A verification
 report has verdict, complete and up to 64 unique per-field outcomes (field, status,
-reason); it is limited to 8,192 bytes. Incomplete, absent, failed or unverified
-coverage cannot yield a passed report. Reports do not mint verification receipts.
+reason); it is limited to 8,192 bytes. Incomplete, failed or unverified coverage, or
+an absent required field, cannot yield a passed report. An optional field the request
+does not state (`absent`, reason `value_absent`) may appear in a passed report, but only
+beside at least one passed field. A cross-check that reads such a field is not applied. Reports do not mint verification receipts.
 
-Contract-2 structural validation requires Input → Greeting cache → Request router,
-using the original trigger message. Reply routes terminate at Response. Extraction
+Contract-2 structural validation requires the entry Input → Request reader (optionally
+through independent record reads that supply its reference), or the earlier Input →
+Greeting cache → Request router, using the original trigger message. Reply routes terminate at Response. Extraction
 Agents and verification originals also bind to the trigger, never router paraphrases.
 Reference-member rules require an explicit, upstream independent-read binding.
 Writes and model-dependent business decisions require verification on every possible
@@ -69,7 +77,7 @@ value and per-field report. This does not claim general semantic validation by a
 
 The runtime creates `_verification` receipts and validates them again on resume against
 the exact run, original input, value, reference context, verifier identity and frozen
-workflow policy. A handler, model response or Redis entry cannot supply a grant.
+workflow policy. A handler or model response cannot supply a grant.
 Human confirmation is also checked against the real tenant-scoped completed approval
 record. A label remains an origin label: accepting a guess does not relabel it source.
 
@@ -103,3 +111,28 @@ Contract-1 behavior is retained. Contract 2 requires its complete graph and conf
 acceptance rules. Step 7 adds new-workflow setup and typed-review controls without
 converting saved workflows. Business drafts configure no writes and require real
 reference connections where applicable. Step 8 separately measures live model quality.
+
+## Request reader
+
+The `request_reader` node binds `message` to the trigger and, optionally, `reference` to
+an independent record read. Its settings are the request contract: `purpose`,
+`accepted_requests`, `excluded_requests`, `examples`, `prepared_replies`, the extraction
+settings above (`expected_schema` must be an object schema with at least one property;
+at least one required field or group), and the model settings.
+
+It returns `text` (the read values as exact JSON), `branch` (`continue` or `reply`),
+`reply`, `report` and `reading` (the validated model answer, or `""` for a prepared
+reply). A prepared reply makes no model call and issues no receipt. Otherwise one model
+call returns `{"type", "values", "reply"}` with exact numbers and unique keys, and values
+that match the schema; one invalid answer earns one repair, and a second fails the node
+with no branch. Code then runs the same checks as Verify extraction and chooses the
+branch by the table in [workflow setup](request-workflow-setup.md). A passed check with
+an `unrelated` type requires an interpretation review whose payload includes
+`request_type`.
+
+The runtime owns this handler, as for Verify extraction. It issues the `_verification`
+receipt and a `_reading` record (input, policy and reading digests). On restore it
+validates the reading, recomputes the check and the branch table, and refuses a
+continuation that needed a person but has no confirmed review. A review pause keeps the
+validated reading, so resuming makes no second model call.
+

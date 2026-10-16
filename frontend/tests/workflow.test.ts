@@ -96,8 +96,7 @@ void test('import preserves a draft with known nodes for repair in the editor', 
       'llm',
       'agent',
       'response',
-      'greeting_cache',
-      'request_router',
+      'request_reader',
     ]),
     draft,
   );
@@ -112,12 +111,12 @@ void test('attachment kinds and target handles affect execution identity', () =>
   };
   assert.equal(sameExecutionGraph(seed, changed), false);
 });
-void test('new starter preserves original input through admission to a narrative Agent', () => {
+void test('new starter preserves original input through the request reader to a narrative Agent', () => {
   const agent = seed.nodes.find(n => n.type === 'agent')!;
-  const router = seed.nodes.find(n => n.type === 'request_router')!;
+  const reader = seed.nodes.find(n => n.type === 'request_reader')!;
   assert.equal(agent.inputs.input, 'input.message');
-  assert.ok(seed.edges.some(e => e.source === router.id && e.target === agent.id && e.sourceHandle === 'continue'));
-  assert.ok(seed.nodes[0].position.y < router.position.y && router.position.y < agent.position.y);
+  assert.ok(seed.edges.some(e => e.source === reader.id && e.target === agent.id && e.sourceHandle === 'continue'));
+  assert.ok(seed.nodes[0].position.y < reader.position.y && reader.position.y < agent.position.y);
 });
 
 import { connectionKind, paletteCategory } from '../lib/workflow.ts';
