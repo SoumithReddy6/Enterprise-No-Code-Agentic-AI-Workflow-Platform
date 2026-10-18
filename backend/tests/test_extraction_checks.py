@@ -475,3 +475,45 @@ def test_a_check_that_fails_for_another_reason_is_never_skipped_for_an_unread_nu
     settings = discounted(cross_checks=['total / quantity == coalesce(unit_price, discounted_price)'])
     report = run('total $1,000 for 0 items at $450', '{"quantity":0,"unit_price":450,"discounted_price":null,"total":1000}', settings)
     assert report.verdict == 'needs_review' and fields(report)[''] == ('unverified', 'cross_check_unavailable')
+
+
+@pytest.mark.parametrize('check,original,divisor', [
+    # coalesce reads the null discounted_price, then the division fails: the null is no excuse.
+    ('total == quantity * coalesce(discounted_price, unit_price) / divisor', '3 at $450, total $1,000, divisor 0', 0),
+    # A type error after an earlier null is not a missing value either.
+    ('total == coalesce(discounted_price, unit_price) * quantity and flag', '3 at $450, total $1,350, divisor 1', 1),
+])
+def test_an_earlier_null_never_excuses_a_different_calculation_error(check, original, divisor):
+    schema = {'type': 'object', 'properties': {**{f: {'type': ['number', 'null']} for f in
+        ('quantity', 'unit_price', 'discounted_price', 'total', 'divisor')}, 'flag': {'type': 'number'}}}
+    settings = ExtractionCheckConfig(expected_schema=schema, required_fields=['/quantity', '/unit_price', '/total'],
+        field_rules=[accept('/' + f) for f in ('quantity', 'unit_price', 'discounted_price', 'total', 'divisor', 'flag')],
+        cross_checks=[check])
+    value = {'quantity': 3, 'unit_price': 450, 'discounted_price': None, 'total': 1000 if divisor == 0 else 1350,
+             'divisor': divisor, 'flag': 1}
+    report = run(original, json.dumps(value), settings)
+    assert report.verdict == 'needs_review' and fields(report)[''] == ('unverified', 'cross_check_unavailable'), fields(report)
+
+
+@pytest.mark.parametrize('expression,value', [
+    ('total == quantity * unit_price', {'total': None, 'quantity': 3, 'unit_price': 450}),
+    ('total == quantity * unit_price', {'quantity': 3, 'unit_price': 450}),
+    ('not flag', {'flag': None}),
+])
+def test_only_a_missing_value_raises_the_missing_value_error(expression, value):
+    from backend.app import calculate
+    with pytest.raises(calculate.MissingValue):
+        calculate.evaluate(calculate.parse(expression), value)
+
+
+@pytest.mark.parametrize('expression,value', [
+    ('total == quantity / divisor', {'total': 1, 'quantity': 3, 'divisor': 0}),
+    ('total == coalesce(discount, price) / divisor', {'total': 1, 'discount': None, 'price': 3, 'divisor': 0}),
+    ('not flag', {'flag': 1}),
+    ('total == quantity', {'total': 'x', 'quantity': 3}),
+])
+def test_other_calculation_errors_are_not_missing_values(expression, value):
+    from backend.app import calculate
+    with pytest.raises(calculate.CalculationError) as error:
+        calculate.evaluate(calculate.parse(expression), value)
+    assert not isinstance(error.value, calculate.MissingValue)

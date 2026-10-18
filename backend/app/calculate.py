@@ -45,6 +45,11 @@ class CalculationError(ValueError):
     pass
 
 
+class MissingValue(CalculationError):
+    """A comparison or logic step met a missing value. Only this error means "not stated";
+    division, range and type errors are never excused by a missing field."""
+
+
 @dataclass(frozen=True)
 class Node:
     kind: str           # number, path, unary, binary, compare, and, or, not, call
@@ -220,7 +225,7 @@ def _field(value, path):
     current = value
     for key in path.split('.'):
         if not isinstance(current, dict) or key not in current:
-            raise CalculationError(f'field {path} is missing')
+            raise MissingValue(f'field {path} is missing')
         current = current[key]
     return current
 
@@ -310,7 +315,7 @@ def _evaluate(node, value, used):
     if kind == 'compare':
         left, right = (_evaluate(arg, value, used) for arg in node.args)
         if left is None or right is None:
-            raise CalculationError(f'cannot compare with a missing value ({node.value})')
+            raise MissingValue(f'cannot compare with a missing value ({node.value})')
         if isinstance(left, bool) != isinstance(right, bool):
             raise CalculationError(f'cannot compare true/false with a number ({node.value})')
         if isinstance(left, bool) and node.value not in ('==', '!='):
@@ -320,6 +325,8 @@ def _evaluate(node, value, used):
     if kind in ('and', 'or', 'not'):
         def truth(arg):
             result = _evaluate(arg, value, used)
+            if result is None:
+                raise MissingValue(f'{kind} needs true/false values, not a number or a missing value')
             if not isinstance(result, bool):
                 raise CalculationError(f'{kind} needs true/false values, not a number or a missing value')
             return result

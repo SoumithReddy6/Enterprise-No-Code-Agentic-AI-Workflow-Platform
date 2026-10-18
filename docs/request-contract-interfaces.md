@@ -47,9 +47,10 @@ report has verdict, complete and up to 64 unique per-field outcomes (field, stat
 reason); it is limited to 8,192 bytes. Incomplete, failed or unverified coverage, or
 an absent required field, cannot yield a passed report. An optional field the request
 does not state (`absent`, reason `value_absent`) may appear in a passed report, but only
-beside at least one passed field. A cross-check that cannot compare because a field it
-actually reads is absent is not applied. Fields that `coalesce` does not reach never
-disable a check, and a check that fails for any other reason never passes. Reports do not mint verification receipts.
+beside at least one passed field. A cross-check is not applied only when a missing value
+stopped its comparison (`MissingValue`) and a field it actually read is absent. Fields that
+`coalesce` does not reach never disable a check. Division, range and type errors never
+pass, whatever nulls were read before them. Reports do not mint verification receipts.
 
 Contract-2 structural validation requires the entry Input → Request reader (optionally
 through independent record reads that supply its reference), or the earlier Input →

@@ -130,7 +130,9 @@ same gate and kept its default. This is a decision for review (section 8).
 | A cycle of record reads before the reader (`Input → A → B → A`) hung validation. | The entry walk stops at a repeated node; the entry error is reported. | Test in a child process with a 20 s limit; fails on `c55a02a`, passes now. Mutant without the stop hangs and fails. |
 | A null field that `coalesce` never needs disabled a cross-check (`total == quantity * coalesce(discounted_price, unit_price)` with total $1,000 for 3 × $450 passed). | A check is skipped only when it cannot compare because a field it actually read is absent. A check that fails for any other reason gives `cross_check_unavailable`. | 3 tests fail on `c55a02a` and pass now; 2 mutants killed. |
 
-After the fixes: backend `PYTHONHASHSEED` 0–4 pass, 1,714 tests each; the fault-profile gate
-passes. The recorded live measurement ran on `c55a02a` code and was not repeated. These
+| An earlier null still excused an unrelated error (`total == quantity * coalesce(discounted_price, unit_price) / divisor` with divisor 0 passed), found by audit of `dd38343`. | The calculator raises `MissingValue` only when a missing value stops a comparison or logic step, or a field is missing. Only that error, with an absent field read, skips a check. | 2 tests fail on `dd38343` and pass now; 7 calculator tests separate the error types; 4 mutants killed. |
+
+After the fixes: backend `PYTHONHASHSEED` 0–4 pass, 1,723 tests each; the fault-profile
+gate passes. The recorded live measurement ran on `c55a02a` code and was not repeated. These
 fixes affect only workflows with cycles or with checks that use `coalesce`, and the
 measured templates have neither.

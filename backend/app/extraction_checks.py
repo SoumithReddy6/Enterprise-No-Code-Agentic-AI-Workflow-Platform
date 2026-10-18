@@ -212,10 +212,12 @@ def verify_extraction(original: str, value: str, config: ExtractionCheckConfig,
             if not calculate.is_check(tree):raise calculate.CalculationError('not a check')
             passed = calculate.evaluate(tree, parsed, used)
             used_paths = list(dict.fromkeys(provenance.pointer(p.split('.')) for p in used))
-        except calculate.CalculationError:
-            # A check that could not compare because a field it actually read is not stated
-            # has nothing to compare. Fields coalesce did not need never disable a check.
-            if any(results.get(provenance.pointer(p.split('.')), (None,))[0] == 'absent' for p in used):continue
+        except calculate.CalculationError as error:
+            # Only a missing value that stopped the comparison means "nothing to compare", and
+            # only when a field the check actually read is not stated. Division, range and type
+            # errors never pass, whatever nulls were read before them.
+            if isinstance(error, calculate.MissingValue) and any(
+                    results.get(provenance.pointer(p.split('.')), (None,))[0] == 'absent' for p in used):continue
             results[''] = ('unverified', 'cross_check_unavailable');continue
         if passed is not True:
             for path in used_paths or ['']:results[path] = ('failed', 'cross_check_failed');hard_failure.add(path)
