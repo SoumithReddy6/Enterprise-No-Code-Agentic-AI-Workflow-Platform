@@ -207,3 +207,37 @@ async def test_qa_template_replies_to_a_message_with_no_question(runtime):
     # No values and no "unrelated" reading: code asks for the required fact, not the model.
     assert result['output'] == 'This request needs more details: question. Send it again with these details.'
     assert len(runtime[4]) == 1
+
+
+def test_the_purchase_demo_needs_no_connection_and_keeps_every_value_check():
+    demo = json.loads((EXAMPLES / 'purchase-demo.json').read_text())
+    template = json.loads((EXAMPLES / 'purchase.json').read_text())
+    assert validate_workflow(Workflow.model_validate(demo)) == []
+    assert not any(n['type'].startswith('tool_') for n in demo['nodes'])
+    reader = next(n for n in demo['nodes'] if n['type'] == 'request_reader')['config']
+    expected = next(n for n in template['nodes'] if n['type'] == 'request_reader')['config']
+    # Only the record membership rule, the purpose and the model differ from the template.
+    assert reader['field_rules'] == [r for r in expected['field_rules'] if r['kind'] != 'reference_member']
+    for key in ('expected_schema', 'required_fields', 'required_any', 'cross_checks', 'prepared_replies'):
+        assert reader[key] == expected[key], key
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('message,values,status,output', [
+    ('3 laptops at $450 each.', {'item': 'laptops', 'quantity': 3, 'unit_price': 450}, 'success', 'Checked purchase exceeds $1,000'),
+    ('2 chairs at $300 each.', {'item': 'chairs', 'quantity': 2, 'unit_price': 300}, 'success', 'Checked purchase is $1,000 or less'),
+    ('Buy some laptops.', {'item': 'laptops'}, 'success', 'This request needs more details: total or quantity and unit price.'),
+    ('3 laptops at $450, total $1,000.', {'item': 'laptops', 'quantity': 3, 'unit_price': 450, 'total': 1000}, 'awaiting_approval', ''),
+    ('Hello', None, 'success', 'Hello! Send your request'),
+])
+async def test_the_purchase_demo_runs_each_branch_without_connections(runtime, message, values, status, output):
+    store, worker, _, answers, calls, reads, _ = runtime
+    workflow = json.loads((EXAMPLES / 'purchase-demo.json').read_text())
+    next(n for n in workflow['nodes'] if n['type'] == 'request_reader')['config']['model'] = 'fixture'
+    if values is not None:
+        answers.append(json.dumps({'type': 'request', 'values': {f: values.get(f) for f in FIELDS['purchase']}, 'reply': ''}))
+    saved = store.create_run(workflow, message)
+    await worker.execute(store.claim_next(worker.owner))
+    result = store.run(saved['id'])
+    assert result['status'] == status, result['error']
+    assert result['output'].startswith(output) and not reads and len(calls) == (values is not None)

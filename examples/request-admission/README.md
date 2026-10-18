@@ -20,6 +20,29 @@ cloud model. Imported files preserve their settings; select models after importi
 | `refund.json` | `{"order_id":"ORDER-1","amount":24}` — independent order membership and the exact requested amount, then an illustrative $100 threshold. This neither establishes refund entitlement nor sends money. |
 | `yesno.json` | `Is record MEMBER-1 eligible?` — record identity plus a yes/no interpretation. The generic example requires human confirmation of eligibility; membership of a boolean in some other record proves nothing about this member. |
 
+### `purchase-demo.json`: run it with no connections
+
+`purchase.json` needs a Jira connection with product records. `purchase-demo.json` is the
+same workflow without the record read: it needs only an enabled `llama3.1:latest` (or
+select another model after import). Every other check is the same. Because no product
+record is checked, any item that is written in the request is accepted.
+
+These messages gave the same outcome in 5 of 5 runs with local `llama3.1:latest`:
+
+| Message | Outcome |
+|---|---|
+| `Hello` | Prepared reply; no model call |
+| `I need 3 laptops at $450 each` | Code calculates $1,350 → "exceeds $1,000" branch |
+| `Order a desk for $800.` | $800 → "$1,000 or less" branch |
+| `laptops for a total of $1,350` | The stated total is used → "exceeds" branch |
+| `Buy some laptops.` | Code asks for a total, or a quantity and unit price |
+| `I need 3 laptops at $450 each, total $1,000` | The cross-check fails → waits for a person |
+| `What is the weather tomorrow?` | The model's reply; no business branch |
+
+A small model is not always consistent. For example, `3 laptops at $450 each.` was often
+read without the quantity, so the reader asked for details. That is safe, but not a
+clean demo.
+
 Purchase, refund and yes/no include a **read-only Jira search** for independent
 reference records. It runs before the reader, which checks values against it, so a
 prepared reply in these examples still makes one record read (but no model call).

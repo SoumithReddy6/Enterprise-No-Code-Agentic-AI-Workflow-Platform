@@ -132,7 +132,11 @@ same gate and kept its default. This is a decision for review (section 8).
 
 | An earlier null still excused an unrelated error (`total == quantity * coalesce(discounted_price, unit_price) / divisor` with divisor 0 passed), found by audit of `dd38343`. | The calculator raises `MissingValue` only when a missing value stops a comparison or logic step, or a field is missing. Only that error, with an absent field read, skips a check. | 2 tests fail on `dd38343` and pass now; 7 calculator tests separate the error types; 4 mutants killed. |
 
-After the fixes: backend `PYTHONHASHSEED` 0–4 pass, 1,723 tests each; the fault-profile
+| A number written into a text value hid a contradiction. Observed live on 2026-10-18 with the purchase demo: "3 laptops at $450, total $1,000." read as `item: "3 laptops at $450"`, `quantity: null`, took the low branch automatically in 2 of 3 runs. | When the schema has number fields, a stated number counts as read only as a number value. Without number fields (Q&A), text still counts. | 3 tests fail on `2fbdd65` and pass now; 2 mutants killed; live: 10/10 runs of that message wait for a person. |
+
+The frozen-suite measurement ran before this fix, so its numbers do not include it.
+
+After the fixes: backend `PYTHONHASHSEED` 0–4 pass, 1,733 tests each; the fault-profile
 gate passes. The recorded live measurement ran on `c55a02a` code and was not repeated. These
 fixes affect only workflows with cycles or with checks that use `coalesce`, and the
 measured templates have neither.

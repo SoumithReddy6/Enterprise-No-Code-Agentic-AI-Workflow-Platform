@@ -426,8 +426,11 @@ def test_invalid_required_groups_and_rules_are_refused(settings):
     ('Buy 3 laptops at $450 each, $1,350 total.', order(quantity=3, unit_price=450, total=1350), 'passed'),
     ('three laptops at $450 each', order(quantity=3, unit_price=450), 'passed'),
     ('3 laptops at $450 each for project 2027', order(quantity=3, unit_price=450), 'needs_review'),
-    # A number inside a read text value is accounted for.
-    ('3 laptops 15 inch at $450 each', order(item='laptops 15 inch', quantity=3, unit_price=450), 'passed'),
+    # With number fields, a number hidden in a text value is not read: it may be a quantity.
+    ('3 laptops 15 inch at $450 each', order(item='laptops 15 inch', quantity=3, unit_price=450), 'needs_review'),
+    # Observed live: the quantity written into the item text hid a contradicting total.
+    ('3 laptops at $450, total $1,000.', order(item='3 laptops at $450', unit_price=450, total=1000), 'needs_review'),
+    ('3 laptops at $450, total $1,000.', order(item='3 laptops', unit_price=450, total=1000), 'needs_review'),
 ])
 def test_every_stated_number_must_be_read_when_quotes_are_accepted(original, value, expected):
     report = run(original, value, purchase())
@@ -517,3 +520,10 @@ def test_other_calculation_errors_are_not_missing_values(expression, value):
     with pytest.raises(calculate.CalculationError) as error:
         calculate.evaluate(calculate.parse(expression), value)
     assert not isinstance(error.value, calculate.MissingValue)
+
+
+@pytest.mark.parametrize('question', ['How many legs does a spider have, 8?', 'Explain HTTP 500 errors'])
+def test_without_number_fields_a_number_inside_read_text_is_read(question):
+    settings = ExtractionCheckConfig(expected_schema={'type': 'object', 'properties': {'question': {'type': ['string', 'null']}}},
+        required_fields=['/question'], field_rules=[accept('/question')])
+    assert run(question, json.dumps({'question': question}), settings).verdict == 'passed'

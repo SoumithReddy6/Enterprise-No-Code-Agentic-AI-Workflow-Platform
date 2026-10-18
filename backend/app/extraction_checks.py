@@ -120,6 +120,20 @@ def _schema_safe(schema):
     return True
 
 
+def _declares_numbers(schema):
+    """Whether any part of the schema allows a number or integer. Unknown shapes count as yes."""
+    pending = [schema]; visits = 0
+    while pending:
+        current = pending.pop(); visits += 1
+        if visits > MAX_VISITS:return True
+        if isinstance(current, dict):
+            kind = current.get('type')
+            if kind in ('number', 'integer') or isinstance(kind, list) and {'number', 'integer'} & set(kind):return True
+            pending.extend(current.values())
+        elif isinstance(current, list):pending.extend(current)
+    return False
+
+
 def _reference(reference, origins):
     if not isinstance(origins, provenance.EvidenceContext) or not origins.complete or not origins.tenant_id:return MISSING
     if not any(isinstance(r, provenance.ReferenceEvidence) and r.tenant_id == origins.tenant_id
@@ -234,13 +248,15 @@ def verify_extraction(original: str, value: str, config: ExtractionCheckConfig,
     # accept_quoted proves where a value is written, not its role. A reading that leaves
     # out a stated number can hide a contradiction ("3 at $450, total $1,000" read without
     # the 3), so every number in the request must appear among the read values.
+    # When the workflow has number fields, a number written into a text value ("item":
+    # "3 laptops") is not read: it may be the quantity, hidden from the cross-check.
     accepted = {r.field for r in config.field_rules if r.kind == 'accept_quoted'}
     if eligible and '' not in results and any(results.get(p, (None,))[0] == 'passed' for p in accepted):
-        read = set()
+        read = set(); text_counts = not _declares_numbers(config.expected_schema)
         for path in actual:
             leaf = at_pointer(parsed, path)
             if isinstance(leaf, (int, Decimal)) and not isinstance(leaf, bool):read.add(Decimal(leaf))
-            elif isinstance(leaf, str):read |= provenance.numbers_in(leaf)
+            elif isinstance(leaf, str) and text_counts:read |= provenance.numbers_in(leaf)
         if provenance.numbers_in(original) - read:results[''] = ('unverified', 'unread_number')
     missing_required = any(results.get(p, (None,))[0] == 'absent' for p in config.required_fields) or bool(config.required_any and not group_met)
     return _bounded_report(results, clarify=missing_required)
