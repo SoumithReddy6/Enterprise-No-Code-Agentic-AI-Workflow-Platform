@@ -126,3 +126,24 @@ def test_the_frontend_route_fixture_matches_the_backend():
     from backend.app.request_contracts import node_routes
     fixture = json.loads(FIXTURE.read_text())
     assert fixture and all(list(node_routes(Node.model_validate(c['node']))) == c['routes'] for c in fixture)
+
+
+@pytest.mark.parametrize('result', [(), [], 'go', ('only',), None, ['left', 1], {'left': 1, 'right': 2}])
+def test_a_malformed_callback_result_is_refused_after_valid_settings(monkeypatch, result):
+    definition = NodeDefinition('test_bad_routes', 'Bad', 'Control', '', {'value': 'string'}, {'branch': 'string'},
+                                RoutedConfig, routed, routes_from_config=lambda config: result)
+    monkeypatch.setitem(REGISTRY, definition.type, definition)
+    from backend.app.request_contracts import node_routes
+    with pytest.raises(ValueError):
+        node_routes(Node(id='n', type='test_bad_routes', config={'routes': ['left']}))
+    raw = flow();raw['nodes'][1]['type'] = 'test_bad_routes'
+    errors = validate_workflow(Workflow.model_validate(raw))
+    assert any('invalid control routes' in e for e in errors), errors
+
+
+def test_a_list_result_is_accepted_like_a_tuple(monkeypatch):
+    definition = NodeDefinition('test_list_routes', 'List', 'Control', '', {'value': 'string'}, {'branch': 'string'},
+                                RoutedConfig, routed, routes_from_config=lambda config: [*config.routes, 'default'])
+    monkeypatch.setitem(REGISTRY, definition.type, definition)
+    raw = flow();raw['nodes'][1]['type'] = 'test_list_routes'
+    assert validate_workflow(Workflow.model_validate(raw)) == []

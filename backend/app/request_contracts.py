@@ -62,15 +62,19 @@ def is_control(definition) -> bool:
 
 def node_routes(node, definition=None) -> tuple[str, ...]:
     """The routes of one node: the only source of routes for validation, compilation,
-    fresh outputs, checkpoint restore and the editor. Invalid settings give no routes (the
-    settings error is reported instead); valid settings that name invalid routes raise."""
+    fresh outputs, checkpoint restore and the editor. Only invalid settings give no routes
+    (the settings error is reported instead). Valid settings must give 2–16 valid routes."""
     from .registry import REGISTRY
     definition = definition or REGISTRY.get(node.type)
     if definition is None:return ()
     if definition.routes_from_config is None:return route_contract(definition)
     try:config = definition.config_model.model_validate(node.config)
     except (ValueError, TypeError):return ()
-    return _checked_routes(tuple(definition.routes_from_config(config)))
+    routes = definition.routes_from_config(config)
+    # A string or a mapping would iterate into the wrong handles ("go" -> g, o).
+    if not isinstance(routes, (tuple, list)):raise ValueError('Configured routes must be a list of handles.')
+    if len(routes) < 2:raise ValueError('A control needs 2–16 routes.')
+    return _checked_routes(tuple(routes))
 
 
 class CommonReply(StrictModel):

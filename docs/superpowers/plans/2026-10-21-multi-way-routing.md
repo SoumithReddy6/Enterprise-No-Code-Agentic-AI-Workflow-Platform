@@ -65,7 +65,18 @@ that reads routes must ask the node. One missed place is a bypass.
 - Backend/frontend parity: a shared JSON fixture of nodes and their expected routes; both
   sides must produce the same routes (fails on baseline: no `nodeRoutes`).
 
-## Task 2: the Switch node and its execution
+## Review changes (2026-10-21, after Task 1)
+
+1. **Tasks 2 and 3 land in one commit.** If the Switch were registered before its safety
+   rule, one pushed version would let an unchecked model value choose a business path.
+2. **Task 1 fix:** a configured-route callback must return a list or tuple of 2–16 valid
+   handles. A string, a mapping, `None` or fewer than 2 routes after valid settings is an
+   error; only invalid settings give no routes.
+3. **Positive parity fixture:** Task 2 adds Switch nodes with valid cases to
+   `frontend/tests/fixtures/node-routes.json`, so backend and editor are proven to agree on
+   configured routes, not only on static ones.
+
+## Task 2: the Switch node and its execution (same commit as Task 3)
 
 **Files:** new `backend/app/switch.py`; `registry.py`; `compiler.py`; `request_safety.py`;
 `provenance.py`; tests `backend/tests/test_switch.py`.
@@ -100,7 +111,7 @@ that reads routes must ask the node. One missed place is a bypass.
 - **Conformance test:** one Switch workflow through validation, platform graph,
   compilation, fresh output and cached output, with a forged branch at each boundary.
 
-## Task 3: only checked or trusted values (the safety rule)
+## Task 3: only checked or trusted values (the safety rule, same commit as Task 2)
 
 **Files:** `compiler.py` (`request_contract_errors`), `request_safety.py`.
 
@@ -127,6 +138,8 @@ that reads routes must ask the node. One missed place is a bypass.
 - A case with id `approved` before an HTTP write with `approval: true` still pauses for
   write approval; a write after the Switch still needs a valid binding.
 - Durable worker: a run that resumes after a crash takes the same case and sends once.
+- Parity: `node-routes.json` gains Switch nodes with 1, 3 and 15 valid cases (and one with
+  invalid settings); the editor's `nodeRoutes` and the backend's `node_routes` must agree.
 
 ## Task 4: the editor
 
@@ -182,7 +195,7 @@ the registry, with a parity test like `condition-node.json`).
 
 ## Commits
 
-One commit per task (5 commits), each with its own tests. The user commits and pushes;
+One commit per task, except Tasks 2 and 3, which are one commit (4 commits). Each has its own tests. The user commits and pushes;
 the next task starts after hosted CI passes.
 
 | Task | Size estimate | Main risk |
