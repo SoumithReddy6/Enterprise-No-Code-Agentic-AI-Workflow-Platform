@@ -8,7 +8,7 @@ import time
 from langgraph.graph import StateGraph, START, END
 from pydantic import ValidationError
 from .models import Workflow
-from .request_contracts import control_routes
+from .request_contracts import is_control, node_routes
 from .request_safety import VERIFIERS
 from .registry import REGISTRY, RESERVED_PORT_PREFIX, Context, validate_template
 from . import exact_json
@@ -141,7 +141,10 @@ def _validate_flow(workflow: Workflow) -> list[str]:
                 errors.append(f'{node.id}: invalid configuration. Check required fields and template syntax; inline credentials are not allowed.')
         except ValueError:
             errors.append(f'{node.id}: invalid configuration. Check required fields and template syntax; inline credentials are not allowed.')
-        routes = control_routes(definition)
+        try:routes = node_routes(node, definition)
+        except ValueError as exc:
+            errors.append(f'{node.id}: invalid control routes. {exc}');continue
+        if is_control(definition) and not routes:continue  # Its settings error is already reported.
         if not set(definition.inputs) <= set(node.inputs) or set(node.inputs) - (set(definition.inputs) | set(definition.optional_inputs)):
             errors.append(f'{node.id}: required inputs are {", ".join(definition.inputs) or "none"}.')
         links = outgoing[node.id]
@@ -452,7 +455,7 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     input_proofs=request_safety.resolved_proofs(run_state,node.inputs,inputs))
                 if completed and node.id in completed:
                     outputs=completed[node.id]
-                    if control_routes(definition) and (not isinstance(outputs, dict) or outputs.get('branch') not in control_routes(definition)):
+                    if is_control(definition) and (not isinstance(outputs, dict) or outputs.get('branch') not in node_routes(node, definition)):
                         raise ValueError(f'{node.id} cannot be restored: its branch is not a declared control route.')
                     if node.type=='request_router':
                         from .request_router import checked_router_checkpoint
@@ -522,7 +525,7 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                       ports={name:value for name,value in outputs.items() if name!=TRUNCATION_KEY}
                       if set(ports) != set(definition.outputs) or any(not (isinstance(value,list) and all(isinstance(item,dict) for item in value)) if definition.outputs[name]=='array<object>' else not isinstance(value,str) for name,value in ports.items()):
                           raise ValueError('Node returned outputs that do not match its declared contract.')
-                      if control_routes(definition) and outputs.get('branch') not in control_routes(definition):
+                      if is_control(definition) and outputs.get('branch') not in node_routes(node, definition):
                           raise ValueError('Node returned a branch outside its declared control routes.')
                       if TRUNCATION_KEY in outputs:
                           try:checked_truncation(outputs[TRUNCATION_KEY])
@@ -640,7 +643,7 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
     graph.add_edge(START, trigger)
     for node in sorted(workflow.nodes, key=lambda n: n.id):
         edges = sorted((e for e in workflow.edges if e.source == node.id), key=lambda e:e.id)
-        if control_routes(REGISTRY[node.type]):
+        if is_control(REGISTRY[node.type]):
             def route(state, id=node.id): return state['values'][id]['branch']
             graph.add_conditional_edges(node.id, route, {e.sourceHandle:e.target for e in edges})
         elif node.on_error == 'route':

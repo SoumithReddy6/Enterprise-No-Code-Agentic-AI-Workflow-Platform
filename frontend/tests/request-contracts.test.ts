@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { controlRoutes, inputPorts, setInputBinding, sameExecutionGraph, seed, type Definition } from '../lib/workflow.ts';
+import { nodeRoutes, inputPorts, setInputBinding, sameExecutionGraph, seed, type Definition } from '../lib/workflow.ts';
 
 const definition: Definition = {
   type: 'test_control', name: 'Test control', category: 'Control', description: '',
@@ -10,9 +10,10 @@ const definition: Definition = {
 };
 
 void test('handles come from the registry for any control type', () => {
-  assert.deepEqual(controlRoutes(definition), ['continue', 'reply']);
-  assert.deepEqual(controlRoutes({ ...definition, branch_routes: [] }), []);
-  assert.deepEqual(controlRoutes({ ...definition, branch_routes: undefined }), []);
+  const node = { type: 'test_control', config: {} };
+  assert.deepEqual(nodeRoutes(definition, node), ['continue', 'reply']);
+  assert.deepEqual(nodeRoutes({ ...definition, branch_routes: [] }, node), []);
+  assert.deepEqual(nodeRoutes({ ...definition, branch_routes: undefined }, node), []);
 });
 
 void test('optional inputs appear but clearing them removes the binding', () => {

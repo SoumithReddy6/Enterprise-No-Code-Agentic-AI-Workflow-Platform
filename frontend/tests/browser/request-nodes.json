@@ -11,6 +11,7 @@
       "message": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {},
@@ -32,6 +33,7 @@
       "message": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {},
@@ -55,6 +57,7 @@
       "text": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -86,6 +89,7 @@
       "provider": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -180,6 +184,7 @@
       "true",
       "false"
     ],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -289,6 +294,7 @@
       "text": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -334,6 +340,7 @@
       "sources": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {},
@@ -359,6 +366,7 @@
       "summary": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -408,6 +416,7 @@
       "grounding": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -545,6 +554,7 @@
       "text": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -625,6 +635,7 @@
       "text": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -700,6 +711,7 @@
       "items": "array<object>"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -782,6 +794,7 @@
       "text": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -868,6 +881,7 @@
       "text": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -951,6 +965,7 @@
       "text": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -999,6 +1014,7 @@
       "sources": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -1117,6 +1133,7 @@
       "grounding": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -1304,6 +1321,7 @@
       "continue",
       "reply"
     ],
+    "configurable_routes": false,
     "config_schema": {
       "$defs": {
         "CommonReply": {
@@ -1366,6 +1384,7 @@
       "continue",
       "reply"
     ],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -1481,6 +1500,7 @@
       "continue",
       "reply"
     ],
+    "configurable_routes": false,
     "config_schema": {
       "$defs": {
         "FieldRule": {
@@ -1664,6 +1684,7 @@
       "continue",
       "reply"
     ],
+    "configurable_routes": false,
     "config_schema": {
       "$defs": {
         "CommonReply": {

@@ -79,8 +79,8 @@ def check_port_names(definition):
             raise ValueError(f"{definition.type}: {kind} port names cannot start with '{RESERVED_PORT_PREFIX}' "
                              f"({', '.join(reserved)}); that prefix is reserved for run metadata.")
     if set(definition.inputs) & set(definition.optional_inputs):raise ValueError('Required and optional input names must be disjoint.')
-    from .request_contracts import control_routes
-    control_routes(definition)
+    from .request_contracts import route_contract
+    route_contract(definition)
 
 
 @dataclass
@@ -97,6 +97,8 @@ class NodeDefinition:
     hidden: bool = False
     branch_routes: tuple[str, ...] = ()
     optional_inputs: dict[str, str] = field(default_factory=dict)
+    # Routes taken from each node's validated settings (Switch); exclusive with branch_routes.
+    routes_from_config: Callable[..., tuple[str, ...]] | None = None
 
     def __post_init__(self):
         check_port_names(self)
@@ -105,7 +107,7 @@ class NodeDefinition:
         return {'type': self.type, 'name': self.name, 'version': 1,
                 'category': self.category, 'description': self.description,
                 'inputs': self.inputs, 'optional_inputs': self.optional_inputs, 'outputs': self.outputs,
-                'branch_routes': self.branch_routes,
+                'branch_routes': self.branch_routes,'configurable_routes': self.routes_from_config is not None,
                 'config_schema': self.config_model.model_json_schema(),
                 'side_effects': self.side_effects,'hidden':self.hidden}
 

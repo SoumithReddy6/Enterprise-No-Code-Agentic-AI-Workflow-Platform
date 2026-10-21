@@ -20,8 +20,8 @@ def split_graph(workflow):
         if edge.kind=='flow':
             if edge.targetHandle not in (None,'input'):errors.append(f'{edge.id}: flow must enter the input port.')
             continue
-        from .request_contracts import control_routes
-        if any(REGISTRY.get(n.type) and control_routes(REGISTRY[n.type]) for n in (source,target)):
+        from .request_contracts import is_control
+        if any(is_control(REGISTRY.get(n.type)) for n in (source,target)):
             errors.append(f'{edge.id}: control nodes must be flow steps, not body/tool/specialist attachments.')
         if edge.kind=='tool':
             if source.type not in TOOL_TYPES or target.type!='agent':errors.append('Tool connections must run from a tool or retrieval node to an Agent.')

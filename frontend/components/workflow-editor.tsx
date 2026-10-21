@@ -92,7 +92,8 @@ import {
   trustSummary,
   trustText,
   type Issue,
-  controlRoutes,
+  isControl,
+  nodeRoutes,
   inputPorts,
   setInputBinding,
 } from '@/lib/workflow';
@@ -195,8 +196,8 @@ function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
           <span className="port-label right">specialists</span>
         </>
       )}
-      {controlRoutes(definition).length ? (
-        controlRoutes(definition).map((route, index, routes) => (
+      {isControl(definition) ? (
+        nodeRoutes(definition, spec).map((route, index, routes) => (
           <div key={route}>
             <Handle type="source" id={route} position={Position.Bottom}
               style={{ left: `${30 + index * 45 / (routes.length - 1)}%` }} />

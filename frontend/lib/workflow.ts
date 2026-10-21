@@ -48,6 +48,7 @@ export type Definition = {
   optional_inputs?: Record<string, string>;
   outputs: Record<string, string>;
   branch_routes?: string[];
+  configurable_routes?: boolean;
   config_schema: { properties: Record<string, ConfigProperty> };
 };
 export type RunEvent = {
@@ -107,7 +108,21 @@ export function parseJsonSetting(text: string, type: string | undefined): unknow
   return value;
 }
 
-export const controlRoutes = (definition?: Definition): string[] => definition?.branch_routes ?? [];
+// Types whose routes come from each node's settings. The backend's routes_from_config is
+// the authority; tests/routes.test.ts pins both to tests/fixtures/node-routes.json.
+const CONFIGURED_ROUTES: Record<string, (config: Record<string, unknown>) => string[]> = {};
+/** The routes of one node, the only source of handles in the editor. */
+export function nodeRoutes(
+  definition: Definition | undefined,
+  node: Pick<WorkflowNode, 'type' | 'config'>,
+): string[] {
+  if (!definition) return [];
+  if (definition.configurable_routes)
+    return CONFIGURED_ROUTES[definition.type]?.(node.config ?? {}) ?? [];
+  return definition.branch_routes ?? [];
+}
+export const isControl = (definition?: Definition): boolean =>
+  !!definition && (!!definition.configurable_routes || !!definition.branch_routes?.length);
 export const inputPorts = (definition: Definition): Record<string, string> => ({ ...definition.inputs, ...definition.optional_inputs });
 export function setInputBinding(definition: Definition, bindings: Record<string, string>, port: string, value: string): Record<string, string> {
   const next = { ...bindings, [port]: value };

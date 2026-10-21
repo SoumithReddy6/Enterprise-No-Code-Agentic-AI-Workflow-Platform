@@ -15,6 +15,7 @@
     "true",
     "false"
   ],
+  "configurable_routes": false,
   "config_schema": {
     "additionalProperties": false,
     "properties": {

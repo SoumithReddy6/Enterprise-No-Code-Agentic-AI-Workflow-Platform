@@ -16,6 +16,7 @@
    "grounding": "string"
   },
   "branch_routes": [],
+  "configurable_routes": false,
   "config_schema": {
    "additionalProperties": false,
    "properties": {
@@ -153,6 +154,7 @@
    "text": "string"
   },
   "branch_routes": [],
+  "configurable_routes": false,
   "config_schema": {
    "additionalProperties": false,
    "properties": {
@@ -195,6 +197,7 @@
    "message": "string"
   },
   "branch_routes": [],
+  "configurable_routes": false,
   "config_schema": {
    "additionalProperties": false,
    "properties": {},
@@ -221,6 +224,7 @@
    "true",
    "false"
   ],
+  "configurable_routes": false,
   "config_schema": {
    "additionalProperties": false,
    "properties": {
@@ -330,6 +334,7 @@
    "text": "string"
   },
   "branch_routes": [],
+  "configurable_routes": false,
   "config_schema": {
    "additionalProperties": false,
    "properties": {
@@ -361,6 +366,7 @@
    "sources": "string"
   },
   "branch_routes": [],
+  "configurable_routes": false,
   "config_schema": {
    "additionalProperties": false,
    "properties": {},

@@ -35,16 +35,42 @@ def bounded_json(value, limit, name):
     if size > limit:raise ValueError(f'{name} exceeds {limit} serialized bytes.')
 
 
-def control_routes(definition) -> tuple[str, ...]:
-    """Read declared graph handles; no parallel list of control-node types."""
-    routes = definition.branch_routes
+def _checked_routes(routes) -> tuple[str, ...]:
     if not isinstance(routes, tuple) or any(not isinstance(r, str) for r in routes) or len(set(routes)) != len(routes):
-        raise ValueError('Control routes must be a tuple of unique handles.')
-    if routes:
-        if len(routes) < 2 or len(routes) > 16 or any(not isinstance(r, str) or not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{0,63}', r) or r == 'error' for r in routes):
-            raise ValueError('Declare 2–16 public control handles; error is reserved for recovery.')
-        if definition.outputs.get('branch') != 'string':raise ValueError('A control requires a string branch output.')
+        raise ValueError('Control routes must be unique handles.')
+    if routes and (len(routes) < 2 or len(routes) > 16 or any(
+            not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{0,63}', r) or r == 'error' for r in routes)):
+        raise ValueError('Declare 2–16 public control routes; error is reserved for recovery.')
     return routes
+
+
+def route_contract(definition) -> tuple[str, ...]:
+    """Type-level check at registration: static routes, or routes from each node's settings.
+
+    It returns the static routes only. A node instance's routes come from node_routes."""
+    routes = _checked_routes(definition.branch_routes)
+    configured = definition.routes_from_config is not None
+    if routes and configured:raise ValueError('Declare static routes or configured routes, not both.')
+    if (routes or configured) and definition.outputs.get('branch') != 'string':
+        raise ValueError('A control requires a string branch output.')
+    return routes
+
+
+def is_control(definition) -> bool:
+    return bool(definition and (definition.branch_routes or definition.routes_from_config is not None))
+
+
+def node_routes(node, definition=None) -> tuple[str, ...]:
+    """The routes of one node: the only source of routes for validation, compilation,
+    fresh outputs, checkpoint restore and the editor. Invalid settings give no routes (the
+    settings error is reported instead); valid settings that name invalid routes raise."""
+    from .registry import REGISTRY
+    definition = definition or REGISTRY.get(node.type)
+    if definition is None:return ()
+    if definition.routes_from_config is None:return route_contract(definition)
+    try:config = definition.config_model.model_validate(node.config)
+    except (ValueError, TypeError):return ()
+    return _checked_routes(tuple(definition.routes_from_config(config)))
 
 
 class CommonReply(StrictModel):

@@ -97,9 +97,9 @@ def test_control_cannot_be_attached(declared_control, kind):
 
 
 def test_condition_public_contract_and_optional_defaults():
-    from backend.app.request_contracts import control_routes
+    from backend.app.request_contracts import route_contract
     public = REGISTRY['condition'].public()
-    assert tuple(public['branch_routes']) == control_routes(REGISTRY['condition']) == ('true', 'false')
+    assert tuple(public['branch_routes']) == route_contract(REGISTRY['condition']) == ('true', 'false')
     assert public['optional_inputs'] == {}
 
 

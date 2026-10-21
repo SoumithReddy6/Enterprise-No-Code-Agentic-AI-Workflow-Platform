@@ -1,0 +1,83 @@
+[
+  {
+    "node": {
+      "id": "c",
+      "type": "condition",
+      "config": {
+        "contains": "x"
+      }
+    },
+    "routes": [
+      "true",
+      "false"
+    ]
+  },
+  {
+    "node": {
+      "id": "r",
+      "type": "request_reader"
+    },
+    "routes": [
+      "continue",
+      "reply"
+    ]
+  },
+  {
+    "node": {
+      "id": "v",
+      "type": "verify_extraction"
+    },
+    "routes": [
+      "continue",
+      "reply"
+    ]
+  },
+  {
+    "node": {
+      "id": "g",
+      "type": "greeting_cache"
+    },
+    "routes": [
+      "continue",
+      "reply"
+    ]
+  },
+  {
+    "node": {
+      "id": "q",
+      "type": "request_router"
+    },
+    "routes": [
+      "continue",
+      "reply"
+    ]
+  },
+  {
+    "node": {
+      "id": "a",
+      "type": "agent"
+    },
+    "routes": []
+  },
+  {
+    "node": {
+      "id": "o",
+      "type": "response"
+    },
+    "routes": []
+  },
+  {
+    "node": {
+      "id": "k",
+      "type": "calculate"
+    },
+    "routes": []
+  },
+  {
+    "node": {
+      "id": "u",
+      "type": "unknown_type"
+    },
+    "routes": []
+  }
+]

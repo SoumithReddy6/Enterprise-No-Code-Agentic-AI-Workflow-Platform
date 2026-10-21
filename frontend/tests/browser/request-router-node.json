@@ -11,6 +11,7 @@
       "message": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {},
@@ -39,6 +40,7 @@
       "continue",
       "reply"
     ],
+    "configurable_routes": false,
     "config_schema": {
       "$defs": {
         "CommonReply": {
@@ -101,6 +103,7 @@
       "continue",
       "reply"
     ],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {
@@ -208,6 +211,7 @@
       "sources": "string"
     },
     "branch_routes": [],
+    "configurable_routes": false,
     "config_schema": {
       "additionalProperties": false,
       "properties": {},
