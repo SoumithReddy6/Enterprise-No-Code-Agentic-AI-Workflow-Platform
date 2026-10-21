@@ -275,6 +275,11 @@ register(NodeDefinition('verify_extraction','Verify extraction','Control',
     {'original':'string','value':'string'},{'text':'string','branch':'string','reply':'string','report':'string'},
     ExtractionCheckConfig,verify_extraction_node,branch_routes=('continue','reply'),optional_inputs={'reference':'string'}))
 
+from .switch import SwitchConfig, routes as switch_routes, switch_node
+register(NodeDefinition('switch','Switch','Control',
+    'Route to one of several named paths: cases are checked in order, the first match wins, otherwise Default. Only checked or trusted values.',
+    {'value':'string'},{'branch':'string'},SwitchConfig,switch_node,routes_from_config=switch_routes))
+
 from .request_safety import request_reader_node
 from .request_reader import RequestReaderConfig
 register(NodeDefinition('request_reader','Request reader','Control',

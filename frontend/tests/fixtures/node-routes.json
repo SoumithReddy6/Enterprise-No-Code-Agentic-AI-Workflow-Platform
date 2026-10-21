@@ -79,5 +79,448 @@
       "type": "unknown_type"
     },
     "routes": []
+  },
+  {
+    "node": {
+      "id": "s1",
+      "type": "switch",
+      "config": {
+        "cases": [
+          {
+            "id": "case_1",
+            "label": "Case 1",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value1"
+            }
+          }
+        ]
+      }
+    },
+    "routes": [
+      "case_1",
+      "default"
+    ]
+  },
+  {
+    "node": {
+      "id": "s3",
+      "type": "switch",
+      "config": {
+        "cases": [
+          {
+            "id": "case_1",
+            "label": "Billing",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value1"
+            }
+          },
+          {
+            "id": "case_2",
+            "label": "Technical",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value2"
+            }
+          },
+          {
+            "id": "case_3",
+            "label": "Account",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value3"
+            }
+          }
+        ]
+      }
+    },
+    "routes": [
+      "case_1",
+      "case_2",
+      "case_3",
+      "default"
+    ]
+  },
+  {
+    "node": {
+      "id": "s15",
+      "type": "switch",
+      "config": {
+        "cases": [
+          {
+            "id": "case_1",
+            "label": "Case 1",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value1"
+            }
+          },
+          {
+            "id": "case_2",
+            "label": "Case 2",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value2"
+            }
+          },
+          {
+            "id": "case_3",
+            "label": "Case 3",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value3"
+            }
+          },
+          {
+            "id": "case_4",
+            "label": "Case 4",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value4"
+            }
+          },
+          {
+            "id": "case_5",
+            "label": "Case 5",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value5"
+            }
+          },
+          {
+            "id": "case_6",
+            "label": "Case 6",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value6"
+            }
+          },
+          {
+            "id": "case_7",
+            "label": "Case 7",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value7"
+            }
+          },
+          {
+            "id": "case_8",
+            "label": "Case 8",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value8"
+            }
+          },
+          {
+            "id": "case_9",
+            "label": "Case 9",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value9"
+            }
+          },
+          {
+            "id": "case_10",
+            "label": "Case 10",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value10"
+            }
+          },
+          {
+            "id": "case_11",
+            "label": "Case 11",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value11"
+            }
+          },
+          {
+            "id": "case_12",
+            "label": "Case 12",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value12"
+            }
+          },
+          {
+            "id": "case_13",
+            "label": "Case 13",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value13"
+            }
+          },
+          {
+            "id": "case_14",
+            "label": "Case 14",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value14"
+            }
+          },
+          {
+            "id": "case_15",
+            "label": "Case 15",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value15"
+            }
+          }
+        ]
+      }
+    },
+    "routes": [
+      "case_1",
+      "case_2",
+      "case_3",
+      "case_4",
+      "case_5",
+      "case_6",
+      "case_7",
+      "case_8",
+      "case_9",
+      "case_10",
+      "case_11",
+      "case_12",
+      "case_13",
+      "case_14",
+      "case_15",
+      "default"
+    ]
+  },
+  {
+    "node": {
+      "id": "s0",
+      "type": "switch",
+      "config": {
+        "cases": []
+      }
+    },
+    "routes": []
+  },
+  {
+    "node": {
+      "id": "s16",
+      "type": "switch",
+      "config": {
+        "cases": [
+          {
+            "id": "case_1",
+            "label": "Case 1",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value1"
+            }
+          },
+          {
+            "id": "case_2",
+            "label": "Case 2",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value2"
+            }
+          },
+          {
+            "id": "case_3",
+            "label": "Case 3",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value3"
+            }
+          },
+          {
+            "id": "case_4",
+            "label": "Case 4",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value4"
+            }
+          },
+          {
+            "id": "case_5",
+            "label": "Case 5",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value5"
+            }
+          },
+          {
+            "id": "case_6",
+            "label": "Case 6",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value6"
+            }
+          },
+          {
+            "id": "case_7",
+            "label": "Case 7",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value7"
+            }
+          },
+          {
+            "id": "case_8",
+            "label": "Case 8",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value8"
+            }
+          },
+          {
+            "id": "case_9",
+            "label": "Case 9",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value9"
+            }
+          },
+          {
+            "id": "case_10",
+            "label": "Case 10",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value10"
+            }
+          },
+          {
+            "id": "case_11",
+            "label": "Case 11",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value11"
+            }
+          },
+          {
+            "id": "case_12",
+            "label": "Case 12",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value12"
+            }
+          },
+          {
+            "id": "case_13",
+            "label": "Case 13",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value13"
+            }
+          },
+          {
+            "id": "case_14",
+            "label": "Case 14",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value14"
+            }
+          },
+          {
+            "id": "case_15",
+            "label": "Case 15",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value15"
+            }
+          },
+          {
+            "id": "case_16",
+            "label": "Case 16",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value16"
+            }
+          }
+        ]
+      }
+    },
+    "routes": []
+  },
+  {
+    "node": {
+      "id": "sdup",
+      "type": "switch",
+      "config": {
+        "cases": [
+          {
+            "id": "case_1",
+            "label": "Case 1",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value1"
+            }
+          },
+          {
+            "id": "case_1",
+            "label": "Case 1",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value1"
+            }
+          }
+        ]
+      }
+    },
+    "routes": []
+  },
+  {
+    "node": {
+      "id": "sres",
+      "type": "switch",
+      "config": {
+        "cases": [
+          {
+            "id": "default",
+            "label": "Case 1",
+            "when": {
+              "field": "category",
+              "operator": "eq",
+              "compare_to": "value1"
+            }
+          }
+        ]
+      }
+    },
+    "routes": []
   }
 ]

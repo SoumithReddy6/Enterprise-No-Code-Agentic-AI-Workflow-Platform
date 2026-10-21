@@ -133,8 +133,8 @@ def _validate_flow(workflow: Workflow) -> list[str]:
             if node.type in ('llm','agent','query','request_router','request_reader') and config.provider in ('openai','claude') and not config.credential_id:
                 errors.append(f'{node.id}: choose a credential for {config.provider}.')
         except ValidationError as exc:
-            if node.type in ('condition', 'calculate'):
-                # Condition and Calculate settings hold no credentials, so their messages are
+            if node.type in ('condition', 'calculate', 'switch'):
+                # Condition, Calculate and Switch settings hold no credentials, so their messages are
                 # shown as written: an invalid comparison or expression says what is wrong.
                 errors.extend(condition_config_error(node.id, error) for error in exc.errors())
             else:
@@ -243,7 +243,8 @@ def request_contract_errors(workflow, flow, deps):
     """
     guards = {'greeting_cache', 'request_router', *VERIFIERS}
     if workflow.contract == 1:
-        return [f'{n.id}: request admission nodes require workflow contract 2.' for n in workflow.nodes if n.type in guards]
+        return [f'{n.id}: request admission nodes require workflow contract 2.' for n in workflow.nodes if n.type in guards] + [
+            f'{n.id}: Switch requires a contract-2 workflow.' for n in workflow.nodes if n.type == 'switch']
     errors = []
     order, arrivals, nodes = flow_order(flow)
     _, available = binding_guarantees(order, arrivals, nodes)
@@ -291,6 +292,13 @@ def request_contract_errors(workflow, flow, deps):
                 errors.append(f'{node.id}: reference_member rules require a reference binding.')
             if reference and not independent_reference(reference, nodes):
                 errors.append(f'{node.id}: reference must come from an independent read, not a model, echo or transformation.')
+        if node.type == 'switch':
+            from .provenance import STATIC_TRUSTED, static_label
+            # The existing trust rule, not a new list: a verifier's checked text (or a Prompt or
+            # Calculate built only from it), or independent source data such as the trigger.
+            value = node.inputs.get('value', '')
+            if not (checked_dependency(value, nodes) or static_label(full, value) == STATIC_TRUSTED):
+                errors.append(f'{node.id}: Route on checked values, or use a Condition, which supports review.')
         if node.type == 'agent' and node.config.get('role') in ('extraction', 'classification') and node.inputs.get('input') != original:
             errors.append(f'{node.id}: extraction must bind the original trigger message.')
         model_inputs = any(unchecked_model_input(ref, full, deps) for ref in node.inputs.values())

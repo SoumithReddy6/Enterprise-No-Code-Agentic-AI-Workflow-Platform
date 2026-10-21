@@ -384,6 +384,9 @@ def for_node(node, definition, inputs, outputs, state_values, body_type=None, or
         previous=(state_values.get(source) or {}).get(PROVENANCE_KEY) or {}
         record['ports']={p:(port_label(state_values,node.inputs['value']) if p=='text' else CALCULATED) for p in ports}
         if port in previous.get('fields',{}):record['fields']={'text':previous['fields'][port]}
+    elif node.type == 'switch':
+        # The route is computed in code from a value that runtime eligibility admitted.
+        record['ports'] = {p: CALCULATED for p in ports}
     elif node.type == 'request_reader':
         # The values are the model's reading, labelled field by field against the original
         # message only. The receipt, not this label, grants eligibility downstream.

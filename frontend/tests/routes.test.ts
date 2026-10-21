@@ -22,3 +22,15 @@ void test('a configured-route type with unknown settings draws no invented handl
   assert.equal(isControl(definition), true);
   assert.equal(isControl(catalog.find((d) => d.type === 'agent')), false);
 });
+
+void test('the editor keeps a case handle while its rule is being edited', () => {
+  // Deliberate: the backend refuses the invalid rule at validation, but the connection survives.
+  const definition = catalog.find((d) => d.type === 'switch');
+  const node = { type: 'switch', config: { cases: [{ id: 'case_1', label: 'Billing', when: { operator: 'gt' } }] } };
+  assert.deepEqual(nodeRoutes(definition, node), ['case_1', 'default']);
+});
+
+void test('the shared fixture covers configured Switch routes, not only static ones', () => {
+  const sizes = cases.filter((c) => c.node.type === 'switch').map((c) => c.routes.length);
+  for (const size of [2, 4, 16, 0]) assert.ok(sizes.includes(size), String(size));
+});

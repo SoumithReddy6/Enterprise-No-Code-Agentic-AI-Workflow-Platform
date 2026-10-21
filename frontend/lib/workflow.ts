@@ -110,7 +110,19 @@ export function parseJsonSetting(text: string, type: string | undefined): unknow
 
 // Types whose routes come from each node's settings. The backend's routes_from_config is
 // the authority; tests/routes.test.ts pins both to tests/fixtures/node-routes.json.
-const CONFIGURED_ROUTES: Record<string, (config: Record<string, unknown>) => string[]> = {};
+const CASE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+const CONFIGURED_ROUTES: Record<string, (config: Record<string, unknown>) => string[]> = {
+  // Case structure only (ids, count, uniqueness). A predicate being edited keeps its handle,
+  // so its connection survives the edit; the backend still refuses the invalid predicate.
+  switch: (config) => {
+    const cases = config.cases;
+    if (!Array.isArray(cases) || cases.length < 1 || cases.length > 15) return [];
+    const ids = cases.map((c) => (c && typeof c === 'object' ? (c as { id?: unknown }).id : undefined));
+    if (ids.some((id) => typeof id !== 'string' || !CASE_ID.test(id) || id === 'default' || id === 'error')) return [];
+    if (new Set(ids).size !== ids.length) return [];
+    return [...(ids as string[]), 'default'];
+  },
+};
 /** The routes of one node, the only source of handles in the editor. */
 export function nodeRoutes(
   definition: Definition | undefined,

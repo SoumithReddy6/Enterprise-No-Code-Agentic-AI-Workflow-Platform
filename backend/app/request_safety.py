@@ -193,7 +193,11 @@ async def checked_control_path(ctx):
         await ctx.platform('checked_review',review['id'],review['kind'],review['payload'])
 
 
+SWITCH_REFUSAL='Route on checked values, or use a Condition, which supports review.'
+
+
 async def check_execution_eligibility(identity,resolved_inputs,receipts,workflow_contract,*,node,ctx):
+    if node.type=='switch' and workflow_contract!=2:raise UnsafeExecutionError('Switch requires a contract-2 workflow.')
     if workflow_contract!=2:return None
     from .compiler import is_write_node,unchecked_model_input
     proofs=receipts if isinstance(receipts,dict) else {}
@@ -208,8 +212,13 @@ async def check_execution_eligibility(identity,resolved_inputs,receipts,workflow
         # A dictionary with a well-formed checksum is not a runtime-issued binding.
         if not valid:raise UnsafeExecutionError('External write requires an exact eligible verification binding.')
         return None
-    if not decision:return None
     model_input=bool(ctx.workflow and any(unchecked_model_input(ref,{n.id:n for n in ctx.workflow.nodes}) for ref in node.inputs.values()))
+    if node.type=='switch':
+        # Checked or trusted values only; a Switch never creates a review of its own.
+        await checked_control_path(ctx)
+        if valid or not model_input and ctx.input_label in provenance.TRUSTED:return None
+        raise UnsafeExecutionError(SWITCH_REFUSAL)
+    if not decision:return None
     needs_review=not valid and (model_input or ctx.input_label not in provenance.TRUSTED)
     if node.type=='calculate' and node.config.get('mode')=='check':
         from .calculate import run
@@ -309,6 +318,11 @@ async def finalize(ctx,node,inputs,outputs,config,*,cached=False):
         from .conditions import evaluate
         expected='true' if evaluate(inputs['value'],config) else 'false'
         if outputs.get('branch')!=expected:raise UnsafeExecutionError('Condition result does not match its checked input and policy.')
+    if node.type=='switch':
+        # A restored route is eligible again and equals the route its input and cases select.
+        if cached:await guard(ctx,node,inputs)
+        from .switch import choose
+        if outputs.get('branch')!=choose(inputs['value'],config):raise UnsafeExecutionError('Switch route does not match its checked input and cases.')
     if node.type in ('prompt','calculate'):
         parents=[p for key,p in (ctx.input_proofs or {}).items() if await binding_valid(p,inputs.get(key),ctx)]
         if parents:
