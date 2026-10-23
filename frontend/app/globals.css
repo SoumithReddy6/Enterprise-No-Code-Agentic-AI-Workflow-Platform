@@ -2350,3 +2350,33 @@ input[type='file']::file-selector-button {
   background: #f8fafc;
   border-color: #cbd5e1;
 }
+
+/* Switch case list (inspector). Warning colours match .validation-warnings. */
+.switch-case {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px 12px;
+  margin: 0 0 12px;
+  min-width: 0;
+}
+.switch-case legend {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 4px;
+}
+.switch-case .button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 8px;
+}
+.warning-text {
+  display: block;
+  color: #854d0e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.6;
+}

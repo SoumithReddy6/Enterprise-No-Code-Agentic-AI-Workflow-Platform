@@ -3,6 +3,8 @@ import { approvalDecision, type RunApproval } from '@/lib/approvals';
 import ApprovalReview from './approval-review';
 import WorkflowSetup from './workflow-setup';
 import RequestChecks from './request-checks';
+import SwitchCases from './switch-cases';
+import { defaultSwitchConfig, removeCase, routeLabel } from '@/lib/switch';
 import { createRequestWorkflow, requestTemplates, admissionDetails, ACCEPT_QUOTED_RISK, fieldsReadDownstream, withSuggestedFields } from '@/lib/request-routing';
 
 import {
@@ -201,7 +203,9 @@ function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
           <div key={route}>
             <Handle type="source" id={route} position={Position.Bottom}
               style={{ left: `${30 + index * 45 / (routes.length - 1)}%` }} />
-            <span className="port-label bottom" style={{ left: `${25 + index * 45 / (routes.length - 1)}%` }}>{route}</span>
+            <span className="port-label bottom" style={{ left: `${25 + index * 45 / (routes.length - 1)}%` }}>
+              {spec.type === 'switch' ? routeLabel(spec.config, route) : route}
+            </span>
           </div>
         ))
       ) : (
@@ -431,6 +435,21 @@ function Editor() {
           : n,
       ),
     );
+  }
+  // Removing a Switch case removes its connection in the same step (one undo entry).
+  function removeSwitchCase(caseId: string) {
+    if (!chosen) return;
+    const result = removeCase(chosen.config, edges, chosen.id, caseId);
+    if (result.config === chosen.config) return;
+    snapshot();
+    setNodes((ns) =>
+      ns.map((n) =>
+        n.id === chosen.id
+          ? { ...n, data: { ...n.data, spec: { ...n.data.spec, config: result.config } } }
+          : n,
+      ),
+    );
+    setEdges(result.edges);
   }
   function clearRun() {
     runViewVersion.current += 1;
@@ -727,6 +746,8 @@ function Editor() {
           .map(([k, p]) => [k, p.default]),
       ),
     };
+    // A new Switch starts with one case, so its handle and Default are drawn at once.
+    if (type === 'switch') spec.config = { ...defaultSwitchConfig() };
     if (['agent', 'query', 'llm', 'request_router', 'request_reader'].includes(type)) {
       const model =
         allowedModels.find((m) => m.enabled && m.provider === 'ollama') ||
@@ -1659,7 +1680,18 @@ function Editor() {
                           </section>
                         );
                       })()}
-                    {definition &&
+                    {chosen.type === 'switch' && definition && (
+                      <SwitchCases
+                        nodeId={chosen.id}
+                        config={chosen.config}
+                        predicate={definition.config_schema.$defs?.ConditionConfig?.properties ?? {}}
+                        edges={edges}
+                        disabled={running}
+                        onChange={(config) => modifyNode({ config })}
+                        onRemove={removeSwitchCase}
+                      />
+                    )}
+                    {definition && chosen.type !== 'switch' &&
                       Object.keys(definition.config_schema.properties).length >
                         0 && (
                         <section className="settings-section">

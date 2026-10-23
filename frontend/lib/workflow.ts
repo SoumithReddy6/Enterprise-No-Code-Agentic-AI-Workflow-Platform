@@ -49,7 +49,10 @@ export type Definition = {
   outputs: Record<string, string>;
   branch_routes?: string[];
   configurable_routes?: boolean;
-  config_schema: { properties: Record<string, ConfigProperty> };
+  config_schema: {
+    properties: Record<string, ConfigProperty>;
+    $defs?: Record<string, { properties?: Record<string, ConfigProperty> }>;
+  };
 };
 export type RunEvent = {
   items_truncated?: boolean;
@@ -328,6 +331,7 @@ export function paletteCategory(type: string): string | null {
         condition: 'Control',
         calculate: 'Control',
         request_reader: 'Control',
+        switch: 'Control',
         response: 'Output',
       } as Record<string, string>
     )[type] || null

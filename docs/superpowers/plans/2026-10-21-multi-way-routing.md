@@ -167,6 +167,13 @@ the registry, with a parity test like `condition-node.json`).
   and check the saved JSON keeps ids and edges; remove a connected case; duplicate
   warning shows; old workflows open unchanged.
 
+**Done (2026-10-23), with two changes from this task text:**
+1. No separate `switch-node.json`: the browser tests serve `request-nodes.json`, which
+   `test_request_examples.py` already pins to the whole registry, Switch included.
+2. Duplicate rules are flagged only when they are exactly equal after the backend's
+   defaults are filled in. Rules that differ only in spacing are not flagged, so the
+   warning never names a case that could still match.
+
 ## Task 5: deployed scenario, docs and evidence
 
 **Files:** `scripts/check_production_scenarios.py` (scenario S20, S21),
