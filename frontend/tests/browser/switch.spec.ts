@@ -270,7 +270,7 @@ test('fifteen cases with long labels draw sixteen separate, readable routes', as
   const measure = await card.evaluate((el) => {
     const boxes = (selector: string) => Array.from(el.querySelectorAll(selector)).map((e) => {
       const r = e.getBoundingClientRect();
-      return { text: e.textContent, x: r.x, y: r.y, w: r.width, h: r.height };
+      return { text: e.textContent, x: r.x, y: r.y, w: r.width, h: r.height, cut: e.scrollWidth > e.clientWidth };
     });
     const overlaps = (list: ReturnType<typeof boxes>) => list.flatMap((a, i) => list.slice(i + 1)
       .filter((b) => Math.min(a.x + a.w, b.x + b.w) > Math.max(a.x, b.x) && Math.min(a.y + a.h, b.y + b.h) > Math.max(a.y, b.y))
@@ -284,8 +284,11 @@ test('fifteen cases with long labels draw sixteen separate, readable routes', as
   expect(measure.labelOverlaps).toEqual([]);
   expect(measure.handleOverlaps).toEqual([]);
   expect(measure.labelHandleOverlaps).toEqual([]);
-  // Every label is drawn at a readable size, and the full text is available on hover.
-  for (const label of measure.labels) expect(label.w).toBeGreaterThan(40);
+  // Long labels get real width (cut with an ellipsis only at the card edge); short ones are
+  // shown whole. The full text is always available on hover. Independent of the system font.
+  const [cases, fallback] = [measure.labels.slice(0, 15), measure.labels[15]];
+  for (const label of cases) expect(label.w).toBeGreaterThan(100);
+  expect(fallback).toMatchObject({ text: 'Default', cut: false });
   await expect(card.getByTitle('Customer success department 15', { exact: true })).toHaveCount(1);
   await expect(card.getByText('Default', { exact: true })).toBeVisible();
   expect(unexpected).toEqual([]);
