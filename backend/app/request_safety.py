@@ -214,9 +214,14 @@ async def check_execution_eligibility(identity,resolved_inputs,receipts,workflow
         return None
     model_input=bool(ctx.workflow and any(unchecked_model_input(ref,{n.id:n for n in ctx.workflow.nodes}) for ref in node.inputs.values()))
     if node.type=='switch':
-        # Checked or trusted values only; a Switch never creates a review of its own.
+        # Checked or trusted values only; a Switch never creates a review of its own. The
+        # lineage walk is validation's (switch_input_allowed): it stops at independent reads.
         await checked_control_path(ctx)
-        if valid or not model_input and ctx.input_label in provenance.TRUSTED:return None
+        from .platform_graph import split_graph
+        _,deps,_=split_graph(ctx.workflow)
+        nodes={n.id:n for n in ctx.workflow.nodes}
+        from_model=any(unchecked_model_input(ref,nodes,deps,stop_at_sources=True) for ref in node.inputs.values())
+        if valid or not from_model and ctx.input_label in provenance.TRUSTED:return None
         raise UnsafeExecutionError(SWITCH_REFUSAL)
     if not decision:return None
     needs_review=not valid and (model_input or ctx.input_label not in provenance.TRUSTED)

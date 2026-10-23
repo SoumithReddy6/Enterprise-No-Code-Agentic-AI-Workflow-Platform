@@ -363,3 +363,119 @@ async def test_a_restored_route_over_an_unchecked_value_is_refused(model, monkey
     with pytest.raises(ValueError, match='Route on checked values'):
         await run(raw, model=model, completed=saved)
     assert len(model[0]) == calls
+
+
+# ------------------------------------------------------------------ one rule: validation and worker agree
+
+FOUND = [{'id': 'found', 'label': 'Found', 'when': {'field': 'total', 'operator': 'gt', 'compare_to': '0'}}]
+RECORDS = {'issues': [{'key': 'CAT-1', 'fields': {'summary': 'Laptop'}}], 'total': 1}
+
+
+def jira(jql, source='input.message'):
+    return {'id': 'records', 'type': 'tool_jira', 'inputs': {'input': source},
+            'config': {'connection_id': 'JIRA', 'operation': 'search', 'jql': jql, 'enable_writes': False}}
+
+
+ALLOWED = {
+    # name: (value, middle, cases, model answers after the reading, crash after, branch, record reads)
+    'configured record query': ('records.text', (jira('project = A'),), FOUND, [], 'records', 'found', 1),
+    'model-written record query': ('records.text', (agent(), jira('{input}', 'guess.text')), FOUND, ['project = A'], 'records', 'found', 1),
+    'reader values': ('reader.text', (), None, [], 'reader', 'billing', 0),
+    'prompt over reader values': ('calc.text', (CALC,), None, [], 'calc', 'billing', 0),
+    'trigger message': ('input.message', (), None, [], 'reader', 'billing', 0),
+}
+
+
+@pytest.fixture
+def jira_worker(worker_setup):
+    store, worker, connection, sent = worker_setup
+    jira_connection = worker.tools.save_connection({'name': 'Records', 'provider': 'jira', 'endpoint': 'https://records.example'})['id']
+    reads = []
+    def receive(request):
+        if request.method == 'GET':
+            reads.append(request);return httpx.Response(200, json=RECORDS)
+        sent.append(request);return httpx.Response(200, text='sent')
+    worker.tools.transport = httpx.MockTransport(receive)
+    return store, worker, jira_connection, reads, sent, connection
+
+
+def with_connection(raw, connection):
+    for node in raw['nodes']:
+        if node.get('config', {}).get('connection_id') == 'JIRA':node['config']['connection_id'] = connection
+    return raw
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('name', ALLOWED)
+async def test_allowed_sources_validate_and_run_fresh_and_after_a_resume(jira_worker, model, monkeypatch, name):
+    store, worker, connection, reads, sent, _ = jira_worker
+    value, middle, cases, answers, crash_after, branch, record_reads = ALLOWED[name]
+    raw = with_connection(flow(value, cases=cases, middle=middle), connection)
+    assert validate_workflow(Workflow.model_validate(raw)) == []
+    original = store.worker_event
+    def crash(id, owner, event):
+        persisted = original(id, owner, event)
+        if event.get('node_id') == crash_after and event.get('status') == 'success':
+            raise RuntimeError('Injected crash after the checkpoint that feeds the Switch')
+        return persisted
+    monkeypatch.setattr(store, 'worker_event', crash)
+    model[1].extend([reading(), *answers])
+    run_id = store.create_run(raw, MESSAGE)['id']
+    await worker.execute(store.claim_next(worker.owner))
+    assert store.run(run_id)['status'] == 'failed'
+    monkeypatch.setattr(store, 'worker_event', original)
+    store.resume_run(run_id)
+    await worker.execute(store.claim_next(worker.owner))
+    final = store.run(run_id)
+    assert final['status'] == 'success', final.get('error')
+    assert final['checkpoints']['route']['branch'] == branch
+    # Nothing before the Switch ran twice, and no write was sent.
+    assert len(model[0]) == 1 + len(answers) and len(reads) == record_reads and sent == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('value,middle', [
+    ('guess.text', (agent(),)),
+    ('http.text', (tool('http', 'tool_http', method='GET', path='/x'),)),
+])
+async def test_refused_sources_fail_in_the_worker_before_any_call(jira_worker, model, value, middle):
+    store, worker, _, reads, sent, http_connection = jira_worker
+    raw = flow(value, middle=middle)
+    for node in raw['nodes']:
+        if node['type'] == 'tool_http':node['config']['connection_id'] = http_connection
+    run_id = store.create_run(raw, MESSAGE)['id']
+    await worker.execute(store.claim_next(worker.owner))
+    final = store.run(run_id)
+    assert final['status'] == 'failed' and 'Route on checked values' in final['error']
+    assert model[0] == [] and reads == [] and sent == []
+
+
+def test_a_loop_summary_over_a_model_body_is_refused_by_the_shared_rule():
+    from backend.app.compiler import switch_input_allowed
+    from backend.app.models import Node
+    nodes = {'input': Node(id='input', type='chat_input'),
+             'each': Node(id='each', type='for_each', inputs={'items': 'input.message'}, config={'body': 'body'}),
+             'body': Node(id='body', type='agent', config={'provider': 'ollama', 'model': 'fixture'}),
+             'records': Node(id='records', type='tool_jira', inputs={'input': 'guess.text'}, config={'operation': 'search'}),
+             'guess': Node(id='guess', type='agent', inputs={'input': 'input.message'}, config={'provider': 'ollama', 'model': 'fixture'})}
+    assert not switch_input_allowed('each.summary', nodes, {'each': ['body']})
+    assert switch_input_allowed('records.text', nodes, {})
+    assert not switch_input_allowed('guess.text', nodes, {})
+
+
+@pytest.mark.asyncio
+async def test_runtime_refuses_a_loop_summary_over_a_model_body(jira_worker, model, monkeypatch):
+    # Validation refuses this too (shared rule); with validation bypassed, runtime must still
+    # follow the loop's attached Agent body, not only its flow inputs.
+    monkeypatch.setattr('backend.app.compiler.request_contract_errors', lambda *a: [])
+    store, worker, connection, reads, sent, _ = jira_worker
+    each = {'id': 'each', 'type': 'for_each', 'inputs': {'items': 'records.items'}, 'config': {'body': 'body', 'max_items': 10}}
+    raw = with_connection(flow('each.summary', cases=FOUND, middle=(jira('project = A'), each)), connection)
+    raw['nodes'].append({'id': 'body', 'type': 'agent', 'config': {'provider': 'ollama', 'model': 'fixture', 'role': 'summarizer'}})
+    raw['edges'].append({'id': 'loop', 'source': 'each', 'target': 'body', 'kind': 'loop', 'sourceHandle': 'body', 'targetHandle': 'input'})
+    model[1].extend([reading(), 'A laptop record.'])
+    run_id = store.create_run(raw, MESSAGE)['id']
+    await worker.execute(store.claim_next(worker.owner))
+    final = store.run(run_id)
+    assert final['status'] == 'failed' and 'Route on checked values' in final['error'], final.get('error')
+    assert 'route' not in final.get('checkpoints', {}) and sent == []

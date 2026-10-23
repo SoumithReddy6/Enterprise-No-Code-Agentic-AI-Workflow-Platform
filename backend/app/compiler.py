@@ -293,11 +293,8 @@ def request_contract_errors(workflow, flow, deps):
             if reference and not independent_reference(reference, nodes):
                 errors.append(f'{node.id}: reference must come from an independent read, not a model, echo or transformation.')
         if node.type == 'switch':
-            from .provenance import STATIC_TRUSTED, static_label
-            # The existing trust rule, not a new list: a verifier's checked text (or a Prompt or
-            # Calculate built only from it), or independent source data such as the trigger.
-            value = node.inputs.get('value', '')
-            if not (checked_dependency(value, nodes) or static_label(full, value) == STATIC_TRUSTED):
+            # The existing trust rule, not a new list; runtime applies the same lineage walk.
+            if not switch_input_allowed(node.inputs.get('value', ''), full, deps):
                 errors.append(f'{node.id}: Route on checked values, or use a Condition, which supports review.')
         if node.type == 'agent' and node.config.get('role') in ('extraction', 'classification') and node.inputs.get('input') != original:
             errors.append(f'{node.id}: extraction must bind the original trigger message.')
@@ -329,13 +326,20 @@ def independent_reference(ref, nodes):
     return bool(sep and node and node.type in ('tool_jira', 'tool_confluence', 'tool_github', 'retrieve') and not is_write_node(node, REGISTRY.get(node.type)))
 
 
-def unchecked_model_input(ref, nodes, deps=None, seen=None):
+def unchecked_model_input(ref, nodes, deps=None, seen=None, stop_at_sources=False):
+    """Whether a model's output can reach this reference without a verifier on the way.
+
+    With stop_at_sources, an independent record read ends the walk: its records are source
+    data whoever wrote its query (provenance.independent_source). The Switch rule uses this."""
     source, sep, port = ref.partition('.')
     node = nodes.get(source)
     seen = set() if seen is None else seen
     if not sep or not node or source in seen:return False
     seen = seen | {source}
     if node.type in VERIFIERS and port == 'text':return False
+    if stop_at_sources:
+        from .provenance import independent_source
+        if independent_source(node):return False
     if node.type in ('agent', 'llm', 'query', 'request_router', 'request_reader'):return True
     # A loop's flow inputs do not describe what its attached body produces. Walk
     # callable dependencies as well, including specialist/tool chains. Otherwise an
@@ -346,7 +350,16 @@ def unchecked_model_input(ref, nodes, deps=None, seen=None):
         if nodes[id].type in ('agent', 'llm', 'query', 'request_router', 'request_reader'):return True
         return any(calls_model(child, visited | {id}) for child in dependencies.get(id, []))
     return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
-        unchecked_model_input(value, nodes, dependencies, seen) for value in node.inputs.values())
+        unchecked_model_input(value, nodes, dependencies, seen, stop_at_sources) for value in node.inputs.values())
+
+
+def switch_input_allowed(ref, nodes, deps=None):
+    """The Switch's input rule, shared by validation and runtime: a verifier's checked text
+    (or a Prompt or Calculate built only from it), or trusted data that no unverified model
+    output reaches before an independent source."""
+    from .provenance import STATIC_TRUSTED, static_label
+    return checked_dependency(ref, nodes) or (static_label(nodes, ref) == STATIC_TRUSTED
+        and not unchecked_model_input(ref, nodes, deps, stop_at_sources=True))
 
 
 def checked_dependency(ref, nodes, seen=None):

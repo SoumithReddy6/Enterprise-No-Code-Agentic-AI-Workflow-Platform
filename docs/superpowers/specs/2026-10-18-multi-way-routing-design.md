@@ -85,6 +85,9 @@ confirmed upstream verification remains valid under the existing rules.
 input, Manual trigger, and the Jira, Confluence and GitHub read operations), outputs of
 Request reader and Verify extraction with a valid receipt, and Prompt or Calculate outputs
 derived only from those. It is the same rule under which a Condition needs no review.
+Validation and runtime apply it through one function (`compiler.switch_input_allowed` and
+the same lineage walk at execution): the walk stops at an independent read, whoever wrote
+its query, and follows a loop's attached body (review R01, 2026-10-21).
 
 Raw model output is not acceptable merely because one field has a quoted provenance
 label. Untrusted HTTP/Python results and other unsupported inputs are refused with a
