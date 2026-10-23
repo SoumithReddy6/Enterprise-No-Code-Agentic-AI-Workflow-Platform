@@ -101,7 +101,7 @@ test('a Switch from the palette gets cases with generated ids and draws one hand
   ]);
   const card = page.locator('.react-flow__node', { hasText: 'Switch' });
   for (const label of ['Billing', 'Technical', 'Account', 'Default']) await expect(card.getByText(label, { exact: true })).toBeVisible();
-  await expect(card.locator('.react-flow__handle-bottom')).toHaveCount(4);
+  await expect(card.locator('.switch-route .react-flow__handle')).toHaveCount(4);
   expect(unexpected).toEqual([]);
 });
 
@@ -164,5 +164,153 @@ test('an older workflow without a Switch opens and saves unchanged', async ({ pa
     edges: w.edges.map((e) => [e.source, e.target, e.sourceHandle ?? null]).sort(byKey),
   });
   expect(shape(saved)).toEqual(shape(old));
+  expect(unexpected).toEqual([]);
+});
+
+// ------------------------------------------------------------------ review E01-E04 (2026-10-23)
+
+test('a malformed Switch draft opens, shows the bad entry and can be repaired without losing data', async ({ page }) => {
+  const validated: Workflow[] = [];
+  const unexpected: string[] = [];
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await editor(page, validated, unexpected);
+  const broken = structuredClone(connected);
+  routeNode(broken).config.cases = [null, ...(routeNode(connected).config.cases as unknown[]).slice(0, 2)];
+  await importWorkflow(page, broken);
+  await page.locator('[data-id="route"]').click();
+  const cases = page.getByRole('region', { name: 'Switch cases' });
+  await expect(cases.getByText(/^Case 1 is not valid: it needs an id, a label and a rule\. Saved data: null$/)).toBeVisible();
+  // Saving before a repair keeps the draft exactly as it was.
+  let saved = await validate(page, validated);
+  expect(routeNode(saved).config.cases).toEqual(routeNode(broken).config.cases);
+  await cases.getByRole('group', { name: 'Case 1' }).getByRole('button', { name: 'Replace with an empty case', exact: true }).click();
+  saved = await validate(page, validated);
+  const repaired = routeNode(saved).config.cases as { id: string; label: string }[];
+  expect(repaired).toHaveLength(3);
+  expect(repaired[0].id).toMatch(/^case_[a-z0-9]{6}$/);
+  expect(repaired.slice(1)).toEqual((routeNode(connected).config.cases as unknown[]).slice(0, 2));
+
+  // A case list that is not a list at all is shown, and only replaced on request.
+  const notList = structuredClone(connected);
+  routeNode(notList).config.cases = 'oops';
+  notList.name = 'Not a list';
+  await importWorkflow(page, notList);
+  await page.locator('[data-id="route"]').click();
+  await expect(cases.getByText('The saved cases are not a list, so they cannot be shown as cases: "oops"', { exact: true })).toBeVisible();
+  await cases.getByRole('button', { name: 'Start a new case list', exact: true }).click();
+  saved = await validate(page, validated);
+  expect(routeNode(saved).config.cases).toHaveLength(1);
+  expect(errors).toEqual([]);
+  expect(unexpected).toEqual([]);
+});
+
+/** Distance between every drawn connection's start and the point where its own handle
+ * anchors it: the outer side of the handle (right edge for a right handle, bottom edge for a
+ * bottom handle), at the handle's centre line. Both x and y are compared. */
+async function edgeAnchors(page: Page) {
+  return page.evaluate(() => Array.from(document.querySelectorAll('.react-flow__edge')).flatMap((edge) => {
+    const id = edge.getAttribute('data-id') ?? '';
+    const path = edge.querySelector('.react-flow__edge-path') as SVGPathElement | null;
+    const meta = (window as unknown as { __edgeSources?: Record<string, [string, string]> }).__edgeSources?.[id];
+    if (!path || !meta) return [];
+    const handle = document.querySelector(`.react-flow__node[data-id="${meta[0]}"] [data-handleid="${meta[1]}"]`);
+    if (!handle) return [{ id, delta: 999 }];
+    const rect = handle.getBoundingClientRect();
+    const right = handle.classList.contains('react-flow__handle-right');
+    const bottom = handle.classList.contains('react-flow__handle-bottom');
+    const anchor = { x: right ? rect.right : rect.x + rect.width / 2, y: bottom ? rect.bottom : rect.y + rect.height / 2 };
+    const start = new DOMPoint(path.getPointAtLength(0).x, path.getPointAtLength(0).y).matrixTransform(path.getScreenCTM()!);
+    return [{ id, delta: Math.hypot(anchor.x - start.x, anchor.y - start.y) }];
+  }));
+}
+
+test('drawn connections stay on their own handles after reorder, add, remove and undo', async ({ page }) => {
+  const validated: Workflow[] = [];
+  const unexpected: string[] = [];
+  await editor(page, validated, unexpected);
+  await importWorkflow(page, connected);
+  await page.evaluate((edges) => {
+    (window as unknown as { __edgeSources: Record<string, [string, string]> }).__edgeSources =
+      Object.fromEntries(edges.filter((e) => e.sourceHandle).map((e) => [e.id, [e.source, e.sourceHandle!]]));
+  }, connected.edges);
+  await page.locator('[data-id="route"]').click();
+  const settled = async () => {
+    await expect.poll(async () => Math.max(...(await edgeAnchors(page)).map((a) => a.delta)), { timeout: 3000 }).toBeLessThan(1);
+    expect((await edgeAnchors(page)).length).toBeGreaterThan(0);
+  };
+  await settled();
+  const group = (n: number) => page.getByRole('group', { name: `Case ${n}` });
+  await group(3).getByRole('button', { name: 'Move up', exact: true }).click();
+  await settled();
+  await group(1).getByRole('button', { name: 'Move down', exact: true }).click();
+  await settled();
+  await page.getByRole('region', { name: 'Switch cases' }).getByRole('button', { name: 'Add case', exact: true }).click();
+  await settled();
+  await group(2).getByRole('button', { name: 'Remove case and its connection', exact: true }).click();
+  await settled();
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await settled();
+  expect(unexpected).toEqual([]);
+});
+
+test('fifteen cases with long labels draw sixteen separate, readable routes', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const validated: Workflow[] = [];
+  const unexpected: string[] = [];
+  await editor(page, validated, unexpected);
+  const many = structuredClone(connected);
+  routeNode(many).config.cases = Array.from({ length: 15 }, (_, i) => ({
+    id: `case_${String(i).padStart(2, '0')}`, label: `Customer success department ${String(i + 1).padStart(2, '0')}`, when: rule(`value${i}`),
+  }));
+  many.edges = many.edges.filter((e) => e.source !== 'route');
+  await importWorkflow(page, many);
+  const card = page.locator('[data-id="route"]');
+  await expect(card.locator('.switch-route .react-flow__handle')).toHaveCount(16);
+  const measure = await card.evaluate((el) => {
+    const boxes = (selector: string) => Array.from(el.querySelectorAll(selector)).map((e) => {
+      const r = e.getBoundingClientRect();
+      return { text: e.textContent, x: r.x, y: r.y, w: r.width, h: r.height };
+    });
+    const overlaps = (list: ReturnType<typeof boxes>) => list.flatMap((a, i) => list.slice(i + 1)
+      .filter((b) => Math.min(a.x + a.w, b.x + b.w) > Math.max(a.x, b.x) && Math.min(a.y + a.h, b.y + b.h) > Math.max(a.y, b.y))
+      .map((b) => [a.text, b.text]));
+    const labels = boxes('.switch-route .port-label');
+    const handles = boxes('.switch-route .react-flow__handle');
+    return { labels, labelOverlaps: overlaps(labels), handleOverlaps: overlaps(handles),
+      labelHandleOverlaps: labels.flatMap((l) => handles.filter((h) => Math.min(l.x + l.w, h.x + h.w) > Math.max(l.x, h.x)
+        && Math.min(l.y + l.h, h.y + h.h) > Math.max(l.y, h.y)).map(() => l.text)) };
+  });
+  expect(measure.labelOverlaps).toEqual([]);
+  expect(measure.handleOverlaps).toEqual([]);
+  expect(measure.labelHandleOverlaps).toEqual([]);
+  // Every label is drawn at a readable size, and the full text is available on hover.
+  for (const label of measure.labels) expect(label.w).toBeGreaterThan(40);
+  await expect(card.getByTitle('Customer success department 15', { exact: true })).toHaveCount(1);
+  await expect(card.getByText('Default', { exact: true })).toBeVisible();
+  expect(unexpected).toEqual([]);
+});
+
+test('invalid JSON in a case rule stops Validate and Run locally and names the case', async ({ page }) => {
+  const validated: Workflow[] = [];
+  const unexpected: string[] = [];
+  await editor(page, validated, unexpected);
+  await importWorkflow(page, connected);
+  await page.locator('[data-id="route"]').click();
+  await page.getByLabel(/^Case 1 Operator/).selectOption('in');
+  const options = page.getByLabel(/^Case 1 Options/);
+  await options.fill('["billing"]');
+  await validate(page, validated);
+  const before = validated.length;
+  await options.fill('["urgent",');
+  await page.getByRole('button', { name: 'Validate', exact: true }).click();
+  await expect(page.getByText(/Case 1 Options is not valid JSON yet\. Fix it before validating or running\./).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Run workflow', exact: true }).click();
+  await expect(page.getByText('Fix the validation issues below.')).toBeVisible();
+  expect(validated.length).toBe(before);
+  // Fixing the text makes it valid again.
+  await options.fill('["urgent"]');
+  const saved = await validate(page, validated);
+  expect((routeNode(saved).config.cases as { when: { options: unknown } }[])[0].when.options).toEqual(['urgent']);
   expect(unexpected).toEqual([]);
 });

@@ -2380,3 +2380,26 @@ input[type='file']::file-selector-button {
   font-size: 12px;
   line-height: 1.6;
 }
+
+/* Switch routes on the canvas: one row per route with its handle on the right edge, so the
+   card grows with the case count and no label or handle overlaps another. */
+.switch-routes {
+  border-top: 1px solid var(--line);
+  padding: 4px 0;
+}
+.switch-route {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 24px;
+  padding: 0 14px 0 12px;
+}
+.port-label.route {
+  position: static;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}

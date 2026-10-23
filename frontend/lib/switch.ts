@@ -1,5 +1,9 @@
 // Switch case editing. Case ids are route handles: generated once, never derived from a
 // label, and kept when a case is renamed or moved, so its connection stays attached.
+//
+// A draft may hold malformed entries (an imported file, an older or hand-edited save). They
+// stay in the draft exactly as they are until the author repairs or removes them; no helper
+// here drops or rewrites one silently.
 type RouteEdge = { id: string; source: string; sourceHandle?: string | null };
 
 export type SwitchCase = { id: string; label: string; when: Record<string, unknown> };
@@ -7,6 +11,16 @@ export type SwitchConfig = { cases: SwitchCase[] };
 
 export const MAX_CASES = 15;
 const ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value);
+
+/** Whether an entry has the shape the case editor can show and edit. The backend still
+ * validates ids, labels and rules; this only guards the editor against crashing. */
+export function isSwitchCase(entry: unknown): entry is SwitchCase {
+  return isRecord(entry) && typeof entry.id === 'string' && typeof entry.label === 'string'
+    && (entry.when === undefined || isRecord(entry.when));
+}
 
 export function newCaseId(existing: Iterable<string>, random: () => number = Math.random): string {
   const taken = new Set(existing);
@@ -18,24 +32,30 @@ export function newCaseId(existing: Iterable<string>, random: () => number = Mat
   }
 }
 
-export function switchCases(config: Record<string, unknown>): SwitchCase[] {
-  return Array.isArray(config.cases) ? (config.cases as SwitchCase[]) : [];
+/** Every entry of the case list, malformed ones included, in order; [] when it is not a list. */
+export function caseEntries(config: Record<string, unknown>): unknown[] {
+  return Array.isArray(config.cases) ? config.cases : [];
 }
 
-function newCase(cases: SwitchCase[]): SwitchCase {
+/** The well-formed cases only, in order. */
+export function switchCases(config: Record<string, unknown>): SwitchCase[] {
+  return caseEntries(config).filter(isSwitchCase);
+}
+
+function newCase(config: Record<string, unknown>, position: number): SwitchCase {
   return {
-    id: newCaseId(cases.map((c) => c.id)),
-    label: `Case ${cases.length + 1}`,
+    id: newCaseId(switchCases(config).map((c) => c.id)),
+    label: `Case ${position}`,
     when: { operator: 'eq', field: '' },
   };
 }
 
-export const defaultSwitchConfig = (): SwitchConfig => ({ cases: [newCase([])] });
+export const defaultSwitchConfig = (): SwitchConfig => ({ cases: [newCase({}, 1)] });
 
 export function addCase(config: Record<string, unknown>): Record<string, unknown> {
-  const cases = switchCases(config);
-  if (cases.length >= MAX_CASES) return config;
-  return { ...config, cases: [...cases, newCase(cases)] };
+  const entries = caseEntries(config);
+  if (entries.length >= MAX_CASES) return config;
+  return { ...config, cases: [...entries, newCase(config, entries.length + 1)] };
 }
 
 export function updateCase(
@@ -43,17 +63,36 @@ export function updateCase(
   id: string,
   change: Partial<Omit<SwitchCase, 'id'>>,
 ): Record<string, unknown> {
-  return { ...config, cases: switchCases(config).map((c) => (c.id === id ? { ...c, ...change } : c)) };
+  return { ...config, cases: caseEntries(config).map((c) => (isSwitchCase(c) && c.id === id ? { ...c, ...change } : c)) };
 }
 
 export function moveCase(config: Record<string, unknown>, id: string, delta: -1 | 1): Record<string, unknown> {
-  const cases = [...switchCases(config)];
-  const from = cases.findIndex((c) => c.id === id);
+  const entries = [...caseEntries(config)];
+  const from = entries.findIndex((c) => isSwitchCase(c) && c.id === id);
   const to = from + delta;
-  if (from < 0 || to < 0 || to >= cases.length) return config;
-  [cases[from], cases[to]] = [cases[to], cases[from]];
-  return { ...config, cases };
+  if (from < 0 || to < 0 || to >= entries.length) return config;
+  [entries[from], entries[to]] = [entries[to], entries[from]];
+  return { ...config, cases: entries };
 }
+
+/** Repair one malformed entry: replace it, at its position, with a new empty case. */
+export function replaceEntry(config: Record<string, unknown>, index: number): Record<string, unknown> {
+  const entries = [...caseEntries(config)];
+  if (index < 0 || index >= entries.length || isSwitchCase(entries[index])) return config;
+  entries[index] = newCase(config, index + 1);
+  return { ...config, cases: entries };
+}
+
+/** Remove one malformed entry. It has no route id, so no connection can belong to it. */
+export function removeEntry(config: Record<string, unknown>, index: number): Record<string, unknown> {
+  const entries = caseEntries(config);
+  if (index < 0 || index >= entries.length || isSwitchCase(entries[index]) || entries.length <= 1) return config;
+  return { ...config, cases: entries.filter((_, i) => i !== index) };
+}
+
+/** Start a new list when `cases` is not a list at all. An explicit author action only. */
+export const resetCases = (config: Record<string, unknown>): Record<string, unknown> =>
+  ({ ...config, cases: [newCase({}, 1)] });
 
 /** The edges that start at this case's handle. */
 export function caseEdges<E extends RouteEdge>(edges: E[], nodeId: string, caseId: string): E[] {
@@ -67,11 +106,11 @@ export function removeCase<E extends RouteEdge>(
   nodeId: string,
   caseId: string,
 ): { config: Record<string, unknown>; edges: E[] } {
-  const cases = switchCases(config);
-  if (cases.length <= 1) return { config, edges };
+  const entries = caseEntries(config);
+  if (entries.length <= 1 || !entries.some((c) => isSwitchCase(c) && c.id === caseId)) return { config, edges };
   const removed = new Set(caseEdges(edges, nodeId, caseId).map((e) => e.id));
   return {
-    config: { ...config, cases: cases.filter((c) => c.id !== caseId) },
+    config: { ...config, cases: entries.filter((c) => !(isSwitchCase(c) && c.id === caseId)) },
     edges: edges.filter((e) => !removed.has(e.id)),
   };
 }
@@ -87,12 +126,14 @@ function canonical(when: Record<string, unknown>): string {
 }
 
 /** For each case that can never match because an earlier case has exactly the same rule,
- * the index of that earlier case. Only provable duplicates: exactly equal settings once
- * the backend's defaults are filled in. Rules that differ only in spacing are not flagged. */
+ * the position of that earlier case (positions count every entry, as the editor shows them).
+ * Only provable duplicates: exactly equal settings once the backend's defaults are filled
+ * in. Rules that differ only in spacing are not flagged; malformed entries are skipped. */
 export function unreachableCases(config: Record<string, unknown>): Map<number, number> {
   const first = new Map<string, number>();
   const result = new Map<number, number>();
-  switchCases(config).forEach((c, index) => {
+  caseEntries(config).forEach((c, index) => {
+    if (!isSwitchCase(c)) return;
     const key = canonical(c.when ?? {});
     if (first.has(key)) result.set(index, first.get(key)!);
     else first.set(key, index);

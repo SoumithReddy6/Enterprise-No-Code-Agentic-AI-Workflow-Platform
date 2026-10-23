@@ -26,6 +26,7 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   useReactFlow,
+  useUpdateNodeInternals,
   type Node as FlowNode,
   type Edge,
   type Connection,
@@ -153,9 +154,16 @@ const icons: Record<string, typeof Zap> = {
   response: Send,
 };
 
-function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
+function WorkflowCard({ id, data, selected }: NodeProps<CanvasNode>) {
   const { spec, definition, status, invalid } = data;
   const Icon = Object.hasOwn(icons, spec.type) ? icons[spec.type] : Layers3;
+  const routes = isControl(definition) ? nodeRoutes(definition, spec) : [];
+  const labels = spec.type === 'switch' ? routes.map((route) => routeLabel(spec.config, route)) : routes;
+  // React Flow caches handle positions. When routes are added, removed, reordered or
+  // relabelled, measure again, or drawn connections keep pointing at old positions.
+  const updateInternals = useUpdateNodeInternals();
+  const routeKey = JSON.stringify([routes, labels]);
+  useEffect(() => updateInternals(id), [id, routeKey, updateInternals]);
   return (
     <div
       className={`workflow-card ${selected ? 'selected' : ''} ${status || ''} ${invalid ? 'invalid' : ''}`}
@@ -198,13 +206,23 @@ function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
           <span className="port-label right">specialists</span>
         </>
       )}
-      {isControl(definition) ? (
-        nodeRoutes(definition, spec).map((route, index, routes) => (
+      {spec.type === 'switch' ? (
+        // One row per route: the card grows, so up to 15 cases and Default never overlap.
+        <div className="switch-routes" aria-label="Routes">
+          {routes.length ? routes.map((route, index) => (
+            <div className="switch-route" key={route}>
+              <span className="port-label route" title={labels[index]}>{labels[index]}</span>
+              <Handle type="source" id={route} position={Position.Right} />
+            </div>
+          )) : <span className="helper">Fix the cases to draw routes.</span>}
+        </div>
+      ) : isControl(definition) ? (
+        routes.map((route, index) => (
           <div key={route}>
             <Handle type="source" id={route} position={Position.Bottom}
               style={{ left: `${30 + index * 45 / (routes.length - 1)}%` }} />
             <span className="port-label bottom" style={{ left: `${25 + index * 45 / (routes.length - 1)}%` }}>
-              {spec.type === 'switch' ? routeLabel(spec.config, route) : route}
+              {route}
             </span>
           </div>
         ))

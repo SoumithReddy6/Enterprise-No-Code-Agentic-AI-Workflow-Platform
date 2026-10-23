@@ -92,3 +92,42 @@ void test('handles show case labels and Default, not internal ids', () => {
   assert.equal(routeLabel(config, 'default'), 'Default');
   assert.equal(routeLabel(config, 'case_unknown'), 'case_unknown');
 });
+
+void test('malformed entries stay in the draft, are skipped by helpers and are repaired only on request', async () => {
+  const { caseEntries, removeEntry, replaceEntry, resetCases, isSwitchCase } = await import('../lib/switch.ts');
+  const broken = { cases: [null, config.cases[0], 'text', { id: 'x' }, config.cases[1]] };
+  assert.equal(caseEntries(broken).length, 5);
+  assert.deepEqual(switchCases(broken).map((c) => c.id), ['case_billing', 'case_tech']);
+  assert.deepEqual([...unreachableCases({ cases: [null, config.cases[0], config.cases[0]] })], [[2, 1]]);
+  // Editing valid cases never drops or rewrites a malformed entry.
+  const renamed = updateCase(broken, 'case_tech', { label: 'Tech' });
+  assert.deepEqual(caseEntries(renamed).slice(0, 4), broken.cases.slice(0, 4));
+  assert.deepEqual(caseEntries(moveCase(broken, 'case_billing', -1)).slice(0, 2), [config.cases[0], null]);
+  assert.deepEqual(caseEntries(removeCase(broken, [], 'route', 'case_billing').config), [null, 'text', { id: 'x' }, config.cases[1]]);
+  assert.equal(caseEntries(addCase(broken)).length, 6);
+  // Explicit repair: replace in place, or remove; valid cases are never touched by these.
+  const repaired = replaceEntry(broken, 0);
+  assert.ok(isSwitchCase(caseEntries(repaired)[0]) && caseEntries(repaired).length === 5);
+  assert.equal(replaceEntry(broken, 1), broken);
+  assert.deepEqual(caseEntries(removeEntry(broken, 2)), [null, config.cases[0], { id: 'x' }, config.cases[1]]);
+  assert.equal(removeEntry(broken, 1), broken);
+  assert.equal(removeEntry({ cases: [null] }, 0).cases instanceof Array, true);
+  assert.deepEqual(caseEntries(removeEntry({ cases: [null] }, 0)), [null]);
+  // A list that is not a list draws no routes; only an explicit reset replaces it.
+  assert.deepEqual(nodeRoutes(definition, { type: 'switch', config: { cases: 'oops' } }), []);
+  assert.equal(switchCases(resetCases({ cases: 'oops' })).length, 1);
+  assert.equal(routeLabel(broken, 'case_tech'), 'Technical');
+});
+
+void test('invalid JSON inside a case rule blocks Validate and Run locally, with the case named', async () => {
+  const { unparsedJsonSettings } = await import('../lib/workflow.ts');
+  const workflow = (cases: unknown[]) => ({
+    version: 1 as const, contract: 2 as const, name: 'x', description: '', edges: [],
+    nodes: [{ id: 'route', type: 'switch', version: 1 as const, label: 'Route', position: { x: 0, y: 0 }, inputs: {}, config: { cases } }],
+  });
+  const valid = { id: 'case_a', label: 'A', when: { field: 'tier', operator: 'in', options: ['gold'] } };
+  assert.deepEqual(unparsedJsonSettings(workflow([valid]), catalog), []);
+  const half = { ...valid, when: { ...valid.when, options: '["urgent",' } };
+  assert.deepEqual(unparsedJsonSettings(workflow([null, valid, half]), catalog).map((i) => i.message),
+    ['Case 3 Options is not valid JSON yet. Fix it before validating or running.']);
+});

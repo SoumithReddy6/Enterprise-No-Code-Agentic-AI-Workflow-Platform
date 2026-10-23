@@ -401,15 +401,33 @@ export function unparsedJsonSettings(
 ): Issue[] {
   const definitions = new Map(catalog.map((d) => [d.type, d]));
   const problems: Issue[] = [];
+  const isJson = (property: ConfigProperty) => {
+    const type = (property.anyOf?.find((p) => p.type !== 'null') ?? property).type;
+    return type === 'object' || type === 'array';
+  };
   for (const node of workflow.nodes) {
-    const properties = definitions.get(node.type)?.config_schema.properties ?? {};
+    const definition = definitions.get(node.type);
+    const properties = definition?.config_schema.properties ?? {};
     for (const [key, property] of Object.entries(properties)) {
-      const type = (property.anyOf?.find((p) => p.type !== 'null') ?? property).type;
-      if ((type === 'object' || type === 'array') && typeof node.config[key] === 'string')
+      if (isJson(property) && typeof node.config[key] === 'string')
         problems.push({
           node_id: node.id,
           message: `${property.title || key} is not valid JSON yet. Fix it before validating or running.`,
         });
+    }
+    // A Switch case's rule is a nested Condition: its JSON settings (Options) need the same check.
+    if (node.type === 'switch' && Array.isArray(node.config.cases)) {
+      const predicate = definition?.config_schema.$defs?.ConditionConfig?.properties ?? {};
+      node.config.cases.forEach((entry: unknown, index: number) => {
+        const when = entry && typeof entry === 'object' ? (entry as { when?: unknown }).when : undefined;
+        if (!when || typeof when !== 'object') return;
+        for (const [key, property] of Object.entries(predicate))
+          if (isJson(property) && typeof (when as Record<string, unknown>)[key] === 'string')
+            problems.push({
+              node_id: node.id,
+              message: `Case ${index + 1} ${property.title || key} is not valid JSON yet. Fix it before validating or running.`,
+            });
+      });
     }
   }
   return problems;
