@@ -44,6 +44,10 @@ Exit zero means every requested scenario/stage passed. Failures, missing results
 | S17 | Purchases above $1,000 go to the approval desk | A typed `gt` condition on a JSON field decides whether the external write is sent. 1200, 1000.01 and 9007199254740993.0 are sent and arrive with exactly those values; 80 and 1000.00 are not. 1000.00000000000001 is routed to the desk, then refused before sending because a JSON number cannot carry it unrounded |
 | S18 | A threshold is typed as words | Invalid comparison is rejected at validation with its reason; no run is created, nothing is sent |
 | S19 | The amount arrives as text that is not a number | The run fails naming the value; neither branch runs, nothing is sent |
+| S20 | A support request routes by its checked category | Request reader → Switch with JSON input: billing and technical each reach exactly their own receiver once; no other receiver is called |
+| S21a | A saved route is forged while the run waits for approval | Restore recomputes the route, the run fails before any send |
+| S21b | A Switch routes on an HTTP result, or sits in a contract-1 workflow | Refused at validation and at run submission; nothing is read or sent |
+| S21c | A case is named `approved` | Its write still waits for write approval; rejection sends nothing |
 | L01 | Two tickets processed by real Ollama agents (optional) | Model usage survives into durable run events |
 | M01 | One agent performs a write, then asks approval for another | Approved continuation completes without repeating the first write; deterministic Worker/Store probe |
 
@@ -52,7 +56,7 @@ The optional existing live campaign adds grounded retrieval, query generation, a
 ## Evidence and realism boundaries
 
 - Real processes, sockets, authentication, leases, SQL persistence, approval endpoints, actual tool transport, and SIGKILL/abrupt process exit.
-- S01–S19 and L01 use no API/worker function stubs. M01 is separately labelled: it exercises real Worker/Store logic with scripted model and delivery fixtures, not deployed HTTP. One test-only failpoint exits after the real item SQL commit to deterministically hit the settled-item crash boundary.
+- S01–S21 and L01 use no API/worker function stubs. S20–S21 run in a second lab whose model is a local HTTP fixture: they measure routing and enforcement with structured JSON input, not prose classification. M01 is separately labelled: it exercises real Worker/Store logic with scripted model and delivery fixtures, not deployed HTTP. One test-only failpoint exits after the real item SQL commit to deterministically hit the settled-item crash boundary.
 - DNS substitution permits only scenario-provider.invalid at the fixture's allocated port. The helper is never imported by product code. Other connection targets use ordinary SSRF checks.
 - The receiver records requests before dropping the response to simulate an ambiguous external outcome.
 - A second synthetic tenant is seeded as setup; its access tests use real login and HTTP authorization. This is not an invitation/registration conformance test.

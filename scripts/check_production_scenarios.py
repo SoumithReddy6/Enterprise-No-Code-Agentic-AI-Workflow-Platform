@@ -359,6 +359,22 @@ def main():
             (output/'provider-requests.json').write_text(json.dumps(lab.provider.calls,indent=2))
         except Exception as exc:rows.append({'id':'LAB','phase':'infrastructure','status':'failed','error':repr(exc)})
         finally:lab.close()
+    # A5.2 Switch scenarios need a Request reader, so they run in their own lab whose only
+    # model is a fixture HTTP server; the scenarios above keep their environment unchanged.
+    from scripts.scenarios.request_routing import ModelFixture
+    from scripts.scenarios.switch_routing import MODEL,switch_scenarios
+    with tempfile.TemporaryDirectory(prefix='relay-switch-lab-') as temp:
+        fixture=ModelFixture();switch_output=output/'switch';switch_output.mkdir(exist_ok=True)
+        lab=Lab(temp,switch_output);lab.env['OLLAMA_BASE_URL']=fixture.url
+        try:
+            lab.boot()
+            r=lab.client.post('/api/models',json={'provider':'ollama','model':MODEL});assert r.status_code==201,r.text
+            for id,phase,name,fn in switch_scenarios(lab,fixture):record(id,phase,name,fn)
+            histories=[lab.client.get('/api/runs/'+item['id']).json() for item in lab.client.get('/api/runs').json()]
+            (switch_output/'runs.json').write_text(json.dumps(histories,indent=2))
+            (switch_output/'provider-requests.json').write_text(json.dumps(lab.provider.calls,indent=2))
+        except Exception as exc:rows.append({'id':'SWITCH-LAB','phase':'infrastructure','status':'failed','error':repr(exc)})
+        finally:lab.close();fixture.close()
     def command(name,cmd):
         with open(output/(name+'.log'),'w') as log:r=subprocess.run(cmd,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT)
         assert r.returncode==0,f'{name} exited {r.returncode}; see {name}.log'

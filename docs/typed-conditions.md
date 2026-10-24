@@ -48,4 +48,4 @@ The inspector shows only the settings the chosen operator uses. Switching operat
 
 - **`matches` (regular expressions).** Python's `re` has no timeout, so a pattern in a saved workflow could block a worker (ReDoS). It needs a linear-time engine or a bounded executor, designed on its own.
 - **Lists as condition input.** The input port is still declared as text. Binding a list, such as Jira's `items`, works with `empty` but shows the existing advisory type warning.
-- **Multi-way routing** is A5.2. **Parallel branches and joins** are A5.3.
+- **Multi-way routing** is the [Switch node](multi-way-routing.md) (A5.2): ordered cases, each one of these typed conditions, plus Default. **Parallel branches and joins** are A5.3.

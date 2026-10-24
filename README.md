@@ -113,7 +113,7 @@ sequenceDiagram
 
 ## 2. Production problems Relay is designed for
 
-These are failure modes of shared, long-running, side-effecting systems, the kind that do not show up in a single-user demo. For each one: what goes wrong, how Relay handles it, and the evidence. Scenario IDs (S01–S19) refer to the [deployed-process scenario gate](docs/production-scenario-testing.md), which runs a real API process, real worker processes and a real HTTP receiver.
+These are failure modes of shared, long-running, side-effecting systems, the kind that do not show up in a single-user demo. For each one: what goes wrong, how Relay handles it, and the evidence. Scenario IDs (S01–S21) refer to the [deployed-process scenario gate](docs/production-scenario-testing.md), which runs a real API process, real worker processes and a real HTTP receiver.
 
 ### 2.1 Two workers believe they own the same run
 
@@ -258,10 +258,32 @@ Each doubling of item count adds roughly 10–25% more bytes, not 4×.
 - S17: an amount condition gates a real external write at the precision boundary. The receiver got exactly 1200, 1000.01 and 9007199254740993, did not get 80 or 1000.00, and `1000.00000000000001` was refused before sending.
 - An independent review found JSON numbers rounded before comparison, plus a stale-predicate bug in the editor. Both are fixed with regression tests; the review is kept in [`docs/reviews`](docs/reviews/).
 - S18 and S19 cover the error cases.
+
+### 2.10 A route label that pretends to be permission
+
+**What goes wrong.** A multi-way router reads a model's guess, or a case is named
+`approved`, and the path behind it sends money or tickets. Or a saved route is changed and
+the run resumes down a path nobody chose.
+
+**Design (A5.2).**
+- A Switch takes one of up to 15 ordered cases (each a typed condition) or Default. The first
+  match wins; an error fails the run and never falls through to Default.
+- It accepts only checked or trusted values, in contract-2 workflows. Validation and
+  execution share one trust rule, so a workflow that validates is not refused later.
+- A case name grants nothing: writes behind it keep their own eligibility and approval.
+- On resume the route is recomputed from the input; a forged route fails before any send.
+
+**Evidence.**
+- S20: a checked support category reaches exactly one of four receivers.
+- S21a–c: a forged saved route, an unchecked HTTP value and a case named `approved` send
+  nothing on any other path. Without the restore check, the forged route ran to `success`.
+- Six independent reviews found 9 code defects (malformed route callbacks, a trust-rule
+  mismatch between validation and runtime, and editor repair paths) and 2 plan or coverage
+  gaps; each code fix has a test that failed first. See [`docs/reviews`](docs/reviews/).
 - A live run had `llama3.1` extract the amount from free text, and the condition routed it correctly.
 - Details: [`docs/typed-conditions.md`](docs/typed-conditions.md).
 
-### 2.10 Two browser tabs, one workflow
+### 2.11 Two browser tabs, one workflow
 
 **What goes wrong.** Two tabs edit the same workflow, and the second save silently overwrites the first.
 
@@ -269,7 +291,7 @@ Each doubling of item count adds roughly 10–25% more bytes, not 4×.
 
 **Evidence.** S13.
 
-### 2.11 Schema changes against databases that already exist
+### 2.12 Schema changes against databases that already exist
 
 **What goes wrong.** Hand-rolled `ALTER TABLE` code guesses at the current schema; an upgrade half-applies; a database from an older build is "migrated" into a shape nobody intended.
 
@@ -281,7 +303,7 @@ Each doubling of item count adds roughly 10–25% more bytes, not 4×.
 
 **Evidence.** PostgreSQL CI runs 0001→0003, downgrades to 0001 and upgrades back, then compares the result to the models. A read-only copy of a real workspace database was upgraded with all 27 table row counts preserved.
 
-### 2.12 Knowledge indexes that break while you rebuild them
+### 2.13 Knowledge indexes that break while you rebuild them
 
 **What goes wrong.** A rebuild fails halfway, and search now returns a mix of old and new chunks. Or the embedding model is updated, and old vectors are compared with new query embeddings, giving quietly wrong results.
 
@@ -300,7 +322,7 @@ The embedding model's digest is pinned per index. If the installed model changes
 
 **Evidence.** Knowledge-service suites on SQLite and on PostgreSQL management and search schemas cover ingestion, rebuild, archive cleanup, tenant isolation, deletion and source revocation.
 
-### 2.13 Grounded answers that cite sources that do not exist
+### 2.14 Grounded answers that cite sources that do not exist
 
 **What goes wrong.** The model writes `[S7]` when only six passages were retrieved, or cites a passage from a different tool call. The answer looks sourced and is not.
 
@@ -312,7 +334,7 @@ The embedding model's digest is pinned per index. If the installed model changes
 
 **Evidence.** The grounding gate is in §4.
 
-### 2.14 Dependencies that are unhealthy, and dependencies that are vulnerable
+### 2.15 Dependencies that are unhealthy, and dependencies that are vulnerable
 
 - **Readiness.** `/api/ready` probes the database, both knowledge services and the age of the worker's last heartbeat. It also probes the Python sandbox by running a real `print(1)` container with the executor's exact flags. A hung Docker CLI is killed and its container removed. Workers re-probe right before execution rather than trusting a cached answer.
 - **A dependency that crashed the process.** onnxruntime's telemetry thread aborted processes at exit on macOS. It is disabled before the package loads, and a native macOS CI job checks for the thread by symbol.
@@ -383,7 +405,7 @@ These are substring and abstention heuristics, not proof of semantic correctness
 | Layer | What runs | Where |
 | --- | --- | --- |
 | Unit and integration | 1,055 backend tests under `PYTHONHASHSEED` 0–4, to catch hidden ordering assumptions; 72 frontend tests | CI + local |
-| Deployed processes | 19 scenarios against a real API process, real worker processes and an HTTP receiver: kill -9 mid-write, restarts between approvals, stale leases, SSRF, tenant isolation | `scripts/check_production_scenarios.py` |
+| Deployed processes | 23 scenarios against a real API process, real worker processes and an HTTP receiver: kill -9 mid-write, restarts between approvals, stale leases, SSRF, tenant isolation | `scripts/check_production_scenarios.py` |
 | Live models | 17 workflow shapes on real Ollama models and real Docker | same runner, `--live-models` |
 | PostgreSQL | migrations up/down/up, four concurrent workers, a stale lease, `SIGKILL` inside a loop | CI `postgres-conformance` |
 | Browser | 10 Chromium tests: layout, the condition editor, invalid-JSON edits that must never run, and validation errors that name and open their node, against intercepted API fixtures | CI `browser-layout` |
@@ -407,7 +429,7 @@ flowchart LR
     classDef later fill:#f1f3f4,stroke:#9aa0a6,color:#3c4043
 
     A3["A3 error policy<br/>+ retries"]:::done --> A4["A4 for-each<br/>iteration"]:::done --> A51["A5.1 typed<br/>conditions"]:::done
-    A51 --> A52["A5.2 multi-way<br/>routing"]:::next --> A53["A5.3 parallel branches<br/>+ explicit joins"]:::next --> A6["A6 subgraphs +<br/>bounded loops"]:::later
+    A51 --> A52["A5.2 multi-way<br/>routing"]:::done --> A53["A5.3 parallel branches<br/>+ explicit joins"]:::next --> A6["A6 subgraphs +<br/>bounded loops"]:::later
     B1["B1 Alembic"]:::done --> B2["B2 Redis: per-tenant budgets,<br/>rate limits, fair queueing"]:::later
     B2 --> B3["B3 object storage<br/>for documents"]:::later
     B2 --> B4["B4 orgs, roles,<br/>resource grants"]:::later --> B5["B5 SSO · SCIM ·<br/>audit log"]:::later
@@ -416,7 +438,8 @@ flowchart LR
     F["F OpenTelemetry ·<br/>eval cross-checks"]:::later
 ```
 
-- **A5.2–A5.3 (next).** Conditions with more than two branches, then parallel fan-out with explicit joins. The hard part is concurrency correctness, not syntax. Shared budgets, approvals, cancellation and crash recovery must stay correct when branches run at once, and the binding rule in §2.8 must learn that after a join every branch has run.
+- **A5.2 (done).** The [Switch](docs/multi-way-routing.md) routes to one of up to 15 cases or Default, on checked or trusted values only.
+- **A5.3 (next).** Parallel fan-out with explicit joins. The hard part is concurrency correctness, not syntax. Shared budgets, approvals, cancellation and crash recovery must stay correct when branches run at once, and the binding rule in §2.8 must learn that after a join every branch has run.
 - **B2.** Shared runtime state in Redis. Today's queue is global FIFO, so one tenant can starve others, and limits are per-run only. Redis stays optional: without it the platform runs exactly as today.
 - **B4–B5.** Organisations with roles and resource-scoped grants, enforced in the worker where credentials resolve (not only at the API), then SSO and SCIM.
 - **C–F.** A data-source interface whose drivers must pass one conformance suite, Text-to-SQL over governed definitions, GraphRAG scored against the existing 53-question gate, and tracing. Each capability lands with a measurement, and anything that does not earn its place gets a written verdict, not a quiet removal.

@@ -267,7 +267,8 @@ The opt-in `section` strategy retains heading paths, inline section headings, an
 - Backend-provided schemas drive the node inspector.
 - Deterministic bindings and validation before execution.
 - Conditions choose a true or false branch with a typed comparison: `contains`, `eq`, `ne`, numeric `gt`/`gte`/`lt`/`lte`, `in` (one of several options), or `empty`. A condition can read a field from JSON, such as the `amount` an extraction agent returned. Numbers compare as exact decimals. A value that cannot be compared, such as text where a number is required, fails the run with the reason instead of choosing a branch. Saved `contains` conditions behave exactly as before. See [typed conditions](typed-conditions.md).
-- Multi-way routing and parallel fan-out are the next planned work; cycles and parallel branches are rejected.
+- A Switch takes one of up to 15 ordered cases (each a typed condition) or Default, on checked or trusted values only, in contract-2 workflows. See [multi-way routing](multi-way-routing.md).
+- Parallel fan-out is the next planned work; cycles and parallel branches are rejected.
 
 ### Execution control
 

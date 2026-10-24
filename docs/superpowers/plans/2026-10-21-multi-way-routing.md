@@ -2,6 +2,9 @@
 
 > Design: [multi-way routing](../specs/2026-10-18-multi-way-routing-design.md), approved
 > 2026-10-21 with three fixes. Baseline: `5cdcd64` (hosted CI run `39174617614`, 5/5 green).
+>
+> **Status: all five tasks done (2026-10-24).** Hosted CI green on every task commit; the
+> final Task 5 commit awaits its own run. Evidence: `evals/results/multi-way-routing-2026-10-24/`.
 
 **Goal:** a **Switch** node picks exactly one of several named paths, using the Condition
 predicates. It accepts only checked or trusted values, only in contract-2 workflows.
@@ -191,6 +194,11 @@ the registry, with a parity test like `condition-node.json`).
    claims nothing about prose classification quality.
 4. Evidence folder `evals/results/multi-way-routing-2026-10-<day>/`: summaries and gate
    results in git, full logs ignored (the existing evidence rule).
+
+**Done (2026-10-24).** S20 and S21a–c run in a second lab with the existing model fixture
+(`scripts/scenarios/switch_routing.py`); the other scenarios keep their environment. Docs:
+`docs/multi-way-routing.md` plus the five files above. Evidence:
+`evals/results/multi-way-routing-2026-10-24/`.
 
 ## Done when
 

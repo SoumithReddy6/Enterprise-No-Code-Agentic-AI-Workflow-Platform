@@ -115,6 +115,15 @@ acceptance rules. Step 7 adds new-workflow setup and typed-review controls witho
 converting saved workflows. Business drafts configure no writes and require real
 reference connections where applicable. Step 8 separately measures live model quality.
 
+## Switch
+
+A `switch` node routes to one of its cases or `default` (see
+[multi-way routing](multi-way-routing.md)). It requires contract 2. Its `value` must be a
+verifier's checked text, a Prompt or Calculate built only from it, or independent source
+data; validation and runtime share `compiler.switch_input_allowed`. Routes come from each
+node's settings through `node_routes(node)`, the single route source for validation,
+compilation, fresh and restored outputs and the editor.
+
 ## Request reader
 
 The `request_reader` node binds `message` to the trigger and, optionally, `reference` to
