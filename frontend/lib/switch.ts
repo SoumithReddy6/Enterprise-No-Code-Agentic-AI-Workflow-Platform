@@ -79,11 +79,17 @@ const CASE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 const entryId = (entry: unknown): string | undefined =>
   isRecord(entry) && typeof entry.id === 'string' ? entry.id : undefined;
 
+// Routes the Switch itself owns. Default is automatic and error is reserved for recovery:
+// no case, valid or malformed, can own their connections.
+const RESERVED_ROUTES = new Set(['default', 'error']);
+
 /** The route id that belongs to this entry alone: a malformed entry can still have one, and
- * then connections can start at it. An id that another entry also uses belongs to neither. */
+ * then connections can start at it. An id that another entry also uses belongs to neither,
+ * and a reserved route never belongs to an entry. */
 function ownedId(entries: unknown[], index: number): string | undefined {
   const id = entryId(entries[index]);
-  return id !== undefined && entries.every((e, i) => i === index || entryId(e) !== id) ? id : undefined;
+  if (id === undefined || RESERVED_ROUTES.has(id)) return undefined;
+  return entries.every((e, i) => i === index || entryId(e) !== id) ? id : undefined;
 }
 
 /** The connections that start at a malformed entry's own route id. */
@@ -106,7 +112,7 @@ export function replaceEntry<E extends RouteEdge>(
   if (index < 0 || index >= entries.length || isSwitchCase(entries[index])) return { config, edges };
   const entry = entries[index];
   const id = ownedId(entries, index);
-  const keep = id !== undefined && CASE_ID.test(id) && id !== 'default' && id !== 'error';
+  const keep = id !== undefined && CASE_ID.test(id);
   const label = isRecord(entry) && typeof entry.label === 'string' && entry.label.trim() ? entry.label : `Case ${index + 1}`;
   const replacement = keep ? { id, label, when: { operator: 'eq', field: '' } } : { ...newCase(config, index + 1), label };
   entries[index] = replacement;

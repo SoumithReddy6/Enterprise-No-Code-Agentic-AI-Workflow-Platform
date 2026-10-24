@@ -150,12 +150,21 @@ void test('repairing a malformed case never leaves a connection pointing at a mi
   assert.deepEqual(result.edges, edges);
   assert.deepEqual(dangling(result.config, result.edges), []);
 
-  // An id that cannot be kept (invalid, reserved or used twice): the connection moves to the new id.
-  for (const id of ['bad id', 'default']) {
-    const moved = replaceEntry({ cases: [{ ...bad, id }, config.cases[1]] }, [edge('b', id), edge('t', 'case_tech')], 'route', 0);
-    const newId = (caseEntries(moved.config)[0] as { id: string }).id;
-    assert.match(newId, /^case_[a-z0-9]{6}$/);
-    assert.deepEqual(moved.edges.map((e) => [e.id, e.sourceHandle]), [['b', newId], ['t', 'case_tech']]);
+  // An invalid id cannot be kept: the connection moves to the new id.
+  const moved = replaceEntry({ cases: [{ ...bad, id: 'bad id' }, config.cases[1]] }, [edge('b', 'bad id'), edge('t', 'case_tech')], 'route', 0);
+  const newId = (caseEntries(moved.config)[0] as { id: string }).id;
+  assert.match(newId, /^case_[a-z0-9]{6}$/);
+  assert.deepEqual(moved.edges.map((e) => [e.id, e.sourceHandle]), [['b', newId], ['t', 'case_tech']]);
+  // A reserved id (default, error) never belongs to a case: the automatic Default line stays
+  // on Default when the entry is replaced or removed.
+  for (const id of ['default', 'error']) {
+    const reserved = { cases: [{ ...bad, id }, config.cases[1]] };
+    const lines = [edge('b', id), edge('t', 'case_tech')];
+    assert.deepEqual(entryConnections(reserved, lines, 'route', 0), []);
+    const replaced = replaceEntry(reserved, lines, 'route', 0);
+    assert.match((caseEntries(replaced.config)[0] as { id: string }).id, /^case_[a-z0-9]{6}$/);
+    assert.deepEqual(replaced.edges, lines);
+    assert.deepEqual(removeEntry(reserved, lines, 'route', 0).edges, lines);
   }
   const shared = { cases: [{ ...bad, id: 'case_tech' }, config.cases[1]] };
   const kept = replaceEntry(shared, [edge('t', 'case_tech')], 'route', 0);

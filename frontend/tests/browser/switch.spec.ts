@@ -382,3 +382,24 @@ test('starting a new case list removes connections from routes that no longer ex
   await expect(page.getByText('The saved cases are not a list, so they cannot be shown as cases: "oops"', { exact: true })).toBeVisible();
   expect(unexpected).toEqual([]);
 });
+
+
+for (const action of ['Replace with an empty case', 'Remove'] as const)
+  test(`a malformed case with the reserved id "default" never takes the Default connection ("${action}")`, async ({ page }) => {
+    const validated: Workflow[] = [];
+    const unexpected: string[] = [];
+    await editor(page, validated, unexpected);
+    const broken = structuredClone(connected);
+    (routeNode(broken).config.cases as unknown[]).push({ id: 'default', label: 'Broken case', when: null });
+    await importWorkflow(page, broken);
+    await page.locator('[data-id="route"]').click();
+    const bad = page.getByRole('group', { name: 'Case 4' });
+    await expect(bad.getByText(/^Case 4 is not valid/)).toBeVisible();
+    // The automatic Default line is not this entry's, so the plain Remove label applies.
+    await bad.getByRole('button', { name: action, exact: true }).click();
+    const saved = await validate(page, validated);
+    expect(routeEdges(saved)).toEqual(routeEdges(connected));
+    expect(routeEdges(saved)).toContain('default->other');
+    expect(dangling(saved)).toEqual([]);
+    expect(unexpected).toEqual([]);
+  });
