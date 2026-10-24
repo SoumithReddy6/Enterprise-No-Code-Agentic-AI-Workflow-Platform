@@ -98,7 +98,8 @@ void test('malformed entries stay in the draft, are skipped by helpers and are r
   const broken = { cases: [null, config.cases[0], 'text', { id: 'x' }, config.cases[1]] };
   assert.equal(caseEntries(broken).length, 5);
   assert.deepEqual(switchCases(broken).map((c) => c.id), ['case_billing', 'case_tech']);
-  assert.deepEqual([...unreachableCases({ cases: [null, config.cases[0], config.cases[0]] })], [[2, 1]]);
+  // Same rule, different ids: a duplicate rule after a malformed entry is still found.
+  assert.deepEqual([...unreachableCases({ cases: [null, config.cases[0], { ...config.cases[0], id: 'case_again' }] })], [[2, 1]]);
   // Editing valid cases never drops or rewrites a malformed entry.
   const renamed = updateCase(broken, 'case_tech', { label: 'Tech' });
   assert.deepEqual(caseEntries(renamed).slice(0, 4), broken.cases.slice(0, 4));
@@ -182,4 +183,41 @@ void test('repairing a malformed case never leaves a connection pointing at a mi
   result = resetCases({ cases: 'oops' }, edges, 'route');
   assert.deepEqual(result.edges.map((e) => e.id), ['d', 'elsewhere']);
   assert.deepEqual(dangling(result.config, result.edges), []);
+});
+
+void test('a well-shaped case with a reserved, invalid or repeated route id is repaired, never edited as a case', async () => {
+  const { caseProblem, replaceEntry, removeEntry, caseEntries, entryConnections } = await import('../lib/switch.ts');
+  const rule = when('billing');
+  const lines = [edge('d', 'default'), edge('b', 'case_billing'), edge('x', 'bad id')];
+  const named = (id: string) => ({ id, label: 'Billing', when: rule });
+  // Problems are named; an ordinary case has none.
+  assert.equal(caseProblem([named('case_billing')], 0), null);
+  assert.match(String(caseProblem([named('default')], 0)), /reserved/);
+  assert.match(String(caseProblem([named('error')], 0)), /reserved/);
+  assert.match(String(caseProblem([named('bad id')], 0)), /not a valid route id/);
+  assert.match(String(caseProblem([named('case_billing'), named('case_billing')], 1)), /also used by another case/);
+  assert.match(String(caseProblem([null], 0)), /needs an id, a label and a rule/);
+  // Such cases are not editable: no route, no duplicate warning, no ordinary removal.
+  const reserved = { cases: [named('default'), config.cases[1]] };
+  assert.deepEqual(switchCases(reserved).map((c) => c.id), ['case_tech']);
+  assert.deepEqual(removeCase(reserved, lines, 'route', 'default'), { config: reserved, edges: lines });
+  assert.deepEqual(entryConnections(reserved, lines, 'route', 0), []);
+  // Repair keeps the label and the valid rule; only the id changes. Default stays put.
+  const repaired = replaceEntry(reserved, lines, 'route', 0);
+  const first = caseEntries(repaired.config)[0] as { id: string; label: string; when: unknown };
+  assert.match(first.id, /^case_[a-z0-9]{6}$/);
+  assert.deepEqual([first.label, first.when], ['Billing', rule]);
+  assert.deepEqual(repaired.edges, lines);
+  assert.deepEqual(removeEntry(reserved, lines, 'route', 0).edges, lines);
+  // An invalid id keeps its rule too, and its own line moves to the new id.
+  const invalid = replaceEntry({ cases: [named('bad id'), config.cases[1]] }, lines, 'route', 0);
+  const fixed = caseEntries(invalid.config)[0] as { id: string; when: unknown };
+  assert.deepEqual(fixed.when, rule);
+  assert.deepEqual(invalid.edges.find((e) => e.id === 'x')!.sourceHandle, fixed.id);
+  // Two cases with one id: both need repair; repairing one gives it a new id and leaves the
+  // line with the other, which is then an ordinary case again.
+  const twice = { cases: [named('case_billing'), named('case_billing')] };
+  const split = replaceEntry(twice, lines, 'route', 1);
+  assert.deepEqual(switchCases(split.config).map((c) => c.id).sort(), ['case_billing', (caseEntries(split.config)[1] as { id: string }).id].sort());
+  assert.deepEqual(split.edges, lines);
 });

@@ -22,6 +22,37 @@ export function isSwitchCase(entry: unknown): entry is SwitchCase {
     && (entry.when === undefined || isRecord(entry.when));
 }
 
+const CASE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+const entryId = (entry: unknown): string | undefined =>
+  isRecord(entry) && typeof entry.id === 'string' ? entry.id : undefined;
+
+// Routes the Switch itself owns. Default is automatic and error is reserved for recovery:
+// no case, valid or malformed, can own their connections.
+const RESERVED_ROUTES = new Set(['default', 'error']);
+
+/** The route id that belongs to this entry alone: a malformed entry can still have one, and
+ * then connections can start at it. An id that another entry also uses belongs to neither,
+ * and a reserved route never belongs to an entry. */
+function ownedId(entries: unknown[], index: number): string | undefined {
+  const id = entryId(entries[index]);
+  if (id === undefined || RESERVED_ROUTES.has(id)) return undefined;
+  return entries.every((e, i) => i === index || entryId(e) !== id) ? id : undefined;
+}
+
+/** Why an entry cannot be edited as an ordinary case, or null when it can. Besides its shape,
+ * a case needs a route id of its own: valid, not reserved for the Switch, and unique. Only
+ * such a case owns the connections at its id. */
+export function caseProblem(entries: unknown[], index: number): string | null {
+  const entry = entries[index];
+  if (!isSwitchCase(entry)) return 'it needs an id, a label and a rule';
+  if (RESERVED_ROUTES.has(entry.id)) return `its route id "${entry.id}" is reserved for the Switch`;
+  if (!CASE_ID.test(entry.id)) return `its route id "${entry.id}" is not a valid route id`;
+  if (entries.some((e, i) => i !== index && entryId(e) === entry.id)) return `its route id "${entry.id}" is also used by another case`;
+  return null;
+}
+
+const editable = (entries: unknown[], index: number): boolean => caseProblem(entries, index) === null;
+
 export function newCaseId(existing: Iterable<string>, random: () => number = Math.random): string {
   const taken = new Set(existing);
   for (;;) {
@@ -37,14 +68,20 @@ export function caseEntries(config: Record<string, unknown>): unknown[] {
   return Array.isArray(config.cases) ? config.cases : [];
 }
 
-/** The well-formed cases only, in order. */
+/** The editable cases only, in order. */
 export function switchCases(config: Record<string, unknown>): SwitchCase[] {
-  return caseEntries(config).filter(isSwitchCase);
+  const entries = caseEntries(config);
+  return entries.filter((_, i) => editable(entries, i)) as SwitchCase[];
 }
+
+/** The position of the editable case with this route id, or -1. */
+const caseIndex = (entries: unknown[], id: string): number =>
+  entries.findIndex((c, i) => entryId(c) === id && editable(entries, i));
 
 function newCase(config: Record<string, unknown>, position: number): SwitchCase {
   return {
-    id: newCaseId(switchCases(config).map((c) => c.id)),
+    // Every id in the draft is taken, even a malformed entry's.
+    id: newCaseId(caseEntries(config).flatMap((c) => entryId(c) ?? [])),
     label: `Case ${position}`,
     when: { operator: 'eq', field: '' },
   };
@@ -63,36 +100,21 @@ export function updateCase(
   id: string,
   change: Partial<Omit<SwitchCase, 'id'>>,
 ): Record<string, unknown> {
-  return { ...config, cases: caseEntries(config).map((c) => (isSwitchCase(c) && c.id === id ? { ...c, ...change } : c)) };
+  const entries = caseEntries(config);
+  const index = caseIndex(entries, id);
+  return { ...config, cases: entries.map((c, i) => (i === index ? { ...(c as SwitchCase), ...change } : c)) };
 }
 
 export function moveCase(config: Record<string, unknown>, id: string, delta: -1 | 1): Record<string, unknown> {
   const entries = [...caseEntries(config)];
-  const from = entries.findIndex((c) => isSwitchCase(c) && c.id === id);
+  const from = caseIndex(entries, id);
   const to = from + delta;
   if (from < 0 || to < 0 || to >= entries.length) return config;
   [entries[from], entries[to]] = [entries[to], entries[from]];
   return { ...config, cases: entries };
 }
 
-const CASE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
-const entryId = (entry: unknown): string | undefined =>
-  isRecord(entry) && typeof entry.id === 'string' ? entry.id : undefined;
-
-// Routes the Switch itself owns. Default is automatic and error is reserved for recovery:
-// no case, valid or malformed, can own their connections.
-const RESERVED_ROUTES = new Set(['default', 'error']);
-
-/** The route id that belongs to this entry alone: a malformed entry can still have one, and
- * then connections can start at it. An id that another entry also uses belongs to neither,
- * and a reserved route never belongs to an entry. */
-function ownedId(entries: unknown[], index: number): string | undefined {
-  const id = entryId(entries[index]);
-  if (id === undefined || RESERVED_ROUTES.has(id)) return undefined;
-  return entries.every((e, i) => i === index || entryId(e) !== id) ? id : undefined;
-}
-
-/** The connections that start at a malformed entry's own route id. */
+/** The connections that start at an entry's own route id (none for a reserved or shared id). */
 export function entryConnections<E extends RouteEdge>(
   config: Record<string, unknown>, edges: E[], nodeId: string, index: number,
 ): E[] {
@@ -102,19 +124,21 @@ export function entryConnections<E extends RouteEdge>(
 
 type Repair<E> = { config: Record<string, unknown>; edges: E[] };
 
-/** Repair one malformed entry: replace it, at its position, with a new empty case. A valid id
- * that only this entry uses is kept (with its label), so its connections stay correct; any
- * other id is replaced, and its connections move to the new id. */
+/** Repair one entry that is not an editable case, at its position. A valid id that only this
+ * entry uses is kept, so its connections stay correct; any other id is replaced, and the
+ * connections at an owned id move to the new one. The label and a well-shaped rule are kept,
+ * so a case whose only problem is its id loses nothing; otherwise the rule starts empty. */
 export function replaceEntry<E extends RouteEdge>(
   config: Record<string, unknown>, edges: E[], nodeId: string, index: number,
 ): Repair<E> {
   const entries = [...caseEntries(config)];
-  if (index < 0 || index >= entries.length || isSwitchCase(entries[index])) return { config, edges };
+  if (index < 0 || index >= entries.length || editable(entries, index)) return { config, edges };
   const entry = entries[index];
   const id = ownedId(entries, index);
   const keep = id !== undefined && CASE_ID.test(id);
   const label = isRecord(entry) && typeof entry.label === 'string' && entry.label.trim() ? entry.label : `Case ${index + 1}`;
-  const replacement = keep ? { id, label, when: { operator: 'eq', field: '' } } : { ...newCase(config, index + 1), label };
+  const when = isRecord(entry) && isRecord(entry.when) ? entry.when : { operator: 'eq', field: '' };
+  const replacement = keep ? { id, label, when } : { ...newCase(config, index + 1), label, when };
   entries[index] = replacement;
   const moved = !keep && id !== undefined
     ? edges.map((e) => (e.source === nodeId && e.sourceHandle === id ? { ...e, sourceHandle: replacement.id } : e))
@@ -127,7 +151,7 @@ export function removeEntry<E extends RouteEdge>(
   config: Record<string, unknown>, edges: E[], nodeId: string, index: number,
 ): Repair<E> {
   const entries = caseEntries(config);
-  if (index < 0 || index >= entries.length || isSwitchCase(entries[index]) || entries.length <= 1) return { config, edges };
+  if (index < 0 || index >= entries.length || editable(entries, index) || entries.length <= 1) return { config, edges };
   const removed = new Set(entryConnections(config, edges, nodeId, index).map((e) => e.id));
   return { config: { ...config, cases: entries.filter((_, i) => i !== index) }, edges: edges.filter((e) => !removed.has(e.id)) };
 }
@@ -148,7 +172,8 @@ export function caseEdges<E extends RouteEdge>(edges: E[], nodeId: string, caseI
   return edges.filter((e) => e.source === nodeId && e.sourceHandle === caseId);
 }
 
-/** Remove a case together with its connections: one explicit action, never a silent drop. */
+/** Remove an editable case together with its connections: one explicit action, never a silent
+ * drop. Only the connections at its own route id go, so Default is never touched. */
 export function removeCase<E extends RouteEdge>(
   config: Record<string, unknown>,
   edges: E[],
@@ -156,10 +181,11 @@ export function removeCase<E extends RouteEdge>(
   caseId: string,
 ): { config: Record<string, unknown>; edges: E[] } {
   const entries = caseEntries(config);
-  if (entries.length <= 1 || !entries.some((c) => isSwitchCase(c) && c.id === caseId)) return { config, edges };
-  const removed = new Set(caseEdges(edges, nodeId, caseId).map((e) => e.id));
+  const index = caseIndex(entries, caseId);
+  if (entries.length <= 1 || index < 0) return { config, edges };
+  const removed = new Set(entryConnections(config, edges, nodeId, index).map((e) => e.id));
   return {
-    config: { ...config, cases: entries.filter((c) => !(isSwitchCase(c) && c.id === caseId)) },
+    config: { ...config, cases: entries.filter((_, i) => i !== index) },
     edges: edges.filter((e) => !removed.has(e.id)),
   };
 }
@@ -181,9 +207,10 @@ function canonical(when: Record<string, unknown>): string {
 export function unreachableCases(config: Record<string, unknown>): Map<number, number> {
   const first = new Map<string, number>();
   const result = new Map<number, number>();
-  caseEntries(config).forEach((c, index) => {
-    if (!isSwitchCase(c)) return;
-    const key = canonical(c.when ?? {});
+  const entries = caseEntries(config);
+  entries.forEach((c, index) => {
+    if (!editable(entries, index)) return;
+    const key = canonical((c as SwitchCase).when ?? {});
     if (first.has(key)) result.set(index, first.get(key)!);
     else first.set(key, index);
   });

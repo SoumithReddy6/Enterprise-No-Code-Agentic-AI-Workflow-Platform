@@ -1,8 +1,8 @@
 'use client';
 import { ConfigField } from './platform-settings';
 import {
-  addCase, caseEdges, caseEntries, entryConnections, isSwitchCase, MAX_CASES, moveCase, removeEntry,
-  replaceEntry, resetCases, unreachableCases, updateCase,
+  addCase, caseEdges, caseEntries, caseProblem, entryConnections, isSwitchCase, MAX_CASES, moveCase,
+  removeEntry, replaceEntry, resetCases, unreachableCases, updateCase, type SwitchCase,
 } from '@/lib/switch';
 import { conditionSettingVisible, withConditionOperator, type ConfigProperty } from '@/lib/workflow';
 
@@ -58,19 +58,21 @@ export default function SwitchCases({
         Each case is a Condition rule: operator, an optional field such as order.amount, and the
         value to compare. A case name grants no permission.
       </p>
-      {entries.map((item, index) => {
-        if (!isSwitchCase(item))
+      {entries.map((entry, index) => {
+        const problem = caseProblem(entries, index);
+        if (problem !== null)
           return (
             // A malformed entry stays in the draft until the author repairs or removes it.
             <fieldset key={`invalid-${index}`} className="switch-case" aria-label={`Case ${index + 1}`}>
               <legend>Case {index + 1}</legend>
               <output className="warning-text">
-                Case {index + 1} is not valid: it needs an id, a label and a rule. Saved data: {preview(item)}
+                Case {index + 1} is not valid: {problem}. Saved data: {preview(entry)}
               </output>
               <div className="button-row">
                 <button className="text-button" disabled={disabled}
                   onClick={() => onRepair(replaceEntry(config, edges, nodeId, index))}>
-                  Replace with an empty case
+                  {/* A case whose only problem is its id keeps its label and rule. */}
+                  {isSwitchCase(entry) ? 'Give this case a new route id' : 'Replace with an empty case'}
                 </button>
                 <button className="text-button danger" disabled={disabled || entries.length <= 1}
                   onClick={() => onRepair(removeEntry(config, edges, nodeId, index))}>
@@ -79,6 +81,7 @@ export default function SwitchCases({
               </div>
             </fieldset>
           );
+        const item = entry as SwitchCase;
         const connected = caseEdges(edges, nodeId, item.id).length > 0;
         const when = item.when ?? {};
         return (

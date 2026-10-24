@@ -403,3 +403,51 @@ for (const action of ['Replace with an empty case', 'Remove'] as const)
     expect(dangling(saved)).toEqual([]);
     expect(unexpected).toEqual([]);
   });
+
+// ------------------------------------------------------------------ reserved or shared ids on well-shaped cases (2026-10-24)
+
+for (const action of ['Give this case a new route id', 'Remove'] as const)
+  test(`a well-shaped case with the reserved id "default" gets repair controls and never takes Default ("${action}")`, async ({ page }) => {
+    const validated: Workflow[] = [];
+    const unexpected: string[] = [];
+    await editor(page, validated, unexpected);
+    const broken = structuredClone(connected);
+    (routeNode(broken).config.cases as unknown[]).push({ id: 'default', label: 'Billing again', when: rule('billing') });
+    await importWorkflow(page, broken);
+    await page.locator('[data-id="route"]').click();
+    const bad = page.getByRole('group', { name: 'Case 4' });
+    await expect(bad.getByText(/^Case 4 is not valid: its route id "default" is reserved for the Switch\./)).toBeVisible();
+    // No ordinary controls: it cannot be removed as a case that owns the Default line.
+    await expect(bad.getByRole('button', { name: /^Remove case/ })).toHaveCount(0);
+    await bad.getByRole('button', { name: action, exact: true }).click();
+    const saved = await validate(page, validated);
+    expect(routeEdges(saved)).toEqual(routeEdges(connected));
+    if (action === 'Give this case a new route id') {
+      const repaired = (routeNode(saved).config.cases as { id: string; label: string; when: unknown }[])[3];
+      expect(repaired.id).toMatch(/^case_[a-z0-9]{6}$/);
+      expect([repaired.label, repaired.when]).toEqual(['Billing again', rule('billing')]);
+    } else {
+      expect(caseIds(saved)).toEqual(caseIds(connected));
+    }
+    expect(unexpected).toEqual([]);
+  });
+
+test('two cases with one id both get repair controls; repairing one keeps the line with the other', async ({ page }) => {
+  const validated: Workflow[] = [];
+  const unexpected: string[] = [];
+  await editor(page, validated, unexpected);
+  const shared = structuredClone(connected);
+  (routeNode(shared).config.cases as unknown[]).push({ id: 'case_billng', label: 'Second billing', when: rule('invoice') });
+  await importWorkflow(page, shared);
+  await page.locator('[data-id="route"]').click();
+  for (const n of [1, 4])
+    await expect(page.getByRole('group', { name: `Case ${n}` }).getByText(/its route id "case_billng" is also used by another case/)).toBeVisible();
+  await page.getByRole('group', { name: 'Case 4' }).getByRole('button', { name: 'Give this case a new route id', exact: true }).click();
+  const saved = await validate(page, validated);
+  expect(routeEdges(saved)).toEqual(routeEdges(connected));
+  expect(caseIds(saved).slice(0, 3)).toEqual(caseIds(connected));
+  expect(caseIds(saved)[3]).toMatch(/^case_[a-z0-9]{6}$/);
+  // Case 1 owns its id again and is an ordinary case.
+  await expect(page.getByLabel('Case 1 label', { exact: true })).toHaveValue('Billing');
+  expect(unexpected).toEqual([]);
+});
