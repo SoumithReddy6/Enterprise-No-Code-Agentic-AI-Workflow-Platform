@@ -198,7 +198,8 @@ test('a malformed Switch draft opens, shows the bad entry and can be repaired wi
   await importWorkflow(page, notList);
   await page.locator('[data-id="route"]').click();
   await expect(cases.getByText('The saved cases are not a list, so they cannot be shown as cases: "oops"', { exact: true })).toBeVisible();
-  await cases.getByRole('button', { name: 'Start a new case list', exact: true }).click();
+  // The draft has connections from routes that no longer exist, and the button says so.
+  await cases.getByRole('button', { name: 'Start a new case list and remove its connections', exact: true }).click();
   saved = await validate(page, validated);
   expect(routeNode(saved).config.cases).toHaveLength(1);
   expect(errors).toEqual([]);
@@ -235,22 +236,26 @@ test('drawn connections stay on their own handles after reorder, add, remove and
       Object.fromEntries(edges.filter((e) => e.sourceHandle).map((e) => [e.id, [e.source, e.sourceHandle!]]));
   }, connected.edges);
   await page.locator('[data-id="route"]').click();
-  const settled = async () => {
-    await expect.poll(async () => Math.max(...(await edgeAnchors(page)).map((a) => a.delta)), { timeout: 3000 }).toBeLessThan(1);
-    expect((await edgeAnchors(page)).length).toBeGreaterThan(0);
+  // Wait for exactly the expected lines, then require every one on its own handle. (An empty
+  // list must never count as settled.)
+  const settled = async (lines: number) => {
+    await expect.poll(async () => {
+      const anchors = await edgeAnchors(page);
+      return anchors.length === lines ? Math.max(...anchors.map((a) => a.delta)) : 999;
+    }, { timeout: 3000 }).toBeLessThan(1);
   };
-  await settled();
+  await settled(4);
   const group = (n: number) => page.getByRole('group', { name: `Case ${n}` });
   await group(3).getByRole('button', { name: 'Move up', exact: true }).click();
-  await settled();
+  await settled(4);
   await group(1).getByRole('button', { name: 'Move down', exact: true }).click();
-  await settled();
+  await settled(4);
   await page.getByRole('region', { name: 'Switch cases' }).getByRole('button', { name: 'Add case', exact: true }).click();
-  await settled();
+  await settled(4);
   await group(2).getByRole('button', { name: 'Remove case and its connection', exact: true }).click();
-  await settled();
+  await settled(3);
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await settled();
+  await settled(4);
   expect(unexpected).toEqual([]);
 });
 
@@ -315,5 +320,65 @@ test('invalid JSON in a case rule stops Validate and Run locally and names the c
   await options.fill('["urgent"]');
   const saved = await validate(page, validated);
   expect((routeNode(saved).config.cases as { when: { options: unknown } }[])[0].when.options).toEqual(['urgent']);
+  expect(unexpected).toEqual([]);
+});
+
+// ------------------------------------------------------------------ review E05 (2026-10-24)
+
+const dangling = (w: Workflow) => {
+  const ids = new Set([...((routeNode(w).config.cases as unknown[]) ?? [])
+    .flatMap((c) => (c && typeof c === 'object' && typeof (c as { id?: unknown }).id === 'string' ? [(c as { id: string }).id] : [])), 'default']);
+  return w.edges.filter((e) => e.source === routeNode(w).id && !ids.has(String(e.sourceHandle))).map((e) => e.id);
+};
+
+for (const action of ['Replace with an empty case', 'Remove case and its connection'] as const)
+  test(`repairing a malformed connected case with "${action}" leaves no orphaned connection, and one undo restores it`, async ({ page }) => {
+    const validated: Workflow[] = [];
+    const unexpected: string[] = [];
+    await editor(page, validated, unexpected);
+    const broken = structuredClone(connected);
+    (routeNode(broken).config.cases as unknown[])[0] = { id: 'case_billng', label: 'Billing', when: null };
+    await importWorkflow(page, broken);
+    await page.locator('[data-id="route"]').click();
+    const first = page.getByRole('group', { name: 'Case 1' });
+    await expect(first.getByText(/^Case 1 is not valid/)).toBeVisible();
+    await first.getByRole('button', { name: action, exact: true }).click();
+    const saved = await validate(page, validated);
+    expect(dangling(saved)).toEqual([]);
+    if (action === 'Replace with an empty case') {
+      // The valid, unique id is kept, so its connection still belongs to the repaired case.
+      expect((routeNode(saved).config.cases as { id: string; label: string }[])[0]).toMatchObject({ id: 'case_billng', label: 'Billing' });
+      expect(routeEdges(saved)).toEqual(routeEdges(connected));
+    } else {
+      expect(caseIds(saved)).toEqual(['case_techno', 'case_accnts']);
+      expect(routeEdges(saved)).toEqual(routeEdges(connected).filter((e) => !e.startsWith('case_billng')));
+    }
+    await page.getByRole('button', { name: 'Undo', exact: true }).click();
+    const restored = await validate(page, validated);
+    expect(routeNode(restored).config.cases).toEqual(routeNode(broken).config.cases);
+    expect(routeEdges(restored)).toEqual(routeEdges(connected));
+    expect(unexpected).toEqual([]);
+  });
+
+test('starting a new case list removes connections from routes that no longer exist, keeping Default', async ({ page }) => {
+  const validated: Workflow[] = [];
+  const unexpected: string[] = [];
+  await editor(page, validated, unexpected);
+  const notList = structuredClone(connected);
+  routeNode(notList).config.cases = 'oops';
+  await importWorkflow(page, notList);
+  await page.locator('[data-id="route"]').click();
+  await page.getByRole('button', { name: 'Start a new case list and remove its connections', exact: true }).click();
+  const saved = await validate(page, validated);
+  expect(dangling(saved)).toEqual([]);
+  expect(routeEdges(saved)).toEqual(['default->other']);
+  await expect(page.getByText(/· 2 connections$/)).toBeVisible();
+  // Undo restores the unreadable list and every connection in one step. The restored draft
+  // is unparsed again, so Validate stays local, and an unreadable list draws no route
+  // handles to hang lines on; the canvas footer counts the restored connections.
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(page.getByText(new RegExp(`· ${connected.edges.length} connections$`))).toBeVisible();
+  await page.locator('[data-id="route"]').click();
+  await expect(page.getByText('The saved cases are not a list, so they cannot be shown as cases: "oops"', { exact: true })).toBeVisible();
   expect(unexpected).toEqual([]);
 });

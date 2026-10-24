@@ -106,16 +106,15 @@ void test('malformed entries stay in the draft, are skipped by helpers and are r
   assert.deepEqual(caseEntries(removeCase(broken, [], 'route', 'case_billing').config), [null, 'text', { id: 'x' }, config.cases[1]]);
   assert.equal(caseEntries(addCase(broken)).length, 6);
   // Explicit repair: replace in place, or remove; valid cases are never touched by these.
-  const repaired = replaceEntry(broken, 0);
+  const repaired = replaceEntry(broken, [], 'route', 0).config;
   assert.ok(isSwitchCase(caseEntries(repaired)[0]) && caseEntries(repaired).length === 5);
-  assert.equal(replaceEntry(broken, 1), broken);
-  assert.deepEqual(caseEntries(removeEntry(broken, 2)), [null, config.cases[0], { id: 'x' }, config.cases[1]]);
-  assert.equal(removeEntry(broken, 1), broken);
-  assert.equal(removeEntry({ cases: [null] }, 0).cases instanceof Array, true);
-  assert.deepEqual(caseEntries(removeEntry({ cases: [null] }, 0)), [null]);
+  assert.equal(replaceEntry(broken, [], 'route', 1).config, broken);
+  assert.deepEqual(caseEntries(removeEntry(broken, [], 'route', 2).config), [null, config.cases[0], { id: 'x' }, config.cases[1]]);
+  assert.equal(removeEntry(broken, [], 'route', 1).config, broken);
+  assert.deepEqual(caseEntries(removeEntry({ cases: [null] }, [], 'route', 0).config), [null]);
   // A list that is not a list draws no routes; only an explicit reset replaces it.
   assert.deepEqual(nodeRoutes(definition, { type: 'switch', config: { cases: 'oops' } }), []);
-  assert.equal(switchCases(resetCases({ cases: 'oops' })).length, 1);
+  assert.equal(switchCases(resetCases({ cases: 'oops' }, [], 'route').config).length, 1);
   assert.equal(routeLabel(broken, 'case_tech'), 'Technical');
 });
 
@@ -130,4 +129,48 @@ void test('invalid JSON inside a case rule blocks Validate and Run locally, with
   const half = { ...valid, when: { ...valid.when, options: '["urgent",' } };
   assert.deepEqual(unparsedJsonSettings(workflow([null, valid, half]), catalog).map((i) => i.message),
     ['Case 3 Options is not valid JSON yet. Fix it before validating or running.']);
+});
+
+
+void test('repairing a malformed case never leaves a connection pointing at a missing route', async () => {
+  const { replaceEntry, removeEntry, resetCases, caseEntries, entryConnections } = await import('../lib/switch.ts');
+  const bad = { id: 'case_billng', label: 'Billing', when: null };
+  const draft = { cases: [bad, config.cases[1]] };
+  const edges = [edge('b', 'case_billng'), edge('t', 'case_tech'), edge('d', 'default'),
+    { id: 'elsewhere', source: 'other', target: 'x', sourceHandle: 'case_billng' }];
+  const dangling = (cfg: Record<string, unknown>, list: WorkflowEdge[]) => {
+    const routes = new Set(nodeRoutes(definition, { type: 'switch', config: cfg }));
+    return list.filter((e) => e.source === 'route' && !routes.has(String(e.sourceHandle))).map((e) => e.id);
+  };
+  assert.deepEqual(entryConnections(draft, edges, 'route', 0).map((e) => e.id), ['b']);
+
+  // Replace keeps a valid, unique id and its label, so the connection stays correct.
+  let result = replaceEntry(draft, edges, 'route', 0);
+  assert.deepEqual(caseEntries(result.config)[0], { id: 'case_billng', label: 'Billing', when: { operator: 'eq', field: '' } });
+  assert.deepEqual(result.edges, edges);
+  assert.deepEqual(dangling(result.config, result.edges), []);
+
+  // An id that cannot be kept (invalid, reserved or used twice): the connection moves to the new id.
+  for (const id of ['bad id', 'default']) {
+    const moved = replaceEntry({ cases: [{ ...bad, id }, config.cases[1]] }, [edge('b', id), edge('t', 'case_tech')], 'route', 0);
+    const newId = (caseEntries(moved.config)[0] as { id: string }).id;
+    assert.match(newId, /^case_[a-z0-9]{6}$/);
+    assert.deepEqual(moved.edges.map((e) => [e.id, e.sourceHandle]), [['b', newId], ['t', 'case_tech']]);
+  }
+  const shared = { cases: [{ ...bad, id: 'case_tech' }, config.cases[1]] };
+  const kept = replaceEntry(shared, [edge('t', 'case_tech')], 'route', 0);
+  // The id belongs to a valid case too, so its connection stays with that case.
+  assert.deepEqual(kept.edges, [edge('t', 'case_tech')]);
+  assert.notEqual((caseEntries(kept.config)[0] as { id: string }).id, 'case_tech');
+
+  // Remove takes the connection with the entry, and nothing else.
+  result = removeEntry(draft, edges, 'route', 0);
+  assert.deepEqual(caseEntries(result.config), [config.cases[1]]);
+  assert.deepEqual(result.edges.map((e) => e.id), ['t', 'd', 'elsewhere']);
+  assert.deepEqual(dangling(result.config, result.edges), []);
+
+  // A reset removes connections from routes that no longer exist; Default stays.
+  result = resetCases({ cases: 'oops' }, edges, 'route');
+  assert.deepEqual(result.edges.map((e) => e.id), ['d', 'elsewhere']);
+  assert.deepEqual(dangling(result.config, result.edges), []);
 });

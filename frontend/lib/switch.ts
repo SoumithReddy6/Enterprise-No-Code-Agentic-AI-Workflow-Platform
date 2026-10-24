@@ -75,24 +75,67 @@ export function moveCase(config: Record<string, unknown>, id: string, delta: -1 
   return { ...config, cases: entries };
 }
 
-/** Repair one malformed entry: replace it, at its position, with a new empty case. */
-export function replaceEntry(config: Record<string, unknown>, index: number): Record<string, unknown> {
+const CASE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+const entryId = (entry: unknown): string | undefined =>
+  isRecord(entry) && typeof entry.id === 'string' ? entry.id : undefined;
+
+/** The route id that belongs to this entry alone: a malformed entry can still have one, and
+ * then connections can start at it. An id that another entry also uses belongs to neither. */
+function ownedId(entries: unknown[], index: number): string | undefined {
+  const id = entryId(entries[index]);
+  return id !== undefined && entries.every((e, i) => i === index || entryId(e) !== id) ? id : undefined;
+}
+
+/** The connections that start at a malformed entry's own route id. */
+export function entryConnections<E extends RouteEdge>(
+  config: Record<string, unknown>, edges: E[], nodeId: string, index: number,
+): E[] {
+  const id = ownedId(caseEntries(config), index);
+  return id === undefined ? [] : caseEdges(edges, nodeId, id);
+}
+
+type Repair<E> = { config: Record<string, unknown>; edges: E[] };
+
+/** Repair one malformed entry: replace it, at its position, with a new empty case. A valid id
+ * that only this entry uses is kept (with its label), so its connections stay correct; any
+ * other id is replaced, and its connections move to the new id. */
+export function replaceEntry<E extends RouteEdge>(
+  config: Record<string, unknown>, edges: E[], nodeId: string, index: number,
+): Repair<E> {
   const entries = [...caseEntries(config)];
-  if (index < 0 || index >= entries.length || isSwitchCase(entries[index])) return config;
-  entries[index] = newCase(config, index + 1);
-  return { ...config, cases: entries };
+  if (index < 0 || index >= entries.length || isSwitchCase(entries[index])) return { config, edges };
+  const entry = entries[index];
+  const id = ownedId(entries, index);
+  const keep = id !== undefined && CASE_ID.test(id) && id !== 'default' && id !== 'error';
+  const label = isRecord(entry) && typeof entry.label === 'string' && entry.label.trim() ? entry.label : `Case ${index + 1}`;
+  const replacement = keep ? { id, label, when: { operator: 'eq', field: '' } } : { ...newCase(config, index + 1), label };
+  entries[index] = replacement;
+  const moved = !keep && id !== undefined
+    ? edges.map((e) => (e.source === nodeId && e.sourceHandle === id ? { ...e, sourceHandle: replacement.id } : e))
+    : edges;
+  return { config: { ...config, cases: entries }, edges: moved };
 }
 
-/** Remove one malformed entry. It has no route id, so no connection can belong to it. */
-export function removeEntry(config: Record<string, unknown>, index: number): Record<string, unknown> {
+/** Remove one malformed entry together with the connections at its own route id. */
+export function removeEntry<E extends RouteEdge>(
+  config: Record<string, unknown>, edges: E[], nodeId: string, index: number,
+): Repair<E> {
   const entries = caseEntries(config);
-  if (index < 0 || index >= entries.length || isSwitchCase(entries[index]) || entries.length <= 1) return config;
-  return { ...config, cases: entries.filter((_, i) => i !== index) };
+  if (index < 0 || index >= entries.length || isSwitchCase(entries[index]) || entries.length <= 1) return { config, edges };
+  const removed = new Set(entryConnections(config, edges, nodeId, index).map((e) => e.id));
+  return { config: { ...config, cases: entries.filter((_, i) => i !== index) }, edges: edges.filter((e) => !removed.has(e.id)) };
 }
 
-/** Start a new list when `cases` is not a list at all. An explicit author action only. */
-export const resetCases = (config: Record<string, unknown>): Record<string, unknown> =>
-  ({ ...config, cases: [newCase({}, 1)] });
+/** Start a new list when `cases` is not a list at all. An explicit author action only. The
+ * old routes are unknown, so connections from any route but Default are removed with it. */
+export function resetCases<E extends RouteEdge>(
+  config: Record<string, unknown>, edges: E[], nodeId: string,
+): Repair<E> {
+  return {
+    config: { ...config, cases: [newCase({}, 1)] },
+    edges: edges.filter((e) => e.source !== nodeId || e.sourceHandle === 'default'),
+  };
+}
 
 /** The edges that start at this case's handle. */
 export function caseEdges<E extends RouteEdge>(edges: E[], nodeId: string, caseId: string): E[] {

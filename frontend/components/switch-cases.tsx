@@ -1,8 +1,8 @@
 'use client';
 import { ConfigField } from './platform-settings';
 import {
-  addCase, caseEdges, caseEntries, isSwitchCase, MAX_CASES, moveCase, removeEntry, replaceEntry,
-  resetCases, unreachableCases, updateCase,
+  addCase, caseEdges, caseEntries, entryConnections, isSwitchCase, MAX_CASES, moveCase, removeEntry,
+  replaceEntry, resetCases, unreachableCases, updateCase,
 } from '@/lib/switch';
 import { conditionSettingVisible, withConditionOperator, type ConfigProperty } from '@/lib/workflow';
 
@@ -22,6 +22,7 @@ export default function SwitchCases({
   disabled,
   onChange,
   onRemove,
+  onRepair,
 }: {
   nodeId: string;
   config: Record<string, unknown>;
@@ -30,6 +31,8 @@ export default function SwitchCases({
   disabled: boolean;
   onChange: (config: Record<string, unknown>) => void;
   onRemove: (caseId: string) => void;
+  /** Settings and connections changed together (repair actions): one undo step. */
+  onRepair: (result: { config: Record<string, unknown>; edges: Edge[] }) => void;
 }) {
   if (!Array.isArray(config.cases))
     return (
@@ -38,8 +41,10 @@ export default function SwitchCases({
         <output className="warning-text">
           The saved cases are not a list, so they cannot be shown as cases: {preview(config.cases)}
         </output>
-        <button className="button" disabled={disabled} onClick={() => onChange(resetCases(config))}>
-          Start a new case list
+        <button className="button" disabled={disabled} onClick={() => onRepair(resetCases(config, edges, nodeId))}>
+          {edges.some((e) => e.source === nodeId && e.sourceHandle !== 'default')
+            ? 'Start a new case list and remove its connections'
+            : 'Start a new case list'}
         </button>
       </section>
     );
@@ -63,12 +68,13 @@ export default function SwitchCases({
                 Case {index + 1} is not valid: it needs an id, a label and a rule. Saved data: {preview(item)}
               </output>
               <div className="button-row">
-                <button className="text-button" disabled={disabled} onClick={() => onChange(replaceEntry(config, index))}>
+                <button className="text-button" disabled={disabled}
+                  onClick={() => onRepair(replaceEntry(config, edges, nodeId, index))}>
                   Replace with an empty case
                 </button>
                 <button className="text-button danger" disabled={disabled || entries.length <= 1}
-                  onClick={() => onChange(removeEntry(config, index))}>
-                  Remove
+                  onClick={() => onRepair(removeEntry(config, edges, nodeId, index))}>
+                  {entryConnections(config, edges, nodeId, index).length ? 'Remove case and its connection' : 'Remove'}
                 </button>
               </div>
             </fieldset>

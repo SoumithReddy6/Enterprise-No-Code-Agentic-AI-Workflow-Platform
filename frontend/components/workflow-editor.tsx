@@ -454,11 +454,12 @@ function Editor() {
       ),
     );
   }
-  // Removing a Switch case removes its connection in the same step (one undo entry).
+  // Removing or repairing a Switch case changes its connections in the same step (one undo entry).
   function removeSwitchCase(caseId: string) {
-    if (!chosen) return;
-    const result = removeCase(chosen.config, edges, chosen.id, caseId);
-    if (result.config === chosen.config) return;
+    if (chosen) applySwitchRepair(removeCase(chosen.config, edges, chosen.id, caseId));
+  }
+  function applySwitchRepair(result: { config: Record<string, unknown>; edges: Edge[] }) {
+    if (!chosen || result.config === chosen.config) return;
     snapshot();
     setNodes((ns) =>
       ns.map((n) =>
@@ -1707,6 +1708,7 @@ function Editor() {
                         disabled={running}
                         onChange={(config) => modifyNode({ config })}
                         onRemove={removeSwitchCase}
+                        onRepair={(result) => applySwitchRepair(result as { config: Record<string, unknown>; edges: Edge[] })}
                       />
                     )}
                     {definition && chosen.type !== 'switch' &&
