@@ -21,3 +21,18 @@ Other checks on the same tree:
 Logs, run histories and `provider-requests.json` stay local (ignored or untracked). The
 scenarios use synthetic data and a model fixture; they claim nothing about how well a model
 classifies prose.
+
+## Follow-up run after the Task 5 review (`production-final/`)
+
+Review `docs/reviews/a52-task5-review-2026-10-24.md` asked for two changes: S21b now also
+submits the contract-1 Switch to `/api/runs` (422, no run created, no external call), and
+the docs say a case named `approved` cannot bypass any *required* approval (writes follow
+their own approval setting; S20 disables it, S21c requires it).
+
+| Result | Value |
+| --- | --- |
+| Gate on `307d82d` plus these changes | **passed**: 24 of 24 rows; no source change during the run |
+| `production-final/report.json` SHA-256 | `518257e244c00a8a8fa0e4db51b740237de8700826aa45660984b3af5a43c59b` |
+| Mutant: run submission stops refusing contract 1 (Validate unchanged) | S21b fails: the run was accepted as `queued` |
+
+The first report in `production/` is kept unchanged; the review verified its checksum.

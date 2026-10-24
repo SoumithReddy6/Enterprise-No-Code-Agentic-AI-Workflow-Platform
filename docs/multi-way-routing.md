@@ -41,8 +41,9 @@ review of its own.
 
 ## What a route does not grant
 
-A case id or label grants nothing. A case named `approved` is an ordinary path: a write
-after it still needs a checked value and still waits for its own write approval.
+A case id or label grants nothing. A case named `approved` is an ordinary path: it cannot
+bypass any required approval. A write after it still needs a checked value, and it follows
+its own approval setting: if the write requires approval, it waits for one.
 
 ## Durability
 

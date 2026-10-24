@@ -47,7 +47,7 @@ Exit zero means every requested scenario/stage passed. Failures, missing results
 | S20 | A support request routes by its checked category | Request reader → Switch with JSON input: billing and technical each reach exactly their own receiver once; no other receiver is called |
 | S21a | A saved route is forged while the run waits for approval | Restore recomputes the route, the run fails before any send |
 | S21b | A Switch routes on an HTTP result, or sits in a contract-1 workflow | Refused at validation and at run submission; nothing is read or sent |
-| S21c | A case is named `approved` | Its write still waits for write approval; rejection sends nothing |
+| S21c | A case is named `approved` | It cannot bypass a required approval: its write, configured for approval, waits, and a rejection sends nothing |
 | L01 | Two tickets processed by real Ollama agents (optional) | Model usage survives into durable run events |
 | M01 | One agent performs a write, then asks approval for another | Approved continuation completes without repeating the first write; deterministic Worker/Store probe |
 

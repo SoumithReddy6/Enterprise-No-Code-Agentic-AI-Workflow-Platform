@@ -111,12 +111,18 @@ def switch_scenarios(lab, fixture):
                          {'id': '3', 'source': 'route', 'target': 'y', 'sourceHandle': 'default'}]}
         old_body = lab.client.post('/api/validate', json=old).json()
         assert 'route: Switch requires a contract-2 workflow.' in old_body['errors'], old_body
+        # Submitting it is refused too: no run exists afterwards.
+        runs_before = len(lab.client.get('/api/runs').json())
+        r = lab.client.post('/api/runs', json={'workflow': old, 'message': 'x'})
+        assert r.status_code == 422 and 'Switch requires a contract-2 workflow.' in r.text, r.text
+        assert len(lab.client.get('/api/runs').json()) == runs_before
         assert post_count(lab, prefix) == 0 and lab.provider.count('/read') == 0
-        return {'validation_errors': body['errors'], 'run_status': 422, 'contract_1': old_body['errors'], 'sends': 0}
+        return {'validation_errors': body['errors'], 'run_status': 422, 'contract_1': old_body['errors'],
+                'contract_1_submission': 422, 'runs_created': 0, 'sends': 0}
 
     def approved_name():
-        # A case named "approved" is just a route: its write still waits for approval, and a
-        # rejection sends nothing anywhere.
+        # A case named "approved" is just a route and cannot bypass a required approval: its
+        # write is configured for approval, so it waits, and a rejection sends nothing anywhere.
         prefix = '/deliver/named'
         cases = [{'id': 'approved', 'label': 'Approved', 'when': {'field': 'category', 'operator': 'eq', 'compare_to': 'billing'}}]
         fixture.script(reading('billing'))
@@ -134,5 +140,5 @@ def switch_scenarios(lab, fixture):
         ('S20', 'A5.2', 'Switch routes a checked support category to exactly one receiver', routed),
         ('S21a', 'A5.2', 'A forged saved route is refused before any send', forged_checkpoint),
         ('S21b', 'A5.2', 'Routing on an unchecked HTTP value or in contract 1 is refused', unchecked_value),
-        ('S21c', 'A5.2', 'A case named "approved" still waits for write approval', approved_name),
+        ('S21c', 'A5.2', 'A case named "approved" cannot bypass a required approval', approved_name),
     ]
