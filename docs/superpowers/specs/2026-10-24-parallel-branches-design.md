@@ -1,14 +1,63 @@
 # A5.3: parallel branches with explicit joins
 
-**Status:** Draft for review; no implementation started.
+**Status:** Draft for review (revised 2026-10-25: corrected example, prior art, branch
+visibility); no implementation started.
 **Baseline:** `bbbb8d6` (A5.2 closed; hosted CI run `40138113161`, 5/5 green).
 
 ## Outcome
 
 A workflow can run independent work at the same time and continue only when all of it is
-done. Example: after the Request reader, look up the customer in Jira, search the
-knowledge base and draft a summary with an Agent, all at once; a **Join** waits for the
-three; a Switch after the Join routes the ticket using the three results.
+done. Two steps can run in parallel only when neither needs the other's result.
+
+Example: the Request reader has already read the issue. Then two branches run at once:
+look up the customer in Jira, and search the knowledge base followed by an Agent that
+summarises the articles (two steps in order inside one branch). A **Join** waits for both;
+a Switch after the Join routes the ticket using both results. An Agent that needs the Jira
+result *and* the articles belongs after the Join: validation refuses a branch node that
+reads a sibling branch's output, and the editor does not offer it.
+
+## Prior art (read 2026-10-25)
+
+| System | Join | One branch fails | Partial failure allowed | Concurrency limit |
+| --- | --- | --- | --- | --- |
+| AWS Step Functions `Parallel` | Waits until all branches terminate; output is an array, one element per branch | The whole Parallel fails and all branches are stopped; running Lambda functions are not stopped | `Map` only: `ToleratedFailurePercentage` / `Count` | `Map`: `MaxConcurrency` |
+| BPMN parallel gateway (Camunda) | Waits until each incoming flow is taken | (error handling outside the gateway) | Inclusive gateway (not parallel) | — |
+| LangGraph | `add_edge([b, c], d)` runs `d` once after all; `defer=True` also exists | The whole superstep is transactional; with a checkpointer, successful nodes are saved and not repeated on resume | — | — |
+| Argo Workflows DAG | A task runs when its dependencies finish | `failFast` (default): no new tasks start; running tasks finish, then the DAG fails | `failFast: false`; enhanced `depends` | — |
+| Apache Airflow | `all_success` by default | Downstream becomes `upstream_failed` | Trigger rules (`all_done`, `none_failed_min_one_success`, …) | Pools |
+| GitHub Actions matrix | `needs` | `fail-fast` cancels in-progress and queued jobs | `continue-on-error` | `max-parallel` |
+| n8n Merge | Waits until data of all inputs is available | — | — | — |
+| Temporal | Workflow code awaits activities | Activities may run more than once; make them idempotent | Workflow code decides | Worker settings |
+
+What Relay takes from this:
+
+1. **Wait-for-all joins with an explicit meeting point are the norm.** Step Functions also
+   requires branches to be self-contained ("must not have a `Next` field that targets a
+   field outside of that branch"), which is Relay's "branches end at one Join".
+2. **Fail-fast is the default everywhere.** Relay fails the run on the first branch failure.
+3. **Stopping a sibling does not undo its side effects.** Step Functions states that
+   running Lambda functions cannot be stopped; Argo lets running tasks finish before
+   failing; Temporal requires idempotent activities. This confirms that writes inside
+   branches need their own design (A5.3b), with Argo's "drain, then fail or pause" and
+   idempotency keys.
+4. **Merging exclusive routes and joining parallel branches are different operations.**
+   Airflow warns that a join after a branch operator needs a non-default trigger rule, and
+   n8n removed a v0 behaviour where an If plus a Merge ran both branches. Relay keeps the two
+   apart: exclusive merges as today, parallel branches only at a Join.
+5. **Partial-failure tolerance and region-level error routes are later features**
+   (Step Functions `Catch` and tolerated failures, Airflow trigger rules). Not in v1.
+6. **A concurrency cap is standard** (`MaxConcurrency`, `max-parallel`): Relay caps a fork at
+   8 branches.
+
+Sources: [Step Functions Parallel](https://docs.aws.amazon.com/step-functions/latest/dg/state-parallel.html),
+[Step Functions Distributed Map](https://docs.aws.amazon.com/step-functions/latest/dg/state-map-distributed.html),
+[Camunda parallel gateways](https://docs.camunda.io/docs/components/modeler/bpmn/parallel-gateways/),
+[LangGraph Graph API](https://docs.langchain.com/oss/python/langgraph/use-graph-api),
+[Argo DAG](https://argo-workflows.readthedocs.io/en/latest/walk-through/dag/),
+[Airflow DAGs and trigger rules](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dags.html),
+[GitHub Actions matrix](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/running-variations-of-jobs-in-a-workflow),
+[n8n Merge](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.merge/),
+[Temporal activities](https://docs.temporal.io/activity-definition).
 
 ## Facts that shape this design (observed on LangGraph 1.2.11, 2026-10-24)
 
@@ -94,8 +143,13 @@ provider never reports. That is true of run cancellation today and is documented
 - **Compilation.** Fork edges become ordinary edges; each Join becomes one list edge from the
   branches' last nodes. LangGraph runs a fork's branches in the same step.
 - **Failure.** A branch node that fails with `on_error: fail` fails the run, and the siblings
-  are cancelled (safe, read-only). With `on_error: continue` the branch finishes with no
-  outputs and the Join still runs.
+  are cancelled (safe, read-only). Short transient errors are retried inside the branch
+  first (each node's own retry setting) while the siblings keep working. With
+  `on_error: continue` the branch finishes with no outputs and the Join still runs.
+- **Every branch's outcome is visible.** The run shows each branch node as succeeded,
+  failed or **cancelled**, so a reviewer sees which branches stopped because of another
+  branch's failure. The run error names the first failure; when several branches fail at
+  once, the others appear as failed or cancelled events, not as silent gaps.
 - **Resume.** Unchanged per-node checkpoints. After a crash, finished branch nodes restore
   from their checkpoints; unfinished ones run again. The Join restores or runs once.
 - **Token ceiling.** Each model call reserves its `max_tokens` before it starts; the check is
@@ -131,7 +185,8 @@ the existing consequential-node rules apply after the Join, exactly as today.
 3. Binding: after a Join, every branch output is bindable; inside a branch, a sibling's is
    not; `on_error: continue` outputs stay unavailable.
 4. Runtime: branches run concurrently (measured: total time below the sum of branch times);
-   the Join runs exactly once; a failing branch fails the run with no sibling side effect.
+   the Join runs exactly once; a failing branch fails the run with no sibling side effect,
+   and every sibling appears in the run as succeeded, failed or cancelled.
 5. Durability: kill the worker after one branch's checkpoint; the resumed run does not
    repeat that branch's model call or read, and the Join runs once. Concurrent checkpoint
    writes from parallel branches lose none, on SQLite and on PostgreSQL.
@@ -142,6 +197,14 @@ the existing consequential-node rules apply after the Join, exactly as today.
    Join (one send); S23 worker killed between branches; S24 a write inside a branch and a
    plain fan-in refused, with no run created.
 9. Backend seeds 0–4, frontend, browser, scenario gate, hosted CI on the exact commit.
+
+## Later steps (not A5.3)
+
+| Step | What | Prior art |
+| --- | --- | --- |
+| A5.3b | Writes and approvals inside branches: drain running branches before pausing or failing, several pending approvals, per-branch resume, idempotency keys | Argo `failFast`, Temporal idempotency |
+| A5.3c | Optional branches: the Join continues when a branch fails, and later nodes see an explicit "missing" marker; region-level error route | Step Functions `Catch`, tolerated failures; Airflow trigger rules |
+| — | Nested forks | BPMN, Step Functions (branches are full state machines) |
 
 ## Alternatives considered
 
