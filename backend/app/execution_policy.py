@@ -129,9 +129,12 @@ def usage_for(run,identity):
     return deepcopy(usage) if usage else None
 
 
-def _model_calls(run):
-    """Model calls recorded on the run so far, across every node."""
-    return sum(totals.get('calls',0) for totals in ((run or {}).get('usage') or {}).values() if isinstance(totals,dict))
+def _work_done(run):
+    """Work recorded on the run so far: model calls, and platform work the caller counts
+    (a request sent, or the stored result of a write already sent). Never a charge."""
+    state=run or {}
+    calls=sum(totals.get('calls',0) for totals in (state.get('usage') or {}).values() if isinstance(totals,dict))
+    return calls+(state.get('platform_work') or {}).get('count',0)
 
 
 def _error(exc,generic):
@@ -209,7 +212,7 @@ async def execute_with_policy(operation,identity:ExecutionIdentity,retry:RetryPo
     attempts=retry.attempts+1
     delay_for=delay_for or retry_delay
     for attempt in range(attempts):
-        debited=False;calls=_model_calls(run)
+        debited=False;work=_work_done(run)
         try:
             if charge_first_attempt or attempt>0:
                 key=f'{identity.invocation_id}#{attempt}'
@@ -239,10 +242,11 @@ async def execute_with_policy(operation,identity:ExecutionIdentity,retry:RetryPo
                                     budget_exhausted=True,budget_kind='action')
         except token_budget.TokenBudgetExhausted as exc:
             # The action budget refuses before an attempt starts; the token ceiling refuses
-            # inside one, possibly after it retrieved or a model answer was rejected. Such
+            # inside one, possibly after it retrieved, a model answer was rejected, or an
+            # approved write was sent against the reservation made before its pause. Such
             # an attempt did work, so it counts as executed. Never retried: the ceiling is
             # run-wide, so a retry is refused the same way.
-            executed=debited or _model_calls(run)>calls
+            executed=debited or _work_done(run)>work
             return ExecutionOutcome('failed',None,str(exc),attempt+executed,usage_for(run,identity),
                                     budget_exhausted=True,budget_kind='tokens')
         except Exception as exc:

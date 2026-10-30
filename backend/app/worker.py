@@ -65,6 +65,12 @@ class Worker:
         async def persist_accounting(snapshot):
             accounting.update(snapshot)
             await asyncio.to_thread(self.store.reserve_accounting,id,owner,snapshot)
+        # Platform work this attempt performed: a request sent now, or the stored result of
+        # a write this run already sent. Neither is charged here. The policy reads it to tell
+        # a token refusal after work (an approved write sent against its earlier
+        # reservation) from one before any work.
+        work={'count':0}
+        def did_work():work['count']+=1
         async def action_settled(invocation):
             return await asyncio.to_thread(self.store.completed_action,id,invocation) is not None
         async def persist_spend(snapshot):
@@ -136,6 +142,7 @@ class Worker:
                         if node_type=='tool_jira' and not write:
                             from .tool_service import jira_items
                             prepared=self.tools.prepare(node_type,settings,input_text,tenant)
+                            did_work()
                             text=await self.tools.execute_prepared(prepared,tenant)
                             return {'text':text,**jira_items(text,config.operation,prepared['connection']['endpoint'])}
                         invocation=identity.invocation_id
@@ -149,9 +156,10 @@ class Worker:
                             candidate=prepare_write()
                             if candidate['payload']!=saved['prepared']['payload'] or candidate['connection_id']!=saved['prepared']['connection_id']:
                                 raise ValueError('The resumed action differs from the reviewed request. Start a new run.')
-                            if saved['status']=='completed':return saved['result']
+                            if saved['status']=='completed':did_work();return saved['result']
                             self.tools.validate_prepared(saved['prepared'],tenant)
                             approvals.begin(self.store,id,owner,saved['id'])
+                            did_work()
                             try:
                                 result=await self.tools.execute_prepared(saved['prepared'],tenant)
                                 approvals.complete(self.store,id,owner,saved['id'],result)
@@ -163,11 +171,12 @@ class Worker:
                         marker=invocation if write else checkpoint_owner
                         if write:
                             done=self.store.completed_action(id,marker)
-                            if done is not None:return done  # Already sent; never send again.
+                            if done is not None:did_work();return done  # Already sent; never send again.
                             # Check the request before marking: a refusal here sends nothing, and
                             # only the send itself can leave an outcome unknown.
                             prepare_write()
                             self.store.mark_write(id,owner,marker)
+                        did_work()
                         try:
                             result=await self.tools.execute(node_type,settings,input_text,tenant)
                         except Exception:
@@ -176,7 +185,7 @@ class Worker:
                             raise
                         if write:self.store.settle_write(id,owner,marker,result)
                         return result
-                    if action=='kb_retrieve':return await self.kbs.retrieve(*args,tenant)
+                    if action=='kb_retrieve':did_work();return await self.kbs.retrieve(*args,tenant)
                     if action=='verify_vector_sources':return await self.kbs.verify(args[0],tenant)
                     if action=='record_vector_sources':
                         checkpoint_owner,sources=args
@@ -190,7 +199,7 @@ class Worker:
                 if isinstance(results,dict) and results.get('unavailable'):raise ValueError(results['unavailable'])
                 issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'))
                 if issues:raise ValueError('; '.join(issues))
-            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend,action_settled=action_settled,run_id=id,tenant_id=tenant_id).graph
+            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend,action_settled=action_settled,platform_work=work,run_id=id,tenant_id=tenant_id).graph
             result=await graph.ainvoke({'values':{}},{'recursion_limit':150})
             return {'output':'\n\n'.join(result['values'][n.id]['text'] for n in workflow.nodes if n.type=='response' and n.id in result['values']),
                     **run_truncation(workflow,result['values'])}

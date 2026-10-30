@@ -418,7 +418,7 @@ def restored_tokens(accounting):
     return tokens_spent({'usage':(accounting or {}).get('usage') or {}})
 
 
-def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None,accounting=None,accounting_sink=None,persist_accounting=None,persist_spend=None,action_settled=None,run_id=None,tenant_id='local'):
+def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None,accounting=None,accounting_sink=None,persist_accounting=None,persist_spend=None,action_settled=None,platform_work=None,run_id=None,tenant_id='local'):
     errors = validate_workflow(workflow)
     if errors: raise ValueError('\n'.join(errors))
     from .platform_graph import split_graph
@@ -448,7 +448,8 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                'accounting_sink':accounting_sink,
                'persist_accounting':persist_accounting,
                'persist_spend':persist_spend,
-               'action_settled':action_settled}  # Every passage retrieved in this run, under a run-unique citation label.
+               'action_settled':action_settled,
+               'platform_work':platform_work}  # Every passage retrieved in this run, under a run-unique citation label.
     prepare_checkpoint_labels(run_state,completed)
     run_state['loop_progress']=dict(loop_progress or {})
     context = Context(message=message, resolve_credential=credential_resolver, authorize_model=authorize_model,knowledge=knowledge_resolver,platform=platform_resolver,run=run_state,emit=emit)

@@ -1,0 +1,165 @@
+# R02 tests on the 3deb964 application code (git archive 3deb964 + backend/tests/test_token_budget_recovery.py)
+# Run: PYTHONHASHSEED=0 python -m pytest backend/tests/test_token_budget_recovery.py -q -p no:logging -rA --tb=line
+
+...........................................FF.F                          [100%]
+=================================== FAILURES ===================================
+E   AssertionError: assert (True is True and 'agent did no...onetary cost.' == 'agent stoppe...onetary cost.'
+      
+      - agent stopped after 1 attempt(s): Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+      ?       ^ ^^^^^^^^^^ ^^^^^^^^^^^^^
+      + agent did not run: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+      ?       ^^^^^^ ^ ^^)
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:698: AssertionError: assert (True is True and 'agent did no...onetary cost.' == 'agent stoppe...onetary cost.'
+E   assert (0 == 1)
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:707: assert (0 == 1)
+E   AssertionError: assert ({'total': 2,...ex': 0, ...}]) == ({'total': 2,...ex': 0, ...}])
+      
+      At index 3 diff: [{'node_id': 'work', 'invocation_id': 'each:0:work', 'parent_node_id': 'each', 'item_index': 0, 'transient': True, 'status': 'not_run', 'reason': 'Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.', 'loop_node_id': 'each', 'seq': 32, 'timestamp': '2026-10-30T18:29:25.783809+00:00'}] != [{'node_id': 'work', 'invocation_id': 'each:0:work', 'parent_node_id': 'each', 'item_index': 0, 'transient': True, 'status': 'not_run', 'reason': 'Run token budget exhausted (10 of 10 provide...
+      
+      ...Full output truncated (2 lines hidden), use '-vv' to show
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:730: AssertionError: assert ({'total': 2,...ex': 0, ...}]) == ({'total': 2,...ex': 0, ...}])
+=============================== warnings summary ===============================
+backend/tests/test_token_budget_recovery.py::test_t11b_a_request_router_repair_refusal_keeps_its_type
+  .venv/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+_ test_t1_a_token_refused_node_that_recovers_marks_the_run_incomplete[continue] _
+----------------------------- Captured stderr call -----------------------------
+__ test_t1_a_token_refused_node_that_recovers_marks_the_run_incomplete[route] __
+----------------------------- Captured stderr call -----------------------------
+____ test_t2_the_recovered_event_keeps_the_typed_token_exhaustion[continue] ____
+----------------------------- Captured stderr call -----------------------------
+_____ test_t2_the_recovered_event_keeps_the_typed_token_exhaustion[route] ______
+----------------------------- Captured stderr call -----------------------------
+_______ test_t3_on_error_fail_still_fails_the_run_with_the_token_message _______
+----------------------------- Captured stderr call -----------------------------
+_ test_t4_an_ordinary_provider_error_is_a_recovered_failure_not_truncation[continue] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t4_an_ordinary_provider_error_is_a_recovered_failure_not_truncation[route] _
+----------------------------- Captured stderr call -----------------------------
+___________________ test_t12_a_token_refusal_is_not_retried ____________________
+----------------------------- Captured stderr call -----------------------------
+___________ test_t5_the_durable_run_stores_a_budget_cause[continue] ____________
+----------------------------- Captured stderr call -----------------------------
+_____________ test_t5_the_durable_run_stores_a_budget_cause[route] _____________
+----------------------------- Captured stderr call -----------------------------
+_ test_t6_resume_after_the_recovery_reaches_the_same_verdict_without_a_new_call _
+----------------------------- Captured stderr call -----------------------------
+_________ test_t8_a_query_whose_repair_is_refused_is_a_budget_failure __________
+----------------------------- Captured stderr call -----------------------------
+___________ test_t11_a_request_reader_repair_refusal_keeps_its_type ____________
+----------------------------- Captured stderr call -----------------------------
+___________ test_t11b_a_request_router_repair_refusal_keeps_its_type ___________
+----------------------------- Captured stderr call -----------------------------
+_ test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[classification] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[extraction] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[output_schema] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[classification] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[extraction] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[output_schema] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t9c_a_free_text_agent_whose_repair_is_refused_returns_the_budget_abstention _
+----------------------------- Captured stderr call -----------------------------
+_ test_t9d_a_free_text_agent_with_no_evidence_whose_repair_is_refused_keeps_the_no_evidence_abstention _
+----------------------------- Captured stderr call -----------------------------
+___ test_t10_a_free_text_agent_with_evidence_makes_no_call_after_exhaustion ____
+----------------------------- Captured stderr call -----------------------------
+_ test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[classification-True] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[classification-False] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[extraction-True] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[extraction-False] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[output_schema-True] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[output_schema-False] _
+----------------------------- Captured stderr call -----------------------------
+____ test_t10c_a_nested_free_text_specialist_returns_the_budget_abstention _____
+----------------------------- Captured stderr call -----------------------------
+_______ test_t10d_action_budget_only_keeps_the_final_partial_answer_call _______
+----------------------------- Captured stderr call -----------------------------
+_________ test_t14_a_removed_source_fails_the_budget_abstention[step] __________
+----------------------------- Captured stderr call -----------------------------
+________ test_t14_a_removed_source_fails_the_budget_abstention[repair] _________
+----------------------------- Captured stderr call -----------------------------
+____ test_t14_a_removed_source_fails_a_nested_specialist_budget_abstention _____
+----------------------------- Captured stderr call -----------------------------
+_________ test_t14b_an_unchanged_source_is_checked_exactly_once[step] __________
+----------------------------- Captured stderr call -----------------------------
+________ test_t14b_an_unchanged_source_is_checked_exactly_once[repair] _________
+----------------------------- Captured stderr call -----------------------------
+______ test_t15_a_valid_answer_that_spends_the_last_tokens_stays_complete ______
+----------------------------- Captured stderr call -----------------------------
+_ test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[continue] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[stop] _
+----------------------------- Captured stderr call -----------------------------
+___ test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[continue] ___
+----------------------------- Captured stderr call -----------------------------
+_____ test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[stop] _____
+----------------------------- Captured stderr call -----------------------------
+_____________ test_t7c_a_compacted_halt_survives_crash_and_resume ______________
+----------------------------- Captured stderr call -----------------------------
+____ test_r02_resume_that_replays_the_stored_write_reaches_the_same_verdict ____
+----------------------------- Captured stderr call -----------------------------
+=========================== short test summary info ============================
+PASSED backend/tests/test_token_budget_recovery.py::test_t1_a_token_refused_node_that_recovers_marks_the_run_incomplete[continue]
+PASSED backend/tests/test_token_budget_recovery.py::test_t1_a_token_refused_node_that_recovers_marks_the_run_incomplete[route]
+PASSED backend/tests/test_token_budget_recovery.py::test_t2_the_recovered_event_keeps_the_typed_token_exhaustion[continue]
+PASSED backend/tests/test_token_budget_recovery.py::test_t2_the_recovered_event_keeps_the_typed_token_exhaustion[route]
+PASSED backend/tests/test_token_budget_recovery.py::test_t3_on_error_fail_still_fails_the_run_with_the_token_message
+PASSED backend/tests/test_token_budget_recovery.py::test_t4_an_ordinary_provider_error_is_a_recovered_failure_not_truncation[continue]
+PASSED backend/tests/test_token_budget_recovery.py::test_t4_an_ordinary_provider_error_is_a_recovered_failure_not_truncation[route]
+PASSED backend/tests/test_token_budget_recovery.py::test_t12_a_token_refusal_is_not_retried
+PASSED backend/tests/test_token_budget_recovery.py::test_t5_the_durable_run_stores_a_budget_cause[continue]
+PASSED backend/tests/test_token_budget_recovery.py::test_t5_the_durable_run_stores_a_budget_cause[route]
+PASSED backend/tests/test_token_budget_recovery.py::test_t6_resume_after_the_recovery_reaches_the_same_verdict_without_a_new_call
+PASSED backend/tests/test_token_budget_recovery.py::test_t8_a_query_whose_repair_is_refused_is_a_budget_failure
+PASSED backend/tests/test_token_budget_recovery.py::test_t11_a_request_reader_repair_refusal_keeps_its_type
+PASSED backend/tests/test_token_budget_recovery.py::test_t11b_a_request_router_repair_refusal_keeps_its_type
+PASSED backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[classification]
+PASSED backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[extraction]
+PASSED backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[output_schema]
+PASSED backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[classification]
+PASSED backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[extraction]
+PASSED backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[output_schema]
+PASSED backend/tests/test_token_budget_recovery.py::test_t9c_a_free_text_agent_whose_repair_is_refused_returns_the_budget_abstention
+PASSED backend/tests/test_token_budget_recovery.py::test_t9d_a_free_text_agent_with_no_evidence_whose_repair_is_refused_keeps_the_no_evidence_abstention
+PASSED backend/tests/test_token_budget_recovery.py::test_t10_a_free_text_agent_with_evidence_makes_no_call_after_exhaustion
+PASSED backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[classification-True]
+PASSED backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[classification-False]
+PASSED backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[extraction-True]
+PASSED backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[extraction-False]
+PASSED backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[output_schema-True]
+PASSED backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[output_schema-False]
+PASSED backend/tests/test_token_budget_recovery.py::test_t10c_a_nested_free_text_specialist_returns_the_budget_abstention
+PASSED backend/tests/test_token_budget_recovery.py::test_t10d_action_budget_only_keeps_the_final_partial_answer_call
+PASSED backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_the_budget_abstention[step]
+PASSED backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_the_budget_abstention[repair]
+PASSED backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_a_nested_specialist_budget_abstention
+PASSED backend/tests/test_token_budget_recovery.py::test_t14b_an_unchanged_source_is_checked_exactly_once[step]
+PASSED backend/tests/test_token_budget_recovery.py::test_t14b_an_unchanged_source_is_checked_exactly_once[repair]
+PASSED backend/tests/test_token_budget_recovery.py::test_t15_a_valid_answer_that_spends_the_last_tokens_stays_complete
+PASSED backend/tests/test_token_budget_recovery.py::test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[continue]
+PASSED backend/tests/test_token_budget_recovery.py::test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[stop]
+PASSED backend/tests/test_token_budget_recovery.py::test_t7c_compact_keeps_the_budget_halt_within_its_reserve
+PASSED backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[continue]
+PASSED backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[stop]
+PASSED backend/tests/test_token_budget_recovery.py::test_t7c_a_compacted_halt_survives_crash_and_resume
+PASSED backend/tests/test_token_budget_recovery.py::test_r02_resume_that_replays_the_stored_write_reaches_the_same_verdict
+FAILED backend/tests/test_token_budget_recovery.py::test_r02_an_agent_that_sent_an_approved_write_did_run
+FAILED backend/tests/test_token_budget_recovery.py::test_r02_a_loop_records_the_item_whose_approved_write_was_sent
+FAILED backend/tests/test_token_budget_recovery.py::test_r02_a_loop_resumed_after_the_send_records_the_same_item
+3 failed, 44 passed, 1 warning in 3.59s

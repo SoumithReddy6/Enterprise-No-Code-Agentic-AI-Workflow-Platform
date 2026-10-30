@@ -612,3 +612,119 @@ async def test_t7c_a_compacted_halt_survives_crash_and_resume(tmp_path, monkeypa
     assert outcome(resumed) == outcome(fresh)
     reason = outcome(fresh)['summary']['truncation_reason']
     assert reason.startswith(HALT), 'the reason comes from the marker kind, not the omitted error text'
+
+
+# --------------------------------------------------------------------------- R02: approved work
+# An approved write runs on resume against the reservation made before the pause, so it
+# makes no new debit. It is still work: an attempt that sent it, or that replays its stored
+# result after a crash, did run. The write is never sent or charged twice.
+
+POST = {'method': 'POST', 'path': '/messages', 'body': '{"text":"{input}"}', 'enable_writes': True, 'approval': True}
+
+
+def approved_flow(worker, loop):
+    connection = worker.tools.save_connection({'name': 'sink', 'provider': 'http', 'endpoint': 'https://example.com'})
+    workflow = calc_flow()
+    workflow.nodes[2].type = 'tool_http'
+    workflow.nodes[2].config = {'connection_id': connection['id'], **POST}
+    if not loop: return agent_config(workflow, 'route', output_schema=SCHEMA)
+    jira = worker.tools.save_connection({'name': 'jira', 'provider': 'jira', 'endpoint': 'https://jira.example.com',
+                                         'username': 'bot', 'secret': 'fixture'})
+    document = loop_flow(connection_id=jira['id']).model_dump(mode='json')
+    next(n for n in document['nodes'] if n['id'] == 'work').update(type='agent', config={**MODEL, 'output_schema': SCHEMA})
+    document['nodes'].append(workflow.nodes[2].model_dump(mode='json'))
+    document['edges'].append({'id': 'tool', 'source': 'calc', 'target': 'work', 'kind': 'tool', 'targetHandle': 'tools'})
+    return Workflow.model_validate(document)
+
+
+async def approved_send(tmp_path, monkeypatch, loop=False, crash=None):
+    """Plan a write (8 + 2 tokens, the whole limit), pause, approve, resume: the write is
+    sent and the next step is refused. crash(event) stops the resumed worker after that
+    event is saved; the run is then resumed once more."""
+    import httpx
+    from backend.app import approvals, tool_service
+    monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', LIMIT)
+    calls, deliveries = [], []
+    chat(monkeypatch, [(json.dumps({'action': 'call', 'target': 'calc', 'input': 'hello'}), 8, 2)], calls)
+    monkeypatch.setattr(tool_service, 'public_addresses', lambda *_: ['93.184.216.34'])
+    def sink(request):
+        if request.method == 'GET':
+            return httpx.Response(200, json={'issues': [{'key': f'P-{i}', 'fields': {'summary': f'Issue {i}',
+                'status': {'name': 'Open'}, 'assignee': None, 'updated': ''}} for i in range(2)]})
+        deliveries.append(json.loads(request.content)); return httpx.Response(200, text='sent')
+    store, worker = durable(tmp_path, monkeypatch, 'approval')
+    try:
+        worker.tools.transport = httpx.MockTransport(sink)
+        row = store.create_run(approved_flow(worker, loop).model_dump(mode='json'), 'send')
+        await worker.execute(store.claim_next(worker.owner))
+        paused = store.run(row['id'])
+        assert paused['status'] == 'awaiting_approval' and not deliveries
+        approval = paused['approvals'][0]
+        approvals.decide(store, row['id'], 'local', approval['id'], approval['digest'], 'approve')
+        if crash is not None:
+            original = store.worker_event
+            def stop(id, owner, event):
+                persisted = original(id, owner, event)
+                if crash(event): raise asyncio.CancelledError()
+                return persisted
+            monkeypatch.setattr(store, 'worker_event', stop)
+            await worker.execute(store.claim_next(worker.owner))
+            assert store.run(row['id'])['status'] != 'success'
+            monkeypatch.setattr(store, 'worker_event', original)
+            store.resume_run(row['id'])
+        await worker.execute(store.claim_next(worker.owner))
+        saved = store.run(row['id'])
+        assert saved['status'] == 'success', saved.get('error')
+        assert (len(calls), len(deliveries)) == (1, 1), 'one model call and one POST, never repeated'
+        return saved
+    finally: store.engine.dispose()
+
+
+def graph_verdict(saved):
+    return (saved['truncated'], saved['truncation_reason'], saved['accounting']['action_budget']['counter'],
+            [(c['node_id'], c['kind']) for c in saved['truncation_causes']])
+
+
+def loop_verdict(saved):
+    each = saved['checkpoints']['each']
+    return (json.loads(each['summary']), each['results'], saved['accounting']['action_budget']['counter'],
+            [e for e in saved['events'] if e.get('status') == 'not_run'])
+
+
+@pytest.mark.asyncio
+async def test_r02_an_agent_that_sent_an_approved_write_did_run(tmp_path, monkeypatch):
+    saved = await approved_send(tmp_path, monkeypatch)
+    truncated, reason, actions, causes = graph_verdict(saved)
+    assert truncated is True and reason == 'agent stopped after 1 attempt(s): ' + REASON
+    assert actions == 1, 'the approved write uses its reservation; it is not charged again'
+    assert causes == [('agent', 'budget')]
+
+
+@pytest.mark.asyncio
+async def test_r02_a_loop_records_the_item_whose_approved_write_was_sent(tmp_path, monkeypatch):
+    saved = await approved_send(tmp_path, monkeypatch, loop=True)
+    summary, results, actions, not_run = loop_verdict(saved)
+    assert summary['processed'] == 1 and summary['failed'] == 1 and summary['budget_exhausted'] is True
+    assert results[0]['budget_halt'] == 'tokens' and results[0]['status'] == 'failed'
+    assert actions == 2, 'one Jira read and one write, reserved once'
+    assert not_run == []
+
+
+@pytest.mark.asyncio
+async def test_r02_resume_that_replays_the_stored_write_reaches_the_same_verdict(tmp_path, monkeypatch):
+    """Crash after the recovered event: the frame replays, the write comes back as its
+    stored result (no second POST, no new charge), and the verdict is the same."""
+    fresh = await approved_send(tmp_path / 'fresh', monkeypatch)
+    resumed = await approved_send(tmp_path / 'resumed', monkeypatch,
+                                  crash=lambda e: e.get('node_id') == 'agent' and e.get('recovered'))
+    assert graph_verdict(resumed) == graph_verdict(fresh)
+
+
+@pytest.mark.asyncio
+async def test_r02_a_loop_resumed_after_the_send_records_the_same_item(tmp_path, monkeypatch):
+    """Crash right after the write's success event, before the item result is saved: the
+    replay returns the stored write result and the item is recorded as in a fresh run."""
+    fresh = await approved_send(tmp_path / 'fresh', monkeypatch, loop=True)
+    resumed = await approved_send(tmp_path / 'resumed', monkeypatch, loop=True,
+                                  crash=lambda e: e.get('node_id') == 'calc' and e.get('status') == 'success')
+    assert loop_verdict(resumed) == loop_verdict(fresh)
