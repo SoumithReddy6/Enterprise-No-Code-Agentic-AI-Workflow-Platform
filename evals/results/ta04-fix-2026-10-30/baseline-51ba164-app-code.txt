@@ -1,0 +1,234 @@
+# New TA04 tests on the 51ba164 application code (git archive 51ba164 + backend/tests/test_token_budget_recovery.py)
+# Run: PYTHONHASHSEED=0 python -m pytest backend/tests/test_token_budget_recovery.py -q -p no:logging -rA --tb=line
+
+FFFF....FFFFFFFFFFFFFFFFFFFFFF.FFFFF.FFFFFF                              [100%]
+=================================== FAILURES ===================================
+E   assert (False is True)
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:123: assert (False is True)
+E   assert (False is True)
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:123: assert (False is True)
+E   AssertionError: assert (True is True and None is True)
+     +  where None = <built-in method get of dict object at 0x10cf313c0>('budget_exhausted')
+     +    where <built-in method get of dict object at 0x10cf313c0> = {'node_id': 'second', 'status': 'failed', 'error': 'Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.', 'recovered': True}.get
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:134: AssertionError: assert (True is True and None is True)
+E   AssertionError: assert (True is True and None is True)
+     +  where None = <built-in method get of dict object at 0x10d038f80>('budget_exhausted')
+     +    where <built-in method get of dict object at 0x10d038f80> = {'node_id': 'second', 'status': 'failed', 'error': 'Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.', 'recovered': True}.get
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:134: AssertionError: assert (True is True and None is True)
+E   assert (False is True)
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:188: assert (False is True)
+E   assert (False is True)
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:188: assert (False is True)
+E   assert False is True
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:201: assert False is True
+E   AssertionError: assert (None is True)
+     +  where None = <built-in method get of dict object at 0x10e5d2580>('budget_exhausted')
+     +    where <built-in method get of dict object at 0x10e5d2580> = {'node_id': 'ask', 'status': 'failed', 'error': 'Invalid grounded answer contract after one repair: Run token budget e...letion_tokens': 2, 'by_model': [{'provider': 'ollama', 'model': 'fixture', 'calls': 1, 'prompt_tokens': 8, ...}]}, ...}.get
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:243: AssertionError: assert (None is True)
+E   AssertionError: assert (False)
+     +  where False = typed(ValueError('Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.'))
+     +    where ValueError('Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.') = <ExceptionInfo ValueError('Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.') tblen=3>.value
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:260: AssertionError: assert (False)
+E   AssertionError: assert (False)
+     +  where False = typed(ValueError('Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.'))
+     +    where ValueError('Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.') = <ExceptionInfo ValueError('Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.') tblen=3>.value
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:273: AssertionError: assert (False)
+E   AssertionError: assert (None is True)
+     +  where None = <built-in method get of dict object at 0x10ed11140>('budget_exhausted')
+     +    where <built-in method get of dict object at 0x10ed11140> = {'node_id': 'agent', 'status': 'failed', 'error': 'Agent output did not match the required structure: Run token budget...letion_tokens': 2, 'by_model': [{'provider': 'ollama', 'model': 'fixture', 'calls': 1, 'prompt_tokens': 8, ...}]}, ...}.get
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:303: AssertionError: assert (None is True)
+E   AssertionError: assert (None is True)
+     +  where None = <built-in method get of dict object at 0x10ece3ac0>('budget_exhausted')
+     +    where <built-in method get of dict object at 0x10ece3ac0> = {'node_id': 'agent', 'status': 'failed', 'error': 'Agent output did not match the required structure: Run token budget...letion_tokens': 2, 'by_model': [{'provider': 'ollama', 'model': 'fixture', 'calls': 1, 'prompt_tokens': 8, ...}]}, ...}.get
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:303: AssertionError: assert (None is True)
+E   AssertionError: assert (None is True)
+     +  where None = <built-in method get of dict object at 0x10e9fd540>('budget_exhausted')
+     +    where <built-in method get of dict object at 0x10e9fd540> = {'node_id': 'agent', 'status': 'failed', 'error': 'Agent output did not match the required structure: Run token budget...letion_tokens': 2, 'by_model': [{'provider': 'ollama', 'model': 'fixture', 'calls': 1, 'prompt_tokens': 8, ...}]}, ...}.get
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:303: AssertionError: assert (None is True)
+E   AssertionError: assert (None is True)
+     +  where None = <built-in method get of dict object at 0x10ed47800>('budget_exhausted')
+     +    where <built-in method get of dict object at 0x10ed47800> = {'node_id': 'agent', 'status': 'failed', 'error': 'Invalid grounded answer contract after one repair: Run token budget...letion_tokens': 2, 'by_model': [{'provider': 'ollama', 'model': 'fixture', 'calls': 1, 'prompt_tokens': 8, ...}]}, ...}.get
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:303: AssertionError: assert (None is True)
+E   AssertionError: assert (None is True)
+     +  where None = <built-in method get of dict object at 0x10e688e00>('budget_exhausted')
+     +    where <built-in method get of dict object at 0x10e688e00> = {'node_id': 'agent', 'status': 'failed', 'error': 'Invalid grounded answer contract after one repair: Run token budget...letion_tokens': 2, 'by_model': [{'provider': 'ollama', 'model': 'fixture', 'calls': 1, 'prompt_tokens': 8, ...}]}, ...}.get
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:303: AssertionError: assert (None is True)
+E   AssertionError: assert (None is True)
+     +  where None = <built-in method get of dict object at 0x10ed2b440>('budget_exhausted')
+     +    where <built-in method get of dict object at 0x10ed2b440> = {'node_id': 'agent', 'status': 'failed', 'error': 'Invalid grounded answer contract after one repair: Run token budget...letion_tokens': 2, 'by_model': [{'provider': 'ollama', 'model': 'fixture', 'calls': 1, 'prompt_tokens': 8, ...}]}, ...}.get
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:303: AssertionError: assert (None is True)
+E   ValueError: Invalid grounded answer contract after one repair: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+    During task with name 'agent' and id 'afbfda9c-66fc-a80a-d0fc-0adbc4e732f0'
+----------------------------- Captured stderr call -----------------------------
+backend/app/compiler.py:582: ValueError: Invalid grounded answer contract after one repair: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+E   ValueError: Invalid grounded answer contract after one repair: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+    During task with name 'agent' and id 'c264ef97-73e9-8486-7827-d9caced8c223'
+----------------------------- Captured stderr call -----------------------------
+backend/app/compiler.py:582: ValueError: Invalid grounded answer contract after one repair: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+E   ValueError: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+    During task with name 'agent' and id '01015275-e265-31de-fef2-630513f3a5c3'
+----------------------------- Captured stderr call -----------------------------
+backend/app/compiler.py:582: ValueError: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+E   AssertionError: assert (None is True)
+     +  where None = <built-in method get of dict object at 0x10ed11b80>('budget_exhausted')
+     +    where <built-in method get of dict object at 0x10ed11b80> = {'node_id': 'agent', 'status': 'failed', 'error': 'Run token budget exhausted (10 of 10 provider-reported tokens; rais...letion_tokens': 2, 'by_model': [{'provider': 'ollama', 'model': 'fixture', 'calls': 1, 'prompt_tokens': 8, ...}]}, ...}.get
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:303: AssertionError: assert (None is True)
+E   AssertionError: agent has no failed event
+    assert []
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:85: AssertionError: agent has no failed event
+E   AssertionError: assert (None is True)
+     +  where None = <built-in method get of dict object at 0x10ec036c0>('budget_exhausted')
+     +    where <built-in method get of dict object at 0x10ec036c0> = {'node_id': 'agent', 'status': 'failed', 'error': 'Run token budget exhausted (10 of 10 provider-reported tokens; rais...letion_tokens': 2, 'by_model': [{'provider': 'ollama', 'model': 'fixture', 'calls': 1, 'prompt_tokens': 8, ...}]}, ...}.get
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:303: AssertionError: assert (None is True)
+E   AssertionError: agent has no failed event
+    assert []
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:85: AssertionError: agent has no failed event
+E   AssertionError: assert (None is True)
+     +  where None = <built-in method get of dict object at 0x10ed44600>('budget_exhausted')
+     +    where <built-in method get of dict object at 0x10ed44600> = {'node_id': 'agent', 'status': 'failed', 'error': 'Run token budget exhausted (10 of 10 provider-reported tokens; rais...letion_tokens': 2, 'by_model': [{'provider': 'ollama', 'model': 'fixture', 'calls': 1, 'prompt_tokens': 8, ...}]}, ...}.get
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:303: AssertionError: assert (None is True)
+E   AssertionError: agent has no failed event
+    assert []
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:85: AssertionError: agent has no failed event
+E   AssertionError: the specialist succeeds with the budget abstention
+    assert 0 == 1
+     +  where 0 = len([])
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:402: AssertionError: the specialist succeeds with the budget abstention
+E   AssertionError: the source check failure is not converted to token exhaustion
+    assert 'Run token bu...onetary cost.' == 'Knowledge so... removed: doc'
+      
+      - Knowledge source was removed: doc
+      + Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:436: AssertionError: the source check failure is not converted to token exhaustion
+E   AssertionError: the source check failure is not converted to token exhaustion
+    assert 'Invalid grou...onetary cost.' == 'Knowledge so... removed: doc'
+      
+      - Knowledge source was removed: doc
+      + Invalid grounded answer contract after one repair: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:436: AssertionError: the source check failure is not converted to token exhaustion
+E   AssertionError: assert 'Run token bu...onetary cost.' == 'Knowledge so... removed: doc'
+      
+      - Knowledge source was removed: doc
+      + Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:448: AssertionError: assert 'Run token bu...onetary cost.' == 'Knowledge so... removed: doc'
+E   ValueError: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+    During task with name 'agent' and id '8a5f9d21-d728-9082-9af1-aff64f826041'
+----------------------------- Captured stderr call -----------------------------
+backend/app/compiler.py:582: ValueError: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+E   ValueError: Invalid grounded answer contract after one repair: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+    During task with name 'agent' and id 'ac1da5f2-bc90-547a-1e24-46515e4de732'
+----------------------------- Captured stderr call -----------------------------
+backend/app/compiler.py:582: ValueError: Invalid grounded answer contract after one repair: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
+E   assert (3, 1) == (2, 1)
+      
+      At index 0 diff: 3 != 2
+      Use -v to get more diff
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:508: assert (3, 1) == (2, 1)
+E   KeyError: 'budget_halt'
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:510: KeyError: 'budget_halt'
+E   KeyError: 'budget_halt'
+backend/tests/test_token_budget_recovery.py:523: KeyError: 'budget_halt'
+E   assert (3, 1) == (2, 1)
+      
+      At index 0 diff: 3 != 2
+      Use -v to get more diff
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:589: assert (3, 1) == (2, 1)
+E   assert (False is True)
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:593: assert (False is True)
+E   KeyError: 'budget_halt'
+----------------------------- Captured stderr call -----------------------------
+backend/tests/test_token_budget_recovery.py:610: KeyError: 'budget_halt'
+=============================== warnings summary ===============================
+backend/tests/test_token_budget_recovery.py::test_t11b_a_request_router_repair_refusal_keeps_its_type
+  .venv/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+_______ test_t3_on_error_fail_still_fails_the_run_with_the_token_message _______
+----------------------------- Captured stderr call -----------------------------
+_ test_t4_an_ordinary_provider_error_is_a_recovered_failure_not_truncation[continue] _
+----------------------------- Captured stderr call -----------------------------
+_ test_t4_an_ordinary_provider_error_is_a_recovered_failure_not_truncation[route] _
+----------------------------- Captured stderr call -----------------------------
+___________________ test_t12_a_token_refusal_is_not_retried ____________________
+----------------------------- Captured stderr call -----------------------------
+_______ test_t10d_action_budget_only_keeps_the_final_partial_answer_call _______
+----------------------------- Captured stderr call -----------------------------
+______ test_t15_a_valid_answer_that_spends_the_last_tokens_stays_complete ______
+----------------------------- Captured stderr call -----------------------------
+=========================== short test summary info ============================
+PASSED backend/tests/test_token_budget_recovery.py::test_t3_on_error_fail_still_fails_the_run_with_the_token_message
+PASSED backend/tests/test_token_budget_recovery.py::test_t4_an_ordinary_provider_error_is_a_recovered_failure_not_truncation[continue]
+PASSED backend/tests/test_token_budget_recovery.py::test_t4_an_ordinary_provider_error_is_a_recovered_failure_not_truncation[route]
+PASSED backend/tests/test_token_budget_recovery.py::test_t12_a_token_refusal_is_not_retried
+PASSED backend/tests/test_token_budget_recovery.py::test_t10d_action_budget_only_keeps_the_final_partial_answer_call
+PASSED backend/tests/test_token_budget_recovery.py::test_t15_a_valid_answer_that_spends_the_last_tokens_stays_complete
+FAILED backend/tests/test_token_budget_recovery.py::test_t1_a_token_refused_node_that_recovers_marks_the_run_incomplete[continue]
+FAILED backend/tests/test_token_budget_recovery.py::test_t1_a_token_refused_node_that_recovers_marks_the_run_incomplete[route]
+FAILED backend/tests/test_token_budget_recovery.py::test_t2_the_recovered_event_keeps_the_typed_token_exhaustion[continue]
+FAILED backend/tests/test_token_budget_recovery.py::test_t2_the_recovered_event_keeps_the_typed_token_exhaustion[route]
+FAILED backend/tests/test_token_budget_recovery.py::test_t5_the_durable_run_stores_a_budget_cause[continue]
+FAILED backend/tests/test_token_budget_recovery.py::test_t5_the_durable_run_stores_a_budget_cause[route]
+FAILED backend/tests/test_token_budget_recovery.py::test_t6_resume_after_the_recovery_reaches_the_same_verdict_without_a_new_call
+FAILED backend/tests/test_token_budget_recovery.py::test_t8_a_query_whose_repair_is_refused_is_a_budget_failure
+FAILED backend/tests/test_token_budget_recovery.py::test_t11_a_request_reader_repair_refusal_keeps_its_type
+FAILED backend/tests/test_token_budget_recovery.py::test_t11b_a_request_router_repair_refusal_keeps_its_type
+FAILED backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[classification]
+FAILED backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[extraction]
+FAILED backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[output_schema]
+FAILED backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[classification]
+FAILED backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[extraction]
+FAILED backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[output_schema]
+FAILED backend/tests/test_token_budget_recovery.py::test_t9c_a_free_text_agent_whose_repair_is_refused_returns_the_budget_abstention
+FAILED backend/tests/test_token_budget_recovery.py::test_t9d_a_free_text_agent_with_no_evidence_whose_repair_is_refused_keeps_the_no_evidence_abstention
+FAILED backend/tests/test_token_budget_recovery.py::test_t10_a_free_text_agent_with_evidence_makes_no_call_after_exhaustion
+FAILED backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[classification-True]
+FAILED backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[classification-False]
+FAILED backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[extraction-True]
+FAILED backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[extraction-False]
+FAILED backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[output_schema-True]
+FAILED backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[output_schema-False]
+FAILED backend/tests/test_token_budget_recovery.py::test_t10c_a_nested_free_text_specialist_returns_the_budget_abstention
+FAILED backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_the_budget_abstention[step]
+FAILED backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_the_budget_abstention[repair]
+FAILED backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_a_nested_specialist_budget_abstention
+FAILED backend/tests/test_token_budget_recovery.py::test_t14b_an_unchanged_source_is_checked_exactly_once[step]
+FAILED backend/tests/test_token_budget_recovery.py::test_t14b_an_unchanged_source_is_checked_exactly_once[repair]
+FAILED backend/tests/test_token_budget_recovery.py::test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[continue]
+FAILED backend/tests/test_token_budget_recovery.py::test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[stop]
+FAILED backend/tests/test_token_budget_recovery.py::test_t7c_compact_keeps_the_budget_halt_within_its_reserve
+FAILED backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[continue]
+FAILED backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[stop]
+FAILED backend/tests/test_token_budget_recovery.py::test_t7c_a_compacted_halt_survives_crash_and_resume
+37 failed, 6 passed, 1 warning in 2.63s

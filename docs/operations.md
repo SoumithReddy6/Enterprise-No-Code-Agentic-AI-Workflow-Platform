@@ -316,13 +316,18 @@ Changing `AGENT_RUN_BUDGET` requires a worker restart. A paused or interrupted r
 
 It is checked before each model call, using counts the provider itself reported (`prompt_eval_count`/`eval_count` on Ollama, `usage` on OpenAI and Claude). Missing usage counts as zero, so a provider that reports nothing cannot be capped — check that model usage appears in operator metrics before relying on this.
 
-Behaviour on exhaustion matches the action budget: an agent stops, answers from the evidence it already has, and the run is flagged `truncated` with
+Once the ceiling is reached, no further model call is made, and the run is flagged `truncated` with
 
 ```
 Run token budget exhausted (101,430 of 100,000 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.
 ```
 
-A plain LLM node has no partial-answer contract, so it refuses with the same message rather than spending more. When both the token and action ceilings are hit, the token reason is reported, because that is the one with a bill attached.
+- **LLM, Query, Request reader and Request router nodes** refuse with that message. The refusal is a `budget` failure, the same as an action-budget refusal. Under `on_error` `continue` or `route` the run is `success` and `truncated`, with a `budget` cause that names the node; under `fail` the run fails. A node that did work before the refusal (a Query that retrieved, a node whose last answer needed a repair) reports `stopped after 1 attempt(s)`; a node refused at entry reports `did not run`. A token refusal is never retried.
+- **A free-text agent** that already has evidence does not write a final answer. It returns a budget abstention: the text says the token budget ran out and that the listed sources were not used to answer, the evidence is listed with every source uncited, and the grounding has `abstain: true` and `compliance: "budget_exhausted"`. This also applies when the agent's last answer needs a repair that the ceiling refuses. The sources pass the same check as a normal grounded answer first: if a source was removed, the agent fails as it would for a normal answer. With no evidence, the agent abstains as before.
+- **A structured agent** (an output schema, or the extraction or classification role) promises JSON to the nodes after it, so it never returns prose here. It fails with the token message, with or without evidence, and that failure follows the node rules above.
+- **A For each loop** stops at the item the ceiling refused. If that item did work first, its result is saved with the halt, so a resumed run stops at the same item without repeating any work.
+
+A call admitted under the ceiling can still finish above it: the ceiling stops further calls, it does not reserve tokens in advance. When both the token and action ceilings are hit, the token reason is reported, because that is the one with a bill attached. When only the action budget runs out, an agent with evidence still makes its final partial-answer call, because that call costs tokens, not actions.
 
 **Tokens are not money.** Prices differ by model by more than an order of magnitude, so convert with your provider's current price list rather than treating this number as a cost. The limit is denominated in tokens precisely because that is the only figure a provider states exactly.
 
@@ -334,7 +339,7 @@ A For each loop's `results` output has a stated contract, measured in serialized
 
 - **Retained values: 1,000,000 bytes.** Item values are kept in order while the list fits; the first value that does not fit, and every later value, is stored as `""` with `value_dropped: true`. Values are never cut part way and always form a prefix.
 - **Outcome text: 500 characters per field.** `error` and `truncation_reason` longer than that are shortened and end with `…`.
-- **Hard maximum: 2,000,000 bytes for the complete list, metadata included.** Room is always reserved for every remaining accepted item in compact form (at most 226 bytes each); an entry that would take that room is stored compact - `index` and `status` kept, details replaced by a marker and `details_omitted: true`. Unlike values, details are kept whenever room remains.
+- **Hard maximum: 2,000,000 bytes for the complete list, metadata included.** Room is always reserved for every remaining accepted item in compact form (at most 251 bytes each); an entry that would take that room is stored compact - `index` and `status` kept, details replaced by a marker and `details_omitted: true`. Unlike values, details are kept whenever room remains.
 
 Any dropped value or omitted detail marks the loop, and therefore the run, incomplete with the count and the reason. Item rows in `run_loop_items` hold the same admitted entries, so resume reaches identical results.
 

@@ -54,9 +54,11 @@ class ExecutionOutcome:
     error: str | None
     attempts: int
     usage: dict | None
-    # The run-wide action budget refused an attempt, so that attempt made no call.
-    # attempts counts only the attempts that actually executed before the refusal.
+    # A run-wide budget refused an attempt. attempts counts only the attempts that
+    # actually executed before the refusal.
     budget_exhausted: bool = False
+    # Which budget: 'action' or 'tokens'. Only the loop journal reads it.
+    budget_kind: str = ''
 
 
 class ActionBudgetExhausted(ValueError):
@@ -127,6 +129,11 @@ def usage_for(run,identity):
     return deepcopy(usage) if usage else None
 
 
+def _model_calls(run):
+    """Model calls recorded on the run so far, across every node."""
+    return sum(totals.get('calls',0) for totals in ((run or {}).get('usage') or {}).values() if isinstance(totals,dict))
+
+
 def _error(exc,generic):
     return str(exc) if isinstance(exc,ValueError) else generic
 
@@ -189,7 +196,8 @@ async def execute_with_policy(operation,identity:ExecutionIdentity,retry:RetryPo
     The token ceiling is deliberately not enforced here. It is checked where spending
     happens - before a provider call in llm_node, and before each agent step - which is
     after every free path has had its chance to resolve. Checking it at this seam would
-    block an abstention that needs no model call at all.
+    block an abstention that needs no model call at all. Its typed refusal is reported
+    here, like an action refusal, as a budget-exhausted outcome.
     """
     # Eligibility is control flow, before reservations, retries or free provider paths.
     if eligibility is not None:
@@ -201,6 +209,7 @@ async def execute_with_policy(operation,identity:ExecutionIdentity,retry:RetryPo
     attempts=retry.attempts+1
     delay_for=delay_for or retry_delay
     for attempt in range(attempts):
+        debited=False;calls=_model_calls(run)
         try:
             if charge_first_attempt or attempt>0:
                 key=f'{identity.invocation_id}#{attempt}'
@@ -226,7 +235,16 @@ async def execute_with_policy(operation,identity:ExecutionIdentity,retry:RetryPo
         except CONTROL_FLOW:
             raise
         except ActionBudgetExhausted as exc:
-            return ExecutionOutcome('failed',None,str(exc),attempt,usage_for(run,identity),budget_exhausted=True)
+            return ExecutionOutcome('failed',None,str(exc),attempt,usage_for(run,identity),
+                                    budget_exhausted=True,budget_kind='action')
+        except token_budget.TokenBudgetExhausted as exc:
+            # The action budget refuses before an attempt starts; the token ceiling refuses
+            # inside one, possibly after it retrieved or a model answer was rejected. Such
+            # an attempt did work, so it counts as executed. Never retried: the ceiling is
+            # run-wide, so a retry is refused the same way.
+            executed=debited or _model_calls(run)>calls
+            return ExecutionOutcome('failed',None,str(exc),attempt+executed,usage_for(run,identity),
+                                    budget_exhausted=True,budget_kind='tokens')
         except Exception as exc:
             error=_error(exc,generic_error)
             transient=isinstance(exc,TransientToolError)

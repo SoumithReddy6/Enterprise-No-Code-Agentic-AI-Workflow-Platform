@@ -67,11 +67,25 @@ def compact(entry):
            'value':'','error':DETAILS_OMITTED if entry.get('error') else '','details_omitted':True}
     if entry.get('value') or entry.get('value_dropped'):short['value_dropped']=True
     if entry.get('truncation_reason'):short['truncation_reason']=DETAILS_OMITTED
+    if entry.get('budget_halt') in HALT_REASONS:short['budget_halt']=entry['budget_halt']
     return short
 
 
+# An item that did work and was then refused by a run-wide budget carries budget_halt,
+# saved with its result, so a replay stops where the fresh run stopped. The loop's reason
+# comes from the kind alone: the item's error text can be shortened by compaction.
+HALT_REASONS={'tokens':'Run token budget exhausted; raise RELAY_RUN_TOKEN_LIMIT.',
+              'action':'Run-wide agent action budget exhausted; raise AGENT_RUN_BUDGET.'}
+
+
+def budget_halt(entry,index):
+    """The halt an admitted entry records, fresh or restored, or None."""
+    kind=entry.get('budget_halt')
+    return ('budget',index+1,HALT_REASONS[kind]) if kind in HALT_REASONS else None
+
+
 # The largest compact entry, plus its list separator: the reserve every unadmitted item needs.
-COMPACT_BYTES=serialized_bytes(compact({'index':MAX_ITEMS_CEILING-1,'status':'success','value':'x','error':'x','truncation_reason':'x'}))+2
+COMPACT_BYTES=serialized_bytes(compact({'index':MAX_ITEMS_CEILING-1,'status':'success','value':'x','error':'x','truncation_reason':'x','budget_halt':'tokens'}))+2
 
 
 class ResultBudget:
@@ -140,8 +154,8 @@ def completeness(node_id,total,accepted,results,failed,halt=None):
     This is part of the node's output rather than only an event, so it is checkpointed
     with the results and a resumed run reports the same incompleteness at run level.
     halt names why iteration ended early: ('stop', index) after a failed item under
-    on_item_error stop, or ('budget', index, reason) when the run-wide action budget
-    refused an item before it made any call.
+    on_item_error stop, or ('budget', index, reason) when a run-wide budget refused an
+    item, before it made any call or after it did some work.
     """
     reasons=[];unrun=accepted-len(results)
     if total>accepted:
@@ -244,21 +258,22 @@ async def for_each_node(inputs,config,ctx):
             # Restored from an earlier attempt: it passes through the same admission and
             # policy checks as a fresh item, so replay reaches the same decisions.
             entry=budget.admit(saved)
+            halt=budget_halt(entry,index)
         else:
             entry,exhausted=await _run_item(ctx,body,emit,index,value)
             if entry is None:
-                # The action budget refused the item before any call: nothing ran, so
-                # there is no item result to record, and every later item would be
-                # refused the same way.
+                # A budget refused the item before any call: nothing ran, so there is no
+                # item result to record, and every later item would be refused the same way.
                 halt=('budget',index,exhausted);break
             # Admit before persisting, so progress never holds a value the output drops.
+            # The halt marker is in the entry already, so it is saved with the result.
             entry=budget.admit(entry)
             record_progress(ctx,index,entry)
             await emit({'kind':'loop_item','status':'info','node_id':ctx.node_id,'item_index':index,'item_result':entry,'transient':True})
-            if exhausted:
-                # An earlier attempt ran and failed; the budget then refused its retry.
-                results.append(entry);failed+=1
-                halt=('budget',index+1,exhausted);break
+            halt=budget_halt(entry,index)
+        if halt:
+            # The item did work, then a budget refused the rest of it.
+            results.append(entry);failed+=1;break
         results.append(entry)
         if entry.get('status')=='failed':failed+=1
         if entry.get('status')=='failed' and config.on_item_error=='stop':
@@ -273,8 +288,9 @@ async def for_each_node(inputs,config,ctx):
 async def _run_item(ctx,body,emit,index,value):
     """Execute one fresh item. Returns (entry, exhaustion reason or '').
 
-    entry is None when the run-wide action budget refused the item before it made any
-    call. The caller admits, persists and publishes the entry.
+    entry is None when a run-wide budget refused the item before it made any call. An
+    item refused after it did work is a failed entry marked budget_halt. The caller
+    admits, persists and publishes the entry.
     """
     from dataclasses import replace
     from .tool_service import UncertainWriteError
@@ -314,10 +330,12 @@ async def _run_item(ctx,body,emit,index,value):
             action_budget=(ctx.run or {}).get('action_budget'),charge_first_attempt=charges_action(body.type))
         if outcome.budget_exhausted and not outcome.attempts:
             await item_emit({**common,'status':'not_run','reason':outcome.error})
-            journal(event='loop.budget_exhausted',node_id=ctx.node_id,reason_code='action_budget')
+            journal(event='loop.budget_exhausted',node_id=ctx.node_id,
+                    reason_code='token_budget' if outcome.budget_kind=='tokens' else 'action_budget')
             return None,outcome.error
         if outcome.status=='failed':
             entry={'index':index,'status':'failed','value':'','error':outcome.error}
+            if outcome.budget_exhausted:entry['budget_halt']=outcome.budget_kind
             event={**common,'status':'failed','error':outcome.error}
             if outcome.usage:event['usage']=outcome.usage
             if body.retry.attempts:event['attempt']=outcome.attempts

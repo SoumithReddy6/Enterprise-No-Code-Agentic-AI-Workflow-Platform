@@ -189,9 +189,9 @@ async def llm_node(inputs, config, ctx):
     if config.provider == 'demo':
         await asyncio.sleep(0.15)
         return {'text': f'[Demo · no model called]\n\nReceived prompt:\n{inputs["prompt"]}', 'provider': 'demo'}
-    from .token_budget import exhausted as tokens_exhausted,reason as token_reason
+    from .token_budget import TokenBudgetExhausted,exhausted as tokens_exhausted,reason as token_reason
     # A plain model node has no partial-answer contract; refuse before spending more.
-    if tokens_exhausted(ctx.run):raise ValueError(token_reason(ctx.run))
+    if tokens_exhausted(ctx.run):raise TokenBudgetExhausted(token_reason(ctx.run))
     params={}
     if config.temperature is not None:params['temperature']=config.temperature
     if config.top_p is not None:params['top_p']=config.top_p

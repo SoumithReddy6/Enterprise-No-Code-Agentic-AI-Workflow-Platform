@@ -9,6 +9,14 @@ DEFAULT_RUN_TOKENS=2_000_000
 MAX_RUN_TOKENS=100_000_000
 
 
+class TokenBudgetExhausted(ValueError):
+    """The run token ceiling refused a model call before it was sent.
+
+    Typed, like ActionBudgetExhausted, so work skipped for lack of tokens is never taken
+    for a failure the workflow chose to route around: a node that recovers from it leaves
+    the run truncated. It stays a ValueError, so every message path shows the same text."""
+
+
 def run_token_limit():
     """Tokens one run may consume across every model call. 0 disables the ceiling."""
     raw=os.getenv('RELAY_RUN_TOKEN_LIMIT','').strip()

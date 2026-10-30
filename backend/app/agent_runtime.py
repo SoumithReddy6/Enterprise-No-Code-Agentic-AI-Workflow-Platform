@@ -112,6 +112,7 @@ def validate_grounded(text,passages,output_schema=None):
 
 async def finalize_grounded_answer(text,passages,repair,output_schema=None):
     try:contract,compliance=await validate_with_repair(text,lambda raw:validate_grounded(raw,passages,output_schema),repair)
+    except token_budget.TokenBudgetExhausted:raise
     except ValueError as exc:raise GroundedContractError(f'Invalid grounded answer contract after one repair: {exc}') from None
     if contract['abstain']:
         if not passages:
@@ -130,6 +131,29 @@ async def finalize_grounded_answer(text,passages,repair,output_schema=None):
         citations=set(contract['citations'])|cited
         sources=[{**p,'cited':p['citation'] in citations} for p in passages]
     return answer,sources,json.dumps({**contract,'compliance':compliance},ensure_ascii=False)
+
+BUDGET_STOPPED='The run token budget ran out before an answer could be written. The sources collected so far are listed but were not used to answer.'
+
+async def budget_abstention(ctx,reason,evidence,truncations,provider):
+    """A free-text agent's answer when the token ceiling stops it with evidence in hand.
+
+    No model call: the ceiling is the cost backstop. The evidence is listed uncited, and
+    it passes the same source check as a normal grounded answer first - a budget stop
+    changes the outcome, never the checks. A failed check fails the agent as it would a
+    normal answer; it is not turned into token exhaustion.
+    """
+    sources=[{**p,'cited':False} for p in evidence]
+    if ctx.platform:await ctx.platform('verify_vector_sources',[{k:v for k,v in s.items() if k not in ('citation','cited')} for s in sources])
+    contract={'answer':'','citations':[],'abstain':True,'reason':reason,'compliance':'budget_exhausted',
+              'truncated':True,'truncation_reason':truncations[-1]['reason'],'truncations':truncations}
+    return {'text':BUDGET_STOPPED+'\n\nReason: '+reason,'provider':provider,'sources':json.dumps(sources,ensure_ascii=False),'grounding':json.dumps(contract,ensure_ascii=False)}
+
+def exhausted_abstention(depth,reason,truncations):
+    """A budget ran out and there is no evidence: the no-evidence abstention, flagged truncated."""
+    if depth:raise AgentBudgetExhausted('Nested agent budget exhausted without evidence.')
+    output=immediate_abstention()
+    output['grounding']=json.dumps({**json.loads(output['grounding']),'truncated':True,'truncation_reason':reason,'truncations':truncations})
+    return output
 
 def immediate_abstention(decision=None):
     contract={'answer':'','citations':[],'abstain':True,'reason':'No evidence passages were retrieved.','compliance':'not_called'}
@@ -284,11 +308,12 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
             else:reason=f'Agent step budget exhausted ({config.max_steps} steps for this agent).'
             truncations.append({'node_id':node_id,'reason':reason})
             await emit({'kind':'agent_budget','node_id':node_id,'status':'warning','transient':True,'truncated':True,'reason':reason,'run_budget':budget.get('ceiling',DEFAULT_RUN_BUDGET),'actions_used':budget['counter'],'max_steps':config.max_steps,'tokens_used':token_budget.tokens_spent(ctx.run)})
-            if not evidence:
-                if depth:raise AgentBudgetExhausted('Nested agent budget exhausted without evidence.')
-                output=immediate_abstention()
-                output['grounding']=json.dumps({**json.loads(output['grounding']),'truncated':True,'truncation_reason':reason,'truncations':truncations})
-                return output
+            # Out of tokens, no further call is made (D1 = B). A structured agent promises
+            # JSON downstream, so prose would break its contract: it fails typed instead,
+            # with or without evidence. This check comes before the no-evidence abstention.
+            if out_of_tokens and structured:raise token_budget.TokenBudgetExhausted(reason)
+            if not evidence:return exhausted_abstention(depth,reason,truncations)
+            if out_of_tokens:return await budget_abstention(ctx,reason,evidence,truncations,provider)
         grounded=grounded or bool(evidence)
         system=instructions+('\n'+GROUNDED_INSTRUCTIONS+'\nTool calls still use action call; final answers use the grounded JSON directly.' if grounded else '')
         if exhausted:
@@ -419,10 +444,17 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
         return action['text'] if action and action.get('action')=='final' and isinstance(action.get('text'),str) else result['text']
     sources=[];grounding='{}'
     if grounded:
-        final,sources,grounding=await finalize_grounded_answer(final,evidence,repair,config.output_schema if structured else None)
+        try:final,sources,grounding=await finalize_grounded_answer(final,evidence,repair,config.output_schema if structured else None)
+        except token_budget.TokenBudgetExhausted as exc:
+            # The last tokens went on an answer that needs repair. Same rule as at a step.
+            if structured:raise
+            truncations.append({'node_id':node_id,'reason':str(exc)})
+            if not evidence:return exhausted_abstention(depth,str(exc),truncations)
+            return await budget_abstention(ctx,str(exc),evidence,truncations,provider)
         if ctx.platform:await ctx.platform('verify_vector_sources',[{k:v for k,v in s.items() if k not in ('citation','cited')} for s in sources])
     elif structured:
         try:final,_=await validate_with_repair(final,lambda text:validate_structured(text,config.output_schema),repair)
+        except token_budget.TokenBudgetExhausted:raise
         except ValueError as exc:raise ValueError(f'Agent output did not match the required structure: {exc}') from None
     if config.role=='memory' and ctx.platform:
         await ctx.platform('memory_write',config.memory_key,input_text,final)
