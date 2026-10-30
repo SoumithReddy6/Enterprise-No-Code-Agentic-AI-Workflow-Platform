@@ -6,7 +6,9 @@
 > final-answer repair (4f). Revised again after
 > [the second review](../../reviews/ta04-revised-plan-review-2026-10-30.md): B keeps the
 > source check, B applies to free-text agents only, and the halt reason is the same in
-> fresh and resumed runs. A closing checklist is in section 10. No code yet.
+> fresh and resumed runs. A closing checklist is in section 10. Third review: a structured
+> agent with no evidence also gets the typed failure when tokens run out. Ready for
+> implementation.
 
 **Goal:** when the run token budget stops model work, the run says so. Under `on_error`
 `continue` or `route`, the run ends `success` **and** `truncated`, with a `budget` cause.
@@ -180,10 +182,15 @@ This is a deliberate narrowing of B.
 **B in the implementation.** One helper, `budget_abstention(reason, evidence, truncations)`
 in `agent_runtime.py`, is used in two places, both only for free-text agents:
 
-1. **Exhaustion known at a step** (`agent_runtime.py:283–289`): today the agent abstains only
-   when it has no evidence. With evidence and `out_of_tokens`, a free-text agent now returns
-   `budget_abstention` and makes no model call. A structured agent raises the typed failure.
-   When only the action or step budget ran out, the current final call stays.
+1. **Exhaustion known at a step** (`agent_runtime.py:283–291`): the first check is
+   `out_of_tokens and structured`. It comes **before** the old no-evidence branch, and it
+   raises `TokenBudgetExhausted`, with or without evidence. Today a structured agent with no
+   evidence returns the prose `immediate_abstention` here (the third review reproduced this
+   for `output_schema`, `extraction` and `classification`). Then, for a free-text agent with
+   evidence and `out_of_tokens`, the agent returns `budget_abstention` and makes no model
+   call. A free-text agent with no evidence keeps today's abstention. When only the action or
+   step budget ran out, the current behavior stays (the final call, or the no-evidence
+   abstention).
 2. **Final-answer repair refused**: the agent boundary catches `TokenBudgetExhausted` from
    `finalize_grounded_answer` (`agent_runtime.py:422`). A free-text agent returns
    `budget_abstention`; a structured agent lets the typed failure propagate. The
@@ -285,7 +292,7 @@ New file `backend/tests/test_token_budget_recovery.py`. Its helper is `token_flo
 | T9b | D | Structured agent **with evidence** (grounded wrapper): the same, with the typed failure; no prose in the output. |
 | T9c | D | Free-text agent with evidence, final answer malformed, repair refused: B. The node succeeds with `budget_abstention`; the **complete visible text** is asserted; the sources are uncited; the grounding is truncated with the token reason. |
 | T10 | D | Free-text agent with evidence, exhaustion known at a step: B with no further call (1 provider call). The **complete visible text** is asserted: it never says "could not find matching evidence". |
-| T10b | D | A structured agent with evidence, exhaustion known at a step: the typed failure and no further call. |
+| T10b | D | A structured agent, exhaustion known at a step, **with and without evidence**, for `output_schema`, `extraction` and `classification`: the typed failure, no further call, and no prose output. |
 | T10c | D | A nested free-text specialist under B: the parent's grounding records the truncated child, and no call is made after exhaustion. |
 | T10d | C | Action budget only (tokens remain): the agent with evidence still makes its final partial-answer call, as today. |
 | T14 | D | Source check at both B return sites (step and refused repair): the source is removed during the call. The agent fails at the source check, and no removed source appears in any success output. Includes one nested-specialist case. |
@@ -316,6 +323,7 @@ and asserts `truncated: true` under `continue` and `route`.
 | M11: `compact()` drops `budget_halt` | T7c |
 | M12: `budget_abstention` skips the source check | T14 |
 | M13: B also applied to structured agents | T9b, T10b |
+| M15: the `out_of_tokens and structured` check placed after the no-evidence branch | T10b (without evidence) |
 | M14: the summary reason comes from the item's `error` text | T7c |
 
 ## 8. Out of scope
@@ -323,12 +331,12 @@ and asserts `truncated: true` under `continue` and `route`.
 TA02, TA03, TA05 (strict reservation), TA06 (missing usage), TA07, the monotonic snapshot,
 and the attached-agent string match (it already matches the token message).
 
-**Found during the second review, existing behavior, not changed here.** A structured agent
-can already return prose in two places: the no-evidence abstention when any budget ends at a
-step (`agent_runtime.py:287–291`), and an ordinary grounded abstention
-(`finalize_grounded_answer`, `agent_runtime.py:116–121`). Both break the same output
-contract as R02. They apply to the action budget and to normal runs, not only to tokens, so
-they need their own step.
+**Found during the reviews, existing behavior, not changed here.** A structured agent can
+still return prose in two places: the no-evidence abstention when the **action or step**
+budget ends at a step (`agent_runtime.py:287–291`; the token case is fixed in 4f), and an
+ordinary grounded abstention (`finalize_grounded_answer`, `agent_runtime.py:116–121`). Both
+break the same output contract as R02. They apply to the action budget and to normal runs,
+so they need their own step.
 
 ## 10. TA04 closing checklist
 
@@ -342,7 +350,8 @@ TA04 is closed when each line below has a passing test, and not before:
    (T7b, T7c).
 4. A valid answer that ends exactly at the limit stays valid (T15).
 
-Anything outside this list is a new finding for a later step, not a reason to reopen TA04.
+Unrelated improvements go to later steps. A regression introduced by TA04, or a failure of
+one of its stated guarantees, still blocks closure.
 
 ## 9. Done when
 
