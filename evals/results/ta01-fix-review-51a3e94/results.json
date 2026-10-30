@@ -1,0 +1,98 @@
+{
+  "reviewed_commit": "51a3e944e80071d8a1e147cb78dd5d2c3ba84ae4",
+  "rows": [
+    {
+      "provider": "ollama",
+      "rejected": false,
+      "busy_first": false,
+      "status": "success",
+      "http_attempts": 1,
+      "accounted_tokens": 150,
+      "sql_tokens": 150,
+      "sql_calls": 1
+    },
+    {
+      "provider": "ollama",
+      "rejected": true,
+      "busy_first": false,
+      "status": "failed",
+      "http_attempts": 1,
+      "accounted_tokens": 150,
+      "sql_tokens": 150,
+      "sql_calls": 1
+    },
+    {
+      "provider": "claude",
+      "rejected": false,
+      "busy_first": false,
+      "status": "success",
+      "http_attempts": 1,
+      "accounted_tokens": 150,
+      "sql_tokens": 150,
+      "sql_calls": 1
+    },
+    {
+      "provider": "claude",
+      "rejected": true,
+      "busy_first": false,
+      "status": "failed",
+      "http_attempts": 1,
+      "accounted_tokens": 150,
+      "sql_tokens": 150,
+      "sql_calls": 1
+    },
+    {
+      "provider": "openai",
+      "rejected": false,
+      "busy_first": false,
+      "status": "success",
+      "http_attempts": 1,
+      "accounted_tokens": 150,
+      "sql_tokens": 150,
+      "sql_calls": 1
+    },
+    {
+      "provider": "openai",
+      "rejected": true,
+      "busy_first": false,
+      "status": "failed",
+      "http_attempts": 1,
+      "accounted_tokens": 150,
+      "sql_tokens": 150,
+      "sql_calls": 1
+    },
+    {
+      "provider": "openai",
+      "rejected": true,
+      "busy_first": true,
+      "status": "failed",
+      "http_attempts": 2,
+      "accounted_tokens": 150,
+      "sql_tokens": 150,
+      "sql_calls": 1
+    },
+    {
+      "reported_tokens": 150,
+      "accounted_tokens": 150,
+      "calls": 1,
+      "persistence_callbacks": 0,
+      "cancelled": true
+    },
+    {
+      "reported_usage": "unavailable",
+      "accounted_tokens": 0,
+      "persistence_callbacks": 0,
+      "scope": "unchanged TA06 policy"
+    }
+  ],
+  "source_sha256": {
+    "backend/app/providers.py": "17ee14b705927e49e8fa83e80444f0c052b58e6292b577d2f0b7dfb3d66b6f85",
+    "backend/app/registry.py": "a91205b56ced402fd74f37b0fe38dc3383729992ff22f6f589865a09504130aa",
+    "backend/app/compiler.py": "829b97b44b2e83f9107c028611df21990204f338462c3ccde04d1a5deb7f01c9",
+    "backend/app/worker.py": "ecbd1a73706efc1c826c29eb458a893890619ffaf970ed9533c3633a7773986d",
+    "backend/app/operator_metrics.py": "9c5d80078b131c1a6432456e91dbdf17c7fd367eb89a95b20f2d963899f1754d"
+  },
+  "source_unchanged": true,
+  "original_evidence_unchanged": true,
+  "checks_passed": 9
+}
