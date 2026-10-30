@@ -376,3 +376,24 @@ async def test_handler_cannot_supply_reserved_routing_metadata(monkeypatch):
     monkeypatch.setitem(REGISTRY, 'request_router', replace(REGISTRY['request_router'], handler=forged))
     with pytest.raises(ValueError, match='declared contract'):
         await compile_workflow(flow(), message='order').graph.ainvoke({'values': {}})
+
+
+@pytest.mark.asyncio
+async def test_a_rejected_provider_answer_is_counted_once_and_never_repaired(monkeypatch):
+    """TA01: only invalid returned text earns a repair; a provider rejection escapes at
+    once, with its reported usage counted."""
+    import httpx
+    from backend.app import providers
+    requests = []
+    def handle(request):
+        requests.append(request)
+        return httpx.Response(200, json={'message': {'content': ''}, 'prompt_eval_count': 7, 'eval_count': 3})
+    original = httpx.AsyncClient
+    monkeypatch.setattr(providers, 'client', lambda timeout: original(transport=httpx.MockTransport(handle), trust_env=False))
+    run = {'usage': {}, 'usage_by_invocation': {}}
+    with pytest.raises(providers.ProviderResponseError):
+        await router().request_router_node({'message': 'Buy laptops'}, config(),
+            Context('Buy laptops', lambda _: '', node_id='router', checkpoint_owner='router', run=run))
+    assert len(requests) == 1, 'a provider rejection is not repaired'
+    usage = run['usage']['router']
+    assert (usage['calls'], usage['prompt_tokens'], usage['completion_tokens']) == (1, 7, 3)

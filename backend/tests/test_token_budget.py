@@ -120,3 +120,148 @@ async def test_plain_model_node_runs_when_under_the_limit(monkeypatch):
     result=await llm_node({'prompt':'Hello'},LLMConfig(provider='ollama',model='test'),Context('',lambda _:'',run=run))
     assert result['text']=='Hi'
     assert tokens_spent(run)==66
+
+
+# --------------------------------------------------------------------------- TA01
+# A rejected answer was still paid for: llm_node counts the usage the provider reported
+# whether the answer is used, rejected or interrupted, and counts it exactly once.
+
+def scripted_chat(monkeypatch,outcomes,calls):
+    """Substitute only the external chat. Each outcome reports 100 + 50 tokens, then
+    returns its text or raises it; authorization, accounting and persistence stay real."""
+    from backend.app import providers
+    queue=list(outcomes)
+    async def chat(model,system,prompt,usage=None,**params):
+        calls.append(prompt);providers.record_usage(usage,100,50)
+        outcome=queue.pop(0)
+        if isinstance(outcome,BaseException):raise outcome
+        return outcome
+    monkeypatch.setattr(providers,'ollama_chat',chat)
+
+
+def model_run(monkeypatch):
+    from backend.app import observability
+    from backend.app.execution_policy import ExecutionIdentity
+    from backend.app.registry import Context
+    snapshots,journal=[],[]
+    async def persist(snapshot):snapshots.append(snapshot)
+    monkeypatch.setattr(observability,'journal',lambda **fields:journal.append(fields))
+    run={'usage':{},'usage_by_invocation':{},'persist_spend':persist}
+    ctx=Context('',lambda _:'secret',node_id='model',checkpoint_owner='model',
+                execution_identity=ExecutionIdentity('model','model','model'),run=run)
+    return run,ctx,snapshots,journal
+
+
+def counted(run):
+    totals=run['usage']['model']
+    return totals['calls'],totals['prompt_tokens'],totals['completion_tokens']
+
+
+@pytest.mark.asyncio
+async def test_a_rejected_answer_is_counted_once_and_made_durable(monkeypatch):
+    from backend.app.providers import ProviderResponseError
+    from backend.app.registry import llm_node,LLMConfig
+    calls=[];scripted_chat(monkeypatch,[ProviderResponseError('Ollama returned no text.')],calls)
+    run,ctx,snapshots,journal=model_run(monkeypatch)
+    with pytest.raises(ProviderResponseError):
+        await llm_node({'prompt':'Hello'},LLMConfig(provider='ollama',model='m'),ctx)
+    assert counted(run)==(1,100,50)
+    assert run['usage_by_invocation']['model']['calls']==1
+    assert [s['tokens_spent'] for s in snapshots]==[150]
+    usage=[e for e in journal if e.get('event')=='model.usage']
+    assert len(usage)==1 and usage[0]['error_type']=='ProviderResponseError'
+
+
+@pytest.mark.asyncio
+async def test_a_cancelled_call_keeps_its_usage_in_memory_and_does_not_persist(monkeypatch):
+    import asyncio
+    from backend.app.registry import llm_node,LLMConfig
+    calls=[];scripted_chat(monkeypatch,[asyncio.CancelledError()],calls)
+    run,ctx,snapshots,journal=model_run(monkeypatch)
+    with pytest.raises(asyncio.CancelledError):
+        await llm_node({'prompt':'Hello'},LLMConfig(provider='ollama',model='m'),ctx)
+    assert counted(run)==(1,100,50) and snapshots==[]
+    usage=[e for e in journal if e.get('event')=='model.usage']
+    assert len(usage)==1 and usage[0]['error_type']=='cancelled'
+
+
+@pytest.mark.asyncio
+async def test_a_used_answer_is_counted_exactly_once(monkeypatch):
+    from backend.app.registry import llm_node,LLMConfig
+    calls=[];scripted_chat(monkeypatch,['Hi'],calls)
+    run,ctx,snapshots,journal=model_run(monkeypatch)
+    assert (await llm_node({'prompt':'Hello'},LLMConfig(provider='ollama',model='m'),ctx))['text']=='Hi'
+    assert counted(run)==(1,100,50)
+    assert [s['tokens_spent'] for s in snapshots]==[150]
+    usage=[e for e in journal if e.get('event')=='model.usage']
+    assert len(usage)==1 and 'error_type' not in usage[0]
+
+
+@pytest.mark.asyncio
+async def test_a_rejected_answer_spends_the_budget_before_the_next_call(monkeypatch):
+    from backend.app.providers import ProviderResponseError
+    from backend.app.registry import llm_node,LLMConfig
+    monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT','150')
+    calls=[];scripted_chat(monkeypatch,[ProviderResponseError('Ollama returned no text.'),'unreachable'],calls)
+    run,ctx,_,_=model_run(monkeypatch)
+    with pytest.raises(ProviderResponseError):
+        await llm_node({'prompt':'first'},LLMConfig(provider='ollama',model='m'),ctx)
+    with pytest.raises(ValueError) as exc:
+        await llm_node({'prompt':'second'},LLMConfig(provider='ollama',model='m'),ctx)
+    assert 'Run token budget exhausted (150 of 150' in str(exc.value)
+    assert calls==['first'], 'the second call must be refused before any provider request'
+
+
+@pytest.mark.asyncio
+async def test_the_reviewed_openai_length_stop_counts_150_tokens(monkeypatch):
+    """The exact response from the token-accounting review (TA01): HTTP 200, empty visible
+    text, finish_reason length, 100 prompt and 50 completion tokens (all reasoning)."""
+    import httpx
+    from backend.app import providers
+    from backend.app.registry import llm_node,LLMConfig
+    original=httpx.AsyncClient
+    body={'choices':[{'message':{'role':'assistant','content':''},'finish_reason':'length'}],
+          'usage':{'prompt_tokens':100,'completion_tokens':50,'total_tokens':150,
+                   'completion_tokens_details':{'reasoning_tokens':50}}}
+    monkeypatch.setattr(providers,'client',lambda timeout:original(
+        transport=httpx.MockTransport(lambda _:httpx.Response(200,json=body)),trust_env=False))
+    run,ctx,snapshots,_=model_run(monkeypatch)
+    with pytest.raises(providers.ProviderResponseError,match='OpenAI returned no text'):
+        await llm_node({'prompt':'Hello'},LLMConfig(provider='openai',model='m',credential_id='key'),ctx)
+    assert tokens_spent(run)==150 and counted(run)==(1,100,50)
+    assert [s['tokens_spent'] for s in snapshots]==[150]
+
+
+@pytest.mark.asyncio
+async def test_a_run_that_fails_on_a_rejected_answer_records_its_tokens_durably(tmp_path,monkeypatch):
+    import httpx
+    from cryptography.fernet import Fernet
+    from sqlalchemy import select
+    from sqlalchemy.orm import Session
+    from backend.app import providers
+    from backend.app.models import Workflow
+    from backend.app.operator_metrics import RunTokenRecord
+    from backend.app.storage import Store
+    from backend.app.worker import Worker
+    original=httpx.AsyncClient
+    monkeypatch.setattr(providers,'client',lambda timeout:original(transport=httpx.MockTransport(
+        lambda _:httpx.Response(200,json={'message':{'role':'assistant','content':''},
+                                          'prompt_eval_count':100,'eval_count':50})),trust_env=False))
+    store=Store(f'sqlite:///{tmp_path}/rejected.db',Fernet.generate_key())
+    try:
+        store.allow_model('ollama','m','','local')
+        workflow=Workflow.model_validate({'version':1,'name':'Rejected answer','nodes':[
+            {'id':'input','type':'chat_input'},
+            {'id':'model','type':'llm','inputs':{'prompt':'input.message'},'config':{'provider':'ollama','model':'m'}},
+            {'id':'out','type':'response','inputs':{'text':'model.text'}}],
+            'edges':[{'id':'a','source':'input','target':'model'},{'id':'b','source':'model','target':'out'}]})
+        row=store.create_run(workflow.model_dump(mode='json'),'go')
+        worker=Worker(store)
+        await worker.execute(store.claim_next(worker.owner))
+        saved=store.run(row['id'])
+        assert saved['status']=='failed' and 'Ollama returned no text' in saved['error']
+        assert saved['accounting']['tokens_spent']==150
+        with Session(store.engine) as s:
+            rows=s.execute(select(RunTokenRecord).where(RunTokenRecord.run_id==row['id'])).scalars().all()
+        assert sum(r.prompt_tokens+r.completion_tokens for r in rows)==150 and sum(r.calls for r in rows)==1
+    finally:store.engine.dispose()

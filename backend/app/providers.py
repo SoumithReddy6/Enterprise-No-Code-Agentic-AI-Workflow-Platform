@@ -162,13 +162,14 @@ async def ollama_chat(model, system, prompt, temperature=None, top_p=None,
             _raise_retryable(response, 'Ollama')
             response.raise_for_status()
             body = _json_object(response, 'Ollama')
+            # Usage belongs to the response, not the answer: a rejected answer was still paid for.
+            record_usage(usage, body.get('prompt_eval_count'), body.get('eval_count'))
             message = body.get('message')
             if not isinstance(message, dict):
                 raise ProviderResponseError('Ollama returned no message object.')
             text = message.get('content')
             if not isinstance(text, str) or not text.strip():
                 raise ProviderResponseError('Ollama returned no text. Choose a chat-capable model.')
-            record_usage(usage, body.get('prompt_eval_count'), body.get('eval_count'))
             return text
     except httpx.ConnectError:
         raise ValueError('Cannot connect to Ollama. Start Ollama and check OLLAMA_BASE_URL.') from None
@@ -261,6 +262,12 @@ async def claude_chat(model, system, prompt, key, temperature=None, top_p=None,
             _raise_retryable(response, 'Claude')
             response.raise_for_status()
             body = _json_object(response, 'Claude')
+            usage_data = body.get('usage')
+            if usage_data is not None and not isinstance(usage_data, dict):
+                raise ProviderResponseError('Claude returned invalid usage metadata.')
+            usage_data = usage_data or {}
+            # Usage belongs to the response, not the answer: a refusal or an empty answer was still paid for.
+            record_usage(usage, usage_data.get('input_tokens'), usage_data.get('output_tokens'))
             blocks = body.get('content')
             if not isinstance(blocks, list):
                 raise ProviderResponseError('Claude returned no supported text response.')
@@ -275,11 +282,6 @@ async def claude_chat(model, system, prompt, key, temperature=None, top_p=None,
                     texts.append(text)
             if not texts or not '\n'.join(texts).strip():
                 raise ProviderResponseError('Claude returned no text.')
-            usage_data = body.get('usage')
-            if usage_data is not None and not isinstance(usage_data, dict):
-                raise ProviderResponseError('Claude returned invalid usage metadata.')
-            usage_data = usage_data or {}
-            record_usage(usage, usage_data.get('input_tokens'), usage_data.get('output_tokens'))
             return '\n'.join(texts)
     except httpx.TimeoutException:
         raise ProviderBusy('Claude request timed out') from None
@@ -313,6 +315,12 @@ async def openai_chat(model, system, prompt, key, temperature=None, top_p=None,
             _raise_retryable(response, 'OpenAI')
             response.raise_for_status()
             body = _json_object(response, 'OpenAI')
+            usage_data = body.get('usage')
+            if usage_data is not None and not isinstance(usage_data, dict):
+                raise ProviderResponseError('OpenAI returned invalid usage metadata.')
+            usage_data = usage_data or {}
+            # Usage belongs to the response, not the answer: a refusal or a length stop was still paid for.
+            record_usage(usage, usage_data.get('prompt_tokens'), usage_data.get('completion_tokens'))
             choices = body.get('choices')
             if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
                 raise ProviderResponseError('OpenAI returned no supported text response.')
@@ -324,11 +332,6 @@ async def openai_chat(model, system, prompt, key, temperature=None, top_p=None,
                 raise ProviderResponseError('Model did not return text.')
             if not text.strip():
                 raise ProviderResponseError('OpenAI returned no text.')
-            usage_data = body.get('usage')
-            if usage_data is not None and not isinstance(usage_data, dict):
-                raise ProviderResponseError('OpenAI returned invalid usage metadata.')
-            usage_data = usage_data or {}
-            record_usage(usage, usage_data.get('prompt_tokens'), usage_data.get('completion_tokens'))
             return text
     except httpx.TimeoutException:
         raise ProviderBusy('OpenAI request timed out') from None

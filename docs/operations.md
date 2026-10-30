@@ -78,7 +78,7 @@ grep '"request_id":"your-request-id"' relay.log
 | `truncation_rate` | Fraction of successful runs flagged incomplete because an agent exhausted its budget |
 | `denominators` | Successful run counts and successful grounded run counts used by the rates |
 
-Empty denominators/percentile populations return `null`. Cached checkpoint replay contributes no additional tokens. Cancellation waits for an in-flight event transaction and does not record its usage a second time. Calls across resumed attempts remain counted. Provider omissions, crashes before event persistence, and loss of a worker lease can leave token usage incomplete; no estimate is invented. Token counts are not dollar costs. Legacy multi-model agent events lack per-model detail and cannot be perfectly attributed; only their stored attribution is available.
+Empty denominators/percentile populations return `null`. Cached checkpoint replay contributes no additional tokens. Cancellation waits for an in-flight event transaction and does not record its usage a second time. Calls across resumed attempts remain counted. A response whose answer Relay rejects (a refusal, an empty answer, a length stop with no visible text) still counts its reported usage, and the failed node event carries it. A call that returned no usage (an HTTP error, a timeout) adds nothing; its real consumption is unknown, because a provider can keep processing after the client stops waiting. Provider omissions, crashes before event persistence, and loss of a worker lease can leave token usage incomplete; no estimate is invented. Token counts are not dollar costs. Legacy multi-model agent events lack per-model detail and cannot be perfectly attributed; only their stored attribution is available.
 
 Run creation/status indexes bound window selection; percentile and grouped aggregation work remains proportional to the matching population. SQL reads compact run metric columns and token rows, not workflow JSON, passages or event payloads. Completion updates metric columns atomically; token rows are inserted alongside ordered run events. Startup atomically backfills existing runs/events once using a migration marker. Large histories may extend the first startup.
 
@@ -403,7 +403,7 @@ Two budgets govern two kinds of spend, and every paid call belongs to exactly on
 | Budget | Counts | Charged |
 | --- | --- | --- |
 | `AGENT_RUN_BUDGET` | Tool calls, knowledge-base retrieval and query, specialist delegation | First attempt and every retry. Replaying an attempt already paid for — an approval continuing, a settled write returning its stored result — is not charged again. |
-| `RELAY_RUN_TOKEN_LIMIT` | Every model call: a standalone LLM node, an agent's planning step, a structured-output repair, query generation | Provider-reported tokens, recorded as soon as the call returns |
+| `RELAY_RUN_TOKEN_LIMIT` | Every model call: a standalone LLM node, an agent's planning step, a structured-output repair, query generation | Provider-reported tokens, recorded as soon as the response arrives, also when Relay rejects the answer |
 
 An LLM node is not an action, and neither is an agent in itself: the agent is a
 container whose tool calls and delegations are charged individually and whose planning

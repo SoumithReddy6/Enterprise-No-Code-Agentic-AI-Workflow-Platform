@@ -1,0 +1,9 @@
+{
+  "response_reported_tokens": 150,
+  "accounted_tokens": 150,
+  "durable_snapshots_tokens_spent": [
+    150
+  ],
+  "calls": 1,
+  "error": "OpenAI returned no text."
+}

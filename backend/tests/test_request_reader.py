@@ -348,3 +348,39 @@ def test_a_cycle_of_record_reads_before_the_reader_ends_validation():
 def _validate(workflow):
     errors = validate_workflow(Workflow.model_validate(workflow))
     assert any('Contract 2 entry must be Input → Request reader' in e for e in errors), errors
+
+
+# TA01 boundaries. The repair policy is unchanged: only returned text that fails validation
+# is repaired. A provider rejection escapes at once, but its reported usage is counted.
+
+@pytest.mark.asyncio
+async def test_a_rejected_provider_answer_is_counted_once_and_never_repaired(monkeypatch):
+    from backend.app import providers
+    from backend.app.registry import Context
+    from backend.app.request_reader import read_request, RequestReaderConfig
+    requests = []
+    def handle(request):
+        requests.append(request)
+        return httpx.Response(200, json={'message': {'content': ''}, 'prompt_eval_count': 5, 'eval_count': 2})
+    original = httpx.AsyncClient
+    monkeypatch.setattr(providers, 'client', lambda timeout: original(transport=httpx.MockTransport(handle), trust_env=False))
+    run = {'usage': {}, 'usage_by_invocation': {}}
+    with pytest.raises(providers.ProviderResponseError):
+        await read_request('3 laptops at $450 each.', RequestReaderConfig.model_validate(settings()),
+                           Context('', lambda _: '', node_id='reader', checkpoint_owner='reader', run=run))
+    assert len(requests) == 1, 'a provider rejection is not repaired'
+    usage = run['usage']['reader']
+    assert (usage['calls'], usage['prompt_tokens'], usage['completion_tokens']) == (1, 5, 2)
+
+
+@pytest.mark.asyncio
+async def test_an_invalid_reading_is_repaired_once_and_both_answers_are_counted(model):
+    from backend.app.registry import Context
+    from backend.app.request_reader import read_request, RequestReaderConfig
+    model[1].extend(['not JSON', reading(item='laptops', quantity=3, unit_price=450)])
+    run = {'usage': {}, 'usage_by_invocation': {}}
+    answer = await read_request('3 laptops at $450 each.', RequestReaderConfig.model_validate(settings()),
+                                Context('', lambda _: '', node_id='reader', checkpoint_owner='reader', run=run))
+    assert answer.type == 'request' and len(model[0]) == 2
+    usage = run['usage']['reader']
+    assert (usage['calls'], usage['prompt_tokens'], usage['completion_tokens']) == (2, 10, 4)

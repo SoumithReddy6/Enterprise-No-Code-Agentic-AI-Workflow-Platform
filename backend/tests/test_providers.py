@@ -203,3 +203,71 @@ async def test_model_requires_installed_name_and_digest(mocked_http):
     assert (await p.ollama_model("embed"))["digest"] == "xyz"
     with pytest.raises(ValueError, match="installed"):
         await p.ollama_model("absent")
+
+
+# TA01: usage belongs to the provider response, not to the answer. Each body below is an
+# HTTP 200 with reported usage and an answer Relay rejects; the usage is still recorded.
+REPORTED = {"ollama": {"prompt_eval_count": 12, "eval_count": 7},
+            "claude": {"usage": {"input_tokens": 12, "output_tokens": 7}},
+            "openai": {"usage": {"prompt_tokens": 12, "completion_tokens": 7}}}
+
+
+def chat(provider, usage):
+    if provider == "ollama":
+        return p.ollama_chat("m", "s", "p", usage=usage)
+    if provider == "claude":
+        return p.claude_chat("m", "s", "p", "key", usage=usage)
+    return p.openai_chat("m", "s", "p", "key", usage=usage)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provider,body", [
+    ("ollama", {}),
+    ("ollama", {"message": None}),
+    ("ollama", {"message": {"role": "assistant", "content": "", "thinking": "..."}}),
+    ("claude", {"content": "not a list"}),
+    ("claude", {"content": ["text"]}),
+    ("claude", {"content": [], "stop_reason": "refusal"}),
+    ("openai", {"choices": [{"message": {"role": "assistant", "content": None,
+                                         "refusal": "I can't help with that."},
+                             "finish_reason": "stop"}]}),
+    ("openai", {"choices": [{"message": {"role": "assistant", "content": ""},
+                             "finish_reason": "length"}]}),
+    ("openai", {"choices": []}),
+])
+async def test_rejected_answer_still_records_reported_usage(mocked_http, provider, body):
+    mocked_http(lambda _: httpx.Response(200, json={**body, **REPORTED[provider]}))
+    usage = {}
+    with pytest.raises(p.ProviderResponseError):
+        await chat(provider, usage)
+    assert usage == {"prompt_tokens": 12, "completion_tokens": 7}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provider,body", [
+    ("claude", {"content": [{"type": "text", "text": "ok"}], "usage": [1]}),
+    ("claude", {"content": [], "usage": "12"}),
+    ("openai", {"choices": [{"message": {"content": "ok"}}], "usage": [1]}),
+    ("openai", {"choices": [], "usage": "12"}),
+])
+async def test_invalid_usage_metadata_still_raises_and_records_nothing(mocked_http, provider, body):
+    mocked_http(lambda _: httpx.Response(200, json=body))
+    usage = {}
+    with pytest.raises(p.ProviderResponseError):
+        await chat(provider, usage)
+    assert usage == {}
+
+
+@pytest.mark.asyncio
+async def test_a_retried_busy_attempt_adds_no_usage(mocked_http, monkeypatch):
+    calls = 0
+    def handle(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(429) if calls == 1 else httpx.Response(200, json=ollama_response())
+    async def sleep(_): pass
+    mocked_http(handle)
+    monkeypatch.setattr(p.asyncio, "sleep", sleep)
+    usage = {}
+    assert await p.with_retries(lambda: p.ollama_chat("m", "s", "p", usage=usage)) == "hello"
+    assert calls == 2 and usage == {"prompt_tokens": 12, "completion_tokens": 7}

@@ -140,8 +140,12 @@ async def record_spend(ctx):
                 reason_code='post_spend',error_type=exc.__class__.__name__)
 
 
-def account_usage(ctx,usage,config):
-    """Accumulate per-node model usage on the shared run state; the compiler reports it on the node event."""
+def account_usage(ctx,usage,config,error_type=None):
+    """Accumulate per-node model usage on the shared run state; the compiler reports it on the node event.
+
+    error_type marks usage from a response that was rejected or interrupted. The tokens
+    count the same either way; the journal line keeps the two apart.
+    """
     if ctx.run is None or not usage:return
     def accumulate(totals):
         totals['calls']+=1;totals['prompt_tokens']+=usage.get('prompt_tokens',0);totals['completion_tokens']+=usage.get('completion_tokens',0)
@@ -158,7 +162,26 @@ def account_usage(ctx,usage,config):
         invocation_totals=ctx.run.setdefault('usage_by_invocation',{}).setdefault(invocation,empty())
         accumulate(invocation_totals)
     from .observability import journal
-    journal(event='model.usage',node_id=ctx.node_id,provider=config.provider,model=config.model,prompt_tokens=usage.get('prompt_tokens'),completion_tokens=usage.get('completion_tokens'))
+    journal(event='model.usage',node_id=ctx.node_id,provider=config.provider,model=config.model,prompt_tokens=usage.get('prompt_tokens'),completion_tokens=usage.get('completion_tokens'),
+            **({'error_type':error_type} if error_type else {}))
+
+
+async def call_model(ctx,config,call):
+    """One provider call through the retry policy. Usage is counted for every response the
+    provider reported, used or rejected: a rejected answer was still paid for. A call that
+    returned no usage (an HTTP error, a timeout) adds nothing; its real consumption is unknown."""
+    from .providers import with_retries
+    usage={}
+    try:
+        text=await with_retries(lambda:call(usage),provider=config.provider,model=config.model)
+    except asyncio.CancelledError:
+        # Keep the spend in memory; the next persistence point writes it. Awaiting a write
+        # here would delay the cancellation.
+        account_usage(ctx,usage,config,error_type='cancelled');raise
+    except Exception as exc:
+        if usage:account_usage(ctx,usage,config,error_type=type(exc).__name__);await record_spend(ctx)
+        raise
+    account_usage(ctx,usage,config);await record_spend(ctx);return text
 
 
 async def llm_node(inputs, config, ctx):
@@ -166,7 +189,6 @@ async def llm_node(inputs, config, ctx):
     if config.provider == 'demo':
         await asyncio.sleep(0.15)
         return {'text': f'[Demo · no model called]\n\nReceived prompt:\n{inputs["prompt"]}', 'provider': 'demo'}
-    from .providers import with_retries
     from .token_budget import exhausted as tokens_exhausted,reason as token_reason
     # A plain model node has no partial-answer contract; refuse before spending more.
     if tokens_exhausted(ctx.run):raise ValueError(token_reason(ctx.run))
@@ -174,18 +196,17 @@ async def llm_node(inputs, config, ctx):
     if config.temperature is not None:params['temperature']=config.temperature
     if config.top_p is not None:params['top_p']=config.top_p
     if config.max_tokens!=2048:params['max_tokens']=config.max_tokens
-    usage={}
     if config.provider == 'ollama':
         from .providers import ollama_chat
-        text=await with_retries(lambda: ollama_chat(config.model, config.system, inputs['prompt'],usage=usage,**params),provider=config.provider,model=config.model)
-        account_usage(ctx,usage,config);await record_spend(ctx);return {'text': text, 'provider': 'ollama'}
+        text=await call_model(ctx,config,lambda usage: ollama_chat(config.model, config.system, inputs['prompt'],usage=usage,**params))
+        return {'text': text, 'provider': 'ollama'}
     if config.provider == 'claude':
         from .providers import claude_chat
-        text=await with_retries(lambda: claude_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),usage=usage,**params),provider=config.provider,model=config.model)
-        account_usage(ctx,usage,config);await record_spend(ctx);return {'text': text, 'provider': 'claude'}
+        text=await call_model(ctx,config,lambda usage: claude_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),usage=usage,**params))
+        return {'text': text, 'provider': 'claude'}
     from .providers import openai_chat
-    text=await with_retries(lambda: openai_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),usage=usage,**params),provider=config.provider,model=config.model)
-    account_usage(ctx,usage,config);await record_spend(ctx);return {'text': text, 'provider': 'openai'}
+    text=await call_model(ctx,config,lambda usage: openai_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),usage=usage,**params))
+    return {'text': text, 'provider': 'openai'}
 
 async def condition_node(inputs, config, ctx):
     return {'branch': 'true' if evaluate_condition(inputs['value'], config) else 'false'}
