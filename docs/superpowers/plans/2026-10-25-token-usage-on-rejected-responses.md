@@ -1,7 +1,8 @@
 # TA01: count tokens when a provider answer is rejected
 
 > Defect: TA01 in [token accounting review](../../reviews/token-accounting-production-review-2026-10-25.md).
-> Baseline: `347c82f`. Status: plan for review. No code yet.
+> Baseline: `347c82f`. Status: revised after the [plan review](../../reviews/ta01-plan-review-2026-10-25.md)
+> (R01–R04 and the cancellation note). No code yet.
 
 **Goal:** when a provider returns HTTP 200 with usage, Relay counts that usage, even when
 Relay rejects the answer. Today Relay counts usage only for an answer it accepts.
@@ -27,6 +28,11 @@ count the first answer, then they validate its JSON (`request_reader.py:203–20
 call is counted too. Only provider-level rejection loses the tokens. So this fix makes
 the adapter follow the rule that the reader and router already follow.
 
+The repair policy does not change. The first `llm_node` call in the reader and router is
+outside their validation `try` block. So a provider rejection (for example an empty answer)
+escapes with no repair, before and after this fix. Only returned text that fails JSON
+validation gets the one repair.
+
 ## 2. Trusted sources and what each one proves
 
 Only official provider documents and the OpenTelemetry specification are used as
@@ -43,9 +49,11 @@ plan does not depend on them.
 
 What we do **not** copy:
 - Bedrock's reservation. It is for strict admission (TA05), which is planned with A5.3.
-- Counting errors with no usage (HTTP 4xx, timeouts). The providers above report no usage
-  for these and do not bill a rejected request. Relay counts nothing, as today. An
-  unknown spend on a timeout is TA06.
+- An estimate for a call that returned no usage (an HTTP error, a timeout). This step adds
+  no usage when no usage was returned. A timeout's consumption is unknown: OpenAI states
+  that "a request may still run after its client times out"
+  ([per-run spending controller](https://developers.openai.com/cookbook/articles/per_run_spending_controller_responses_api)).
+  Handling unknown consumption is TA06.
 
 ## 3. Changes
 
@@ -79,15 +87,20 @@ async def call_model(ctx,config,call):
         text=await with_retries(lambda:call(usage),provider=config.provider,model=config.model)
     except Exception as exc:
         account_usage(ctx,usage,config,error_type=type(exc).__name__);await record_spend(ctx);raise
-    except BaseException:
-        # Cancellation: keep the spend in memory. The next persistence point writes it;
+    except asyncio.CancelledError:
+        # Keep the spend in memory. The next persistence point writes it;
         # awaiting a write here would delay the cancellation.
         account_usage(ctx,usage,config,error_type='cancelled');raise
     account_usage(ctx,usage,config);await record_spend(ctx);return text
 ```
 
-- `account_usage` already returns when `usage` is empty. So an HTTP error or a timeout
-  records nothing, as today.
+- The cancellation branch catches `asyncio.CancelledError` only, not every
+  `BaseException`. `PersistedNodeCancellation` is a subclass, so it is included.
+  Cancellation stays non-retryable and propagates at once. `LeaseLost` is a
+  `RuntimeError`, so it takes the `Exception` branch, where `record_spend` is already
+  best-effort.
+- `account_usage` already returns when `usage` is empty. So a call that returned no usage
+  (an HTTP error, a timeout) adds nothing, as today.
 - `account_usage` gets an optional `error_type`. It is added to the `model.usage` journal
   line only. Run totals and event shapes do not change.
 - A rejected call counts as one call in `calls`, because the provider did one call.
@@ -106,13 +119,18 @@ async def call_model(ctx,config,call):
 ### 3d. Docs
 
 `docs/operations.md`, lines 81 and 406: say that a rejected answer with reported usage
-is counted, and that a call with no reported usage (error, timeout) is not.
+is counted. A call that returned no usage (an error, a timeout) adds nothing; its real
+consumption is unknown (TA06).
 
-## 4. Tests (write first; each must fail on `347c82f`)
+## 4. Tests (write first)
 
-**Adapters** (`backend/tests/test_providers.py`, existing `mocked_http` fixture). Each case is
-HTTP 200 with usage. Each asserts that `ProviderResponseError` is raised **and** that the usage
-dictionary has the counts.
+Two kinds of test:
+- **Defect reproduction (D):** fails on `347c82f`, passes after the fix.
+- **Control (C):** the behavior must not change. It passes on `347c82f` and after the fix.
+
+**Adapters (D)** (`backend/tests/test_providers.py`, existing `mocked_http` fixture). Each case
+is HTTP 200 with usage. Each asserts that `ProviderResponseError` is raised **and** that the
+usage dictionary has the counts.
 
 | Provider | Rejected response |
 |---|---|
@@ -121,26 +139,37 @@ dictionary has the counts.
 | OpenAI | `content: null` with `refusal`; `content: ""` with `finish_reason: length` (TA01's exact case); empty `choices` |
 
 Also:
-- Claude and OpenAI: a non-object `usage` still raises and records nothing (passes on the baseline too; it guards against a regression).
-- A 429, then a 200: usage is counted once.
+- (C) Claude and OpenAI: a non-object `usage` still raises and records nothing.
+- (C) A 429, then a 200: usage is counted once.
 
 **Caller** (new tests in `backend/tests/test_token_budget.py`):
-- A fake adapter records 100/50, then raises `ProviderResponseError`. Then:
-  - `run['usage']` has 150;
+- (D) A fake adapter records 100/50, then raises `ProviderResponseError`. Then:
+  - `run['usage']` has 150 tokens and `calls == 1`;
   - `record_spend` persists `tokens_spent == 150` once;
   - the journal `model.usage` line has `error_type`.
-- The same with `CancelledError`: the usage is in memory and persist is not called.
-- Limit 150: a rejected 150-token call, then the next `llm_node` is refused with the
+- (D) The same with `CancelledError`: the usage is in memory, `calls == 1`, persist is not
+  called, and the cancellation propagates.
+- (C) Success: 100/50 is counted exactly once (`calls == 1`), and persist is called once.
+- (D) Limit 150: a rejected 150-token call, then the next `llm_node` is refused with the
   token-budget message before any provider call.
-- A Request reader whose provider rejects the first answer, then gives a valid repair: both
-  calls are counted.
 
-**Worker** (durable, through the existing worker fixture): a run that fails on a rejected
+**Reader and router boundaries** (`backend/tests/test_request_reader.py` and the router tests):
+- (D) The provider returns an empty answer with usage. Its usage is counted once. The
+  `ProviderResponseError` escapes. There is one provider request and no repair.
+- (C) The provider returns nonempty invalid JSON, then a valid reading. The existing single
+  repair runs, and both responses are counted exactly once.
+
+**Worker (D)** (durable, through the existing worker fixture): a run that fails on a rejected
 answer has accounting `tokens_spent == 150`, and its `run_token_usage` rows sum to 150.
 
-**Auditor probe:** run `rejected_paid_response` from
-`evals/results/token-accounting-review-2026-10-25/probe.py` against the fix. Back up the
-evidence folder first and restore it after. Expected: 150 tokens counted, not 0.
+**Auditor probe:** the historical `rejected_paid_response` asserts the broken result
+(`tokens_spent == 0`) and returns a fixed `accounted_tokens: 0`. Do not run it and do not
+change it. Instead:
+- the permanent regression test is the caller (D) test above, with the probe's exact
+  response (empty content, `finish_reason: length`, 100 + 50 tokens);
+- a revised copy goes in a new evidence folder
+  (`evals/results/ta01-fix-2026-10-<day>/`). It measures `tokens_spent`, asserts 150 and
+  writes the measured value. The original evidence folder is not touched.
 
 ## 5. Mutants (scratch copies only)
 
@@ -148,9 +177,11 @@ evidence folder first and restore it after. Expected: 150 tokens counted, not 0.
 |---|---|
 | M1: OpenAI `record_usage` back after the content checks | OpenAI adapter tests |
 | M2: Ollama `record_usage` back after the message checks | Ollama adapter tests |
-| M3: delete the `except Exception` accounting in `call_model` | Caller test (150), worker test |
-| M4: count usage in both `except` and the success path (double count) | Caller test (exactly 150, `calls == 1`) |
-| M5: `await record_spend` in the cancellation branch | Cancellation test |
+| M3: Claude `record_usage` back after the content checks | Claude adapter tests |
+| M4: delete the `except Exception` accounting in `call_model` | Caller test (150), worker test |
+| M5: call `account_usage` twice inside the `except Exception` handler | Caller test (exactly 150, `calls == 1`) |
+| M6: call `account_usage` twice on the success path | Success control (exactly 150, `calls == 1`) |
+| M7: `await record_spend` in the cancellation branch | Cancellation test |
 
 ## 6. Out of scope
 
@@ -160,7 +191,8 @@ fields), and the monotonic accounting snapshot. Each one gets its own step.
 
 ## 7. Done when
 
-1. All tests in section 4 fail on `347c82f` and pass on the fix. All mutants are caught.
+1. Every (D) test fails on `347c82f` and passes on the fix. Every (C) test passes on both.
+   All mutants are caught.
 2. Backend `PYTHONHASHSEED` 0–4 passes. The isolation copy of the commit files passes.
 3. Deployed scenario gate passes (the runtime changes).
 4. Hosted CI is green on the pushed commit.
