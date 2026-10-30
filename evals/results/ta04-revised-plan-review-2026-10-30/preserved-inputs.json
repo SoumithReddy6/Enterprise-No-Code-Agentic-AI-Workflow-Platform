@@ -1,0 +1,12 @@
+{
+  "docs/reviews/ta04-plan-review-2026-10-30.md": "1a5ee5541abfe63d44c78f0e0f2ab6c2317abb74709e2de0d5c2092f82aec057",
+  "docs/superpowers/plans/2026-10-30-typed-token-budget-refusal.md": "ce5b1e39ca227727daf6d62a7ebae814a292acbe8cd373e14d2a131ea6c36824",
+  "evals/results/ta04-plan-2026-10-30/agent_token_probe.py": "30b03b920bb1dff4cae9e815327bf55471e0d69ae9d23e0fccddf530757c4320",
+  "evals/results/ta04-plan-2026-10-30/agent_token_probe.txt": "ccdf57d36116be09b8250e15f9c84a403ba6e7f4bd39dc1bf8ebdb30dcd8fb60",
+  "evals/results/ta04-plan-review-2026-10-30/README.md": "d8e028fb3e0fa3c62315c25a477c6bacb37fdcd2fe7c693792bd7c6b492c1a0a",
+  "evals/results/ta04-plan-review-2026-10-30/agent-repair.txt": "cca57789db9a4014001c289f1238140cc25f80f367e5b6ecb4d9ae8c4d618c01",
+  "evals/results/ta04-plan-review-2026-10-30/loop-resume.txt": "411f70ecdf4951a611704cdd6d41aa0d00faad09080ddfb96f9df1c9688b5f7b",
+  "evals/results/ta04-plan-review-2026-10-30/original-agent.txt": "25327a169f37fe9c50094a689ca908ad2fb20eac47516dc475dea887a5d7c09b",
+  "evals/results/ta04-plan-review-2026-10-30/probe_agent_repair.py": "a073da7eecc2b3c8a89edf53f4d3e89ba0918583dd62dbcc35d6d3e991bfeee5",
+  "evals/results/ta04-plan-review-2026-10-30/probe_loop_resume.py": "25382fcdfe1c4e77034b67de3028951d7863d52d56a01bd7ee44dfff1087db5c"
+}

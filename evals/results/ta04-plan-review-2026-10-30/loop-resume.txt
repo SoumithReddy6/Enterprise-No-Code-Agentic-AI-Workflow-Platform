@@ -1,0 +1,66 @@
+{"timestamp":"2026-10-30T15:48:04.552279+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T15:48:04.580322+00:00","request_id":null,"run_id":null,"tenant":null,"event":"loop.item_failed","node_id":"each","reason_code":"item_error"}
+{"timestamp":"2026-10-30T15:48:04.580945+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T15:48:04.581327+00:00","request_id":null,"run_id":null,"tenant":null,"event":"loop.item_failed","node_id":"each","reason_code":"item_error"}
+{"timestamp":"2026-10-30T15:48:04.581578+00:00","request_id":null,"run_id":null,"tenant":null,"event":"loop.item_failed","node_id":"each","reason_code":"item_error"}
+{
+  "kind": "plan-counterexample-with-policy-outcome-shim",
+  "uninterrupted": {
+    "retrieved_items": [
+      "q0",
+      "q1"
+    ],
+    "provider_calls": 1,
+    "actions": 2,
+    "result_statuses": [
+      "success",
+      "failed"
+    ],
+    "summary": {
+      "total": 3,
+      "accepted": 3,
+      "processed": 2,
+      "failed": 1,
+      "limited": false,
+      "stopped": false,
+      "budget_exhausted": true,
+      "incomplete_items": 0,
+      "values_dropped": false,
+      "dropped_value_count": 0,
+      "details_omitted": 0,
+      "truncated": true,
+      "truncation_reason": "each stopped at item 2: Run token budget exhausted (100 of 100 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost. 1 accepted items did not run.",
+      "truncation_source": "confirmed"
+    }
+  },
+  "interrupted_then_resumed": {
+    "retrieved_items": [
+      "q0",
+      "q1",
+      "q2"
+    ],
+    "provider_calls": 1,
+    "actions": 3,
+    "result_statuses": [
+      "success",
+      "failed",
+      "failed"
+    ],
+    "summary": {
+      "total": 3,
+      "accepted": 3,
+      "processed": 3,
+      "failed": 2,
+      "limited": false,
+      "stopped": false,
+      "budget_exhausted": true,
+      "incomplete_items": 0,
+      "values_dropped": false,
+      "dropped_value_count": 0,
+      "details_omitted": 0,
+      "truncated": true,
+      "truncation_reason": "each stopped at item 3: Run token budget exhausted (100 of 100 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost. 0 accepted items did not run.",
+      "truncation_source": "confirmed"
+    }
+  }
+}

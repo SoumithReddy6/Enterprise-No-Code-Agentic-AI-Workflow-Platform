@@ -1,0 +1,4 @@
+Command: .venv/bin/python -m pytest -q backend/tests/test_token_budget.py backend/tests/test_budget_recovery.py backend/tests/test_run_causes.py backend/tests/test_agent_grounding.py backend/tests/test_result_contract.py
+........................................................................ [ 86%]
+...........                                                              [100%]
+83 passed in 10.04s
