@@ -1,4 +1,4 @@
-"""R01 mutants N1-N15: each applied to a fresh copy of the base; the planned tests must fail."""
+"""R01 mutants N1-N16: each applied to a fresh copy of the base; the planned tests must fail."""
 import shutil,subprocess,sys,tempfile,re,pathlib
 BASE=pathlib.Path(open(sys.argv[1]).read().strip()); PY=sys.argv[2]; OUT=sys.argv[3]
 NEW='backend/tests/test_response_source_boundary.py'
@@ -19,6 +19,8 @@ M={
 'N13':([('backend/app/main.py',",previous.get('vector_dependencies'),previous.get('loop_progress'))",",previous.get('vector_dependencies'))")],['test_u8_']),
 'N14':([(RG,"verify_published(ctx,ctx.node_id,sources+reused)","verify_published(ctx,ctx.node_id,sources)")],['test_u22_u23_','test_u24_']),
 'N15':([('backend/app/iteration.py',"            if ctx.run is not None:ctx.run.setdefault('reused_owners',set()).add(item_owner(ctx,index))\n","")],['test_u22_u23_']),
+# R01-I01: a restored Response is validated without loop progress (06b1062).
+'N16':([('backend/app/worker.py',",{node.id:outputs},run.get('vector_dependencies'),run.get('loop_progress'))",",{node.id:outputs},run.get('vector_dependencies'))")],['test_u25_']),
 }
 lines=[];ok=True
 for name,(edits,planned) in M.items():

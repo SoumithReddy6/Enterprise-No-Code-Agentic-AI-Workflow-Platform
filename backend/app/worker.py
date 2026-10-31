@@ -197,7 +197,9 @@ class Worker:
             async def validate_cached(node,outputs):
                 results=outputs.get('results')
                 if isinstance(results,dict) and results.get('unavailable'):raise ValueError(results['unavailable'])
-                issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'))
+                # With progress, a restored Response also checks the reused loop items behind its
+                # text: when it was saved after a loop resume, it lists none of their sources.
+                issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'),run.get('loop_progress'))
                 if issues:raise ValueError('; '.join(issues))
             graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend,action_settled=action_settled,platform_work=work,saved_dependencies=run.get('vector_dependencies'),run_id=id,tenant_id=tenant_id).graph
             result=await graph.ainvoke({'values':{}},{'recursion_limit':150})

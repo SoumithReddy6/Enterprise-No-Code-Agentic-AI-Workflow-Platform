@@ -1,5 +1,5 @@
 {
-  "application_root": "<scratchpad>/r01-iso.ER1H/backend/app",
+  "application_root": "<scratchpad>/r01-i01-iso.7n2m/backend/app",
   "shapes": {
     "missing_authority_refused": "out: knowledge source verification is unavailable. No answer was published.",
     "malformed_empty_object_refused": [
@@ -21,25 +21,25 @@
         []
       ],
       "response_verification_documents": [
-        "bf48a85b65754643ba328d166b84a707"
+        "6457229fe964441b9d6c641791f54000"
       ],
       "timeline": [
         {
           "event": "verify",
           "documents": [
-            "bf48a85b65754643ba328d166b84a707"
+            "6457229fe964441b9d6c641791f54000"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "bf48a85b65754643ba328d166b84a707"
+            "6457229fe964441b9d6c641791f54000"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "bf48a85b65754643ba328d166b84a707"
+            "6457229fe964441b9d6c641791f54000"
           ]
         },
         {
@@ -48,7 +48,7 @@
         {
           "event": "verify",
           "documents": [
-            "bf48a85b65754643ba328d166b84a707"
+            "6457229fe964441b9d6c641791f54000"
           ]
         }
       ]
@@ -67,25 +67,25 @@
         []
       ],
       "response_verification_documents": [
-        "b9e8fbc422aa4cfd9f547ab515a20ca3"
+        "14b23142f1f746099ad378d4682566cf"
       ],
       "timeline": [
         {
           "event": "verify",
           "documents": [
-            "b9e8fbc422aa4cfd9f547ab515a20ca3"
+            "14b23142f1f746099ad378d4682566cf"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "b9e8fbc422aa4cfd9f547ab515a20ca3"
+            "14b23142f1f746099ad378d4682566cf"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "b9e8fbc422aa4cfd9f547ab515a20ca3"
+            "14b23142f1f746099ad378d4682566cf"
           ]
         },
         {
@@ -94,7 +94,7 @@
         {
           "event": "verify",
           "documents": [
-            "b9e8fbc422aa4cfd9f547ab515a20ca3"
+            "14b23142f1f746099ad378d4682566cf"
           ]
         }
       ]
@@ -113,25 +113,25 @@
         []
       ],
       "response_verification_documents": [
-        "d9aeab02e6de4e8e9fe4fbcd150f5f47"
+        "209eb758c0b443cfa48d1e07113674ee"
       ],
       "timeline": [
         {
           "event": "verify",
           "documents": [
-            "d9aeab02e6de4e8e9fe4fbcd150f5f47"
+            "209eb758c0b443cfa48d1e07113674ee"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "d9aeab02e6de4e8e9fe4fbcd150f5f47"
+            "209eb758c0b443cfa48d1e07113674ee"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "d9aeab02e6de4e8e9fe4fbcd150f5f47"
+            "209eb758c0b443cfa48d1e07113674ee"
           ]
         },
         {
@@ -140,7 +140,7 @@
         {
           "event": "verify",
           "documents": [
-            "d9aeab02e6de4e8e9fe4fbcd150f5f47"
+            "209eb758c0b443cfa48d1e07113674ee"
           ]
         }
       ]
@@ -157,43 +157,43 @@
       "response_checkpointed": true,
       "model_call_documents": [
         [
-          "40c1eb7cbc894fbf9154763f854bc386"
+          "6bb8ad496e084634bec3be8f7abc6d80"
         ]
       ],
       "response_verification_documents": [
-        "40c1eb7cbc894fbf9154763f854bc386",
-        "40c1eb7cbc894fbf9154763f854bc386",
-        "40c1eb7cbc894fbf9154763f854bc386"
+        "6bb8ad496e084634bec3be8f7abc6d80",
+        "6bb8ad496e084634bec3be8f7abc6d80",
+        "6bb8ad496e084634bec3be8f7abc6d80"
       ],
       "timeline": [
         {
           "event": "verify",
           "documents": [
-            "40c1eb7cbc894fbf9154763f854bc386"
+            "6bb8ad496e084634bec3be8f7abc6d80"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "40c1eb7cbc894fbf9154763f854bc386"
+            "6bb8ad496e084634bec3be8f7abc6d80"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "40c1eb7cbc894fbf9154763f854bc386"
+            "6bb8ad496e084634bec3be8f7abc6d80"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "40c1eb7cbc894fbf9154763f854bc386"
+            "6bb8ad496e084634bec3be8f7abc6d80"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "40c1eb7cbc894fbf9154763f854bc386"
+            "6bb8ad496e084634bec3be8f7abc6d80"
           ]
         },
         {
@@ -202,13 +202,13 @@
         {
           "event": "verify",
           "documents": [
-            "40c1eb7cbc894fbf9154763f854bc386"
+            "6bb8ad496e084634bec3be8f7abc6d80"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "40c1eb7cbc894fbf9154763f854bc386"
+            "6bb8ad496e084634bec3be8f7abc6d80"
           ]
         }
       ]
@@ -225,7 +225,7 @@
       "response_checkpointed": false,
       "model_call_documents": [
         [
-          "3bb31829c12549aa974506cdd1913018"
+          "f45edda4a7634268845737af35e0bcba"
         ]
       ],
       "response_verification_documents": [],
@@ -233,25 +233,25 @@
         {
           "event": "verify",
           "documents": [
-            "3bb31829c12549aa974506cdd1913018"
+            "f45edda4a7634268845737af35e0bcba"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "3bb31829c12549aa974506cdd1913018"
+            "f45edda4a7634268845737af35e0bcba"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "3bb31829c12549aa974506cdd1913018"
+            "f45edda4a7634268845737af35e0bcba"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "3bb31829c12549aa974506cdd1913018"
+            "f45edda4a7634268845737af35e0bcba"
           ]
         },
         {
@@ -260,7 +260,7 @@
         {
           "event": "verify",
           "documents": [
-            "3bb31829c12549aa974506cdd1913018"
+            "f45edda4a7634268845737af35e0bcba"
           ]
         }
       ]
@@ -277,7 +277,7 @@
       "response_checkpointed": false,
       "model_call_documents": [
         [
-          "37ff80cc51234f2181768aa8cc76927e"
+          "08098f20b0364604b6b5519c4ce0de60"
         ]
       ],
       "response_verification_documents": [],
@@ -285,25 +285,25 @@
         {
           "event": "verify",
           "documents": [
-            "37ff80cc51234f2181768aa8cc76927e"
+            "08098f20b0364604b6b5519c4ce0de60"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "37ff80cc51234f2181768aa8cc76927e"
+            "08098f20b0364604b6b5519c4ce0de60"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "37ff80cc51234f2181768aa8cc76927e"
+            "08098f20b0364604b6b5519c4ce0de60"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "37ff80cc51234f2181768aa8cc76927e"
+            "08098f20b0364604b6b5519c4ce0de60"
           ]
         },
         {
@@ -312,7 +312,7 @@
         {
           "event": "verify",
           "documents": [
-            "37ff80cc51234f2181768aa8cc76927e"
+            "08098f20b0364604b6b5519c4ce0de60"
           ]
         }
       ]
@@ -329,41 +329,41 @@
       "response_checkpointed": true,
       "model_call_documents": [
         [
-          "e53ca795e50442b39d8e3f5779cbbba2"
+          "cc0043a041d441e5aa695c3d8ee0946c"
         ]
       ],
       "response_verification_documents": [
-        "e53ca795e50442b39d8e3f5779cbbba2"
+        "cc0043a041d441e5aa695c3d8ee0946c"
       ],
       "timeline": [
         {
           "event": "verify",
           "documents": [
-            "e53ca795e50442b39d8e3f5779cbbba2"
+            "cc0043a041d441e5aa695c3d8ee0946c"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "e53ca795e50442b39d8e3f5779cbbba2"
+            "cc0043a041d441e5aa695c3d8ee0946c"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "e53ca795e50442b39d8e3f5779cbbba2"
+            "cc0043a041d441e5aa695c3d8ee0946c"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "e53ca795e50442b39d8e3f5779cbbba2"
+            "cc0043a041d441e5aa695c3d8ee0946c"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "e53ca795e50442b39d8e3f5779cbbba2"
+            "cc0043a041d441e5aa695c3d8ee0946c"
           ]
         }
       ]
@@ -375,58 +375,70 @@
       "provider_calls": 1,
       "output": "[{'index': 0, 'status': 'success', 'value': 'Bluebird is the project codename. [unsupported reference]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}]",
       "response_source_count": 0,
-      "verification_calls_after_resume": 3,
+      "verification_calls_after_resume": 5,
       "verification_calls_after_removal": null,
       "response_checkpointed": true,
       "model_call_documents": [
         [
-          "3a9d245135664a21856ae2420183a8c7"
+          "1fb2620e8d624ba393da43cfcc41456a"
         ]
       ],
       "response_verification_documents": [
-        "3a9d245135664a21856ae2420183a8c7"
+        "1fb2620e8d624ba393da43cfcc41456a"
       ],
       "timeline": [
         {
           "event": "verify",
           "documents": [
-            "3a9d245135664a21856ae2420183a8c7"
+            "1fb2620e8d624ba393da43cfcc41456a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "3a9d245135664a21856ae2420183a8c7"
+            "1fb2620e8d624ba393da43cfcc41456a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "3a9d245135664a21856ae2420183a8c7"
+            "1fb2620e8d624ba393da43cfcc41456a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "3a9d245135664a21856ae2420183a8c7"
+            "1fb2620e8d624ba393da43cfcc41456a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "3a9d245135664a21856ae2420183a8c7"
+            "1fb2620e8d624ba393da43cfcc41456a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "3a9d245135664a21856ae2420183a8c7"
+            "1fb2620e8d624ba393da43cfcc41456a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "3a9d245135664a21856ae2420183a8c7"
+            "1fb2620e8d624ba393da43cfcc41456a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "1fb2620e8d624ba393da43cfcc41456a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "1fb2620e8d624ba393da43cfcc41456a"
           ]
         }
       ]
@@ -438,52 +450,64 @@
       "provider_calls": 1,
       "output": "",
       "response_source_count": 0,
-      "verification_calls_after_resume": 3,
+      "verification_calls_after_resume": 5,
       "verification_calls_after_removal": 1,
       "response_checkpointed": false,
       "model_call_documents": [
         [
-          "e76a89923f56433286e6e62cf6cf2a04"
+          "d19c6dc6750a4c7da3d56fd95c885487"
         ]
       ],
       "response_verification_documents": [
-        "e76a89923f56433286e6e62cf6cf2a04"
+        "d19c6dc6750a4c7da3d56fd95c885487"
       ],
       "timeline": [
         {
           "event": "verify",
           "documents": [
-            "e76a89923f56433286e6e62cf6cf2a04"
+            "d19c6dc6750a4c7da3d56fd95c885487"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "e76a89923f56433286e6e62cf6cf2a04"
+            "d19c6dc6750a4c7da3d56fd95c885487"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "e76a89923f56433286e6e62cf6cf2a04"
+            "d19c6dc6750a4c7da3d56fd95c885487"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "e76a89923f56433286e6e62cf6cf2a04"
+            "d19c6dc6750a4c7da3d56fd95c885487"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "e76a89923f56433286e6e62cf6cf2a04"
+            "d19c6dc6750a4c7da3d56fd95c885487"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "e76a89923f56433286e6e62cf6cf2a04"
+            "d19c6dc6750a4c7da3d56fd95c885487"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "d19c6dc6750a4c7da3d56fd95c885487"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "d19c6dc6750a4c7da3d56fd95c885487"
           ]
         },
         {
@@ -498,7 +522,7 @@
         {
           "event": "verify",
           "documents": [
-            "e76a89923f56433286e6e62cf6cf2a04"
+            "d19c6dc6750a4c7da3d56fd95c885487"
           ]
         }
       ]
@@ -510,74 +534,86 @@
       "provider_calls": 2,
       "output": "",
       "response_source_count": 0,
-      "verification_calls_after_resume": 6,
+      "verification_calls_after_resume": 8,
       "verification_calls_after_removal": 1,
       "response_checkpointed": false,
       "model_call_documents": [
         [
-          "8745782203f3447db76d877b1fc2b8b3"
+          "93b4cbff36164c3fba56a1c1c56fb92f"
         ],
         [
-          "9809190b077b435585ddc1c263cf142a"
+          "93fa8eaf6bc54d5abb5d225e9defa174"
         ]
       ],
       "response_verification_documents": [
-        "9809190b077b435585ddc1c263cf142a",
-        "8745782203f3447db76d877b1fc2b8b3"
+        "93fa8eaf6bc54d5abb5d225e9defa174",
+        "93b4cbff36164c3fba56a1c1c56fb92f"
       ],
       "timeline": [
         {
           "event": "verify",
           "documents": [
-            "8745782203f3447db76d877b1fc2b8b3"
+            "93b4cbff36164c3fba56a1c1c56fb92f"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "8745782203f3447db76d877b1fc2b8b3"
+            "93b4cbff36164c3fba56a1c1c56fb92f"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "8745782203f3447db76d877b1fc2b8b3"
+            "93b4cbff36164c3fba56a1c1c56fb92f"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "8745782203f3447db76d877b1fc2b8b3"
+            "93b4cbff36164c3fba56a1c1c56fb92f"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "8745782203f3447db76d877b1fc2b8b3"
+            "93b4cbff36164c3fba56a1c1c56fb92f"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "9809190b077b435585ddc1c263cf142a"
+            "93b4cbff36164c3fba56a1c1c56fb92f"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "9809190b077b435585ddc1c263cf142a"
+            "93b4cbff36164c3fba56a1c1c56fb92f"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "9809190b077b435585ddc1c263cf142a"
+            "93fa8eaf6bc54d5abb5d225e9defa174"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "9809190b077b435585ddc1c263cf142a"
+            "93fa8eaf6bc54d5abb5d225e9defa174"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93fa8eaf6bc54d5abb5d225e9defa174"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93fa8eaf6bc54d5abb5d225e9defa174"
           ]
         },
         {
@@ -589,8 +625,8 @@
         {
           "event": "verify",
           "documents": [
-            "9809190b077b435585ddc1c263cf142a",
-            "8745782203f3447db76d877b1fc2b8b3"
+            "93fa8eaf6bc54d5abb5d225e9defa174",
+            "93b4cbff36164c3fba56a1c1c56fb92f"
           ]
         }
       ]
@@ -602,81 +638,93 @@
       "provider_calls": 2,
       "output": "[{'index': 0, 'status': 'success', 'value': 'Bluebird is the project codename. [unsupported reference]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}, {'index': 1, 'status': 'success', 'value': 'Unrelated handbook material. [S2]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}]",
       "response_source_count": 1,
-      "verification_calls_after_resume": 6,
+      "verification_calls_after_resume": 8,
       "verification_calls_after_removal": null,
       "response_checkpointed": true,
       "model_call_documents": [
         [
-          "8f9fa1df8a444b74ac0ea7c2b55b6999"
+          "849518027de244e385e3ad46e04c736a"
         ],
         [
-          "f90bc8f2c6354e56aface86ed52c8dcf"
+          "52c47cfe6cf94bb490578332cd58015e"
         ]
       ],
       "response_verification_documents": [
-        "f90bc8f2c6354e56aface86ed52c8dcf",
-        "8f9fa1df8a444b74ac0ea7c2b55b6999"
+        "52c47cfe6cf94bb490578332cd58015e",
+        "849518027de244e385e3ad46e04c736a"
       ],
       "timeline": [
         {
           "event": "verify",
           "documents": [
-            "8f9fa1df8a444b74ac0ea7c2b55b6999"
+            "849518027de244e385e3ad46e04c736a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "8f9fa1df8a444b74ac0ea7c2b55b6999"
+            "849518027de244e385e3ad46e04c736a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "8f9fa1df8a444b74ac0ea7c2b55b6999"
+            "849518027de244e385e3ad46e04c736a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "8f9fa1df8a444b74ac0ea7c2b55b6999"
+            "849518027de244e385e3ad46e04c736a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "8f9fa1df8a444b74ac0ea7c2b55b6999"
+            "849518027de244e385e3ad46e04c736a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "f90bc8f2c6354e56aface86ed52c8dcf"
+            "849518027de244e385e3ad46e04c736a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "f90bc8f2c6354e56aface86ed52c8dcf"
+            "849518027de244e385e3ad46e04c736a"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "f90bc8f2c6354e56aface86ed52c8dcf"
+            "52c47cfe6cf94bb490578332cd58015e"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "f90bc8f2c6354e56aface86ed52c8dcf"
+            "52c47cfe6cf94bb490578332cd58015e"
           ]
         },
         {
           "event": "verify",
           "documents": [
-            "f90bc8f2c6354e56aface86ed52c8dcf",
-            "8f9fa1df8a444b74ac0ea7c2b55b6999"
+            "52c47cfe6cf94bb490578332cd58015e"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "52c47cfe6cf94bb490578332cd58015e"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "52c47cfe6cf94bb490578332cd58015e",
+            "849518027de244e385e3ad46e04c736a"
           ]
         }
       ]

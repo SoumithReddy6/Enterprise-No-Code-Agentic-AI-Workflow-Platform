@@ -347,10 +347,13 @@ def passage_model(monkeypatch, calls):
     monkeypatch.setattr(providers, 'ollama_chat', ollama_chat)
 
 
-async def loop_case(tmp_path, monkeypatch, services, crash, remove=None, two_items=False, store=None, resume=True):
+async def loop_case(tmp_path, monkeypatch, services, crash, remove=None, two_items=False, store=None, resume=True,
+                    repeat=False):
     """crash: 'loop' (after the loop checkpoint), 'item' (after item 0's progress row) or 'out'
-    (after the Response checkpoint). remove: 'before_resume', 'after_prompt' (in the resumed
-    attempt, after the Prompt's success event) or None."""
+    (after the Response checkpoint). remove: 'before_resume', 'after_prompt' (in the last
+    attempt, after the Prompt's success event) or None. repeat: one more attempt first, with the
+    document present, that stops after the Response checkpoint; the last attempt then reuses
+    that saved Response."""
     from backend.app import tool_service
     from backend.app.worker import Worker
     kb, doc, ingester = await populated(services)
@@ -382,6 +385,17 @@ async def loop_case(tmp_path, monkeypatch, services, crash, remove=None, two_ite
     assert before['status'] != 'success' and 'each:0' in before['vector_dependencies']
     assert ('each' in before['checkpoints']) == (crash != 'item')
     if crash == 'item': assert '0' in before['loop_progress']['each']
+    if repeat:
+        def middle(id, owner, event):
+            saved = original(id, owner, event)
+            if event.get('node_id') == 'out' and event.get('status') == 'success' and not event.get('transient'):
+                raise asyncio.CancelledError()
+            return saved
+        monkeypatch.setattr(store, 'worker_event', middle)
+        store.resume_run(row['id'])
+        await worker.execute(store.claim_next(worker.owner))
+        middle_run = store.run(row['id'])
+        assert middle_run['status'] != 'success' and 'out' in middle_run['checkpoints'], middle_run.get('error')
     if remove == 'before_resume': remove_document()
     def second(id, owner, event):
         if event.get('status') == 'running': phase['node'] = event.get('node_id')
@@ -391,13 +405,14 @@ async def loop_case(tmp_path, monkeypatch, services, crash, remove=None, two_ite
         return saved
     monkeypatch.setattr(store, 'worker_event', second)
     resumed_from = len(timeline)
+    events_from = len(store.run(row['id'])['events'])
     if resume:
         store.resume_run(row['id'])
         await worker.execute(store.claim_next(worker.owner))
     final = store.run(row['id'])
     checks = [t for t in timeline[resumed_from:] if t != 'removed']
     after = timeline[timeline.index('removed') + 1:] if 'removed' in timeline else []
-    return SimpleNamespace(run=final, doc=doc, calls=calls, store=store, id=row['id'],
+    return SimpleNamespace(run=final, doc=doc, calls=calls, store=store, id=row['id'], events=final['events'][events_from:],
                            out_checks=[docs for node, docs in checks if node == 'out'],
                            checks_after_removal=[t for t in after if t != 'removed'])
 
@@ -562,4 +577,22 @@ async def test_u24_the_response_checks_the_reused_items_saved_source(tmp_path, m
         assert case.run['status'] == 'success', case.run.get('error')
         assert len(case.calls) == (2 if two else 1) and case.calls[0] == case.doc['id']
         assert any(case.doc['id'] in docs for docs in case.out_checks), case.out_checks
+    finally: case.store.engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_u25_a_saved_response_from_a_loop_resume_rechecks_the_reused_items_source(tmp_path, monkeypatch, services):
+    """R01-I01: attempt 1 stops after the loop checkpoint; attempt 2 publishes a Response whose
+    listed sources are empty (the reused item's passage is not in the evidence) and stops after
+    its checkpoint; attempt 3 restores both. The document is removed after the cached Prompt,
+    so only the check at the restored Response can see it."""
+    case = await loop_case(tmp_path, monkeypatch, services, 'loop', remove='after_prompt', repeat=True)
+    try:
+        assert json.loads(case.run['checkpoints']['out']['sources']) == [], 'precondition: saved Response lists no source'
+        assert case.run['status'] == 'failed', case.run.get('output')
+        assert case.run['error'].startswith('each:0: saved knowledge sources are unavailable or removed'), case.run['error']
+        assert not case.run.get('output')
+        assert [docs for _, docs in case.checks_after_removal] == [[case.doc['id']]]
+        assert not [e for e in case.events if e.get('node_id') == 'out' and e.get('status') == 'success']
+        assert case.calls == [case.doc['id']], 'no model call is repeated'
     finally: case.store.engine.dispose()

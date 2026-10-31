@@ -4,6 +4,10 @@ Plan: [revision 3](../../../docs/superpowers/plans/2026-10-30-response-source-bo
 approved in the [revision-3 review](../../../docs/reviews/r01-plan-r3-review-2026-10-31.md), with its
 U23/U24 clarification applied. Base commit: `9801c46` (application code identical to `812fefd`).
 
+The first implementation is `06b1062`. Its [implementation review](../../../docs/reviews/r01-fix-review-2026-10-31.md)
+found R01-I01 (P1). The correction is in the section **R01-I01 correction** below. The sections
+between record `06b1062` as it was committed.
+
 ## What changed
 
 | File | Change |
@@ -65,9 +69,8 @@ id-less passages at the gateway with `KeyError`).
 
 ## Deviations from the plan
 
-- `validate_cached` does not receive `loop_progress`. A restored loop checkpoint is already
-  covered by the loop-key rule, and an item reused from progress is checked by preflight and at
-  the Response; passing progress would only repeat checks.
+- ~~`validate_cached` does not receive `loop_progress`.~~ **Withdrawn: this deviation was wrong
+  (R01-I01).** The reasoning missed a Response that is itself restored. See the correction below.
 - U4 is implemented with `on_error: route` to a fallback Response, which is refused under the
   fallback's own id.
 - U12 `query-null` and `query-7` already refuse on the baseline (see above).
@@ -100,6 +103,58 @@ print to standard output, the regressions ran from copies, and the SHA-256 of ev
 `probe-results.json`, `mutants.json` and TA04 JSON file is unchanged after the runs.
 
 `production/report.json` SHA-256: `12e7b6d76f5e6bfd890a7e5b590a517a08b795dd562cf91f71190c455c54f1a8`.
+
+## R01-I01 correction
+
+**Finding** ([review](../../../docs/reviews/r01-fix-review-2026-10-31.md), P1). `Worker.validate_cached` passed
+only `{node.id: outputs}` and no `loop_progress` to `kb_errors`. At a restored Response, an owner
+such as `each:0` is then not reused by the rule, so its saved sources are not checked. A
+Response saved after a loop resume lists `sources: []`, because the reused item's passage is not
+in the evidence. So in this sequence nothing is checked:
+
+1. Attempt 1 stops after the loop checkpoint.
+2. Attempt 2 runs the Response fresh (it checks `each:0` correctly) and stops after the Response checkpoint.
+3. Attempt 3 restores the loop, the Prompt and the Response; the document is removed after the cached Prompt.
+
+On `06b1062` the run succeeds and publishes the removed document's fact.
+
+**Verified before the change.** `kb_errors`'s `reused()` rule needs the loop id in the
+checkpoint map or the index in `progress`. Neither is present at the cached Response.
+`loop_progress` holds every completed item: `storage.py` merges each item's `run_loop_items` row
+into it, and the rows stay after the loop completes. So passing progress covers every reused item.
+
+**Change.** `backend/app/worker.py`: `validate_cached` passes `run.get('loop_progress')`, as plan
+5d specified. `docs/operations.md`: one sentence on the restored-Response check.
+
+**Test.** U25: the three attempts above with the real Worker, KB stores and verifier. It asserts:
+- the saved Response lists no source (the precondition);
+- the run fails with `each:0: saved knowledge sources are unavailable or removed…`;
+- there is no output and no `out` success in the last attempt;
+- exactly one check after the removal, for the removed document;
+- one model call across all three attempts.
+
+`loop_case` gets a `repeat` option for the extra attempt.
+
+| Run | Result | File |
+|---|---|---|
+| New tests on `06b1062` application code | U25 fails (`'success' == 'failed'`, output contains the removed fact); 51 pass | `i01-baseline-06b1062.txt` |
+| Mutants N1–N16 (N16: drop the argument again) | all caught by their planned tests | `mutants.txt` |
+
+Closing gates on `06b1062` + the correction (these replace the earlier files of the same name):
+
+| Check | Result | File |
+|---|---|---|
+| Backend `PYTHONHASHSEED` 0–4 | 1,950 passed each (1,949 + U25) | `seeds.txt` |
+| Isolation: `git archive 06b1062` + the 3 changed files, `git init` + commit | 1,950 passed; imports from the copy | `isolation.txt` |
+| Auditor's repeated-resume regression (`r01-fix-review-06b1062/probe_repeated_resume.py`) on the isolation copy | exit 0: `each:0` refusal, no output, 1 check after removal, no cached Response republished, 1 model call | `auditor/r01-fix-review-06b1062-repeated-resume.json` |
+| Revision-3 review probe on the isolation copy | exit 0, all 13 cases | `auditor/r01-plan-r3-review-9801c46.json` |
+| Deployed scenario gate | 24 of 24 rows passed | `production-i01/report.json` |
+
+`production-i01/report.json` SHA-256: `6f419f2eacfa5b6128edc0a0357223540a24e71e3912ccb5a43285224efafed5`.
+The `production/` report above is the `06b1062` run and is kept as it was.
+
+The auditor's files in `r01-fix-review-06b1062/` and the earlier review folders have the same
+SHA-256 before and after these runs.
 
 ## Residual
 
