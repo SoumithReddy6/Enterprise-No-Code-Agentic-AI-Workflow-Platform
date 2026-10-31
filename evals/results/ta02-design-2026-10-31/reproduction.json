@@ -1,0 +1,13 @@
+{
+  "limit": 15,
+  "responses": 2,
+  "known_provider_response_tokens": 30,
+  "interrupted_had_checkpoint": true,
+  "interrupted_accounting": null,
+  "resumed_status": "success",
+  "final_accounting_tokens": 15,
+  "operator_metrics": {
+    "tokens": 30,
+    "calls": 2
+  }
+}
