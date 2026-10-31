@@ -1,0 +1,7 @@
+# probe_response_on_error.py on 812fefd application code (2026-10-31)
+# A Response that succeeds, with on_error continue and route.
+Task out with path ('__pregel_pull', 'out') wrote to unknown channel branch:to:output, ignoring it.
+continue validation errors: []
+continue success run -> {'text': 'hi', 'sources': '[]', '_provenance': {'v': 2, 'ports': {'text': 'calculated', 'sources': 'source'}}}
+route validation errors: []
+route success run -> {'text': 'hi', 'sources': '[]', '_provenance': {'v': 2, 'ports': {'text': 'calculated', 'sources': 'source'}}}

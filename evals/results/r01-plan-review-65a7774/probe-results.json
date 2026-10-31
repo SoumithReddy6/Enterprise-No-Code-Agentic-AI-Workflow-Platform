@@ -1,0 +1,54 @@
+{
+  "application_root": "/private/tmp/relay-r01-plan-9EWX8MAl/backend/app",
+  "shapes": {
+    "nonempty_sources_without_verifier_published": true,
+    "malformed_empty_object_checkpoint_accepted": true,
+    "N7_same_canonical_source_list": true
+  },
+  "real_cases": [
+    {
+      "case": "fresh_fail",
+      "status": "failed",
+      "error": "out: a listed knowledge source is unavailable or was removed. No answer was published. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output_has_removed_answer": false,
+      "response_source_count": 0,
+      "verification_calls_after_resume": null,
+      "response_failures": [
+        "out: a listed knowledge source is unavailable or was removed. No answer was published. Start a new run with current evidence."
+      ]
+    },
+    {
+      "case": "fresh_continue",
+      "status": "failed",
+      "error": "Run failed unexpectedly.",
+      "provider_calls": 1,
+      "output_has_removed_answer": false,
+      "response_source_count": 0,
+      "verification_calls_after_resume": null,
+      "response_failures": [
+        "out: a listed knowledge source is unavailable or was removed. No answer was published. Start a new run with current evidence."
+      ]
+    },
+    {
+      "case": "cached_response",
+      "status": "failed",
+      "error": "out: saved knowledge sources are unavailable or removed. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output_has_removed_answer": false,
+      "response_source_count": 1,
+      "verification_calls_after_resume": 1,
+      "response_failures": []
+    },
+    {
+      "case": "cached_loop",
+      "status": "success",
+      "error": "",
+      "provider_calls": 1,
+      "output_has_removed_answer": true,
+      "response_source_count": 0,
+      "verification_calls_after_resume": 0,
+      "response_failures": []
+    }
+  ]
+}
