@@ -1,0 +1,157 @@
+{
+  "application_root": "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/backend/app",
+  "status": "success",
+  "error": "",
+  "output": "[{'index': 0, 'status': 'success', 'value': 'Bluebird is the project codename. [unsupported reference]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}]",
+  "provider_calls": 1,
+  "cached_response_sources": [],
+  "checks_after_removal": 0,
+  "cached_response_republished": true,
+  "timeline": [
+    {
+      "event": "success",
+      "attempt": 1,
+      "node": "input",
+      "cached": false
+    },
+    {
+      "event": "success",
+      "attempt": 1,
+      "node": "tickets",
+      "cached": false
+    },
+    {
+      "event": "verify",
+      "attempt": 1,
+      "documents": [
+        "a96bcf1f17524626b2d1ba766523f2e7"
+      ]
+    },
+    {
+      "event": "verify",
+      "attempt": 1,
+      "documents": [
+        "a96bcf1f17524626b2d1ba766523f2e7"
+      ]
+    },
+    {
+      "event": "verify",
+      "attempt": 1,
+      "documents": [
+        "a96bcf1f17524626b2d1ba766523f2e7"
+      ]
+    },
+    {
+      "event": "verify",
+      "attempt": 1,
+      "documents": [
+        "a96bcf1f17524626b2d1ba766523f2e7"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 1,
+      "node": "each",
+      "cached": false
+    },
+    {
+      "event": "verify",
+      "attempt": 2,
+      "documents": [
+        "a96bcf1f17524626b2d1ba766523f2e7"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 2,
+      "node": "input",
+      "cached": true
+    },
+    {
+      "event": "success",
+      "attempt": 2,
+      "node": "tickets",
+      "cached": true
+    },
+    {
+      "event": "verify",
+      "attempt": 2,
+      "documents": [
+        "a96bcf1f17524626b2d1ba766523f2e7"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 2,
+      "node": "each",
+      "cached": true
+    },
+    {
+      "event": "success",
+      "attempt": 2,
+      "node": "render",
+      "cached": false
+    },
+    {
+      "event": "verify",
+      "attempt": 2,
+      "documents": [
+        "a96bcf1f17524626b2d1ba766523f2e7"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 2,
+      "node": "out",
+      "cached": false
+    },
+    {
+      "event": "verify",
+      "attempt": 3,
+      "documents": [
+        "a96bcf1f17524626b2d1ba766523f2e7"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 3,
+      "node": "input",
+      "cached": true
+    },
+    {
+      "event": "success",
+      "attempt": 3,
+      "node": "tickets",
+      "cached": true
+    },
+    {
+      "event": "verify",
+      "attempt": 3,
+      "documents": [
+        "a96bcf1f17524626b2d1ba766523f2e7"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 3,
+      "node": "each",
+      "cached": true
+    },
+    {
+      "event": "success",
+      "attempt": 3,
+      "node": "render",
+      "cached": true
+    },
+    {
+      "event": "removed",
+      "attempt": 3
+    },
+    {
+      "event": "success",
+      "attempt": 3,
+      "node": "out",
+      "cached": true
+    }
+  ]
+}
