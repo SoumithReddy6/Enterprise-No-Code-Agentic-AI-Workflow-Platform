@@ -1,0 +1,67 @@
+{
+  "application_root": "<scratchpad>/r01-iso.ER1H",
+  "cases": [
+    {
+      "case": "shapes",
+      "probe_asserts": "all hold",
+      "status": null,
+      "error": null
+    },
+    {
+      "case": "fresh_fail",
+      "probe_asserts": "all hold",
+      "status": "failed",
+      "error": "out: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence."
+    },
+    {
+      "case": "fresh_continue",
+      "probe_asserts": "all hold",
+      "status": "failed",
+      "error": "out: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence."
+    },
+    {
+      "case": "fresh_route",
+      "probe_asserts": "all hold",
+      "status": "failed",
+      "error": "out: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence."
+    },
+    {
+      "case": "cached_response",
+      "probe_asserts": "all hold",
+      "status": "failed",
+      "error": "out: saved knowledge sources are unavailable or removed. Start a new run with current evidence.; each:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence."
+    },
+    {
+      "case": "cached_loop",
+      "probe_asserts": "all hold",
+      "status": "failed",
+      "error": "each:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence."
+    },
+    {
+      "case": "cached_partial_loop",
+      "probe_asserts": "all hold",
+      "status": "failed",
+      "error": "each:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence."
+    },
+    {
+      "case": "loop_fresh",
+      "probe_asserts": "all hold",
+      "status": "success",
+      "error": ""
+    },
+    {
+      "case": "cached_loop_unchanged",
+      "probe_asserts": "all hold",
+      "status": "success",
+      "error": ""
+    },
+    {
+      "case": "cached_loop_after_reuse",
+      "probe_asserts": "failed at line 160",
+      "source": "assert final['status'] == 'success' and 'Bluebird' in final['output']",
+      "status": "failed",
+      "error": "out: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence.",
+      "provider_calls": 1
+    }
+  ]
+}

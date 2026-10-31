@@ -1,0 +1,18 @@
+# Isolation: git archive 9801c46 + 14 changed files, git init + commit c6b9ffb, 2026-10-31T18:45:59Z
+uncommitted files: 0
+imports from <scratchpad>/r01-iso.ER1H/backend/app/__init__.py
+changed: backend/app/compiler.py
+changed: backend/app/iteration.py
+changed: backend/app/main.py
+changed: backend/app/platform_nodes.py
+changed: backend/app/platform_validation.py
+changed: backend/app/registry.py
+changed: backend/app/worker.py
+changed: backend/tests/test_agent_grounding.py
+changed: backend/tests/test_loop_event_bounds.py
+changed: backend/tests/test_provenance_foundation.py
+changed: backend/tests/test_token_budget_recovery.py
+changed: docs/operations.md
+changed: docs/superpowers/plans/2026-10-30-response-source-boundary.md
+changed: backend/tests/test_response_source_boundary.py
+1949 passed, 4 warnings in 97.46s (0:01:37)

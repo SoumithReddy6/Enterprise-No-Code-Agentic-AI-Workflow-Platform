@@ -252,6 +252,8 @@ async def for_each_node(inputs,config,ctx):
     for index,value in enumerate(selected):
         if index in done:
             from .provenance import PROVENANCE_KEY, restored_record
+            # Its text is reused without its passages; the Response checks its saved sources.
+            if ctx.run is not None:ctx.run.setdefault('reused_owners',set()).add(item_owner(ctx,index))
             saved=done[index]
             if PROVENANCE_KEY in saved:
                 saved={**saved,PROVENANCE_KEY:restored_record(body,saved[PROVENANCE_KEY])}

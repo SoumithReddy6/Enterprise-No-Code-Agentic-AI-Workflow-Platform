@@ -6,7 +6,7 @@
 > Revision 3, after [the revision-2 review of `e50fa65`](../../reviews/r01-plan-r2-review-2026-10-31.md)
 > (D1, D2, D3 kept; one P1 gap and one test correction, section 12). Revision 2 followed
 > [the plan review of `65a7774`](../../reviews/r01-plan-review-2026-10-30.md) (section 11).
-> Status: draft for re-review.
+> Status: approved for implementation ([revision-3 review](../../reviews/r01-plan-r3-review-2026-10-31.md)); U23/U24 clarified as that review asks.
 
 **Goal:** a run publishes a Response only after every knowledge source behind it has
 passed the authoritative source check now. This applies to a fresh Response, a restored
@@ -231,8 +231,8 @@ unrelated document keeps the knowledge base searchable after a removal.
 | U8 | D | Both resume entry points: the resume endpoint (`main.py`) returns 422 with the error, and the worker preflight fails the run, for U5's state. |
 | U9 | C | Unchanged-source control for U5, U6 and U7: no removal; resume succeeds; no model call repeated. It does **not** assert the same output and sources as an uninterrupted run: on the baseline a resumed loop's `[S1]` becomes `[unsupported reference]` and the Response lists no source (section 9). The test records that difference. |
 | U22 | D | The R2-01 sequence (real KB, Worker): crash after the loop checkpoint; resume with the document present (resume checks pass, the loop is reused); the Prompt commits its success event; then the document is removed, before the Response runs. Run `failed` with the named refusal; no `out` success event or checkpoint; empty run output; provider calls stay 1 across both attempts. |
-| U23 | D | As U22, but the first attempt stops after item 0's progress row and before the loop checkpoint. On resume, item 0 is reused from progress and item 1 runs fresh; the removed document belongs to item 0. Same refusal and the same assertions. |
-| U24 | D | Unchanged-document control for U22 and U23: the run succeeds with no repeated model call, and the Response's verifier calls include the reused item's saved source (the baseline makes no Response call). |
+| U23 | D | As U22, but the first attempt stops after item 0's progress row and before the loop checkpoint. On resume, item 0 is reused from progress and item 1 runs fresh. Items 0 and 1 retrieve **different** documents, so item 1's fresh evidence cannot cover item 0's; the removed document belongs to item 0. Same refusal, no `out` checkpoint, empty output; provider calls are **2** in total (one per item), and item 0 is not repeated. |
+| U24 | D | Unchanged-document control for U22 and U23: the run succeeds with no repeated model call (1 and 2 provider calls), and a Response verifier call contains item 0's document specifically (the baseline makes no Response call). |
 
 **Contract**
 

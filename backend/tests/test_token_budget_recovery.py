@@ -403,7 +403,7 @@ async def test_t10c_a_nested_free_text_specialist_returns_the_budget_abstention(
     assert_budget_abstention(child[0]['outputs'], 'spec0')
     parent = json.loads(result['values']['agent']['grounding'])
     assert parent['truncated'] is True and {'node_id': 'spec0', 'reason': REASON} in parent['truncations']
-    assert len(verified) == 2, 'each budget abstention checks its sources once'
+    assert len(verified) == 3, 'each budget abstention checks its sources once, then the Response (R01)'
 
 
 @pytest.mark.asyncio
@@ -444,12 +444,20 @@ async def test_t14_a_removed_source_fails_a_nested_specialist_budget_abstention(
     workflow = team_flow(1)
     for node in workflow.nodes:
         if node.type == 'agent': node.config = {**node.config, **MODEL}
-    result, events = await execute(workflow, kb_platform([], removed=True), 'facts')
+    events = []
+    async def emit(event): events.append(dict(event))
+    with pytest.raises(ValueError) as exc:
+        await compile_workflow(workflow, message='facts', platform_resolver=kb_platform([], removed=True),
+                               emit=emit).graph.ainvoke({'values': {}})
     assert failed_event(events, 'spec0', nested=True)['error'] == REMOVED
     for event in events:
         if event.get('node_id') in ('agent', 'spec0') and event.get('status') == 'success':
             assert 'chunk1' not in event['outputs'].get('sources', ''), event['node_id']
-    assert json.loads(result['values']['agent']['sources']) == []
+    parent = [e for e in events if e.get('node_id') == 'agent' and e.get('status') == 'success']
+    assert len(parent) == 1 and json.loads(parent[0]['outputs']['sources']) == []
+    # R01: the shared registry still holds the removed passage, so the Response refuses.
+    assert type(exc.value).__name__ == 'UnsafeExecutionError' and str(exc.value).startswith('out: ')
+    assert not [e for e in events if e.get('node_id') == 'out' and e.get('status') == 'success']
 
 
 @pytest.mark.asyncio
@@ -465,7 +473,8 @@ async def test_t14b_an_unchanged_source_is_checked_exactly_once(monkeypatch, sit
     verified = []
     result, _ = await execute(workflow, kb_platform(verified), message)
     assert_budget_abstention(result['values']['agent'])
-    assert len(verified) == 1 and [s['id'] for s in verified[0]] == ['chunk1']
+    # Once by the abstention, once by the Response before it publishes (R01).
+    assert len(verified) == 2 and [[s['id'] for s in batch] for batch in verified] == [['chunk1'], ['chunk1']]
 
 
 @pytest.mark.asyncio

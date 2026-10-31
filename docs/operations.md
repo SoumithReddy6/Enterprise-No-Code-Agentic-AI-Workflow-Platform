@@ -249,6 +249,14 @@ ANSWERABILITY_MODEL_DIR=/absolute/path/to/reader .venv/bin/python -m scripts.eva
 
 Verify the report's `product_answerability_guard.decisions`: a skipped or unmeasured reader is not evidence of enforcement, even if other generation metrics pass.
 
+## Response source boundary
+
+Before a Response publishes, it checks every source it lists, cited or not, and the saved sources behind loop items that this attempt reused instead of running again. The check uses the authoritative knowledge-base verifier, in batches of at most 120 distinct records. If any source is removed, unauthorized or malformed, or if sources exist but no verifier is available, nothing is published and the run fails with `<response id>: ... No answer was published.` This refusal is not retried, and no `on_error` setting (fail, continue or route) recovers it. Start a new run with current evidence.
+
+A resume (the resume endpoint and the worker preflight) also checks the saved sources of every reused node: a saved Response, a restored Retrieve or Query, and each item of a loop that is restored or continued from its saved progress. A failed check returns 422 from the endpoint or fails the run before any model call. A saved source list that is not a list of records with ids is refused; it never counts as zero sources.
+
+After a resumed loop, citation labels in reused item text can show as `[unsupported reference]`, because those passages are not back in the run's evidence. The sources behind that text are still checked. A source removed between the check and publication is a known residual window ([CWE-367](https://cwe.mitre.org/data/definitions/367.html)).
+
 ## Decision provenance (shadow mode)
 
 Every successful node output carries a `_provenance` record. It labels each output, and each field of a structured Agent answer, as `source`, `quoted`, `calculated`, `guessed` or `absent`. Labels are assigned by code: a model's value is `quoted` only if it is written in that Agent's trusted bound input. System prompts and examples are never searched, and another Agent's free text is never trusted. See [the plan](superpowers/plans/2026-10-08-decision-provenance.md) for the rule and its limits.

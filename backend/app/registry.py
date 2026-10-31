@@ -212,10 +212,17 @@ async def condition_node(inputs, config, ctx):
     return {'branch': 'true' if evaluate_condition(inputs['value'], config) else 'false'}
 
 async def response_node(inputs, config, ctx):
-    """The response boundary: any [S#] label must name evidence this run actually retrieved."""
+    """The response boundary: any [S#] label must name evidence this run actually retrieved,
+    and every source behind the answer, listed or reused, must still be valid now."""
     from .agent_runtime import ground_answer
+    from .platform_nodes import reused_dependencies,verify_published
+    from .request_safety import UnsafeExecutionError
     evidence=(ctx.run or {}).get('evidence',[])
     text,sources=ground_answer(inputs['text'],evidence)
+    try:reused=reused_dependencies(ctx.run)
+    except ValueError:
+        raise UnsafeExecutionError(f'{ctx.node_id}: saved knowledge sources of reused work are malformed. No answer was published. Start a new run.') from None
+    await verify_published(ctx,ctx.node_id,sources+reused)
     return {'text': text, 'sources': json.dumps(sources,ensure_ascii=False)}
 
 REGISTRY: dict[str, NodeDefinition] = {}

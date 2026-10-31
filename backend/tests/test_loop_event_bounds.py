@@ -105,6 +105,7 @@ async def test_events_emitted_through_the_context_carry_it_too(monkeypatch):
         if action == 'tool': return {'text': '{}', 'items': json.loads(jira_payload(2))['issues'], 'truncated': False, 'warnings': []}
         if action == 'kb_retrieve': return {'query': args[1], 'knowledge_base_id': 'kb1', 'version': 1, 'sources': [source(1)]}
         if action == 'record_vector_sources': return None
+        if action == 'verify_vector_sources': return args[0]  # The Response checks what it publishes (R01).
         raise AssertionError(action)
     events = []
     async def emit(event): events.append(dict(event))

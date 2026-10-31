@@ -106,7 +106,7 @@ class Worker:
             self.store.check_resume_writes(run)
             from . import sandbox
             # Checked again here: Docker may have stopped after the run was submitted.
-            errors=self.store.model_errors(workflow,tenant_id)+platform_errors(self.store,workflow,tenant_id)+await kb_errors(self.kbs,workflow,tenant_id,run.get('checkpoints'),run.get('vector_dependencies'))+await sandbox.preflight_errors(workflow,fresh=True)
+            errors=self.store.model_errors(workflow,tenant_id)+platform_errors(self.store,workflow,tenant_id)+await kb_errors(self.kbs,workflow,tenant_id,run.get('checkpoints'),run.get('vector_dependencies'),run.get('loop_progress'))+await sandbox.preflight_errors(workflow,fresh=True)
             if errors:raise ValueError('; '.join(errors))
             resolver=lambda credential_id:self.store.resolve_run_credential(id,owner,credential_id)
             async def platform_resolver(action,*args):
@@ -199,9 +199,13 @@ class Worker:
                 if isinstance(results,dict) and results.get('unavailable'):raise ValueError(results['unavailable'])
                 issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'))
                 if issues:raise ValueError('; '.join(issues))
-            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend,action_settled=action_settled,platform_work=work,run_id=id,tenant_id=tenant_id).graph
+            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend,action_settled=action_settled,platform_work=work,saved_dependencies=run.get('vector_dependencies'),run_id=id,tenant_id=tenant_id).graph
             result=await graph.ainvoke({'values':{}},{'recursion_limit':150})
-            return {'output':'\n\n'.join(result['values'][n.id]['text'] for n in workflow.nodes if n.type=='response' and n.id in result['values']),
+            answers=[n.id for n in workflow.nodes if n.type=='response' and n.id in result['values']]
+            for response_id in answers:
+                # A Response recovered under on_error continue holds no text; that is not an answer.
+                if 'text' not in result['values'][response_id]:raise ValueError(f'{response_id}: the Response produced no answer.')
+            return {'output':'\n\n'.join(result['values'][n]['text'] for n in answers),
                     **run_truncation(workflow,result['values'])}
         async def bounded_run():
             # The deadline covers knowledge-service preflight as well as graph execution.

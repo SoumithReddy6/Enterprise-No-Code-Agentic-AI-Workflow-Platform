@@ -40,8 +40,9 @@ async def test_invented_citations_are_marked_and_cited_sources_reported(monkeypa
     assert agent['text']=='The codename is Bluebird [S1]. Launch is in October [unsupported reference].'
     sources=json.loads(agent['sources'])
     assert [(s['citation'],s['cited']) for s in sources]==[('S1',True),('S2',False)]
-    # Post-generation verification receives canonical sources without presentation fields.
-    assert verified==[[source(1),source(2)]]
+    # Post-generation verification receives canonical sources without presentation fields;
+    # the Response checks the same list again before it publishes (R01).
+    assert verified==[[source(1),source(2)]]*2
     assert result['values']['out']['text']==agent['text']
 
 @pytest.mark.asyncio
@@ -116,7 +117,7 @@ def test_grouped_citations_are_canonicalized_and_each_label_validated():
 
 @pytest.mark.asyncio
 async def test_response_rewrites_citation_when_run_has_no_evidence():
-    result=await response_node({'text':'Invented [S1].'},None,SimpleNamespace(run={'evidence':[]}))
+    result=await response_node({'text':'Invented [S1].'},None,SimpleNamespace(run={'evidence':[]},platform=None,node_id='out'))
     assert result['text']=='Invented [unsupported reference].'
     assert result['sources']=='[]'
 

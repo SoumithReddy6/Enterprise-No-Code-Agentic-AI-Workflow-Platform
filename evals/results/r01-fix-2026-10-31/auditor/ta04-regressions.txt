@@ -1,0 +1,7 @@
+PASSED ../ta04-tests.Ls0R/test_real_source_boundary.py::test_removed_document_survives_into_the_final_response
+PASSED ../ta04-tests.Ls0R/test_replayed_attempt.py::test_an_approved_send_counts_as_work_without_a_second_debit
+PASSED ../ta04-tests.Ls0R/test_replayed_attempt.py::test_a_loop_records_the_item_whose_approved_write_was_sent
+3 passed in 1.19s
+baseline (HEAD app code): E   AssertionError: R01: the final Response returns the document removed during generation
+baseline (HEAD app code): FAILED ../ta04-tests.Ls0R/test_real_source_boundary.py::test_removed_document_survives_into_the_final_response
+baseline (HEAD app code): 1 failed in 0.77s

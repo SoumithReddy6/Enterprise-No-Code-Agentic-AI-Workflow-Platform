@@ -13,6 +13,7 @@ from backend.app import provenance as p
 from backend.app.calculate import run as calculate
 from backend.app.compiler import compile_workflow, validate_workflow
 from backend.app.models import Workflow, Node, Edge
+from backend.app.request_safety import UnsafeExecutionError
 
 MODEL = {'provider': 'ollama', 'model': 'llama3.1:latest'}
 STRUCTURED = {**MODEL, 'role': 'extraction', 'output_schema': {'type': 'object'}}
@@ -40,8 +41,9 @@ def flow(middle, decide='extract.text', field='amount', operator='gt'):
     return wf
 
 
-async def execute(wf, message, answers=(), platform=None, completed=None, progress=None):
-    replies, events, calls = iter(answers), [], []
+async def execute(wf, message, answers=(), platform=None, completed=None, progress=None, events=None):
+    replies, calls = iter(answers), []
+    events = [] if events is None else events
     async def model(*args, **kwargs):
         calls.append(True)
         kwargs['usage'].update(prompt_tokens=1, completion_tokens=1)
@@ -202,8 +204,14 @@ async def test_grounding_answer_does_not_launder_a_model_guess():
     envelope = json.dumps({'question': 'Cost?', 'passages': [{'citation': 'S1', 'filename': 'catalogue.txt',
                           'page': 1, 'text': 'Laptops are listed without prices.'}]})
     first = json.dumps({'answer': 'The amount is $0 [S1]', 'citations': ['S1'], 'abstain': False, 'reason': ''})
-    values, _, decisions, _ = await execute(wf, envelope, [first, '{"amount":0}'])
-    assert values['draft']['_provenance']['ports']['grounding'] == p.GUESSED
+    events = []
+    # R01: the typed passage has no knowledge source and this run has no verifier, so the
+    # terminal Response refuses to publish it. The decision below is made before that.
+    with pytest.raises(UnsafeExecutionError):
+        await execute(wf, envelope, [first, '{"amount":0}'], events=events)
+    draft = next(e for e in events if e.get('node_id') == 'draft' and e.get('status') == 'success')
+    assert draft['outputs']['_provenance']['ports']['grounding'] == p.GUESSED
+    decisions = {e['node_id']: e['decision'] for e in events if 'decision' in e}
     assert decisions['check']['would_review'] is True
 
 

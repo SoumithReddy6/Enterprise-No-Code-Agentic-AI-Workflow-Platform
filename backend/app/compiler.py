@@ -418,7 +418,7 @@ def restored_tokens(accounting):
     return tokens_spent({'usage':(accounting or {}).get('usage') or {}})
 
 
-def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None,accounting=None,accounting_sink=None,persist_accounting=None,persist_spend=None,action_settled=None,platform_work=None,run_id=None,tenant_id='local'):
+def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None,accounting=None,accounting_sink=None,persist_accounting=None,persist_spend=None,action_settled=None,platform_work=None,saved_dependencies=None,run_id=None,tenant_id='local'):
     errors = validate_workflow(workflow)
     if errors: raise ValueError('\n'.join(errors))
     from .platform_graph import split_graph
@@ -452,6 +452,11 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                'platform_work':platform_work}  # Every passage retrieved in this run, under a run-unique citation label.
     prepare_checkpoint_labels(run_state,completed)
     run_state['loop_progress']=dict(loop_progress or {})
+    # Each loop item's verified sources as saved when the run was claimed. A reused item does
+    # not run in this attempt, so its list cannot change; the Response checks those of
+    # reused_owners, whose passages are not back in the evidence registry.
+    run_state['saved_dependencies']=dict(saved_dependencies or {})
+    run_state['reused_owners']=set()
     context = Context(message=message, resolve_credential=credential_resolver, authorize_model=authorize_model,knowledge=knowledge_resolver,platform=platform_resolver,run=run_state,emit=emit)
     async def invoke_agent(id,text,identity=None):
         child=replace(context,node_id=id,node_type='agent',checkpoint_owner=id,
@@ -518,6 +523,10 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                         outputs={**outputs,'summary':json.dumps(reconstructed_summary(node.id,items,config,outputs,body))}
                     validation=validate_cached(node,outputs)
                     if inspect.isawaitable(validation):await validation
+                    if node.type=='for_each':
+                        prefix=node.id+':'
+                        run_state['reused_owners'].update(owner for owner in run_state['saved_dependencies']
+                                                          if owner.startswith(prefix) and owner[len(prefix):].isdigit())
                     outputs=await request_safety.finalize(node_ctx,node,inputs,outputs,config,cached=True)
                     evidence_from_outputs(run_state,outputs)  # Restored evidence keeps its original labels.
                     await emit_evidence_notice(run_state,emit,node.id)

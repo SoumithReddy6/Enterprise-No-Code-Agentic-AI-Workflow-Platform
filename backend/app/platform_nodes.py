@@ -28,6 +28,52 @@ async def retrieve_node(inputs,config,ctx):
 def canonical(sources):
     return [{k:v for k,v in s.items() if k not in ('citation','cited')} for s in sources]
 
+MALFORMED='Saved knowledge sources are malformed.'
+PUBLISH_BATCH=120  # The gateway's limit for one verify call.
+
+def source_list(value):
+    """The only accepted source container: a list of objects with a string id, or its JSON text.
+    Anything else is refused, so malformed metadata never reads as zero sources."""
+    if isinstance(value,str):
+        try:value=json.loads(value)
+        except ValueError:raise ValueError(MALFORMED) from None
+    if not isinstance(value,list) or not all(isinstance(s,dict) and isinstance(s.get('id'),str) and s['id'] for s in value):
+        raise ValueError(MALFORMED)
+    return value
+
+def published_batches(sources):
+    """Canonical sources in verify-sized batches. Exact copies (one chunk under two labels)
+    collapse; records that share an id but differ go to different batches, so each is checked
+    and the index never sees a repeated id in one call."""
+    unique={}
+    for s in canonical(sources):unique.setdefault(json.dumps(s,sort_keys=True,ensure_ascii=False,default=str),s)
+    batches=[]
+    for s in unique.values():
+        batch=next((b for b in batches if len(b)<PUBLISH_BATCH and all(x['id']!=s['id'] for x in b)),None)
+        if batch is None:batches.append(batch:=[])
+        batch.append(s)
+    return batches
+
+def reused_dependencies(run):
+    """Saved sources of the loop items this attempt reused. Their answer text is published,
+    but their passages are not back in the run registry, so the Response checks them here."""
+    run=run or {};saved=run.get('saved_dependencies') or {}
+    return [s for owner in sorted(run.get('reused_owners',())) if owner in saved for s in source_list(saved[owner])]
+
+async def verify_published(ctx,node_id,sources):
+    """Every source behind a published answer passes the authoritative check now, or nothing
+    is published. The refusal is control flow: no retry or on_error recovers it."""
+    from .execution_policy import CONTROL_FLOW
+    from .request_safety import UnsafeExecutionError
+    try:
+        batches=published_batches(source_list(sources))
+        if batches and ctx.platform is None:
+            raise UnsafeExecutionError(f'{node_id}: knowledge source verification is unavailable. No answer was published.')
+        for batch in batches:await ctx.platform('verify_vector_sources',batch)
+    except CONTROL_FLOW:raise
+    except (KeyError,ValueError,TypeError):
+        raise UnsafeExecutionError(f'{node_id}: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence.') from None
+
 async def query_node(inputs,config,ctx):
     from .registry import llm_node
     retrieved=await retrieve_node(inputs,config,ctx)

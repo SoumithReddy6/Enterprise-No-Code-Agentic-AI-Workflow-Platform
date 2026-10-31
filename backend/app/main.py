@@ -186,7 +186,7 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     async def resume(id:str,tenant_id:str=Depends(tenant)):
         previous=fetch_run(id,tenant_id)
         workflow=Workflow.model_validate(previous['workflow'])
-        errors=store.model_errors(workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id,previous.get('checkpoints'),previous.get('vector_dependencies'))+await sandbox.preflight_errors(workflow)
+        errors=store.model_errors(workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id,previous.get('checkpoints'),previous.get('vector_dependencies'),previous.get('loop_progress'))+await sandbox.preflight_errors(workflow)
         if errors:raise HTTPException(422,detail=errors)
         try:run=store.resume_run(id,tenant_id);return {'id':run['id'],'status':run['status']}
         except KeyError:raise HTTPException(404,'Run not found') from None
