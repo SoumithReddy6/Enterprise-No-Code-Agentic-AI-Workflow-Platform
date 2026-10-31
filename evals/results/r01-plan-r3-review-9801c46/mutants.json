@@ -1,0 +1,34 @@
+[
+  {
+    "mutant": "N14",
+    "case": "cached_loop_after_reuse",
+    "expected_exit": 1,
+    "actual_exit": 1,
+    "outcome": "unsafe publication detected",
+    "application_root": "/private/tmp/relay-r01-plan-r3-mutant-rdjzhw8c"
+  },
+  {
+    "mutant": "N14",
+    "case": "cached_partial_after_reuse",
+    "expected_exit": 1,
+    "actual_exit": 1,
+    "outcome": "unsafe publication detected",
+    "application_root": "/private/tmp/relay-r01-plan-r3-mutant-rdjzhw8c"
+  },
+  {
+    "mutant": "N15",
+    "case": "cached_loop_after_reuse",
+    "expected_exit": 0,
+    "actual_exit": 0,
+    "outcome": "full-checkpoint control still refuses",
+    "application_root": "/private/tmp/relay-r01-plan-r3-mutant-2kafm5g4"
+  },
+  {
+    "mutant": "N15",
+    "case": "cached_partial_after_reuse",
+    "expected_exit": 1,
+    "actual_exit": 1,
+    "outcome": "unsafe publication detected",
+    "application_root": "/private/tmp/relay-r01-plan-r3-mutant-2kafm5g4"
+  }
+]
