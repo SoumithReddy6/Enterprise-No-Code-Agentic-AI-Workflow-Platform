@@ -409,16 +409,10 @@ async def silent(event):
     pass
 
 
-def restored_tokens(accounting):
-    """Tokens spent by earlier attempts. Older snapshots predate tokens_spent, so fall back
-    to summing their usage totals rather than restarting the ceiling at zero."""
-    value=(accounting or {}).get('tokens_spent')
-    if type(value) is int and value>=0:return value
-    from .token_budget import tokens_spent
-    return tokens_spent({'usage':(accounting or {}).get('usage') or {}})
+from .accounting_state import restored_tokens  # noqa: E402 - re-exported at its historical path
 
 
-def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None,accounting=None,accounting_sink=None,persist_accounting=None,persist_spend=None,action_settled=None,platform_work=None,saved_dependencies=None,run_id=None,tenant_id='local'):
+def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=silent, message='', completed=None, authorize_model=lambda _: None, knowledge_resolver=None,validate_cached=lambda node,outputs:None,platform_resolver=None,citation_counter=0,agent_frames=None,loop_progress=None,accounting=None,accounting_sink=None,persist_accounting=None,persist_spend=None,action_settled=None,platform_work=None,saved_dependencies=None,run_id=None,tenant_id='local',durability=None):
     errors = validate_workflow(workflow)
     if errors: raise ValueError('\n'.join(errors))
     from .platform_graph import split_graph
@@ -449,7 +443,9 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                'persist_accounting':persist_accounting,
                'persist_spend':persist_spend,
                'action_settled':action_settled,
-               'platform_work':platform_work}  # Every passage retrieved in this run, under a run-unique citation label.
+               'platform_work':platform_work,
+               # The managed run's trust and save state; None for compiler-only execution.
+               'durability':durability}  # Every passage retrieved in this run, under a run-unique citation label.
     prepare_checkpoint_labels(run_state,completed)
     run_state['loop_progress']=dict(loop_progress or {})
     # Each loop item's verified sources as saved when the run was claimed. A reused item does
@@ -457,6 +453,12 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
     # reused_owners, whose passages are not back in the evidence registry.
     run_state['saved_dependencies']=dict(saved_dependencies or {})
     run_state['reused_owners']=set()
+    forward=emit
+    async def emit(event):
+        # Every event, nested ones included, leaves with the spend known at that moment, so
+        # the commit that saves it saves that accounting too. Kept out of the event itself.
+        if accounting_sink is not None:accounting_sink.update(accounting_snapshot(run_state))
+        await forward(event)
     context = Context(message=message, resolve_credential=credential_resolver, authorize_model=authorize_model,knowledge=knowledge_resolver,platform=platform_resolver,run=run_state,emit=emit)
     async def invoke_agent(id,text,identity=None):
         child=replace(context,node_id=id,node_type='agent',checkpoint_owner=id,

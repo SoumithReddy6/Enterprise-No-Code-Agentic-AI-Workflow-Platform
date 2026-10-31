@@ -30,8 +30,8 @@ def main():
         from backend.app.storage import Store,local_key
         store=Store(os.environ['DATABASE_URL'],local_key(directory))
         original_event=store.worker_event
-        def durable_event(*args):
-            result=original_event(*args)
+        def durable_event(*args,**kwargs):
+            result=original_event(*args,**kwargs)
             marker=directory/'crash-after-item'
             if result and args[-1].get('kind')=='loop_item' and marker.exists():
                 marker.unlink()

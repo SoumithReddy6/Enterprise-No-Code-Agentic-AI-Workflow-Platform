@@ -125,8 +125,8 @@ async def test_worker_scopes_receipts_to_the_real_tenant_and_replays_the_checkpo
     worker = Worker(store)
     caplog.set_level(logging.INFO)
     original = store.worker_event
-    def crash_after_cache(id, owner, event):
-        persisted = original(id, owner, event)
+    def crash_after_cache(id, owner, event, **kwargs):
+        persisted = original(id, owner, event, **kwargs)
         if event.get('node_id') == 'cache' and event.get('status') == 'success':
             raise RuntimeError('Injected crash after the greeting checkpoint commit')
         return persisted

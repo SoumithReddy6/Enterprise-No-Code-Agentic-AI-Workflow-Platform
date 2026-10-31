@@ -16,8 +16,8 @@ def test_operator_metrics_permissions_and_known_aggregates(tmp_path,monkeypatch)
         operator=client.post('/api/auth/register',json={'email':'operator@example.com','password':'OperatorPassword!'}).json()
         assert client.get('/api/operator/metrics').status_code==200
         for i in range(4):
-            run=store.create_run(sample(),'SECRET prompt',operator['tenant_id']);store.claim_next('worker')
-            store.worker_event(run['id'],'worker',{'node_id':'agent','status':'success','usage':{'by_model':[{'provider':'ollama','model':'llama3.1','prompt_tokens':10,'completion_tokens':5,'calls':1}]},'outputs':{'grounding':json.dumps({'abstain':i==0}),'sources':'[]','text':'SECRET passage'}})
+            run=store.create_run(sample(),'SECRET prompt',operator['tenant_id']);accounting=store.claim_next('worker')['accounting']
+            store.worker_event(run['id'],'worker',{'node_id':'agent','status':'success','usage':{'by_model':[{'provider':'ollama','model':'llama3.1','prompt_tokens':10,'completion_tokens':5,'calls':1}]},'outputs':{'grounding':json.dumps({'abstain':i==0}),'sources':'[]','text':'SECRET passage'}},accounting=accounting)
             store.finish_run(run['id'],'worker','success',output='SECRET answer',truncated=i<2)
         result=client.get('/api/operator/metrics')
         assert result.status_code==200
@@ -53,12 +53,12 @@ def test_exact_percentiles_window_cached_usage_and_resume(tmp_path):
     assert report['runs_by_status']=={'success':20}
     assert report['duration_seconds']=={'p50':10.0,'p95':19.0}
     assert report['abstention_rate']==.1 and report['truncation_rate']==.2
-    run=store.create_run(sample(),'test');store.claim_next('worker')
+    run=store.create_run(sample(),'test');accounting=store.claim_next('worker')['accounting']
     usage={'by_model':[{'provider':'ollama','model':'a','prompt_tokens':10,'completion_tokens':2,'calls':1},{'provider':'ollama','model':'b','prompt_tokens':20,'completion_tokens':3,'calls':1}]}
-    store.worker_event(run['id'],'worker',{'node_id':'agent','status':'failed','usage':usage})
+    store.worker_event(run['id'],'worker',{'node_id':'agent','status':'failed','usage':usage},accounting=accounting)
     store.finish_run(run['id'],'worker','failed')
     store.resume_run(run['id']);store.claim_next('worker')
-    store.worker_event(run['id'],'worker',{'node_id':'agent','status':'success','cached':True,'usage':usage,'outputs':{}})
+    store.worker_event(run['id'],'worker',{'node_id':'agent','status':'success','cached':True,'usage':usage,'outputs':{}},accounting=accounting)
     store.finish_run(run['id'],'worker','success')
     assert metrics(store,24)['tokens']==[{'provider':'ollama','model':'a','prompt_tokens':10,'completion_tokens':2,'calls':1},{'provider':'ollama','model':'b','prompt_tokens':20,'completion_tokens':3,'calls':1}]
     store.engine.dispose()

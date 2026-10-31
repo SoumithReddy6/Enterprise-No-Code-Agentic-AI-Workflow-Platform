@@ -203,8 +203,8 @@ async def test_t6_resume_after_the_recovery_reaches_the_same_verdict_without_a_n
     calls.clear(); chat(monkeypatch, [('one', 8, 2)], calls)
     store, worker = durable(tmp_path / 'b', monkeypatch)
     original = store.worker_event
-    def crash(id, owner, event):
-        persisted = original(id, owner, event)
+    def crash(id, owner, event, **kwargs):
+        persisted = original(id, owner, event, **kwargs)
         if event.get('node_id') == 'second' and event.get('recovered'): raise asyncio.CancelledError()
         return persisted
     monkeypatch.setattr(store, 'worker_event', crash)
@@ -563,8 +563,8 @@ async def durable_loop(tmp_path, monkeypatch, services, kb, on_item_error, crash
         row = store.create_run(query_loop(on_item_error, jira_connection(store), kb['id']).model_dump(mode='json'), 'go')
         if crash_at is not None:
             original = store.worker_event
-            def crash(id, owner, event):
-                persisted = original(id, owner, event)
+            def crash(id, owner, event, **kwargs):
+                persisted = original(id, owner, event, **kwargs)
                 if event.get('kind') == 'loop_item' and event.get('item_index') == crash_at: raise asyncio.CancelledError()
                 return persisted
             monkeypatch.setattr(store, 'worker_event', crash)
@@ -672,8 +672,8 @@ async def approved_send(tmp_path, monkeypatch, loop=False, crash=None):
         approvals.decide(store, row['id'], 'local', approval['id'], approval['digest'], 'approve')
         if crash is not None:
             original = store.worker_event
-            def stop(id, owner, event):
-                persisted = original(id, owner, event)
+            def stop(id, owner, event, **kwargs):
+                persisted = original(id, owner, event, **kwargs)
                 if crash(event): raise asyncio.CancelledError()
                 return persisted
             monkeypatch.setattr(store, 'worker_event', stop)

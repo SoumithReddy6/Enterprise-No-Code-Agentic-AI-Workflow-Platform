@@ -273,10 +273,10 @@ async def test_cancellation_during_event_commit_does_not_double_count_tokens(tmp
     real=httpx.AsyncClient
     monkeypatch.setattr(providers,'client',lambda timeout:real(transport=httpx.MockTransport(lambda request:httpx.Response(200,json={'message':{'content':'answer'},'prompt_eval_count':13,'eval_count':7}))))
     entered=threading.Event();release=threading.Event();original=store.worker_event
-    def paused(id,owner,event):
+    def paused(id,owner,event,**kwargs):
         if event.get('node_id')=='prompt' and event['status']=='success':
             entered.set();assert release.wait(3)
-        return original(id,owner,event)
+        return original(id,owner,event,**kwargs)
     monkeypatch.setattr(store,'worker_event',paused)
     deadlines=[]
     if deadline:

@@ -311,8 +311,8 @@ async def test_a_resumed_run_takes_the_same_route_and_sends_once(worker_setup, m
     store, worker, connection, sent = worker_setup
     model[1].append(reading())
     original = store.worker_event
-    def crash_after_route(id, owner, event):
-        persisted = original(id, owner, event)
+    def crash_after_route(id, owner, event, **kwargs):
+        persisted = original(id, owner, event, **kwargs)
         if event.get('node_id') == 'route' and event.get('status') == 'success':
             raise RuntimeError('Injected crash after the route checkpoint')
         return persisted
@@ -413,8 +413,8 @@ async def test_allowed_sources_validate_and_run_fresh_and_after_a_resume(jira_wo
     raw = with_connection(flow(value, cases=cases, middle=middle), connection)
     assert validate_workflow(Workflow.model_validate(raw)) == []
     original = store.worker_event
-    def crash(id, owner, event):
-        persisted = original(id, owner, event)
+    def crash(id, owner, event, **kwargs):
+        persisted = original(id, owner, event, **kwargs)
         if event.get('node_id') == crash_after and event.get('status') == 'success':
             raise RuntimeError('Injected crash after the checkpoint that feeds the Switch')
         return persisted

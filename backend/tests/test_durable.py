@@ -26,7 +26,7 @@ def test_expired_claim_can_be_recovered_and_stale_owner_is_fenced(store,monkeypa
     first=store.claim_next('old',lease_seconds=30)
     assert first['id']==run['id']
     assert store.claim_next('other') is None
-    assert store.worker_event(run['id'],'old',{'node_id':'input','status':'success','outputs':{'message':'Ada'}}) is True
+    assert store.worker_event(run['id'],'old',{'node_id':'input','status':'success','outputs':{'message':'Ada'}},accounting=first['accounting']) is True
     clock[0]+=31
     recovered=store.claim_next('new')
     assert recovered['checkpoints']['input']=={'message':'Ada'}
@@ -37,8 +37,8 @@ def test_expired_claim_can_be_recovered_and_stale_owner_is_fenced(store,monkeypa
 
 def test_cancellation_and_resume_preserve_completed_results(store):
     run=store.create_run(sample(),'Ada')
-    store.claim_next('worker')
-    store.worker_event(run['id'],'worker',{'node_id':'input','status':'success','outputs':{'message':'Ada'}})
+    claimed=store.claim_next('worker')
+    store.worker_event(run['id'],'worker',{'node_id':'input','status':'success','outputs':{'message':'Ada'}},accounting=claimed['accounting'])
     store.request_cancel(run['id'])
     assert store.cancel_requested(run['id'],'worker')
     store.finish_run(run['id'],'worker','cancelled')

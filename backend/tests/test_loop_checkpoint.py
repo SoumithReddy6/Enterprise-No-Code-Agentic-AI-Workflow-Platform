@@ -67,8 +67,8 @@ def execute_two_loops(tmp_path, monkeypatch, crash_after_each):
     monkeypatch.setattr(worker.tools, 'execute', execute)
     original = store.worker_event
     if crash_after_each:
-        def crash(id, owner, event):
-            persisted = original(id, owner, event)
+        def crash(id, owner, event, **kwargs):
+            persisted = original(id, owner, event, **kwargs)
             if event.get('node_id') == 'each' and event['status'] == 'success' and not event.get('transient'):
                 raise asyncio.CancelledError()
             return persisted
@@ -105,8 +105,8 @@ def test_a_legacy_checkpoint_with_embedded_results_still_loads_and_resumes(tmp_p
         calls.append(text); return f'done {len(calls)}'
     monkeypatch.setattr(worker.tools, 'execute', execute)
     original = store.worker_event
-    def crash(id, owner, event):
-        persisted = original(id, owner, event)
+    def crash(id, owner, event, **kwargs):
+        persisted = original(id, owner, event, **kwargs)
         if event.get('node_id') == 'each' and event['status'] == 'success' and not event.get('transient'): raise asyncio.CancelledError()
         return persisted
     monkeypatch.setattr(store, 'worker_event', crash)
@@ -150,8 +150,8 @@ def test_damaged_rows_make_the_checkpoint_unavailable_never_empty(tmp_path, monk
         calls.append(text); return 'done'
     monkeypatch.setattr(worker.tools, 'execute', execute)
     original = store.worker_event
-    def crash(id, owner, event):
-        persisted = original(id, owner, event)
+    def crash(id, owner, event, **kwargs):
+        persisted = original(id, owner, event, **kwargs)
         if event.get('node_id') == 'each' and event['status'] == 'success' and not event.get('transient'): raise asyncio.CancelledError()
         return persisted
     monkeypatch.setattr(store, 'worker_event', crash)
@@ -177,14 +177,14 @@ def test_damaged_rows_make_the_checkpoint_unavailable_never_empty(tmp_path, monk
 def test_the_loop_checkpoint_is_written_only_under_the_lease(tmp_path, monkeypatch):
     store, worker, _, _ = durable_setup(tmp_path, monkeypatch, items=1)
     row = store.create_run(loop_flow(connection_id=jira_connection(store)).model_dump(mode='json'), 'go')
-    store.claim_next('worker')
+    accounting = store.claim_next('worker')['accounting']
     store.worker_event(row['id'], 'worker', {'kind': 'loop_item', 'status': 'info', 'node_id': 'each', 'item_index': 0, 'transient': True,
-                                             'item_result': {'index': 0, 'status': 'success', 'value': 'done', 'error': ''}})
+                                             'item_result': {'index': 0, 'status': 'success', 'value': 'done', 'error': ''}}, accounting=accounting)
     success = {'node_id': 'each', 'status': 'success', 'outputs': {'results': [{'index': 0, 'status': 'success', 'value': 'done', 'error': ''}],
                                                                    'failed': '0', 'summary': '{}'}}
-    assert store.worker_event(row['id'], 'intruder', success) is False
+    assert store.worker_event(row['id'], 'intruder', success, accounting=accounting) is False
     assert 'each' not in raw(store, row['id']).get('checkpoints', {})
-    assert store.worker_event(row['id'], 'worker', success) is True
+    assert store.worker_event(row['id'], 'worker', success, accounting=accounting) is True
     assert raw(store, row['id'])['checkpoints']['each']['results']['count'] == 1
 
 
@@ -198,8 +198,8 @@ def compacted_run(tmp_path, monkeypatch):
         calls.append(text); return 'done'
     monkeypatch.setattr(worker.tools, 'execute', execute)
     original = store.worker_event
-    def crash(id, owner, event):
-        persisted = original(id, owner, event)
+    def crash(id, owner, event, **kwargs):
+        persisted = original(id, owner, event, **kwargs)
         if event.get('node_id') == 'each' and event['status'] == 'success' and not event.get('transient'): raise asyncio.CancelledError()
         return persisted
     monkeypatch.setattr(store, 'worker_event', crash)

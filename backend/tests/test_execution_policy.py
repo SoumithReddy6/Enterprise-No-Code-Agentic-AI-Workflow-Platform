@@ -133,8 +133,8 @@ async def test_resume_continues_the_run_budget_rather_than_replenishing_it(tmp_p
     monkeypatch.setattr(registry,'llm_node',model)
 
     original=store.worker_event
-    def die_after_first_agent(run_id,owner,event):
-        written=original(run_id,owner,event)
+    def die_after_first_agent(run_id,owner,event,**kwargs):
+        written=original(run_id,owner,event,**kwargs)
         if event.get('node_id')=='agent' and event.get('status')=='success':raise asyncio.CancelledError()
         return written
     monkeypatch.setattr(store,'worker_event',die_after_first_agent)
@@ -210,9 +210,9 @@ async def test_model_tokens_are_durable_before_the_node_finishes(tmp_path,monkey
         'edges':[{'id':'a','source':'input','target':'first'},{'id':'b','source':'first','target':'second'},
                  {'id':'c','source':'second','target':'out'}]})
     original=store.worker_event
-    def die_before_first_success(run_id,owner,event):
+    def die_before_first_success(run_id,owner,event,**kwargs):
         if event.get('node_id')=='first' and event.get('status')=='success':raise asyncio.CancelledError()
-        return original(run_id,owner,event)
+        return original(run_id,owner,event,**kwargs)
     monkeypatch.setattr(store,'worker_event',die_before_first_success)
     row=store.create_run(workflow.model_dump(mode='json'),'go')
     await worker.execute(store.claim_next(worker.owner))

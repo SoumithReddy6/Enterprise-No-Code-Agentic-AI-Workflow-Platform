@@ -10,6 +10,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import create_engine, Column, String, Text, JSON, Float, Boolean, select, update, or_, and_, inspect, text, UniqueConstraint, Integer, Index
 from sqlalchemy.orm import DeclarativeBase, Session
 from sqlalchemy.exc import IntegrityError
+from .accounting_state import CONTRACT,AccountingUnavailable,MISSING,STALE,checked_snapshot,restored_tokens,zero_snapshot
 
 class Base(DeclarativeBase):pass
 
@@ -148,6 +149,12 @@ MAX_PREVIEW_PATHS=20
 # The absolute ceiling for a stored loop event, whatever its fields hold.
 MAX_EVENT_BYTES=32_768
 EVENT_FIELD_OMITTED='[omitted: event size ceiling]'
+
+
+def publishes(event):
+    """Whether saving this event makes work reusable or counts usage, so needs accounting."""
+    checkpoint=bool(event.get('node_id')) and event.get('status')=='success' and 'outputs' in event and not event.get('transient')
+    return checkpoint or event.get('kind')=='loop_item' or bool(event.get('usage'))
 
 
 def observed(event):
@@ -463,9 +470,11 @@ class Store:
             except InvalidToken:raise ValueError('Credential cannot be decrypted. Restore the original encryption key.') from None
 
     def create_run(self,workflow,message,tenant_id='local',request_id=None,approval_required=False):
-        data={'approval_required':approval_required,'request_id':request_id,'id':new_id(),'workflow':workflow,'message':message,'status':'queued','created_at':now(),'output':'','error':'','checkpoints':{}}
+        # The accounting contract and its explicit zero baseline are created together: the
+        # only place a trusted zero is ever introduced. Older runs have neither.
+        data={'approval_required':approval_required,'request_id':request_id,'id':new_id(),'workflow':workflow,'message':message,'status':'queued','created_at':now(),'output':'','error':'','checkpoints':{},'accounting_contract':CONTRACT}
         with Session(self.engine) as s:
-            s.add(RunRecord(id=data['id'],tenant_id=tenant_id,data=data,created_at=data['created_at'],status='queued',name=workflow['name']))
+            s.add(RunRecord(id=data['id'],tenant_id=tenant_id,data=data,created_at=data['created_at'],status='queued',name=workflow['name'],accounting=zero_snapshot()))
             s.add(JobRecord(run_id=data['id'],status='queued'));s.commit()
         return {**data,'events':[]}
 
@@ -587,8 +596,29 @@ class Store:
 
     @staticmethod
     def _accounting(row):
-        """Run-wide spend: the column, or the document copy for runs from before it."""
+        """Run-wide spend: the column, or the document copy for runs from before it.
+
+        A run under the accounting contract has only the column: a missing column stays
+        missing rather than being masked by a stale document copy.
+        """
+        if row.data.get('accounting_contract') is not None:return row.accounting
         return row.accounting if row.accounting is not None else row.data.get('accounting')
+
+    @staticmethod
+    def _set_accounting(row,snapshot):
+        """The one checked accounting assignment, under the caller's fence. Never commits.
+
+        No writer may lower tokens_spent: a delayed or stale snapshot is refused, not
+        clamped or merged, and the caller's transaction is rolled back with it. An equal
+        total is allowed, so an action or approval change can be saved without new tokens.
+        A contract run's stored snapshot is checked strictly; an older run's stored total is
+        what its restore would use.
+        """
+        incoming=checked_snapshot(snapshot)
+        stored=Store._accounting(row)
+        previous=checked_snapshot(stored)['tokens_spent'] if row.data.get('accounting_contract') is not None else restored_tokens(stored)
+        if incoming['tokens_spent']<previous:raise AccountingUnavailable(STALE)
+        if stored!=incoming:row.accounting=incoming
 
     @staticmethod
     def _document(s,row):
@@ -614,6 +644,7 @@ class Store:
         if checkpoints:
             document['checkpoints']={node:Store._hydrate_loop(node,outputs,rows) if isinstance(outputs,dict) else outputs
                                      for node,outputs in checkpoints.items()}
+        document.pop('accounting',None)
         accounting=Store._accounting(row)
         if accounting is not None:document['accounting']=accounting
         return document
@@ -652,10 +683,18 @@ class Store:
             job=s.get(JobRecord,id)
             return not job or job.owner!=owner or job.status!='running' or job.cancel_requested
 
-    def worker_event(self,id,owner,event):
+    def worker_event(self,id,owner,event,*,accounting=None):
+        """Save one event and the state it publishes, with its accounting, in one transaction.
+
+        A checkpoint, loop item or reported usage is reusable or counted work, so on a run
+        under the accounting contract it commits only with the snapshot it was produced
+        under. None preserves the saved accounting; it never erases it.
+        """
         with Session(self.engine) as s:
             if not self._fence(s,id,owner):return False
             row=s.get(RunRecord,id);data=row.data
+            if accounting is not None:self._set_accounting(row,accounting)
+            elif data.get('accounting_contract') is not None and publishes(event):raise AccountingUnavailable(MISSING)
             checkpoint=None
             if event.get('node_id') and event['status']=='success' and 'outputs' in event and not event.get('transient'):
                 checkpoint=self._compact_loop(s,row,event['node_id'],event['outputs'])
@@ -739,21 +778,19 @@ class Store:
         with Session(self.engine) as s:
             if not self._fence(s,id,owner):
                 raise LeaseLost('Execution lease is no longer owned; the action was not started.')
-            row=s.get(RunRecord,id)
-            row.accounting=snapshot;s.commit()
+            self._set_accounting(s.get(RunRecord,id),snapshot);s.commit();return True
 
     def record_accounting(self,id,owner,snapshot):
         """Persist run-wide spend so a resumed run continues from it.
 
         Budgets and token totals are run-wide, so an interrupted run that came back with
-        a fresh ceiling could spend it again simply by being resumed.
+        a fresh ceiling could spend it again simply by being resumed. True only after a
+        confirmed commit, an unchanged value included; a lost fence saves nothing and is
+        never reported as saved.
         """
-        if not isinstance(snapshot,dict) or not snapshot:return
         with Session(self.engine) as s:
-            if not self._fence(s,id,owner):return
-            row=s.get(RunRecord,id)
-            if self._accounting(row)!=snapshot:
-                row.accounting=snapshot;s.commit()
+            if not self._fence(s,id,owner):return False
+            self._set_accounting(s.get(RunRecord,id),snapshot);s.commit();return True
 
     def mark_write(self,id,owner,node_id):
         with Session(self.engine) as s:

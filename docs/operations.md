@@ -426,10 +426,40 @@ calls are model spend. Charging model calls as actions too would bill one call t
 and if that reservation cannot be written — the lease has been lost, or the database is
 unavailable — the call never starts. Tokens cannot be reserved in advance, because the
 count is only known once the provider responds, so they are written the moment the call
-returns. The remaining gap is the interval between a response arriving and that write; a
-worker that dies inside it leaves at most one call's tokens unrecorded. A resumed run
-restores both budgets from the database, so it continues spending rather than starting
-over.
+returns (the fast save). If the fast save fails, the paid answer is kept and its tokens
+stay pending in memory. A resumed run restores both budgets from the database, so it
+continues spending rather than starting over.
+
+- **Saved work and its accounting commit together.** An event that saves reusable work
+  (a node checkpoint, a loop item, an approval frame) or reports usage is committed in
+  one transaction with the run's cumulative accounting as known at that moment. A resumed
+  run never reuses a saved answer without the tokens that paid for it. If the transaction
+  does not commit, neither the result nor its accounting is saved, and that work runs
+  again on resume.
+- **A pending save stops further model calls.** Before the next model request (including
+  a repair, an agent planning step or query generation), pending tokens are saved first.
+  This save charges no action. If it cannot be confirmed, the run fails with `Run
+  accounting could not be saved; no further model request was started. Saved results were
+  kept. Resume after storage recovers.` Retry and `on_error` do not recover this failure.
+  A lost lease stops the worker as before.
+- **Totals never go down.** Every accounting write (fast save, action reservation, outcome
+  commit, approval pause) is checked under the run's lease fence and refused if it would
+  lower `tokens_spent`. A delayed write from a cancelled thread cannot replace newer
+  accounting.
+- **Older runs.** Runs created before this check have no accounting contract. Their saved
+  results stay usable, and cached, deterministic or tool-only work can still finish, but
+  they start no new model request (`Past token usage cannot be verified for this older
+  run. ...`). An approved write that such a run has not started is refused when a worker
+  claims the run, before it is sent; reject or cancel the approval and start a new run.
+  A run under the contract whose saved accounting is missing or malformed fails before
+  any node runs (`Saved token accounting is missing or malformed. ...`). Relay never
+  assumes a zero baseline for these runs.
+
+Remaining limits: a worker that dies after a provider response but before any durable
+save loses that call's tokens, and the resumed run pays for the call again; this is at
+most one reported call between saves. The ceiling stays soft, as described above. Calls
+whose provider reports no usage, and provider-internal retries, are not counted. These
+gaps are tracked separately and are not closed by the commit rules above.
 
 Provider-level retries inside a single model call are covered by the token ceiling
 checked before that call, not re-checked per retry; a call already in flight is allowed

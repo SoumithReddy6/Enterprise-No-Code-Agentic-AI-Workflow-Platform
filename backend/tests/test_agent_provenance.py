@@ -87,11 +87,11 @@ async def test_agent_evidence_rechecked_immediately_before_cached_result(setup, 
     await worker.execute(store.claim_next(worker.owner))
     store.resume_run(run['id'])
     original=store.worker_event
-    def event(id,owner,value):
+    def event(id,owner,value,**kwargs):
         # Evidence disappears after preflight passed but before the agent's cached result would be reused.
         if value.get('node_id')=='input' and value.get('cached'):
             services.management.call_sync('remove_document','local',{'kb_id':kb['id'],'document_id':doc['id']})
-        return original(id,owner,value)
+        return original(id,owner,value,**kwargs)
     monkeypatch.setattr(store,'worker_event',event)
     await worker.execute(store.claim_next(worker.owner))
     result=store.run(run['id'])

@@ -1,0 +1,26 @@
+M1: KILLED by planned tests ['test_t01_', 'test_t02_outcome_transaction[after_commit]', 'test_t07_'] | 7 failed, 17 passed in 1.82s
+  failed: test_t01_outage_checkpoint_resume, test_t02_outcome_transaction[after_commit], test_t04_monotonic_writer[event], test_t05_cancelled_thread_cannot_regress, test_t06_cancelled_known_usage_snapshot, test_t07_loop_progress_replay, test_t08_pending_before_repair[recovered]
+M2: KILLED by planned tests ['test_t06_'] | 3 failed, 21 passed in 1.66s
+  failed: test_t01_outage_checkpoint_resume, test_t06_cancelled_known_usage_snapshot, test_t07_loop_progress_replay
+M3: KILLED by planned tests ['test_t03_pause_snapshot[valid]'] | 2 failed, 22 passed in 1.59s
+  failed: test_t03_pause_snapshot[valid], test_t04_monotonic_writer[pause]
+M4: KILLED by planned tests ['test_t04_', 'test_t05_'] | 5 failed, 19 passed in 1.59s
+  failed: test_t04_monotonic_writer[event], test_t04_monotonic_writer[fast], test_t04_monotonic_writer[pause], test_t04_monotonic_writer[reserve], test_t05_cancelled_thread_cannot_regress
+M5: KILLED by planned tests ['test_t08_'] | 4 failed, 20 passed in 1.60s
+  failed: test_t08_pending_before_repair[failed], test_t08_pending_before_repair[recovered], test_t09_durability_not_recoverable[grounded_continue], test_t09_durability_not_recoverable[structured_route]
+M6: KILLED by planned tests ['test_t10_legacy_trust[model]', 'test_t11_'] | 6 failed, 18 passed in 1.83s
+  failed: test_t10_legacy_trust[approved_write], test_t10_legacy_trust[model], test_t11_invalid_trusted_snapshot[-1], test_t11_invalid_trusted_snapshot[15], test_t11_invalid_trusted_snapshot[True], test_t11_invalid_trusted_snapshot[missing]
+M7: KILLED by planned tests ['test_t10_legacy_trust[approved_write]'] | 1 failed, 23 passed in 1.63s
+  failed: test_t10_legacy_trust[approved_write]
+M8: KILLED by planned tests ['test_t09_'] | 3 failed, 21 passed in 1.62s
+  failed: test_t08_pending_before_repair[failed], test_t09_durability_not_recoverable[grounded_continue], test_t09_durability_not_recoverable[structured_route]
+M9: KILLED by planned tests ['test_t09_durability_not_recoverable[grounded_continue]'] | 1 failed, 23 passed in 1.59s
+  failed: test_t09_durability_not_recoverable[grounded_continue]
+M10: KILLED by planned tests ['test_t09_durability_not_recoverable[structured_route]'] | 2 failed, 22 passed in 1.67s
+  failed: test_t08_pending_before_repair[failed], test_t09_durability_not_recoverable[structured_route]
+M11: KILLED by planned tests ['test_t08_pending_before_repair[failed]'] | 3 failed, 21 passed in 1.62s
+  failed: test_t08_pending_before_repair[failed], test_t09_durability_not_recoverable[grounded_continue], test_t09_durability_not_recoverable[structured_route]
+M12: KILLED by planned tests ['test_t06_'] | 1 failed, 23 passed in 1.64s
+  failed: test_t06_cancelled_known_usage_snapshot
+
+ALL PLANNED KILLS: True

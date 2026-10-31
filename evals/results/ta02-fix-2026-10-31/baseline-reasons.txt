@@ -1,0 +1,44 @@
+E   AssertionError: the saved answer is ahead of its accounting
+backend/tests/test_accounting_durability.py:157: AssertionError: the saved answer is ahead of its accounting
+E   AssertionError: assert ('m0' in {'input': {'message': 'go', '_provenance': {'v': 2, 'ports': {'message': 'source'}, 'eligible_ports': ['message']}}, '... {'text': 'answer', 'provider': 'ollama', '_provenance': {'v': 
+backend/tests/test_accounting_durability.py:203: AssertionError: assert ('m0' in {'input': {'message': 'go', '_provenance': {'v': 2, 'ports': {'message': 'source'}, 'eligible_ports': ['message']}}, '... {'text': 'answer'
+E   TypeError: pause() got an unexpected keyword argument 'accounting'
+backend/tests/test_accounting_durability.py:224: TypeError: pause() got an unexpected keyword argument 'accounting'
+E   Failed: DID NOT RAISE ValueError
+backend/tests/test_accounting_durability.py:219: Failed: DID NOT RAISE ValueError
+E   TypeError: Store.worker_event() got an unexpected keyword argument 'accounting'
+backend/tests/test_accounting_durability.py:239: TypeError: Store.worker_event() got an unexpected keyword argument 'accounting'
+E   Failed: DID NOT RAISE ValueError
+backend/tests/test_accounting_durability.py:247: Failed: DID NOT RAISE ValueError
+E   Failed: DID NOT RAISE ValueError
+backend/tests/test_accounting_durability.py:247: Failed: DID NOT RAISE ValueError
+E   TypeError: pause() got an unexpected keyword argument 'accounting'
+backend/tests/test_accounting_durability.py:243: TypeError: pause() got an unexpected keyword argument 'accounting'
+E   TypeError: Store.worker_event() got an unexpected keyword argument 'accounting'
+backend/tests/test_accounting_durability.py:282: TypeError: Store.worker_event() got an unexpected keyword argument 'accounting'
+E   AssertionError: the cancelled response was paid for
+backend/tests/test_accounting_durability.py:304: AssertionError: the cancelled response was paid for
+E   AssertionError: the saved item is ahead of its accounting
+backend/tests/test_accounting_durability.py:342: AssertionError: the saved item is ahead of its accounting
+E   AssertionError: known spend is flushed before the next request
+backend/tests/test_accounting_durability.py:372: AssertionError: known spend is flushed before the next request
+E   AssertionError: known spend is flushed before the next request
+backend/tests/test_accounting_durability.py:372: AssertionError: known spend is flushed before the next request
+E   ModuleNotFoundError: No module named 'backend.app.accounting_state'
+backend/tests/test_accounting_durability.py:387: ModuleNotFoundError: No module named 'backend.app.accounting_state'
+E   ModuleNotFoundError: No module named 'backend.app.accounting_state'
+backend/tests/test_accounting_durability.py:387: ModuleNotFoundError: No module named 'backend.app.accounting_state'
+E   AssertionError: assert ('success' == 'failed'
+backend/tests/test_accounting_durability.py:430: AssertionError: assert ('success' == 'failed'
+E   AssertionError: assert ('success' == 'failed'
+backend/tests/test_accounting_durability.py:446: AssertionError: assert ('success' == 'failed'
+E   AssertionError: assert ('success' == 'failed'
+backend/tests/test_accounting_durability.py:491: AssertionError: assert ('success' == 'failed'
+E   AssertionError: assert ('success' == 'failed'
+backend/tests/test_accounting_durability.py:491: AssertionError: assert ('success' == 'failed'
+E   AssertionError: assert ('success' == 'failed'
+backend/tests/test_accounting_durability.py:491: AssertionError: assert ('success' == 'failed'
+E   AssertionError: assert ('success' == 'failed'
+backend/tests/test_accounting_durability.py:491: AssertionError: assert ('success' == 'failed'
+E   Failed: DID NOT RAISE LeaseLost
+backend/tests/test_accounting_durability.py:512: Failed: DID NOT RAISE LeaseLost

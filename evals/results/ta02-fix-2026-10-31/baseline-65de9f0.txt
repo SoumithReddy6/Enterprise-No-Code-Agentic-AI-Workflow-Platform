@@ -1,0 +1,97 @@
+# Final TA02 tests (24 cases) on the unchanged application: git archive 65de9f0 + backend/tests/test_accounting_durability.py only.
+# HEAD application is identical to f3e0923 (90d9839/65de9f0 changed docs only).
+# test file sha256 e8900b05e5d1df6481979540d05e4fe6b325bdb02d1d4d7ae1f1623f17781ed1
+E           AssertionError: the saved answer is ahead of its accounting
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:16.414081+00:00","request_id":null,"run_id":"c3bc0e9f43f34d00aa2c4ee66d7214d8","tenant":"local","event":"accounting.persist_failed","node_id":"input","reason_code":"post_event","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:16.417523+00:00","request_id":null,"run_id":"c3bc0e9f43f34d00aa2c4ee66d7214d8","tenant":"local","event":"accounting.persist_failed","node_id":"m0","reason_code":"post_spend","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:16.421357+00:00","request_id":null,"run_id":"c3bc0e9f43f34d00aa2c4ee66d7214d8","tenant":"local","event":"run.finish","status":"failed","seconds":0.046}
+E               AssertionError: assert ('m0' in {'input': {'message': 'go', '_provenance': {'v': 2, 'ports': {'message': 'source'}, 'eligible_ports': ['message']}}, '... {'text': 'answer', 'provider': 'ollama', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source'}}}} and None == 15)
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:16.569135+00:00","request_id":null,"run_id":"c9f47d01b43e48deba2b8af79b3810c0","tenant":"local","event":"accounting.persist_failed","node_id":"input","reason_code":"post_event","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:16.570885+00:00","request_id":null,"run_id":"c9f47d01b43e48deba2b8af79b3810c0","tenant":"local","event":"accounting.persist_failed","node_id":"m0","reason_code":"post_spend","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:16.574329+00:00","request_id":null,"run_id":"c9f47d01b43e48deba2b8af79b3810c0","tenant":"local","event":"run.finish","status":"failed","seconds":0.035}
+E               TypeError: pause() got an unexpected keyword argument 'accounting'
+E               Failed: DID NOT RAISE ValueError
+E           TypeError: Store.worker_event() got an unexpected keyword argument 'accounting'
+E           Failed: DID NOT RAISE ValueError
+E           Failed: DID NOT RAISE ValueError
+E       TypeError: pause() got an unexpected keyword argument 'accounting'
+E                                     TypeError: Store.worker_event() got an unexpected keyword argument 'accounting'
+E           AssertionError: the cancelled response was paid for
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:26.942391+00:00","request_id":null,"run_id":"597313379bf7467ab5f6d1dc4a540cef","tenant":"local","event":"run.finish","status":"failed","seconds":0.046}
+E           AssertionError: the saved item is ahead of its accounting
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.097452+00:00","request_id":null,"run_id":"03e4517da85f435c95d84527bb564526","tenant":"local","event":"accounting.persist_failed","node_id":"input","reason_code":"post_event","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.101437+00:00","request_id":null,"run_id":"03e4517da85f435c95d84527bb564526","tenant":"local","event":"accounting.persist_failed","node_id":"tickets","reason_code":"post_event","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.104453+00:00","request_id":null,"run_id":"03e4517da85f435c95d84527bb564526","tenant":"local","event":"accounting.persist_failed","node_id":"work","reason_code":"post_spend","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.105650+00:00","request_id":null,"run_id":"03e4517da85f435c95d84527bb564526","tenant":"local","event":"accounting.persist_failed","node_id":"work","reason_code":"post_event","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.109166+00:00","request_id":null,"run_id":"03e4517da85f435c95d84527bb564526","tenant":"local","event":"run.finish","status":"failed","seconds":0.044}
+____________________ test_t08_pending_before_repair[failed] ____________________
+flush = 'failed'
+    @pytest.mark.parametrize('flush', ['failed', 'recovered'])
+                if flush == 'failed' and value['tokens_spent']: return False
+E           AssertionError: known spend is flushed before the next request
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.191978+00:00","request_id":null,"run_id":"f93f69faa4674b8ea89c53029155330d","tenant":"local","event":"accounting.persist_failed","node_id":"input","reason_code":"post_event","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.194561+00:00","request_id":null,"run_id":"f93f69faa4674b8ea89c53029155330d","tenant":"local","event":"accounting.persist_failed","node_id":"agent","reason_code":"post_spend","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.195098+00:00","request_id":null,"run_id":"f93f69faa4674b8ea89c53029155330d","tenant":"local","event":"accounting.persist_failed","node_id":"agent","reason_code":"post_spend","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.196586+00:00","request_id":null,"run_id":"f93f69faa4674b8ea89c53029155330d","tenant":"local","event":"accounting.persist_failed","node_id":"agent","reason_code":"post_event","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.198712+00:00","request_id":null,"run_id":"f93f69faa4674b8ea89c53029155330d","tenant":"local","event":"accounting.persist_failed","node_id":"out","reason_code":"post_event","error_type":"OSError"}
+    @pytest.mark.parametrize('flush', ['failed', 'recovered'])
+                if flush == 'failed' and value['tokens_spent']: return False
+E           AssertionError: known spend is flushed before the next request
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.255991+00:00","request_id":null,"run_id":"21b9ad79a63b4fa29b68804ba1461e2c","tenant":"local","event":"accounting.persist_failed","node_id":"input","reason_code":"post_event","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.258459+00:00","request_id":null,"run_id":"21b9ad79a63b4fa29b68804ba1461e2c","tenant":"local","event":"accounting.persist_failed","node_id":"agent","reason_code":"post_spend","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.259001+00:00","request_id":null,"run_id":"21b9ad79a63b4fa29b68804ba1461e2c","tenant":"local","event":"accounting.persist_failed","node_id":"agent","reason_code":"post_spend","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.260242+00:00","request_id":null,"run_id":"21b9ad79a63b4fa29b68804ba1461e2c","tenant":"local","event":"accounting.persist_failed","node_id":"agent","reason_code":"post_event","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.262129+00:00","request_id":null,"run_id":"21b9ad79a63b4fa29b68804ba1461e2c","tenant":"local","event":"accounting.persist_failed","node_id":"out","reason_code":"post_event","error_type":"OSError"}
+E       ModuleNotFoundError: No module named 'backend.app.accounting_state'
+E       ModuleNotFoundError: No module named 'backend.app.accounting_state'
+>               assert run['status'] == 'failed' and run['error'] == LEGACY_MODEL and calls == []
+E               AssertionError: assert ('success' == 'failed'
+E                 - failed
+                assert run['status'] == 'failed' and run['error'] == LEGACY_MODEL and calls == []
+>               assert run['status'] == 'failed' and run['error'] == LEGACY_WRITE
+E               AssertionError: assert ('success' == 'failed'
+E                 - failed
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.466776+00:00","request_id":null,"run_id":"e95ce2c5c4454a05bd409d9aee8a0dba","tenant":"local","event":"node.failed","node_id":"agent","transient":false,"cached":false,"duration_ms":null}
+>           assert run['status'] == 'failed' and run['error'] == INVALID and calls == []
+E           AssertionError: assert ('success' == 'failed'
+E             - failed
+>           assert run['status'] == 'failed' and run['error'] == INVALID and calls == []
+E           AssertionError: assert ('success' == 'failed'
+E             - failed
+>           assert run['status'] == 'failed' and run['error'] == INVALID and calls == []
+E           AssertionError: assert ('success' == 'failed'
+E             - failed
+>           assert run['status'] == 'failed' and run['error'] == INVALID and calls == []
+E           AssertionError: assert ('success' == 'failed'
+E             - failed
+E       Failed: DID NOT RAISE LeaseLost
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.925798+00:00","request_id":null,"run_id":null,"tenant":null,"event":"accounting.persist_failed","node_id":"m0","reason_code":"post_spend","error_type":"LeaseLost"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:16.509161+00:00","request_id":null,"run_id":"af6619cdaf174ec1ab356e6bbe0a8527","tenant":"local","event":"accounting.persist_failed","node_id":"input","reason_code":"post_event","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:16.511119+00:00","request_id":null,"run_id":"af6619cdaf174ec1ab356e6bbe0a8527","tenant":"local","event":"accounting.persist_failed","node_id":"m0","reason_code":"post_spend","error_type":"OSError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:16.514828+00:00","request_id":null,"run_id":"af6619cdaf174ec1ab356e6bbe0a8527","tenant":"local","event":"run.finish","status":"failed","seconds":0.031}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T22:25:27.541184+00:00","request_id":null,"run_id":"b38a9f48178f4e6fb95ca74a3ae7667e","tenant":"local","event":"run.finish","status":"failed","seconds":0.04}
+PASSED backend/tests/test_accounting_durability.py::test_t02_outcome_transaction[before_commit]
+PASSED backend/tests/test_accounting_durability.py::test_t10_legacy_trust[cached_and_tool]
+FAILED backend/tests/test_accounting_durability.py::test_t01_outage_checkpoint_resume
+FAILED backend/tests/test_accounting_durability.py::test_t02_outcome_transaction[after_commit]
+FAILED backend/tests/test_accounting_durability.py::test_t03_pause_snapshot[valid]
+FAILED backend/tests/test_accounting_durability.py::test_t03_pause_snapshot[missing]
+FAILED backend/tests/test_accounting_durability.py::test_t04_monotonic_writer[event]
+FAILED backend/tests/test_accounting_durability.py::test_t04_monotonic_writer[fast]
+FAILED backend/tests/test_accounting_durability.py::test_t04_monotonic_writer[reserve]
+FAILED backend/tests/test_accounting_durability.py::test_t04_monotonic_writer[pause]
+FAILED backend/tests/test_accounting_durability.py::test_t05_cancelled_thread_cannot_regress
+FAILED backend/tests/test_accounting_durability.py::test_t06_cancelled_known_usage_snapshot
+FAILED backend/tests/test_accounting_durability.py::test_t07_loop_progress_replay
+FAILED backend/tests/test_accounting_durability.py::test_t08_pending_before_repair[failed]
+FAILED backend/tests/test_accounting_durability.py::test_t08_pending_before_repair[recovered]
+FAILED backend/tests/test_accounting_durability.py::test_t09_durability_not_recoverable[grounded_continue]
+FAILED backend/tests/test_accounting_durability.py::test_t09_durability_not_recoverable[structured_route]
+FAILED backend/tests/test_accounting_durability.py::test_t10_legacy_trust[model]
+FAILED backend/tests/test_accounting_durability.py::test_t10_legacy_trust[approved_write]
+FAILED backend/tests/test_accounting_durability.py::test_t11_invalid_trusted_snapshot[missing]
+FAILED backend/tests/test_accounting_durability.py::test_t11_invalid_trusted_snapshot[True]
+FAILED backend/tests/test_accounting_durability.py::test_t11_invalid_trusted_snapshot[-1]
+FAILED backend/tests/test_accounting_durability.py::test_t11_invalid_trusted_snapshot[15]
+FAILED backend/tests/test_accounting_durability.py::test_t12_fast_save_lease_loss
+22 failed, 2 passed in 12.31s

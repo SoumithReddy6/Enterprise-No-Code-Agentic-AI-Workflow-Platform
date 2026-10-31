@@ -22,6 +22,7 @@ pytest and the existing scenario/process harnesses. No dependency or schema migr
 - Keep cumulative totals separate from per-attempt event usage; replay sends no new request.
 - `tokens_spent` is an exact nonnegative integer; booleans are invalid.
 - No accounting writer may lower a stored total. Compare under the job fence; equal is allowed.
+- Every refused supplied/missing accounting write raises `AccountingUnavailable`, not a plain `ValueError`; existing lease-loss/cancellation control flow remains unchanged.
 - New runs get `run.data['accounting_contract']=1` and a zero snapshot in one creation transaction.
 - Existing/legacy runs are never silently promoted. New model requests require trusted accounting.
 - Unverified legacy runs with unstarted approved writes fail at claim before sending them.
@@ -51,13 +52,13 @@ a compatibility assertion. Keep provider responses synthetic, Worker/Store real.
 | T01 `outage_checkpoint_resume` (D) | 1 | Limit 15, response 10+5. Disable fast saves; interrupt just after m0 commit. `m0` and cumulative 15 survive together; resume reuses m0, refuses m1, provider calls stay 1. Also inspect creation's marker/zero snapshot without hiding the original failure behind that new assertion. |
 | T02 `outcome_transaction` (D/C), before/after commit | 2 | With fast saves disabled, pre-commit failure leaves checkpoint/event and accounting at their old state; post-commit interruption leaves both new checkpoint and 15 tokens. Never claim a lost commit acknowledgment proves rollback. |
 | T03 `pause_snapshot`, valid/missing (D) | 2 | Stored 0, frozen in-memory 15 with a reserved action. Valid: failed pause commit rolls back approval/frames/deferred/accounting, then successful retry commits 15 plus the deferred key once. Missing: `AccountingUnavailable`, no new pause state. No prerequisite successful fast save. |
-| T04 `monotonic_writer` (D), event/fast/reserve/pause | 4 | Save 30, attempt 10 through each writer. Typed refusal, saved 30 unchanged and no associated new checkpoint/frame. Equal-total updates still work. |
+| T04 `monotonic_writer` (D), event/fast/reserve/pause | 4 | Save 30, attempt 10 through each writer. Assert `AccountingUnavailable` specifically, saved 30 unchanged and no associated new checkpoint/frame. Equal-total updates still work. |
 | T05 `cancelled_thread_cannot_regress` (D) | 1 | Block old 10-token thread before its fence; cancel its await; commit a 30-token outcome; release/join the old thread. Saved total remains 30. Controlled storage race, not a claim that parallel graphs are supported. |
 | T06 `cancelled_known_usage_snapshot` (D/C) | 1 | First nested/provider call reports and saves 15. Second reports 15, then raises cancellation before `record_spend`, so memory is 30 but the sink/DB are still 15. Cancel emission must persist 30. Do not infer it from TA03 metrics. Also assert acknowledging captured generation 1 after generation 2 exists leaves generation 2 pending. |
 | T07 `loop_progress_replay` (D/C) | 1 | Query/model body reports 15; stop after item 0 commit. Progress and 15 survive; resume never repeats item 0 or adds its tokens again; verify final action counter as in the uninterrupted control. |
 | T08 `pending_before_repair` (D), failed/recovered write | 2 | Fast save fails after the first paid response. A strict flush returning false prevents call 2; a confirmed flush permits exactly the intended repair. Calls 1/2 respectively, with no action debit by the flush. |
 | T09 `durability_not_recoverable` (D), grounded-continue/structured-route | 2 | Use real agent repair paths. Accounting refusal must remain typed through `finalize_grounded_answer` and the structured-only wrapper, fail by name, and cause no fallback/new provider request. Default fail is already exercised by T08. |
-| T10 `legacy_trust` (D/C), model/approved-write/cached | 3 | Plausible old snapshot with no contract: new model request refused; unstarted approved write refused at claim with receiver calls 0; fully cached completion succeeds with model calls 0 and marker absent. Do not restart external actions. |
+| T10 `legacy_trust` (D/C), model/approved-write/cached-and-tool | 3 | Old snapshot has only `usage` (10+5), with no contract or `tokens_spent`: new model request refused; unstarted approved write refused at claim with receiver calls 0; cached work plus one fresh read-only HTTP GET completes with model calls 0, tool calls 1, total 15 and marker absent. The tool reservation must pass the legacy monotonic guard. Do not restart external actions. |
 | T11 `invalid_trusted_snapshot` (D), missing/boolean/negative/text | 4 | Contract marker 1 with missing snapshot or totals `True`, `-1`, `"15"`: named refusal, no provider call, no inferred zero baseline. |
 | T12 `fast_save_lease_loss` (D/C) | 1 | Real llm_node/provider returns known usage, persistence raises `LeaseLost`; the exact exception propagates, no retry or repair. Keep the pre-existing paid-answer-on-ordinary-I/O-outage control. |
 | **Total** | **24** | Reuse existing TA01/TA04/S07/approval/R01 compatibility tests. |
@@ -83,6 +84,12 @@ before later runtime checks. Update scenario entrypoints in Task 3 before execut
 - `Store._set_accounting(row, snapshot) -> None`: **no commit**. Validate, compare with the
   latest persisted total under the caller's fence, reject a smaller total, assign a detached
   snapshot. Do not clamp totals or merge unrelated snapshots.
+  For marked runs, strictly validate the stored snapshot. For legacy runs, stored total is
+  `restored_tokens(Store._accounting(row))`, including the column/document fallback, rather
+  than applying the new strict schema to old data or skipping the guard. Share the existing
+  pure fallback with the accounting helper/compiler (re-export it at its current path);
+  do not introduce a second calculator. Invalid incoming snapshots, missing required
+  snapshots and regressions all raise `AccountingUnavailable`.
 - `Store.worker_event(id, owner, event, *, accounting=None) -> bool`;
   `record_accounting(...) -> bool`; `reserve_accounting(...) -> bool`: true only after
   acknowledged commit (including an already-equal saved value). `record_accounting` no
@@ -175,9 +182,13 @@ constructor arguments preserving its current defaults, and use `10, 5` for these
 The fixture server lives in the parent, outside the killed worker. In the existing
 milestone worker entrypoint only, require its lab marker and add test-only flags for
 fast-save failure and `before_commit`/`after_commit` barriers. The before-commit barrier
-must be inside the transaction (flush then block before commit), not just before calling
-`worker_event`; the after-commit barrier fires after the real method returns true.
+uses the engine's documented `ConnectionEvents.commit` event
+(`event.listen(store.engine, 'commit', callback)`), after the Session has flushed and before
+the DBAPI commit, not `SessionEvents.before_commit` and not before calling `worker_event`.
+Scope it with the test entrypoint's active-outcome context; do not flush or add hooks in
+application code. The after-commit barrier fires after the real method returns true.
 Scope these hooks to the selected LLM outcome so run creation is not blocked.
+Reference: [SQLAlchemy 2.0 ConnectionEvents.commit](https://docs.sqlalchemy.org/en/20/core/events.html#sqlalchemy.events.ConnectionEvents.commit).
 
 - [ ] Update scenario wrappers of `worker_event` to accept/forward `**kwargs`; preserve `args[-1]` as the event by passing accounting as a keyword. Update `approvals.pause` in `request_review_worker.py` similarly. Recheck Task 1's pytest/direct-call edits; never disable the marker to hide a required-snapshot failure.
 - [ ] Implement the four rows using fixture LLM usage 10+5 and limit 15. Before-commit kill, with fast saves disabled: neither new reusable state nor its accounting update is committed. After-commit kill: both survive, resume sends no duplicate saved request and no second over-budget call. Receiver stays outside the killed worker; use existing lease recovery facilities and isolate all databases/schemas.
@@ -197,6 +208,12 @@ The current wrappers are in `test_switch.py`, `test_loop_completeness.py`,
 `test_budget_recovery.py`, `test_loop_event_bounds.py`, `test_token_budget_recovery.py`,
 `test_s07_boundaries.py`, `test_tool_truncation.py`, `test_loop_checkpoint.py`,
 `test_common_replies.py` under `backend/tests`, plus `scripts/scenarios/lab.py`.
+Also include direct-call fixtures in `backend/tests/test_durable.py`,
+`backend/tests/test_loop_storage.py`, `backend/tests/test_operator_metrics.py`,
+`backend/tests/test_request_admission_metrics.py`, `backend/tests/test_run_history.py` and
+`backend/tests/test_runtime_answerability.py`. All successful publishing calls on newly
+marked runs must supply snapshots; keep every existing assertion. This includes the 24
+direct `worker_event` call sites identified by the plan review, not just monkeypatched wrappers.
 Use `rg -n 'worker_event|approvals.pause|reserve_accounting|record_accounting' backend/tests scripts` before the signature edit
 to enumerate direct call sites too. These are mechanical compatibility changes; retain
 their original behavioral assertions and record any non-mechanical change separately.
@@ -212,4 +229,17 @@ their original behavioral assertions and record any non-mechanical change separa
 - Close TA02 after the atomic/pause/monotonic/legacy/pending barriers and normal gates pass.
   New unrelated findings are recorded for their owning steps rather than extending this plan.
 
-**Next action:** review this implementation plan. Execution is not started by writing it.
+**Next action:** execute Task 1 under the approved plan after the four final edits below;
+no additional full review round is required.
+
+## Final plan-review check (TA02-P1–P4)
+
+- P1: every refused accounting write uses `AccountingUnavailable`; T04 asserts that type.
+- P2: legacy stored totals use the existing `restored_tokens` fallback; marked data stays
+  strict. T10 now exercises a fresh read-only tool/reservation without adding a case.
+- P3: the six direct-call test modules are explicitly listed above; assertions are retained.
+- P4: the process barrier names `ConnectionEvents.commit`, verified against SQLAlchemy
+  documentation and the installed 2.0.52 ordering. No production test hook is needed.
+
+These edits satisfy the requested short check. The test budget and scope are unchanged;
+the plan is approved for execution with these edits, without another full review round.

@@ -111,8 +111,10 @@ def validate_grounded(text,passages,output_schema=None):
     return value
 
 async def finalize_grounded_answer(text,passages,repair,output_schema=None):
+    from .execution_policy import CONTROL_FLOW
     try:contract,compliance=await validate_with_repair(text,lambda raw:validate_grounded(raw,passages,output_schema),repair)
     except token_budget.TokenBudgetExhausted:raise
+    except CONTROL_FLOW:raise  # A refused repair request is not an invalid answer.
     except ValueError as exc:raise GroundedContractError(f'Invalid grounded answer contract after one repair: {exc}') from None
     if contract['abstain']:
         if not passages:
@@ -453,8 +455,10 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
             return await budget_abstention(ctx,str(exc),evidence,truncations,provider)
         if ctx.platform:await ctx.platform('verify_vector_sources',[{k:v for k,v in s.items() if k not in ('citation','cited')} for s in sources])
     elif structured:
+        from .execution_policy import CONTROL_FLOW
         try:final,_=await validate_with_repair(final,lambda text:validate_structured(text,config.output_schema),repair)
         except token_budget.TokenBudgetExhausted:raise
+        except CONTROL_FLOW:raise
         except ValueError as exc:raise ValueError(f'Agent output did not match the required structure: {exc}') from None
     if config.role=='memory' and ctx.platform:
         await ctx.platform('memory_write',config.memory_key,input_text,final)

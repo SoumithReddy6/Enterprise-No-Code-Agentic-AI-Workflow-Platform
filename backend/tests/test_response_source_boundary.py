@@ -371,9 +371,9 @@ async def loop_case(tmp_path, monkeypatch, services, crash, remove=None, two_ite
     watch_verifier(monkeypatch, services, phase, timeline)
     remove_document = remover(services, kb, doc, timeline)
     original = store.worker_event
-    def first(id, owner, event):
+    def first(id, owner, event, **kwargs):
         if event.get('status') == 'running': phase['node'] = event.get('node_id')
-        saved = original(id, owner, event)
+        saved = original(id, owner, event, **kwargs)
         if crash == 'item' and event.get('kind') == 'loop_item': raise asyncio.CancelledError()
         if event.get('status') == 'success' and not event.get('transient') and event.get('node_id') == {'loop': 'each', 'out': 'out'}.get(crash):
             raise asyncio.CancelledError()
@@ -386,8 +386,8 @@ async def loop_case(tmp_path, monkeypatch, services, crash, remove=None, two_ite
     assert ('each' in before['checkpoints']) == (crash != 'item')
     if crash == 'item': assert '0' in before['loop_progress']['each']
     if repeat:
-        def middle(id, owner, event):
-            saved = original(id, owner, event)
+        def middle(id, owner, event, **kwargs):
+            saved = original(id, owner, event, **kwargs)
             if event.get('node_id') == 'out' and event.get('status') == 'success' and not event.get('transient'):
                 raise asyncio.CancelledError()
             return saved
@@ -397,9 +397,9 @@ async def loop_case(tmp_path, monkeypatch, services, crash, remove=None, two_ite
         middle_run = store.run(row['id'])
         assert middle_run['status'] != 'success' and 'out' in middle_run['checkpoints'], middle_run.get('error')
     if remove == 'before_resume': remove_document()
-    def second(id, owner, event):
+    def second(id, owner, event, **kwargs):
         if event.get('status') == 'running': phase['node'] = event.get('node_id')
-        saved = original(id, owner, event)
+        saved = original(id, owner, event, **kwargs)
         if remove == 'after_prompt' and event.get('node_id') == 'render' and event.get('status') == 'success':
             remove_document()
         return saved
@@ -471,8 +471,8 @@ async def test_u20_the_refusal_fails_the_run_by_name_under_every_on_error(tmp_pa
         assert validate_workflow(workflow) == []
         timeline = []; remove_document = remover(services, kb, doc, timeline)
         original = store.worker_event
-        def event(id, owner, payload):
-            saved = original(id, owner, payload)
+        def event(id, owner, payload, **kwargs):
+            saved = original(id, owner, payload, **kwargs)
             if payload.get('node_id') == 'agent' and payload.get('status') == 'success': remove_document()
             return saved
         monkeypatch.setattr(store, 'worker_event', event)

@@ -24,8 +24,8 @@ def main():
         (directory/'review-barrier').write_text(name)
         while True:time.sleep(.05)
     old_pause=approvals.pause
-    def pause(*args):
-        result=old_pause(*args);block('pause');return result
+    def pause(*args,**kwargs):
+        result=old_pause(*args,**kwargs);block('pause');return result
     approvals.pause=pause
     old_consume=approvals.consume_review
     def consume(*args):

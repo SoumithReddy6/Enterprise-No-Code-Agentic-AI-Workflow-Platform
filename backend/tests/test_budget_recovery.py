@@ -154,8 +154,8 @@ async def test_resume_after_the_recovery_reaches_the_same_verdict(tmp_path, monk
     (tmp_path / 'b').mkdir()
     store, worker, calls = durable(tmp_path / 'b', monkeypatch)
     original = store.worker_event
-    def crash(id, owner, event):
-        persisted = original(id, owner, event)
+    def crash(id, owner, event, **kwargs):
+        persisted = original(id, owner, event, **kwargs)
         if event.get('node_id') == 'second' and event.get('recovered'): raise asyncio.CancelledError()
         return persisted
     monkeypatch.setattr(store, 'worker_event', crash)

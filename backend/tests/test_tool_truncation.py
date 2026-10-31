@@ -97,8 +97,8 @@ async def test_the_truncation_survives_resume_from_the_checkpoint(tmp_path, monk
         calls.append(1); return page(100, total=200)
     monkeypatch.setattr(worker.tools, 'execute_prepared', prepared)
     original = store.worker_event
-    def crash(id, owner, event):
-        persisted = original(id, owner, event)
+    def crash(id, owner, event, **kwargs):
+        persisted = original(id, owner, event, **kwargs)
         if event.get('node_id') == 'tickets' and event['status'] == 'success': raise asyncio.CancelledError()
         return persisted
     monkeypatch.setattr(store, 'worker_event', crash)
@@ -219,8 +219,8 @@ async def test_malformed_metadata_in_a_checkpoint_is_refused_on_restore(tmp_path
     from backend.app.storage import RunRecord
     store, worker = with_jira(tmp_path, monkeypatch, page(100, total=200))
     original = store.worker_event
-    def crash(id, owner, event):
-        persisted = original(id, owner, event)
+    def crash(id, owner, event, **kwargs):
+        persisted = original(id, owner, event, **kwargs)
         if event.get('node_id') == 'tickets' and event['status'] == 'success': raise asyncio.CancelledError()
         return persisted
     monkeypatch.setattr(store, 'worker_event', crash)

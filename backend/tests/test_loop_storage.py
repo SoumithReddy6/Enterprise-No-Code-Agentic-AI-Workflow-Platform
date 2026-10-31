@@ -26,6 +26,23 @@ def claimed_run(store):
     return row['id']
 
 
+def saved(store, run_id):
+    """The run's current snapshot: a loop item commits together with its accounting (TA02)."""
+    return store.run(run_id)['accounting']
+
+
+def canonical(**budget):
+    return {'action_budget': budget, 'tokens_spent': 0, 'usage': {}, 'usage_by_invocation': {}}
+
+
+def make_legacy(store, run_id, accounting):
+    """A run from before the accounting column and contract: only a document copy."""
+    with Session(store.engine) as s:
+        record = s.get(RunRecord, run_id)
+        record.data = {**{k: v for k, v in record.data.items() if k != 'accounting_contract'}, 'accounting': accounting}
+        record.accounting = None; s.commit()
+
+
 def item_event(index, value='done', **extra):
     return {'kind': 'loop_item', 'status': 'info', 'node_id': 'each', 'item_index': index, 'transient': True,
             'item_result': {'index': index, 'status': 'success', 'value': value, 'error': '', **extra}}
@@ -37,7 +54,7 @@ def test_items_are_rows_and_the_run_document_does_not_grow(tmp_path, monkeypatch
     store, *_ = durable_setup(tmp_path, monkeypatch)
     id = claimed_run(store)
     with Session(store.engine) as s: before = len(json.dumps(s.get(RunRecord, id).data))
-    for index in range(5): assert store.worker_event(id, 'worker', item_event(index, 'v' * 5000))
+    for index in range(5): assert store.worker_event(id, 'worker', item_event(index, 'v' * 5000), accounting=saved(store, id))
     with Session(store.engine) as s: after = s.get(RunRecord, id).data
     assert 'loop_progress' not in after and len(json.dumps(after)) == before
     assert sorted(rows(store, id)) == [('each', i) for i in range(5)]
@@ -46,8 +63,8 @@ def test_items_are_rows_and_the_run_document_does_not_grow(tmp_path, monkeypatch
 def test_a_repeated_item_event_updates_its_row_instead_of_duplicating_it(tmp_path, monkeypatch):
     store, *_ = durable_setup(tmp_path, monkeypatch)
     id = claimed_run(store)
-    store.worker_event(id, 'worker', item_event(0, 'first'))
-    store.worker_event(id, 'worker', item_event(0, 'second'))
+    store.worker_event(id, 'worker', item_event(0, 'first'), accounting=saved(store, id))
+    store.worker_event(id, 'worker', item_event(0, 'second'), accounting=saved(store, id))
     assert rows(store, id) == {('each', 0): {'index': 0, 'status': 'success', 'value': 'second', 'error': ''}}
 
 
@@ -57,7 +74,7 @@ def test_the_row_and_its_event_commit_together_or_not_at_all(tmp_path, monkeypat
     events_before = len(store.run(id)['events'])
     # A value the JSON column cannot store fails the flush: the event must roll back with it.
     with pytest.raises(Exception):
-        store.worker_event(id, 'worker', {**item_event(0), 'item_result': {'index': 0, 'value': {1, 2}}})
+        store.worker_event(id, 'worker', {**item_event(0), 'item_result': {'index': 0, 'value': {1, 2}}}, accounting=saved(store, id))
     assert rows(store, id) == {} and len(store.run(id)['events']) == events_before
 
 
@@ -65,7 +82,7 @@ def test_a_worker_without_the_lease_writes_neither(tmp_path, monkeypatch):
     store, *_ = durable_setup(tmp_path, monkeypatch)
     id = claimed_run(store)
     events_before = len(store.run(id)['events'])
-    assert store.worker_event(id, 'someone-else', item_event(0)) is False
+    assert store.worker_event(id, 'someone-else', item_event(0), accounting=saved(store, id)) is False
     assert rows(store, id) == {} and len(store.run(id)['events']) == events_before
 
 
@@ -166,7 +183,7 @@ def test_a_reservation_updates_the_accounting_column_not_the_document(tmp_path, 
     store, *_ = durable_setup(tmp_path, monkeypatch)
     id = claimed_run(store)
     before = document_bytes(store, id)
-    snapshot = {'action_budget': {'remaining': 3, 'counter': 1, 'ceiling': 4, 'charged': ['each:0:work#0']}}
+    snapshot = canonical(remaining=3, counter=1, ceiling=4, charged=['each:0:work#0'])
     store.reserve_accounting(id, 'worker', snapshot)
     store.record_accounting(id, 'worker', {**snapshot, 'tokens_spent': 5})
     assert document_bytes(store, id) == before
@@ -176,14 +193,13 @@ def test_a_reservation_updates_the_accounting_column_not_the_document(tmp_path, 
 def test_legacy_document_accounting_is_read_until_the_column_is_written(tmp_path, monkeypatch):
     store, *_ = durable_setup(tmp_path, monkeypatch)
     id = claimed_run(store)
-    legacy = {'action_budget': {'remaining': 1, 'counter': 3, 'ceiling': 4, 'charged': []}}
-    with Session(store.engine) as s:
-        record = s.get(RunRecord, id); record.data = {**record.data, 'accounting': legacy}; s.commit()
+    legacy = canonical(remaining=1, counter=3, ceiling=4, charged=[])
+    make_legacy(store, id, legacy)
     assert store.run(id)['accounting'] == legacy
     # An unchanged snapshot is recognised against the legacy copy and not rewritten.
     store.record_accounting(id, 'worker', legacy)
     with Session(store.engine) as s: assert s.get(RunRecord, id).accounting is None
-    current = {'action_budget': {**legacy['action_budget'], 'remaining': 0, 'counter': 4}}
+    current = {**legacy, 'action_budget': {**legacy['action_budget'], 'remaining': 0, 'counter': 4}}
     store.reserve_accounting(id, 'worker', current)
     assert store.run(id)['accounting'] == current
 
@@ -195,14 +211,14 @@ def test_an_approval_pause_defers_its_reservation_in_the_column(tmp_path, monkey
     from backend.app import approvals
     store, *_ = durable_setup(tmp_path, monkeypatch)
     id = claimed_run(store)
-    accounting = {'action_budget': {'remaining': 2, 'counter': 2, 'ceiling': 4, 'charged': ['tickets#0', 'each:0:send#0']}}
+    accounting = canonical(remaining=2, counter=2, ceiling=4, charged=['tickets#0', 'each:0:send#0'])
     if stored == 'column':
         store.reserve_accounting(id, 'worker', accounting)
     else:
-        with Session(store.engine) as s:
-            record = s.get(RunRecord, id); record.data = {**record.data, 'accounting': accounting}; s.commit()
+        make_legacy(store, id, accounting)
     pause = approvals.ApprovalPause('send', 'each:0', 'each:0:send', {'payload': {'to': 'a@example.test', 'body': 'x' * 5000}})
-    approvals.pause(store, id, 'worker', pause)
+    # The worker supplies its in-memory snapshot (TA02); the pause never rebuilds it from storage.
+    approvals.pause(store, id, 'worker', pause, accounting=accounting)
     run = store.run(id)
     assert run['accounting']['action_budget']['deferred'] == ['each:0:send#0']
     assert run['approvals'][0]['payload']['body'] == 'x' * 5000, 'approval payloads are never previewed'

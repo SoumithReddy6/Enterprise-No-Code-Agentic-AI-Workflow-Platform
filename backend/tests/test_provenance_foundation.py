@@ -388,8 +388,8 @@ async def test_durable_item_labels_replay_without_a_second_model_call(tmp_path, 
                                          for i, amount in enumerate((1200, 1350))]})
         monkeypatch.setattr(worker.tools, 'execute_prepared', search)
         original = store.worker_event
-        def interrupt(id, owner, event):
-            result = original(id, owner, event)
+        def interrupt(id, owner, event, **kwargs):
+            result = original(id, owner, event, **kwargs)
             if event.get('kind') == 'loop_item' and event['item_index'] == 0: raise asyncio.CancelledError()
             return result
         monkeypatch.setattr(store, 'worker_event', interrupt)

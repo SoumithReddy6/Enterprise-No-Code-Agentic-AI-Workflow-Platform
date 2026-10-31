@@ -59,11 +59,11 @@ def wait_for(predicate, seconds=20):
 
 
 @contextlib.contextmanager
-def deployed(url, output):
+def deployed(url, output, env=None):
     output.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='relay-milestone-process-') as directory:
         lab = Lab(directory, output)
-        lab.env.update(DATABASE_URL=url, AGENT_RUN_BUDGET='200')
+        lab.env.update(DATABASE_URL=url, AGENT_RUN_BUDGET='200', **(env or {}))
         try:
             # boot starts a worker; pause queue work while the fixtures are created.
             lab.boot()
@@ -77,10 +77,10 @@ def deployed(url, output):
             lab.close()
 
 
-def start_worker(lab, mode='serve'):
+def start_worker(lab, mode='serve', *flags):
     log = open(lab.output / f'milestone-worker-{len(lab.processes)}.log', 'w')
     lab.logs.append(log)
-    process = subprocess.Popen([sys.executable, '-m', 'scripts.scenarios.milestone_worker', mode], cwd=ROOT, env=lab.env, stdout=log, stderr=subprocess.STDOUT)
+    process = subprocess.Popen([sys.executable, '-m', 'scripts.scenarios.milestone_worker', mode, *flags], cwd=ROOT, env=lab.env, stdout=log, stderr=subprocess.STDOUT)
     lab.processes.append(process)
     return process
 
@@ -183,6 +183,62 @@ def killed_loop(output):
         assert resumed['accounting']['action_budget']['counter'] == 5  # Jira + 3 reads + repeated in-flight read.
         (output / 'receiver.json').write_text(json.dumps(lab.provider.calls, indent=2))
         return {'sigkill': True, 'committed_items_repeated': 0, 'in_flight_read_repeated': 1, 'checkpoint_equals_uninterrupted': True, 'actions_including_retry': 5}
+
+
+ACCOUNTING_MODEL = 'accounting-fixture'
+
+
+def accounting_flow():
+    nodes = [{'id': 'input', 'type': 'chat_input'}]
+    for i in range(2):
+        nodes.append({'id': f'm{i}', 'type': 'llm', 'inputs': {'prompt': 'input.message' if i == 0 else 'm0.text'},
+                      'config': {'provider': 'ollama', 'model': ACCOUNTING_MODEL}})
+    nodes.append({'id': 'out', 'type': 'response', 'inputs': {'text': 'm1.text'}})
+    return {'version': 1, 'name': 'TA02 accounting commit', 'nodes': nodes,
+            'edges': [{'id': str(i), 'source': a['id'], 'target': b['id']} for i, (a, b) in enumerate(zip(nodes, nodes[1:]))]}
+
+
+def accounting_commit(kind, moment, output):
+    """TA02: SIGKILL at m0's outcome commit with fast saves failing (limit 15, 10+5 per call).
+
+    before_commit: neither m0's checkpoint nor its 15 tokens is committed. The response was
+    never saved, so the resumed run pays for m0 again; that remains the documented boundary.
+    after_commit: both survive; the resumed run reuses m0 and refuses m1 without a request.
+    """
+    from scripts.scenarios.request_routing import ModelFixture
+    model = ModelFixture(prompt_tokens=10, completion_tokens=5)
+    try:
+        with database(kind) as url, deployed(url, output, {'OLLAMA_BASE_URL': model.url, 'RELAY_RUN_TOKEN_LIMIT': '15'}) as (lab, store):
+            response = lab.client.post('/api/models', json={'provider': 'ollama', 'model': ACCOUNTING_MODEL})
+            assert response.status_code == 201, response.text
+            model.script('first answer', 'second answer', 'third answer')
+            identifier = lab.submit(accounting_flow(), 'synthetic accounting probe')
+            held = start_worker(lab, 'serve', '--accounting-barrier', moment, '--fail-fast-saves')
+            barrier = lab.directory / 'accounting-barrier'
+            wait_for(barrier.exists, 60)
+            assert barrier.read_text() == moment and len(model.calls) == 1
+            os.kill(held.pid, signal.SIGKILL); held.wait(timeout=10)
+            prior = store.run(identifier, lab.tenant)
+            m0_events = [e for e in prior['events'] if e.get('node_id') == 'm0' and e.get('status') == 'success']
+            if moment == 'before_commit':
+                assert 'm0' not in prior['checkpoints'] and not m0_events, 'an uncommitted outcome is visible'
+                assert prior['accounting']['tokens_spent'] == 0, prior['accounting']
+            else:
+                assert 'm0' in prior['checkpoints'] and len(m0_events) == 1
+                assert prior['accounting']['tokens_spent'] == 15, prior['accounting']
+            # Wait for the real default 30-second lease, without mutating the database.
+            start_worker(lab)
+            resumed = lab.wait(identifier, timeout=90)
+            assert resumed['status'] == 'failed' and 'Run token budget exhausted (15 of 15' in resumed['error'], resumed.get('error')
+            assert resumed['accounting']['tokens_spent'] == 15
+            calls = 2 if moment == 'before_commit' else 1
+            assert len(model.calls) == calls, len(model.calls)
+            assert lab.provider.calls == []
+            return {'database': kind, 'moment': moment, 'sigkill': True, 'fast_saves': 'failing',
+                    'prior_checkpoint': 'm0' in prior['checkpoints'], 'prior_tokens_spent': prior['accounting']['tokens_spent'],
+                    'model_calls': calls, 'final_tokens_spent': 15, 'resumed_status': 'failed (token limit before m1)'}
+    finally:
+        model.close()
 
 
 async def measure(url, n):
@@ -307,6 +363,8 @@ def main():
         ('storage-cost', storage_cost),
         ('copied-workspace', copied_workspace),
         ('populated-downgrade', lambda: populated_downgrade(output / 'downgrade')),
+        *[(f'{kind}-accounting-{moment.replace("_", "-")}', lambda kind=kind, moment=moment: accounting_commit(kind, moment, output / f'accounting-{kind}-{moment}'))
+          for kind in ('sqlite', 'postgres') for moment in ('before_commit', 'after_commit')],
     ]
     if args.checks and set(args.checks) - {name for name, _ in checks}:
         parser.error('Unknown check name')

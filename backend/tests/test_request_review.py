@@ -250,8 +250,8 @@ async def test_cached_verification_never_restores_damaged_authority(setup,monkey
     store,worker,_,calls,_,_=setup;saved=await execute(setup);approval=saved['approvals'][0]
     decide(store,saved['id'],'local',approval['id'],approval['digest'],'approve')
     original=store.worker_event
-    def after_verify(id,owner,event):
-        result=original(id,owner,event)
+    def after_verify(id,owner,event,**kwargs):
+        result=original(id,owner,event,**kwargs)
         if event.get('node_id')=='verify' and event.get('status')=='success':raise RuntimeError('Injected interruption after verification commit')
         return result
     monkeypatch.setattr(store,'worker_event',after_verify)
@@ -398,8 +398,8 @@ async def test_cached_automatic_condition_cannot_change_the_verified_branch(setu
     store,worker,connection,calls,_,script=setup;script('{"amount":0}')
     raw=automatic_condition_flow(connection);run=store.create_run(raw,'{"amount":0}')
     old=store.worker_event
-    def after_choose(id,owner,event):
-        result=old(id,owner,event)
+    def after_choose(id,owner,event,**kwargs):
+        result=old(id,owner,event,**kwargs)
         if event.get('node_id')=='choose' and event.get('status')=='success':raise RuntimeError('Interrupt after condition commit')
         return result
     monkeypatch.setattr(store,'worker_event',after_choose);await worker.execute(store.claim_next(worker.owner))
@@ -432,8 +432,8 @@ async def test_expired_manual_control_cannot_authorize_an_independently_bound_wr
     run=store.create_run(raw,'{"amount":0}');await worker.execute(store.claim_next(worker.owner))
     review=store.run(run['id'])['approvals'][0];decide(store,run['id'],'local',review['id'],review['digest'],'approve',True)
     old=store.worker_event
-    def expire_after_choose(id,owner,event):
-        result=old(id,owner,event)
+    def expire_after_choose(id,owner,event,**kwargs):
+        result=old(id,owner,event,**kwargs)
         if event.get('node_id')=='choose' and event.get('status')=='success':
             with Session(store.engine) as s:s.get(ApprovalRecord,review['id']).expires_at=0;s.commit()
         return result
@@ -471,8 +471,8 @@ async def test_cached_derivation_cannot_change_checked_values_and_coalesce_reads
     raw['edges'].append({'id':'derivation','source':'derived','target':'send'})
     next(n for n in raw['nodes'] if n['id']=='send')['inputs']={'input':'derived.text'}
     old=store.worker_event
-    def after_derived(id,owner,event):
-        result=old(id,owner,event)
+    def after_derived(id,owner,event,**kwargs):
+        result=old(id,owner,event,**kwargs)
         if event.get('node_id')=='derived' and event.get('status')=='success':raise RuntimeError('Interrupt after derivation commit')
         return result
     monkeypatch.setattr(store,'worker_event',after_derived)

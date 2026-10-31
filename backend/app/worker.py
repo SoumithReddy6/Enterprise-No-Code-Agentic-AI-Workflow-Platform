@@ -14,6 +14,7 @@ from .platform_validation import platform_errors,kb_errors
 from .kb_gateway import KnowledgeServices
 from . import approvals
 from .execution_policy import ExecutionIdentity
+from .accounting_state import AccountingDurability,AccountingUnavailable,LEGACY_APPROVED_WRITE,accounting_trusted
 
 RUN_TIMEOUT_SECONDS=120
 from .observability import journal,request_id,run_id,tenant_id
@@ -62,9 +63,15 @@ class Worker:
         id=run['id'];owner=run.get('_claim_owner',self.owner);started=time.perf_counter()
         journal(event='run.start',run_id=id,tenant=run.get('tenant_id'),workflow=run['workflow'].get('name'),nodes=len(run['workflow'].get('nodes',[])),resumed=bool(run.get('checkpoints')))
         accounting={}
+        # Trust is decided at claim, inside graph_run, so a malformed snapshot fails the run.
+        durability=AccountingDurability(False)
         async def persist_accounting(snapshot):
+            # The generation the caller's snapshot was taken at; a later one stays pending.
+            generation=durability.generation
             accounting.update(snapshot)
-            await asyncio.to_thread(self.store.reserve_accounting,id,owner,snapshot)
+            saved=await asyncio.to_thread(self.store.reserve_accounting,id,owner,snapshot)
+            if saved is True:durability.acknowledge(generation)
+            return saved
         # Platform work this attempt performed: a request sent now, or the stored result of
         # a write this run already sent. Neither is charged here. The policy reads it to tell
         # a token refusal after work (an approved write sent against its earlier
@@ -74,10 +81,16 @@ class Worker:
         async def action_settled(invocation):
             return await asyncio.to_thread(self.store.completed_action,id,invocation) is not None
         async def persist_spend(snapshot):
+            generation=durability.generation
             accounting.update(snapshot)
-            await asyncio.to_thread(self.store.record_accounting,id,owner,snapshot)
+            saved=await asyncio.to_thread(self.store.record_accounting,id,owner,snapshot)
+            if saved is True:durability.acknowledge(generation)
+            return saved
         async def emit(event):
-            write=asyncio.create_task(asyncio.to_thread(self.store.worker_event,id,owner,event));cancelled=False
+            # Frozen before the thread starts: the event commits with the spend known when it
+            # was emitted, and only that version is acknowledged.
+            generation,frozen=durability.capture(accounting) if accounting else (None,None)
+            write=asyncio.create_task(asyncio.to_thread(self.store.worker_event,id,owner,event,accounting=frozen));cancelled=False
             while True:
                 try:
                     persisted=await asyncio.shield(write);break
@@ -85,15 +98,7 @@ class Worker:
                     if write.cancelled():raise
                     cancelled=True
             if not persisted:raise asyncio.CancelledError()
-            if accounting and event.get('node_id') and event['status'] in ('success','failed','info'):
-                try:
-                    await asyncio.to_thread(self.store.record_accounting,id,owner,dict(accounting))
-                except Exception as exc:
-                    # The node's result is already checkpointed by the event write above, so
-                    # a resume reuses it; an accounting write failing here must not turn a
-                    # completed node into a failed run.
-                    journal(event='accounting.persist_failed',node_id=event.get('node_id'),
-                            reason_code='post_event',error_type=type(exc).__name__)
+            if frozen is not None:durability.acknowledge(generation)
             if event.get('node_id') and event['status']!='running':
                 journal(event='node.'+event['status'],run_id=id,node_id=event['node_id'],transient=event.get('transient',False),cached=event.get('cached',False),duration_ms=event.get('duration_ms'),usage=event.get('usage'),error=event.get('error'))
             if cancelled:
@@ -104,6 +109,12 @@ class Worker:
             workflow=Workflow.model_validate(run['workflow'])
             tenant_id=self.store.run_tenant(id,owner)
             self.store.check_resume_writes(run)
+            durability.trusted=accounting_trusted(run)
+            # Before any node runs: an older run cannot send an approved write it has not
+            # started, since its past spend cannot be verified. The approval record decides,
+            # not the run status, which approval already changed to queued.
+            if not durability.trusted and approvals.has_unstarted_approved_write(self.store,id,tenant_id):
+                raise AccountingUnavailable(LEGACY_APPROVED_WRITE)
             from . import sandbox
             # Checked again here: Docker may have stopped after the run was submitted.
             errors=self.store.model_errors(workflow,tenant_id)+platform_errors(self.store,workflow,tenant_id)+await kb_errors(self.kbs,workflow,tenant_id,run.get('checkpoints'),run.get('vector_dependencies'),run.get('loop_progress'))+await sandbox.preflight_errors(workflow,fresh=True)
@@ -201,7 +212,7 @@ class Worker:
                 # text: when it was saved after a loop resume, it lists none of their sources.
                 issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'),run.get('loop_progress'))
                 if issues:raise ValueError('; '.join(issues))
-            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend,action_settled=action_settled,platform_work=work,saved_dependencies=run.get('vector_dependencies'),run_id=id,tenant_id=tenant_id).graph
+            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend,action_settled=action_settled,platform_work=work,saved_dependencies=run.get('vector_dependencies'),run_id=id,tenant_id=tenant_id,durability=durability).graph
             result=await graph.ainvoke({'values':{}},{'recursion_limit':150})
             answers=[n.id for n in workflow.nodes if n.type=='response' and n.id in result['values']]
             for response_id in answers:
@@ -225,11 +236,15 @@ class Worker:
             journal(event='run.finish',run_id=id,status='success',seconds=round(time.perf_counter()-started,3))
         except approvals.ApprovalPause as exc:
             try:
-                approvals.pause(self.store,id,owner,exc)
+                # The frame commits with the in-memory spend, not the older database copy.
+                generation,frozen=durability.capture(accounting) if accounting else (None,None)
+                approvals.pause(self.store,id,owner,exc,accounting=frozen)
+                durability.acknowledge(generation)
                 journal(event='run.awaiting_approval',run_id=id)
             except Exception as pause_error:
                 cancelled=self.store.cancel_requested(id,owner)
-                self.store.finish_run(id,owner,'cancelled' if cancelled else 'failed',error='' if cancelled else 'Unable to persist approval request.')
+                error='' if cancelled else str(pause_error) if isinstance(pause_error,AccountingUnavailable) else 'Unable to persist approval request.'
+                self.store.finish_run(id,owner,'cancelled' if cancelled else 'failed',error=error)
                 journal(event='approval.pause_failure',run_id=id,error_type=type(pause_error).__name__)
         except asyncio.CancelledError:
             task.cancel();await asyncio.gather(task,return_exceptions=True)

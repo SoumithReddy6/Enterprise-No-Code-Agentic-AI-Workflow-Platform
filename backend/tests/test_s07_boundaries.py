@@ -38,9 +38,9 @@ async def test_agent_settled_write_keeps_identity_after_crash(lab,monkeypatch):
     async def send(_type,_settings,text,*_):deliveries.append(text);return 'sent'
     monkeypatch.setattr(worker.tools,'execute',send)
     original=store.worker_event
-    def crash(id,owner,event):
+    def crash(id,owner,event,**kwargs):
         if event.get('node_id')=='calc' and event['status']=='success':raise asyncio.CancelledError()
-        return original(id,owner,event)
+        return original(id,owner,event,**kwargs)
     monkeypatch.setattr(store,'worker_event',crash)
     row=store.create_run(workflow.model_dump(mode='json'),'send')
     await worker.execute(store.claim_next(worker.owner))
@@ -58,9 +58,9 @@ async def test_reexecuted_read_is_not_free_on_resume(lab,monkeypatch):
     async def read(*_):calls.append(1);return 'read result'
     monkeypatch.setattr(worker.tools,'execute',read)
     original=store.worker_event
-    def crash(id,owner,event):
+    def crash(id,owner,event,**kwargs):
         if event.get('node_id')=='work' and event['status']=='success':raise asyncio.CancelledError()
-        return original(id,owner,event)
+        return original(id,owner,event,**kwargs)
     monkeypatch.setattr(store,'worker_event',crash)
     row=store.create_run(flow().model_dump(mode='json'),'go')
     await worker.execute(store.claim_next(worker.owner))
@@ -119,11 +119,11 @@ async def test_token_persistence_failure_preserves_paid_response(lab,monkeypatch
         calls.append(1);providers.record_usage(usage,10,0);return 'paid answer'
     monkeypatch.setattr(providers,'ollama_chat',model)
     original=store.record_accounting;writes=[]
-    def fail_once(*args):
+    def fail_once(*args,**kwargs):
         if calls:
             writes.append(1)
             if len(writes)==1:raise RuntimeError('injected accounting database outage')
-        return original(*args)
+        return original(*args,**kwargs)
     monkeypatch.setattr(store,'record_accounting',fail_once)
     row=store.create_run(workflow.model_dump(mode='json'),'go')
     await worker.execute(store.claim_next(worker.owner))

@@ -10,7 +10,7 @@ import pytest
 
 def test_admission_metrics_count_codes_without_reading_or_returning_run_content(tmp_path):
     store = Store(f'sqlite:///{tmp_path}/metrics.db', Fernet.generate_key())
-    run = store.create_run(sample(), 'PRIVATE INPUT'); store.claim_next('worker')
+    run = store.create_run(sample(), 'PRIVATE INPUT'); accounting = store.claim_next('worker')['accounting']
     events = [
         {'request_stage':'greeting_cache','status':'success','outputs':{'receipt':'{"outcome":"local_fallback"}','reply':'PRIVATE REPLY'}},
         {'request_stage':'request_router','status':'success','outputs':{'decision':'{"route":"proceed","reason":"PRIVATE REASON"}'}},
@@ -22,7 +22,7 @@ def test_admission_metrics_count_codes_without_reading_or_returning_run_content(
             'report':'{"verdict":"passed","complete":true,"fields":[]}','text':'PRIVATE VALUE'}},
         {'request_stage':'request_reader','status':'paused'},
     ]
-    for item in events:store.worker_event(run['id'],'worker',{'node_id':'custom-name',**item})
+    for item in events:store.worker_event(run['id'],'worker',{'node_id':'custom-name',**item},accounting=accounting)
     store.finish_run(run['id'],'worker','success')
     queries=[]
     event.listen(store.engine,'before_cursor_execute',lambda conn,cursor,statement,*args:queries.append(statement))

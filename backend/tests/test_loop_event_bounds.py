@@ -199,8 +199,8 @@ async def test_resuming_a_looped_agent_ends_like_an_uninterrupted_run(tmp_path, 
 
     store, worker, calls = durable(tmp_path / 'b', monkeypatch)
     original = store.worker_event
-    def crash(id, owner, event):
-        persisted = original(id, owner, event)
+    def crash(id, owner, event, **kwargs):
+        persisted = original(id, owner, event, **kwargs)
         if event.get('kind') == 'loop_item' and event.get('item_index') == crash_after: raise asyncio.CancelledError()
         return persisted
     monkeypatch.setattr(store, 'worker_event', crash)

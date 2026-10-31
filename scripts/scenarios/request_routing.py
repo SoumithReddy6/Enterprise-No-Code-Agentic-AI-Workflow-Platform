@@ -24,7 +24,7 @@ def decision(route):
 
 
 class ModelFixture:
-    def __init__(self):
+    def __init__(self, prompt_tokens=7, completion_tokens=3):
         self.responses = []; self.calls = []; self.lock = threading.Lock()
         owner = self
         class Handler(BaseHTTPRequestHandler):
@@ -35,7 +35,7 @@ class ModelFixture:
                     owner.calls.append(raw)
                     text = owner.responses.pop(0) if owner.responses else 'unexpected model call'
                 result = json.dumps({'message': {'role': 'assistant', 'content': text},
-                    'prompt_eval_count': 7, 'eval_count': 3}).encode()
+                    'prompt_eval_count': prompt_tokens, 'eval_count': completion_tokens}).encode()
                 self.send_response(200); self.send_header('Content-Length', str(len(result)))
                 self.send_header('Content-Type', 'application/json'); self.end_headers()
                 self.wfile.write(result)

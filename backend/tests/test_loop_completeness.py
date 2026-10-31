@@ -305,8 +305,8 @@ async def test_a_checkpoint_from_before_the_summary_port_still_resumes(tmp_path,
 def crash_after_item(store, monkeypatch, index):
     """Stop the worker right after the progress event for `index` is committed."""
     original = store.worker_event
-    def record(id, owner, event):
-        result = original(id, owner, event)
+    def record(id, owner, event, **kwargs):
+        result = original(id, owner, event, **kwargs)
         if event.get('kind') == 'loop_item' and event.get('item_index') == index:
             raise asyncio.CancelledError()
         return result

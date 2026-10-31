@@ -127,14 +127,16 @@ async def record_spend(ctx):
     """
     persist=(ctx.run or {}).get('persist_spend')
     if persist is None:return
-    from .execution_policy import accounting_snapshot
+    from .execution_policy import CONTROL_FLOW,accounting_snapshot
     try:
         await persist(accounting_snapshot(ctx.run))
+    except CONTROL_FLOW:
+        # A lost lease or refused write is not an outage to ride out: nothing more may be
+        # spent on this worker's behalf.
+        raise
     except Exception as exc:
-        # Keep the paid response. The spend stays in memory and is written by the next
-        # successful persistence point; losing the answer would only mean paying again.
-        # Cancellation and a lost lease are BaseException or re-raised elsewhere and are
-        # deliberately not caught here.
+        # Keep the paid response. The spend stays pending in memory: the atomic outcome
+        # commit saves it, and no further model request starts before it is saved.
         from .observability import journal
         journal(event='accounting.persist_failed',node_id=ctx.node_id,
                 reason_code='post_spend',error_type=exc.__class__.__name__)
@@ -161,6 +163,8 @@ def account_usage(ctx,usage,config,error_type=None):
     if invocation:
         invocation_totals=ctx.run.setdefault('usage_by_invocation',{}).setdefault(invocation,empty())
         accumulate(invocation_totals)
+    durability=ctx.run.get('durability')
+    if durability is not None:durability.changed()  # Known spend not yet saved.
     from .observability import journal
     journal(event='model.usage',node_id=ctx.node_id,provider=config.provider,model=config.model,prompt_tokens=usage.get('prompt_tokens'),completion_tokens=usage.get('completion_tokens'),
             **({'error_type':error_type} if error_type else {}))
@@ -171,6 +175,10 @@ async def call_model(ctx,config,call):
     provider reported, used or rejected: a rejected answer was still paid for. A call that
     returned no usage (an HTTP error, a timeout) adds nothing; its real consumption is unknown."""
     from .providers import with_retries
+    from .accounting_state import ensure_accounting_ready
+    # Repair, planning and query generation all reach the provider here, so known spend is
+    # durable, and the run's past usage verifiable, before any of them sends a request.
+    await ensure_accounting_ready(ctx.run)
     usage={}
     try:
         text=await with_retries(lambda:call(usage),provider=config.provider,model=config.model)

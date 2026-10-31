@@ -7,6 +7,7 @@ import time
 from sqlalchemy import Column,String,Text,JSON,Float,Integer,UniqueConstraint,CheckConstraint,select,update
 from sqlalchemy.orm import Session
 from .storage import Base,RunRecord,JobRecord,new_id,now
+from .accounting_state import AccountingUnavailable,PAUSE,checked_snapshot
 from .observability import journal
 
 class ApprovalPause(Exception):
@@ -55,9 +56,17 @@ def digest(payload):return hashlib.sha256(preview(payload).encode()).hexdigest()
 def public(row):return {**{key:getattr(row,key) for key in ('id','run_id','node_id','checkpoint_owner','kind','payload','digest','status','created_at','expires_at')},'payload_json':preview(row.payload)}
 def listing(session,run_id,tenant):return [public(r) for r in session.scalars(select(ApprovalRecord).where(ApprovalRecord.run_id==run_id,ApprovalRecord.tenant_id==tenant).order_by(ApprovalRecord.created_at))]
 
-def pause(store,run_id,owner,exc):
+def pause(store,run_id,owner,exc,*,accounting=None):
+    """Publish the approval frame and its accounting in one transaction that releases the lease.
+
+    accounting is the worker's frozen in-memory snapshot, never the older database copy: an
+    earlier fast save may have failed. Missing, malformed or lowering snapshots publish
+    nothing. True after the commit.
+    """
     ttl=int(os.getenv('APPROVAL_TTL_SECONDS','86400'))
     if not 1<=ttl<=604800:raise ValueError('APPROVAL_TTL_SECONDS must be between 1 and 604800')
+    if accounting is None:raise AccountingUnavailable(PAUSE)
+    accounting=checked_snapshot(accounting)
     with Session(store.engine) as s:
         if not store._fence(s,run_id,owner):raise ValueError('Execution lease is no longer owned.')
         run=s.get(RunRecord,run_id);job=s.get(JobRecord,run_id)
@@ -74,16 +83,23 @@ def pause(store,run_id,owner,exc):
         # in the transaction that releases the lease, so the approved execution reuses the
         # reservation instead of being charged twice. The seam cannot do it: by the time
         # the pause reaches it, this worker no longer holds the lease.
-        accounting=dict(store._accounting(run) or {})
-        budget=dict(accounting.get('action_budget') or {})
+        budget=dict(accounting['action_budget'])
         if budget and kind=='write':
-            budget['deferred']=[*budget.get('deferred',[]),f'{exc.invocation}#0']
+            key=f'{exc.invocation}#0'
+            budget['deferred']=[*[k for k in budget.get('deferred',[]) if k!=key],key]
             accounting['action_budget']=budget
+        store._set_accounting(run,accounting)
         run.data={**run.data,'status':'awaiting_approval','agent_frames':exc.frames};run.status='awaiting_approval'
-        if budget:run.accounting=accounting
         job.status='awaiting_approval';job.owner='';job.lease_until=0
         store._event(s,run,{'kind':'approval','approval_kind':kind,'node_id':exc.node_id,'status':'awaiting_approval','approval_id':row.id})
         s.commit();journal(event='approval.pending',run_id=run_id,tenant=run.tenant_id,node_id=exc.node_id,approval_kind=kind)
+    return True
+
+def has_unstarted_approved_write(store,run_id,tenant_id):
+    """An approved external write that no attempt has begun: approved, not yet executing."""
+    with Session(store.engine) as s:
+        return s.scalar(select(ApprovalRecord.id).where(ApprovalRecord.run_id==run_id,ApprovalRecord.tenant_id==tenant_id,
+                        ApprovalRecord.kind=='write',ApprovalRecord.status=='approved').limit(1)) is not None
 
 def _close(store,s,row,run,job,status):
     row.status=status;job.status='cancelled';job.owner='';job.lease_until=0
