@@ -1,11 +1,13 @@
 # TA02: durable accounting for reusable results
 
-**Status:** proposed design for approval; no application changes.
+**Status:** approved with review changes, incorporated below; no application changes.
+**Revision:** 2, after the user's design review (2026-10-31).
 **Baseline:** `f3e09238de9eb822713d50f2e5a3170ef25dc5f0` (R01 closed).
 **Chosen approach:** the user selected atomic result/accounting commits, keeping TA02
 separate from a new per-model-call ledger. The user also selected blocking further model
-calls for unverified older runs while retaining their saved results. The full design below
-is still proposed for approval; those two choices do not imply approval of every detail.
+calls for unverified older runs while retaining their saved results. The design review
+requires an atomic approval-pause snapshot and nondecreasing stored token totals. The
+recommended claim-time legacy approval guard and harness reuse are accepted in revision 2.
 
 ## 1. Problem and goal
 
@@ -77,6 +79,10 @@ leases and approvals. Switching checkpointers or adopting Temporal is outside th
    retain their guarantees. Bookkeeping never charges an action or sends a write.
 8. The current soft token threshold stays soft. A valid last response that reaches/passes
    the threshold remains valid; TA04's typed refusal handles later calls as before.
+9. No accounting writer may lower a run's `tokens_spent`. Check this while holding the same
+   job-row fence as the write, across fast saves, action reservations, outcome commits and
+   approval pauses. Equal totals are allowed: an action/approval update can change without
+   adding tokens. A rejected stale write acknowledges nothing and leaves stored state intact.
 
 ## 5. Proposed write path
 
@@ -113,14 +119,32 @@ Extend the existing storage boundary conceptually as
 snapshot. Inside its current transaction, validate the fence, store event/metrics, update
 the checkpoint or item row, and assign `RunRecord.accounting` before one commit. A supplied
 snapshot is validated; `None` means preserve existing accounting, never erase it.
+For runs marked `accounting_contract=1`, a worker event that publishes reusable state or
+usage must supply the snapshot; omission fails closed rather than saving work ahead of
+accounting. Compatibility defaults cannot waive the new contract.
 
 Remove the separate post-event accounting write in `Worker.emit`: it is no longer the
 durability mechanism. Immediate post-response persistence remains a useful early save.
-Approval publication must retain the same invariant: the paused-node boundary saves the
-current snapshot before the approval/frame transaction reads and extends the action budget.
+Approval publication has its own atomic boundary. Pass a frozen current snapshot explicitly
+to `approvals.pause(..., accounting=...)`; never rebuild its base from the older database
+copy. Add the action's deferred reservation to that snapshot and commit snapshot, frames,
+approval record and lease release in the pause transaction. A valid supplied snapshot may
+commit even if the earlier fast save failed. This commit is its acknowledgment; missing or
+invalid snapshot or a rejected regression means `AccountingUnavailable` and transaction
+rollback. A commit without an acknowledgment is not assumed rolled back; the worker does
+not advance or invent another approval, and existing durable status/idempotency decide
+recovery. There is no requirement for a separate earlier snapshot write to
+succeed before this transaction can succeed.
 
 No nested commit or separate Session may write the checkpoint and accounting independently.
 The existing loop compaction and usage-row creation stay in this transaction too.
+Use one checked accounting assignment under the fence in every writer. If the incoming
+total is below the stored total, reject the write and roll back associated state; do not
+silently clamp the total, merge unrelated snapshots, or overwrite the other fields with
+the older snapshot. This protects late thread writes without claiming full parallel
+reservation/settlement correctness. PostgreSQL holds conflicting writer locks until
+transaction end ([row-level locking](https://www.postgresql.org/docs/17/explicit-locking.html));
+the existing fence establishes the serialization point before comparing the totals.
 
 ### Acknowledgment and another model call
 
@@ -135,6 +159,8 @@ control-flow error, so the Worker preserves its explanatory message. It is not
 `TokenBudgetExhausted`: usage is not established as exhausted. Retry and
 `on_error` recovery must not convert it into another provider call. Free paths such as
 cached outputs, deterministic work and abstention need no new provider request.
+Grounded and structured repair wrappers must re-raise this control-flow type before
+their generic output-validation catches; it is not a repairable schema failure.
 
 Only a confirmed commit clears the pending version. A local generation number or equivalent
 is sufficient; this is not a persistent call identity or a ledger. Existing silent returns
@@ -163,6 +189,14 @@ automatic sum of reporting rows, manual offset, or provider reconciliation is in
 The failure must explain that past usage cannot be verified and saved results remain;
 it must not automatically restart the workflow or repeat its external actions.
 
+For legacy runs with an unstarted approved write, also check trust when the worker claims
+the run, before executing any node or calling `approvals.begin`. Such a run fails before
+the approved request is sent. Detect the approved write from its durable approval record,
+not a run-status string already changed to `queued`/`running`. Keep rejection, cancellation,
+expiry and reconciliation available. An already-executing/uncertain write still follows
+the existing uncertainty/reconciliation rules; do not claim it was never sent. A legacy
+run with no such pending write may still finish through cached/free work.
+
 This is deliberately conservative even when an old snapshot looks plausible. The user
 selected this policy explicitly; it is not a claim that every old run is corrupt.
 In-memory compiler-only executions retain their non-durable behavior; production Worker
@@ -175,10 +209,13 @@ execution carries the trust decision to the shared model-call boundary.
   call/database boundary. Unknown calls and strict reservations remain TA05/TA06 work.
 - The pending-save barrier limits further requests during a known persistence outage;
   it does not make an already-started request or provider-internal retry free or bounded.
+  Its one-unsaved-call bound applies to calls with reported usage; missing provider usage
+  and unreported retry consumption remain TA05/TA06 concerns.
 - No new call ledger, Redis, broker, billing service, provider cost estimates or full
   event-sourcing architecture. TA03 metrics and TA07 provider cache categories stay separate.
-- Current execution is sequential; parallel branches remain refused. This does not close
-  TA08's concurrent stale-snapshot problem or supply A5.3 reservation/settlement semantics.
+- Current execution is sequential; parallel branches remain refused. The monotonic writer
+  check addresses stale token-total regression, including delayed background writes. It
+  does not close all of TA08 or supply A5.3 concurrent reservation/settlement semantics.
 - A total database outage cannot preserve a new checkpoint. Never claim otherwise:
   either the atomic transaction committed or that result is not recorded as reusable.
 
@@ -192,23 +229,32 @@ Worker/Store and fixture providers, with barriers rather than elapsed-time asser
 | Original TA02 outage + interruption | First 15-token answer/checkpoint and 15-token accounting commit together despite failed fast saves; resume reuses it; second provider call is refused at limit 15; one provider call total |
 | Transaction rollback and post-commit crash | With fast saves disabled, a failure before commit leaves neither new checkpoint nor its accounting update; after commit both survive. Do not assert replay suppression for a response never committed |
 | Loop item and compact loop checkpoints | Item progress and matching cumulative accounting commit together; replay never repeats the saved item or re-adds its tokens |
-| Agent approval pause/repeated resume | Paused-frame publication cannot outrun accounting; defer/replay does not charge the same action again or reset tokens |
+| Agent approval pause/repeated resume | Pause atomically commits the supplied in-memory snapshot, not the stale DB copy; missing snapshot or failed pause commit publishes nothing; defer/replay does not charge twice |
 | TA01 rejection and known-usage cancellation | Rejected answers still count; cancellation captures memory-only known usage before emission. Nested accounting remains exact; do not repair TA03 by summing its overlapping outcome rows |
 | Pending save before repair/planning | No second provider request if the pending snapshot still cannot be saved; recovery of that write permits exactly the intended next request |
 | Saved paid answer and free completion | Failed fast save does not discard a completed answer when atomic commit works; cached/deterministic paths add zero provider calls |
 | Fatal durability error, lost lease | No retry/recovery under fail/continue/route starts a new request; stale owner writes neither state nor accounting; cancellation remains cancellation |
-| New/legacy/malformed accounting | New zero baseline is explicit; unverified legacy or missing/invalid baseline never grants new model spend; free cached completion does not bless legacy state |
+| New/legacy/malformed accounting | New zero baseline is explicit; unverified legacy or missing/invalid baseline never grants new model spend; claim-time guard stops unstarted approved writes; free cached completion does not bless legacy state |
+| Stale snapshots | Every writer refuses a smaller total; a cancelled-await thread cannot replace a newer outcome snapshot when it later reaches storage |
 | Compatibility controls | Known threshold/TA04 behavior unchanged; final valid response stays complete; event shapes, metrics attribution, action ceilings and replay IDs unchanged |
 
-Run transactional crash tests on SQLite and an isolated PostgreSQL 17 schema. Include
-separate-process termination after commit, with provider requests observed by a fixture
-server outside the killed worker. Before-commit tests establish atomic rollback, not
-exactly-once behavior of an uncommitted remote call.
+Reuse `scripts/check_production_scenarios.py`'s S15/S16 process/receiver harness and
+`scripts/check_milestone_storage.py`'s isolated-database/worker helpers. Extend those test-only
+failpoints, forwarding any new keyword arguments, instead of adding a separate server or
+worker framework. Add the accounting commit check to the existing `postgres-conformance`
+job through that harness. Before-commit tests establish atomic rollback, not exactly-once
+behavior of an uncommitted remote call.
+
+**Test budget:** at most 24 new collected pytest cases (parametrized variants count), plus
+four harness rows: before/after the atomic commit on SQLite/PostgreSQL. Reuse existing
+TA01/TA04, approvals and compatibility controls. If a new uncovered requirement needs more,
+replace redundant cases or explain the specific reason before expanding the budget.
 
 Mutations must independently catch: separate checkpoint/accounting commits; missing loop
 snapshot; missing pause/cancel snapshot refresh; replay added to the baseline; lost-fence
 return treated as success; pending save ignored before repair; unknown legacy promoted to
-zero; durability error made recoverable. Positive assertions must require the expected
+zero; durability error made recoverable; approval pause falls back to its DB copy; monotonic
+write guard removed. Positive assertions must require the expected
 record/call/checkpoint to exist, avoiding vacuous passes.
 
 ## 9. Delivery and implementation boundaries
@@ -217,9 +263,11 @@ One coordinated implementation should cover snapshot capture, transactional comm
 acknowledgment/restore guards and their tests before enabling the new run contract. Do not
 ship a marker that promises atomic durability before all its write paths satisfy it.
 
-Expected responsibilities: `storage.py` (creation contract and atomic fenced writes),
-`worker.py` (snapshot handoff/acknowledgment), `compiler.py` and `iteration.py` (all emission
+Expected responsibilities: `storage.py` (creation contract, monotonic guard and atomic fenced writes),
+`worker.py` (snapshot handoff/acknowledgment and legacy approval preflight), `approvals.py`
+(atomic supplied pause snapshot), `compiler.py` and `iteration.py` (all emission
 and reuse boundaries), `registry.py` (immediate persistence and pre-call barrier),
+`agent_runtime.py` (preserve the durability cause through repair wrappers),
 `execution_policy.py` (nonrecoverable durability cause), and a small accounting helper if
 validation/state handling needs one. Keep the existing accounting snapshot as the source
 of cumulative counts; do not add a second calculator.
@@ -229,3 +277,11 @@ all test wrappers affected by the optional storage argument, failure messages, e
 defect/control tests, mutations, isolation proof and the SQLite/PostgreSQL checks. Closing
 gates remain the backend seed campaign, relevant scenario campaign and hosted CI. No code
 or dependency installation is authorized by this document alone.
+
+## 10. Design-review changes
+
+Both required changes are included: pause commits its supplied snapshot in its own
+transaction, and every accounting writer enforces nondecreasing tokens. Both recommendations
+are adopted: claim-time refusal before an old approved write and a bounded test program
+using existing harnesses. The shared per-call ledger and full parallel accounting remain
+deferred. These are revisions to the selected approach, not a new architecture.

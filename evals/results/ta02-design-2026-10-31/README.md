@@ -42,5 +42,22 @@ There is no recommendation to add those services or copy their architecture whol
 The user chose atomic result/accounting commits over a new physical-call ledger.
 They also selected blocking further model calls for unverified older runs while keeping
 saved results available. `builder-review.md` records the independent builder check and
-the clarifications incorporated into the design. Approval of the complete design remains
-the next step; no implementation plan or application code has been produced.
+the clarifications incorporated into the initial design.
+
+## Design review revision 2
+
+The user approved the design with two required corrections: pause must atomically commit
+its supplied frozen snapshot, and no writer may lower `tokens_spent`. Both recommendations
+were adopted too: refuse an unverified legacy run at claim before an unstarted approved
+write, and reuse the existing process/PostgreSQL harnesses with a test budget.
+
+`review-boundaries.json` checks the current pause API's database-copy behavior and re-runs
+the existing controlled out-of-order snapshot test (30 stored, then overwritten to 10).
+The pause check is a storage-contract probe with synthetic frame data, not a live Agent
+measurement. The concurrency check is a controlled writer ordering, not a claim that an
+accepted parallel graph ran. Original evidence remains unchanged.
+
+The revised design is followed by
+`docs/superpowers/plans/2026-10-31-token-accounting-durability.md`: three coordinated tasks,
+at most 24 new collected pytest cases, four rows in reused harnesses, and twelve targeted
+mutants. The plan is written but has not been executed. Application code is unchanged.
