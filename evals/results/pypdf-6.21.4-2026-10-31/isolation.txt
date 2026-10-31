@@ -1,0 +1,2 @@
+# isolation: git archive e50fa65 + backend/requirements.txt, 2026-10-31T17:49:53Z
+1898 passed, 4 warnings in 89.98s (0:01:29)

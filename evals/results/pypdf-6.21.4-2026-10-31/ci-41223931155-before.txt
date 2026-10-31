@@ -1,0 +1,11 @@
+Found 7 known vulnerabilities in 1 package
+Name  Version ID              Fix Versions
+----- ------- --------------- ------------
+pypdf 6.21.2  CVE-2026-119208 6.21.3
+pypdf 6.21.2  CVE-2026-119206 6.21.3
+pypdf 6.21.2  CVE-2026-119209 6.21.3
+pypdf 6.21.2  CVE-2026-119207 6.21.3
+pypdf 6.21.2  CVE-2026-119203 6.21.4
+pypdf 6.21.2  CVE-2026-119205 6.21.4
+pypdf 6.21.2  CVE-2026-119204 6.21.4
+##[error]Process completed with exit code 1.
