@@ -1,0 +1,39 @@
+{
+  "review_commit": "e50fa65",
+  "application_baseline": "812fefd",
+  "before": {
+    "backend/app/compiler.py": "bad170b8836be8ec9a37278f7ee5c88a715a686e5b97003dddf546b033c6d06b",
+    "backend/app/main.py": "7046adf8f04405a730d52c70c1159e99dd36699a25a46b42e0ae64f40f1d8d38",
+    "backend/app/platform_nodes.py": "03ca499d16a0c22ebeff65a8463e13095962ec4115ddfb7cc81ce978777df7d5",
+    "backend/app/platform_validation.py": "5427a13803321f5b1ab3b74dffec5728539cba6a4ccbd55a99817d76a7658d93",
+    "backend/app/registry.py": "4f1f4b7b3502c4132bf6c75cf337b3c254058b1f680ccb6c88b40549647e7142",
+    "backend/app/worker.py": "e595fc6afc768bc67957c5e589eef884372a591708a70f24ac9447bcdbd912b4",
+    "docs/superpowers/plans/2026-10-30-response-source-boundary.md": "c062abb65a9ced70ff4ecea225a88eb77bad6e03a2935eb8894d2b192fc50918",
+    "evals/results/r01-plan-2026-10-30/probe_response_on_error.py": "bc16028b905a61f10a3791bbee74170402ab7c8e68387893a6da788ee6516ffb",
+    "evals/results/r01-plan-2026-10-30/prototype-run.txt": "05084404831e6ffe4b5b53632172089d163068afd8f397f9f67d8b728effbcac",
+    "evals/results/r01-plan-2026-10-30/response-on-error-probe.txt": "44f57e865ba6ef89096560e5005a103672baa390337b46ea7fc9f45312781446",
+    "evals/results/r01-plan-review-65a7774/README.md": "39c2325572dca448fb0ac7be56fbe8ecc9a12c40b1168b8a6adcb331895537bc",
+    "evals/results/r01-plan-review-65a7774/prepare_candidate.py": "9f460ea406d0a2c638501c713062601d3a2a1137686507bd6cb0bf695468ed3d",
+    "evals/results/r01-plan-review-65a7774/preserved-inputs.json": "f09e2a96abaf17171ec62b19bffdd86883dd7d2fdcc2e62c580f7823ed323700",
+    "evals/results/r01-plan-review-65a7774/probe-results.json": "aeae888297f44d0ad78e954aa978e73b4c5de375a90e173c5476e779a56e1b0f",
+    "evals/results/r01-plan-review-65a7774/probe_plan.py": "cfe4faa151295f0021fc71e065d8f47e36bccac4b8c7fc0804fa3519b05fb0b7"
+  },
+  "after": {
+    "backend/app/compiler.py": "bad170b8836be8ec9a37278f7ee5c88a715a686e5b97003dddf546b033c6d06b",
+    "backend/app/main.py": "7046adf8f04405a730d52c70c1159e99dd36699a25a46b42e0ae64f40f1d8d38",
+    "backend/app/platform_nodes.py": "03ca499d16a0c22ebeff65a8463e13095962ec4115ddfb7cc81ce978777df7d5",
+    "backend/app/platform_validation.py": "5427a13803321f5b1ab3b74dffec5728539cba6a4ccbd55a99817d76a7658d93",
+    "backend/app/registry.py": "4f1f4b7b3502c4132bf6c75cf337b3c254058b1f680ccb6c88b40549647e7142",
+    "backend/app/worker.py": "e595fc6afc768bc67957c5e589eef884372a591708a70f24ac9447bcdbd912b4",
+    "docs/superpowers/plans/2026-10-30-response-source-boundary.md": "c062abb65a9ced70ff4ecea225a88eb77bad6e03a2935eb8894d2b192fc50918",
+    "evals/results/r01-plan-2026-10-30/probe_response_on_error.py": "bc16028b905a61f10a3791bbee74170402ab7c8e68387893a6da788ee6516ffb",
+    "evals/results/r01-plan-2026-10-30/prototype-run.txt": "05084404831e6ffe4b5b53632172089d163068afd8f397f9f67d8b728effbcac",
+    "evals/results/r01-plan-2026-10-30/response-on-error-probe.txt": "44f57e865ba6ef89096560e5005a103672baa390337b46ea7fc9f45312781446",
+    "evals/results/r01-plan-review-65a7774/README.md": "39c2325572dca448fb0ac7be56fbe8ecc9a12c40b1168b8a6adcb331895537bc",
+    "evals/results/r01-plan-review-65a7774/prepare_candidate.py": "9f460ea406d0a2c638501c713062601d3a2a1137686507bd6cb0bf695468ed3d",
+    "evals/results/r01-plan-review-65a7774/preserved-inputs.json": "f09e2a96abaf17171ec62b19bffdd86883dd7d2fdcc2e62c580f7823ed323700",
+    "evals/results/r01-plan-review-65a7774/probe-results.json": "aeae888297f44d0ad78e954aa978e73b4c5de375a90e173c5476e779a56e1b0f",
+    "evals/results/r01-plan-review-65a7774/probe_plan.py": "cfe4faa151295f0021fc71e065d8f47e36bccac4b8c7fc0804fa3519b05fb0b7"
+  },
+  "changed": []
+}

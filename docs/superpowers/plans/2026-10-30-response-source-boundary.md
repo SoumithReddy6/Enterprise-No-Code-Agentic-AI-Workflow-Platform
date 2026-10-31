@@ -3,8 +3,9 @@
 > Finding: R01 (P1) in [TA04 implementation audit](../../reviews/ta04-fix-review-2026-10-30.md),
 > confirmed open in [the R02 re-check](../../reviews/ta04-r02-recheck-2026-10-30.md).
 > Exists since at least `51ba164`. Baseline for this plan: `812fefd` (TA04 closed, hosted CI green).
-> Revision 2, after [the plan review of `65a7774`](../../reviews/r01-plan-review-2026-10-30.md)
-> (D1 = A accepted; three required changes and two test changes, section 11).
+> Revision 3, after [the revision-2 review of `e50fa65`](../../reviews/r01-plan-r2-review-2026-10-31.md)
+> (D1, D2, D3 kept; one P1 gap and one test correction, section 12). Revision 2 followed
+> [the plan review of `65a7774`](../../reviews/r01-plan-review-2026-10-30.md) (section 11).
 > Status: draft for re-review.
 
 **Goal:** a run publishes a Response only after every knowledge source behind it has
@@ -38,6 +39,12 @@ Three paths publish a removed document's content:
    the Response; the document is removed; on resume the loop restores its answer text with
    no source list, the Response sees `sources: []` and publishes the old answer. No source
    check runs. The dependency is still saved under `<loop id>:0`.
+4. **Reused loop work, removal after the resume check** (revision-2 review, R2-01): the
+   resume check passes, the loop is reused, a later node commits, and then the document is
+   removed before the Response. A restored loop has `results`, `failed` and `summary` but
+   no `sources` port, so `evidence_from_outputs` (`agent_runtime.py:165`) registers nothing.
+   The Response sees an empty list, makes no check and publishes the old answer. A valid
+   empty presentation list does not prove that the answer has no knowledge dependency.
 
 ## 2. What Relay already has (proven, CI-tested)
 
@@ -77,6 +84,11 @@ checked, whether or not the Response will read that item. A narrower "only items
 Response consumed" rule needs a mapping from Response text to items that Relay does not
 have. Cost: a resume is refused if any reused item used a removed document. The user starts
 a new run, which is the existing restore message.
+
+The same set is checked **twice**: at resume (preflight and loop reuse, 5c) and again at
+each Response publication (5f). The resume check stops reuse early; the publication check
+covers a removal after the resume check. A successful earlier check is a remembered
+result, so it does not replace the check at publication.
 
 ### D3: the Response's `on_error` setting — **the refusal ignores it**
 
@@ -122,12 +134,15 @@ Next to the existing `canonical()` (line 28):
   - `CONTROL_FLOW` members are re-raised first and unchanged (`UnsafeExecutionError` is a
     `ValueError`, so the order matters); `KeyError`, `ValueError` and `TypeError` from the
     verifier become
-    `UnsafeExecutionError(f'{node_id}: a listed knowledge source is unavailable or was removed. No answer was published. Start a new run with current evidence.')`.
+    `UnsafeExecutionError(f'{node_id}: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence.')`.
 
 ### 5b. The fresh Response (`backend/app/registry.py`, `response_node`)
 
-After `ground_answer`, call `verify_published(ctx, ctx.node_id, sources)` and then return.
-The text, the source list, the order and the `cited` flags do not change.
+After `ground_answer`, call `verify_published(ctx, ctx.node_id, sources + reused)` and then
+return. `sources` is the displayed list; `reused` is the saved dependencies of every reused
+loop item in this attempt (5f), through `source_list()`. Both go through the same
+canonical form, exact de-duplication and batches. The text, the displayed source list, the
+order and the `cited` flags do not change: `reused` is checked, not displayed.
 
 ### 5c. Restore (`backend/app/platform_validation.py`, `kb_errors`)
 
@@ -155,13 +170,33 @@ before any work is reused.
 - `main.py:189` (the resume endpoint): pass `previous.get('loop_progress')`. Both run
   documents come from `storage._document`, which merges `run_loop_items` into
   `loop_progress`.
+- `worker.py:202` (`compile_workflow`): pass `saved_dependencies=run.get('vector_dependencies')` (5f).
 - `worker.py:204`: the named error for a Response value without `text` (D3).
 
 ### 5e. Docs (`docs/operations.md`)
 
-One passage: the Response checks every listed source before it publishes; a resume checks
-the saved sources of every reused node and loop item; the refusal fails the run under any
-`on_error`.
+One passage: the Response checks every listed source, and the saved sources behind reused
+loop work, before it publishes; a resume checks the saved sources of every reused node and
+loop item; the refusal fails the run under any `on_error`; a resumed loop's citations can
+show as `[unsupported reference]` (section 9).
+
+### 5f. Reused dependencies reach the publication check (`compiler.py`, `iteration.py`)
+
+No new store, schema, model call or citation parsing. The run already saves each loop
+item's verified sources under `<loop id>:<index>` (`storage.record_vector_dependencies`).
+
+- `compile_workflow(..., saved_dependencies=None)`: the run's `vector_dependencies` as
+  loaded at claim, kept in the run state. A reused item does not run again in this attempt,
+  so its saved list cannot change during the attempt.
+- Two reuse points record the owner in a run-state set `reused_owners`:
+  1. the compiler's cached path, when a `for_each` checkpoint is restored (after
+     `validate_cached`): every saved owner `<loop id>:<integer>`;
+  2. `iteration.for_each_node`, when an index from `completed_indices` is reused:
+     `item_owner(ctx, index)`.
+- The Response reads the saved lists of `reused_owners` (5b). An owner with no saved list
+  adds nothing; a malformed list is refused by `source_list()`.
+- Fresh loop items in the same attempt are not in `reused_owners`: their passages enter the
+  shared registry and the displayed list, as today.
 
 ## 6. What does not change
 
@@ -194,7 +229,10 @@ unrelated document keeps the knowledge base searchable after a removal.
 | U6 | D | As U5, but crash after item 0's progress row and before the loop checkpoint (partial item progress). Resume is refused naming `<loop id>:0`; item 0 is not reused. |
 | U7 | D | Crash after the `out` success event (Response checkpoint saved), remove the document, resume. Refused with the restore error; the saved source is not republished. |
 | U8 | D | Both resume entry points: the resume endpoint (`main.py`) returns 422 with the error, and the worker preflight fails the run, for U5's state. |
-| U9 | C | Unchanged-source control for U5, U6 and U7: no removal; resume succeeds; same output and sources as a run with no crash; no model call repeated. |
+| U9 | C | Unchanged-source control for U5, U6 and U7: no removal; resume succeeds; no model call repeated. It does **not** assert the same output and sources as an uninterrupted run: on the baseline a resumed loop's `[S1]` becomes `[unsupported reference]` and the Response lists no source (section 9). The test records that difference. |
+| U22 | D | The R2-01 sequence (real KB, Worker): crash after the loop checkpoint; resume with the document present (resume checks pass, the loop is reused); the Prompt commits its success event; then the document is removed, before the Response runs. Run `failed` with the named refusal; no `out` success event or checkpoint; empty run output; provider calls stay 1 across both attempts. |
+| U23 | D | As U22, but the first attempt stops after item 0's progress row and before the loop checkpoint. On resume, item 0 is reused from progress and item 1 runs fresh; the removed document belongs to item 0. Same refusal and the same assertions. |
+| U24 | D | Unchanged-document control for U22 and U23: the run succeeds with no repeated model call, and the Response's verifier calls include the reused item's saved source (the baseline makes no Response call). |
 
 **Contract**
 
@@ -248,14 +286,22 @@ no verifier; each one found is listed with its reason in the evidence README.
 | N11: lenient container (`"{}"` decodes to zero sources) | U12 |
 | N12: the refusal raised as a plain `ValueError` (recoverable) | U20 |
 | N13: resume endpoint does not pass `loop_progress` | U8 |
+| N14: reused dependencies checked only at resume (preflight and loop reuse), not at the Response | U22, U23, U24 |
+| N15: only a restored loop checkpoint records `reused_owners` (an item reused from progress does not) | U23 |
 
 ## 9. Limits and out of scope
 
 - **Check-to-publish window.** The check runs before the Response returns. A removal after a
   source's batch was checked and before the checkpoint commits is not caught (CWE-367). The
   window includes the remaining batches and the checkpoint write, so no time bound is
-  claimed. Query and Agent have the same window. The loop path in section 1 is not this
-  window: the resume check covers it.
+  claimed. Query and Agent have the same window. Paths 3 and 4 in section 1 are not this
+  window: the resume check covers path 3, and the publication check of reused dependencies
+  (5f) covers path 4.
+- **Citations of reused loop results (existing behavior).** A resumed loop's result text
+  keeps `[S1]`, but its passage is not restored into the shared registry, so the Response
+  shows `[unsupported reference]` and lists no source. The answer is not wrong in its
+  source authority (5f checks it); it is less well cited. Restoring evidence and labels for
+  reused loop results is a separate change. R01 does not depend on it.
 - **D2 cost.** A resume can be refused for a removed source in a reused item that the
   Response does not read.
 - **Run history.** Finished runs and intermediate events (for example a retrieval's own
@@ -274,19 +320,24 @@ R01 is closed when each line has a passing test:
 2. A resume never reuses work whose saved sources fail the check: after a loop checkpoint
    (U5), after partial item progress (U6), after a Response checkpoint (U7), at both entry
    points (U8); with the unchanged-source control (U9).
-3. Missing authority and malformed containers fail closed (U10, U12); a valid empty list
+3. A Response built on reused loop work checks the reused items' saved sources at
+   publication, after a full loop checkpoint (U22) and after partial progress (U23); with
+   the unchanged-document control (U24).
+4. Missing authority and malformed containers fail closed (U10, U12); a valid empty list
    needs no verifier (U11).
-4. Duplicates, conflicting metadata and large lists are checked completely (U13–U16);
+5. Duplicates, conflicting metadata and large lists are checked completely (U13–U16);
    unchanged runs publish exactly as before (U17, U18).
-5. Control flow is never converted into a source failure (U19); the refusal fails the run by
+6. Control flow is never converted into a source failure (U19); the refusal fails the run by
    name under every `on_error` (U20, U21).
 
 Then: backend `PYTHONHASHSEED` 0–4, the isolation copy, the deployed scenario gate, and
 hosted CI on the pushed commit. The audit's `test_real_source_boundary.py` and the review's
-four candidate scenarios (`evals/results/r01-plan-review-65a7774/`) pass or close as stated.
+four candidate scenarios (`evals/results/r01-plan-review-65a7774/`) and the revision-2
+review's scenarios (`evals/results/r01-plan-r2-review-e50fa65/`) pass or close as stated.
 
-**Size:** one commit. Five application files (`platform_nodes.py`, `registry.py`,
-`platform_validation.py`, `worker.py`, `main.py`), about 70 changed lines, plus tests and docs.
+**Size:** one commit. Seven application files (`platform_nodes.py`, `registry.py`,
+`platform_validation.py`, `worker.py`, `main.py`, `compiler.py`, `iteration.py`), about 90
+changed lines, plus tests and docs.
 
 ## 11. Changes from revision 1 (`65a7774`)
 
@@ -298,3 +349,11 @@ four candidate scenarios (`evals/results/r01-plan-review-65a7774/`) pass or clos
 | N7 equivalent | Replaced by `id`-only de-duplication (N7) with the conflicting-metadata test U14. |
 | D/C labels | The new-call assertions are D (U15, U16, U19); U15 asserts complete coverage. |
 | "Milliseconds" | Removed; the window is described without a time bound. |
+
+## 12. Changes from revision 2 (`e50fa65`)
+
+| Review item | Change |
+|---|---|
+| R2-01 (P1): reused-loop dependencies never reach the publication check | Section 1 path 4; D2 checks the same set at resume **and** at publication; 5b checks displayed sources plus reused dependencies; new 5f carries the saved dependencies and the reused owners into the run state; 5d passes them from the worker; tests U22–U24; mutants N14, N15. |
+| U9 exact replay equality fails on the baseline | U9 narrowed to completion with no repeated model call; the citation difference is recorded in U9 and in section 9 as existing behavior, separate from R01. |
+| Refusal text | "a listed knowledge source" becomes "a knowledge source behind this answer", because the check now covers dependencies that are not displayed. |
