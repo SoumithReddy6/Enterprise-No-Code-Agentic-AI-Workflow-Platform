@@ -1,0 +1,27 @@
+{
+  "sqlalchemy": "2.0.52",
+  "rows": {
+    "lost_fast_save_ack": {
+      "passed": true,
+      "model_calls": 2,
+      "tokens_spent": 30,
+      "pending_spend_resaved_before_repair": true
+    },
+    "missing_publishing_snapshot": {
+      "passed": true,
+      "error_type": "AccountingUnavailable",
+      "published_nothing": true
+    },
+    "session_hook_rollback": {
+      "passed": true,
+      "independent_connection_value": 0,
+      "pooled_connection_value": 0
+    },
+    "connection_hook_is_not_a_rollback": {
+      "passed": true,
+      "independent_connection_value": 0,
+      "pooled_connection_value": 1
+    }
+  },
+  "passed": true
+}
