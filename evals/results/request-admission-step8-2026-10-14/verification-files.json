@@ -1,0 +1,16 @@
+[
+  ".github/workflows/ci.yml",
+  "backend/app/compiler.py",
+  "backend/app/operator_metrics.py",
+  "backend/app/storage.py",
+  "backend/migrations/versions/0005_admission_metrics.py",
+  "backend/tests/test_request_admission_eval.py",
+  "backend/tests/test_request_admission_metrics.py",
+  "backend/tests/test_request_review_migration.py",
+  "docs/operations.md",
+  "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md",
+  "evals/request-admission/expectations.json",
+  "frontend/tests/browser/request-routing.spec.ts",
+  "scripts/check_request_admission_eval.py",
+  "scripts/eval_request_admission.py"
+]

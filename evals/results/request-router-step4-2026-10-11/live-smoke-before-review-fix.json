@@ -1,0 +1,221 @@
+{
+  "started_at": 1791738681.447426,
+  "completed_at": 1791738710.9795709,
+  "base_commit": "953d4d20b8b8918ea3cb8e085b2472956b01e5cf",
+  "model": {
+    "name": "llama3.1:latest",
+    "digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e",
+    "details": {
+      "parent_model": "",
+      "format": "gguf",
+      "family": "llama",
+      "families": [
+        "llama"
+      ],
+      "parameter_size": "8.0B",
+      "quantization_level": "Q4_K_M",
+      "context_length": 131072,
+      "embedding_length": 4096
+    }
+  },
+  "temperature": 0,
+  "path": "real Worker -> compiler -> request_router -> authorized llm_node -> Ollama; isolated SQLite",
+  "measurement": "Exploratory smoke test, not the frozen Step 8 accuracy suite or a release threshold. Expectations fixed before calls; no threshold tuning.",
+  "source_sha256": {
+    "backend/app/__init__.py": "59489687fe4e7c80a64c9ec50e182e03a117e49ccbf8c555f0b7078a17b86463",
+    "backend/app/agent_memory.py": "59421c58d5ef1babce0401e902d37283ffa4a14cede85cc3de5d0bab2f4d3368",
+    "backend/app/agent_runtime.py": "e27b7de965172cef2e8cf74a9466d78eee9d22d4588f225882d6759e10c76847",
+    "backend/app/answerability_guard.py": "e7917d0020ea2e3a7a43e9ebc8e6d1294166e9f6657a529ce8ecdcde2a4b4c9d",
+    "backend/app/approvals.py": "d3f8ba23cb56d3260863f9a596a989628dad29ab760b87502267f3c08576dcf5",
+    "backend/app/auth.py": "085a9b13fa0074d0873b8624a1f11fce1443de5d397e50e1550f0c460f7e2bf3",
+    "backend/app/auth_security.py": "9c5c399d2f2f2f9504e9f7dfe2c4996594644703eb9d6fc5ca1c2bd95ccdf3a5",
+    "backend/app/calculate.py": "8e3e5d3fc5c2ab11c7a097cc672d7cfca33f80e0ee824084eaf1d0b052cab0f3",
+    "backend/app/common_replies.py": "c41b2575ced6e0a22fbc7274a2a38f8fe9b3eb7ca129de3df789d1858f737fd4",
+    "backend/app/compiler.py": "dbd5da21a772a281e3a1f4020d1b6da60b527c6d508bd43f81c61a6270304099",
+    "backend/app/conditions.py": "68305e7326bce7c4840e1be6ee6fdda380b7d63b6c5577b5d5421a050bb06031",
+    "backend/app/evidence_registry.py": "462bbafa5bc108e0bfe63fd45beb8fc26d77838be109f08be38bd6b12f488b0b",
+    "backend/app/exact_json.py": "439487fa40c44474dfc562b5c5afef9fb163829cb6dac7dd42ab416e7b200cbe",
+    "backend/app/execution_policy.py": "c39036416134fc5486ac96ceec59a101b1f7a7ad6d98104dd7feb3a97b6621fa",
+    "backend/app/iteration.py": "dba2687bdbcff7e018a8650a023805828b590d5af076c9ddbc04fc29e2a97303",
+    "backend/app/kb/__init__.py": "b466075df148b1ec103d94036e1d215ae9bd891aa096c0aff9364ee155f9bad8",
+    "backend/app/kb/answerability.py": "224c4cdd6952446a56792c0c224f27ca54f7bf09e186d3bf64db28603762b5c3",
+    "backend/app/kb/embedding.py": "6c6bb4b63216ccbf5b0bf7dd1bb0ac1076e7e6120e7086f53ea6a1021504a3cc",
+    "backend/app/kb/ingestion.py": "c6f9587b14d7b353e1b33089cec27dae9394b480868e20c9e80885bc2dd478e8",
+    "backend/app/kb/management.py": "5b3985a2bab41adde0a70f1e7fa742fbb368dd9c78938a259dff1c54444a848d",
+    "backend/app/kb/management_app.py": "dbb7b6f17eef7e9a138f37a7171392573c374bb453208ef41a013d3c41886d3f",
+    "backend/app/kb/management_models.py": "2b2e65b53c4395998ef067083b81136964e3efa584eda0c62bc6d6790263d118",
+    "backend/app/kb/options.py": "064ef8e0087d8169334dbe15827f9fcf7693c278f9ffe37f5e1956c764637589",
+    "backend/app/kb/reranking.py": "31063b5307857444bdc416f0286df84b74255fdbdffb47af0ee4fde28cf32b91",
+    "backend/app/kb/rpc.py": "bf5bf4d535cf3207845be4a4904538fdfb52d29ed85f82556c711c96fe148bcd",
+    "backend/app/kb/search.py": "8e3354d9782c0e0b07b023d335f84c1f94f1106e6f3b680bf3dd44357bd6730f",
+    "backend/app/kb/search_app.py": "78945d1f66ced1125bf954765f92b1d3d561039e6f431918718f7708cd682aaa",
+    "backend/app/kb/search_models.py": "af8453c5453d515b07ff18db484b6b4c2f4a171c449dae6c75d4b64e77ac46a7",
+    "backend/app/kb/section_chunking.py": "82527dc829fa88fe1ff258f02eb243e2c0469950e00e310eb2fa1345ad77ada7",
+    "backend/app/kb_gateway.py": "efe542364c28f0f48a5605a992e37336ac8d841e471c4fec51596adcaaf0f91a",
+    "backend/app/main.py": "15792a51f14ba58813b8cf8647a3dba26e922684b7d506aea2230478af9b8607",
+    "backend/app/models.py": "8472fcbc7a4c118ef7033a5b59eae8b876151f31322fb7fb13bf6bf9eee287ea",
+    "backend/app/observability.py": "1ab89943a3c58247622213f809515fdbb0ef2fe5814bfca442400492040e10db",
+    "backend/app/operator_metrics.py": "8b675ed224933e6342c9c589c1fbcd022e60fd5d8e7fa962c6dc15e24d5d81ad",
+    "backend/app/pdf_extract.py": "9d1aeedd5688b52b0eeb61cd435adda695a1e443dc2fd79bb18585e1216c32b1",
+    "backend/app/platform_graph.py": "407b00c9b59acaa701cce63ecc7cfe942b168acc536135e4590a0adb015e92af",
+    "backend/app/platform_nodes.py": "03ca499d16a0c22ebeff65a8463e13095962ec4115ddfb7cc81ce978777df7d5",
+    "backend/app/platform_validation.py": "5427a13803321f5b1ab3b74dffec5728539cba6a4ccbd55a99817d76a7658d93",
+    "backend/app/port_types.py": "df4e339dcbeda6eb6ffc5dd7a0123d435e717808dd531b9789da269c6bd6f073",
+    "backend/app/provenance.py": "fe509ca9b67d8c12ed6b00d6186030e84683ef28f761eed9f656fafdfd6fa932",
+    "backend/app/providers.py": "ae921d5ee05b15c65f5b1e001c6f5f7578830049db94a47faeca982a6c87c84c",
+    "backend/app/readiness.py": "4f26c72f07a2af2ae5db44c0988e588547d6a4bdfef72c359a6c45b052f66074",
+    "backend/app/registry.py": "ddfd4a5f05cdf2274d632a9051f7507f40bc10b818c0ff4a8af4f1158a385269",
+    "backend/app/request_contracts.py": "149d38128823de178fd5f55e690523fdeaf85df68c91bc16e1ee4125fc3f80fa",
+    "backend/app/request_router.py": "287bc92434a1a54cfc5c7621f76f48de324f08b4174d41e5182fca1c885ae363",
+    "backend/app/sandbox.py": "463c58aa45a4e12aef4a27f332369751a8eba9cebe590bce30365bd0d8997e68",
+    "backend/app/schema.py": "cbbd9eb6a2e5c65069448e48c15d2640e98d75abc0012273bec650763189d882",
+    "backend/app/storage.py": "109ddabbff68c74da51beef78d0270d9d9f2969ec64fa43b076c8545afdff002",
+    "backend/app/token_budget.py": "3d1d4397ea767c8583d98a5cc9dcf895119e90af2c4bfd782f3c2f00e841af45",
+    "backend/app/tool_api.py": "ef5542b16f8c2ef47ca8e15f75bb6571bfd63b976fc5470cf967f72f81db379d",
+    "backend/app/tool_service.py": "92869b8f7d083dce1f418fbde49a29a6a0ad0f7d50c8b81ecb7e15bf699e6fbe",
+    "backend/app/vector_adapters.py": "ed0d207c65b917343c32406deabd8adb6452bc8ac35e2fe1db99110afc328df2",
+    "backend/app/vector_extract.py": "f1e805901e22a8c76ad50604f2a0673a077dea9b7130a605b09fc0f56d174815",
+    "backend/app/worker.py": "ef33d3e9bb7efc769ec240cc13497da66f06a5e0a6c58bfffa297e92dfcd6175"
+  },
+  "source_files_changed": [],
+  "rows": [
+    {
+      "brief": "purchase",
+      "input": "3 laptops at $450 each",
+      "expected": "proceed",
+      "actual": "clarify",
+      "matched": false,
+      "status": "success",
+      "error": "",
+      "decision": {
+        "missing_fields": [
+          "quantity",
+          "total",
+          "unit_price"
+        ],
+        "reason": "Missing quantity, total or unit price is incomplete.",
+        "reply": "Please specify the quantity and unit price or provide a total for the purchase.",
+        "route": "clarify"
+      },
+      "duration_seconds": 8.819,
+      "tokens_spent": 881,
+      "extraction_ran": false,
+      "writes": 0
+    },
+    {
+      "brief": "purchase",
+      "input": "Buy some laptops",
+      "expected": "clarify",
+      "actual": "clarify",
+      "matched": true,
+      "status": "success",
+      "error": "",
+      "decision": {
+        "missing_fields": [
+          "item",
+          "quantity",
+          "price"
+        ],
+        "reason": "Missing item, quantity, and price. A bare action word such as 'buy' is not an item.",
+        "reply": "Please specify the item you want to buy, the quantity, and the unit price.",
+        "route": "clarify"
+      },
+      "duration_seconds": 3.995,
+      "tokens_spent": 436,
+      "extraction_ran": false,
+      "writes": 0
+    },
+    {
+      "brief": "purchase",
+      "input": "Order $450",
+      "expected": "clarify",
+      "actual": "clarify",
+      "matched": true,
+      "status": "success",
+      "error": "",
+      "decision": {
+        "missing_fields": [
+          "item",
+          "quantity"
+        ],
+        "reason": "Missing item and quantity. A bare action word such as 'order' is not an item.",
+        "reply": "Please specify the item you want to order and the quantity.",
+        "route": "clarify"
+      },
+      "duration_seconds": 3.41,
+      "tokens_spent": 425,
+      "extraction_ran": false,
+      "writes": 0
+    },
+    {
+      "brief": "purchase",
+      "input": "How do AI workflows work?",
+      "expected": "out_of_scope",
+      "actual": null,
+      "matched": false,
+      "status": "failed",
+      "error": "Request router returned invalid output after one repair; no route was taken.",
+      "decision": null,
+      "duration_seconds": 4.973,
+      "tokens_spent": 927,
+      "extraction_ran": false,
+      "writes": 0
+    },
+    {
+      "brief": "purchase",
+      "input": "Hello, buy 3 laptops at $450 each",
+      "expected": "proceed",
+      "actual": "clarify",
+      "matched": false,
+      "status": "success",
+      "error": "",
+      "decision": {
+        "missing_fields": [
+          "item_name"
+        ],
+        "reason": "Missing item name, e.g. 'Lenovo ThinkPad'.",
+        "reply": "Please specify the laptop model or brand you'd like to purchase.",
+        "route": "clarify"
+      },
+      "duration_seconds": 2.577,
+      "tokens_spent": 426,
+      "extraction_ran": false,
+      "writes": 0
+    },
+    {
+      "brief": "general_qa",
+      "input": "How do AI workflows work?",
+      "expected": "proceed",
+      "actual": null,
+      "matched": false,
+      "status": "failed",
+      "error": "Request router returned invalid output after one repair; no route was taken.",
+      "decision": null,
+      "duration_seconds": 2.628,
+      "tokens_spent": 729,
+      "extraction_ran": false,
+      "writes": 0
+    },
+    {
+      "brief": "general_qa",
+      "input": "Buy 3 laptops at $450 each",
+      "expected": "out_of_scope",
+      "actual": "out_of_scope",
+      "matched": true,
+      "status": "success",
+      "error": "",
+      "decision": {
+        "missing_fields": [],
+        "reason": "Request to make a purchase is excluded from the workflow.",
+        "reply": "This workflow is for answering general questions about software, AI, and workflows. It cannot assist with purchasing or sending messages.",
+        "route": "out_of_scope"
+      },
+      "duration_seconds": 2.907,
+      "tokens_spent": 371,
+      "extraction_ran": false,
+      "writes": 0
+    }
+  ],
+  "matched": 3,
+  "count": 7
+}

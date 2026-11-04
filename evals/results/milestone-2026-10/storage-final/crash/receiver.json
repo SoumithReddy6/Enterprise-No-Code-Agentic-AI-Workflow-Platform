@@ -1,0 +1,47 @@
+[
+  {
+    "method": "GET",
+    "path": "/rest/api/3/search/jql",
+    "body": ""
+  },
+  {
+    "method": "GET",
+    "path": "/hold/milestone-read",
+    "body": "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:63482/browse/LAB-0\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/hold/milestone-read",
+    "body": "{\"key\":\"LAB-1\",\"summary\":\"Ticket 1\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:63482/browse/LAB-1\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/hold/milestone-read",
+    "body": "{\"key\":\"LAB-1\",\"summary\":\"Ticket 1\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:63482/browse/LAB-1\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/hold/milestone-read",
+    "body": "{\"key\":\"LAB-2\",\"summary\":\"Ticket 2\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:63482/browse/LAB-2\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/rest/api/3/search/jql",
+    "body": ""
+  },
+  {
+    "method": "GET",
+    "path": "/read/milestone-baseline",
+    "body": "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:63482/browse/LAB-0\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/read/milestone-baseline",
+    "body": "{\"key\":\"LAB-1\",\"summary\":\"Ticket 1\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:63482/browse/LAB-1\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/read/milestone-baseline",
+    "body": "{\"key\":\"LAB-2\",\"summary\":\"Ticket 2\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:63482/browse/LAB-2\"}"
+  }
+]

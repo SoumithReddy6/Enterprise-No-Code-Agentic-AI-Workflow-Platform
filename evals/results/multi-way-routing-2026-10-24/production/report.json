@@ -1,0 +1,402 @@
+{
+  "head_at_start": "e4d3ee19eb347cb6ac8a57da9cf685fe3697e160",
+  "head": "e4d3ee19eb347cb6ac8a57da9cf685fe3697e160",
+  "working_tree": " M README.md\n M docs/platform-reference.md\n M docs/production-scenario-testing.md\n M docs/request-contract-interfaces.md\n M docs/typed-conditions.md\n M scripts/check_production_scenarios.py\n?? docs/multi-way-routing.md\n?? evals/results/a52-switch-editor-closure-26c10ac/\n?? evals/results/a52-switch-editor-e05-recheck-14c7087/\n?? evals/results/a52-switch-editor-final-e4d3ee1/\n?? evals/results/a52-switch-editor-recheck-8f1f44a/\n?? evals/results/a52-switch-editor-review-2026-10-23/\n?? evals/results/a52-switch-review-2026-10-21/\n?? evals/results/common-replies-step3-2026-10-11/isolation-manifest.json\n?? evals/results/common-replies-step3-2026-10-11/production/provider-requests.json\n?? evals/results/loop-marker-production-rerun/\n?? evals/results/loop-marker-production/\n?? evals/results/milestone-2026-10/browser-original-bug-trace.zip\n?? evals/results/milestone-2026-10/npm-audit.json\n?? evals/results/milestone-2026-10/pip-audit.json\n?? evals/results/milestone-2026-10/storage-validation/\n?? evals/results/milestone-2026-10/storage/\n?? evals/results/multi-way-routing-2026-10-24/\n?? evals/results/request-admission-step8-2026-10-14/fault-current/rows.json\n?? evals/results/request-admission-step8-2026-10-14/fault-final/rows.json\n?? evals/results/request-admission-step8-2026-10-14/fault-release/\n?? evals/results/request-admission-step8-2026-10-14/fault-verified/\n?? evals/results/request-admission-step8-2026-10-14/fault/\n?? evals/results/request-admission-step8-2026-10-14/live-final/rows.json\n?? evals/results/request-admission-step8-2026-10-14/live-release/rows.json\n?? evals/results/request-admission-step8-2026-10-14/live/rows.json\n?? evals/results/request-admission-step8-2026-10-14/production-release/provider-requests.json\n?? evals/results/request-admission-step8-2026-10-14/production/live-models.json\n?? evals/results/request-admission-step8-2026-10-14/production/provider-requests.json\n?? evals/results/request-admission-step8-2026-10-14/storage-process-final/crash/\n?? evals/results/request-admission-step8-2026-10-14/storage-process-final/workers/\n?? evals/results/request-contracts-step2-2026-10-11/production/\n?? evals/results/request-editor-step7-2026-10-13/production/provider-requests.json\n?? evals/results/request-enforcement-step6-2026-10-12/process/\n?? evals/results/request-enforcement-step6-2026-10-12/production-final/provider-requests.json\n?? scripts/scenarios/switch_routing.py\n",
+  "started_at": 1792875016.034407,
+  "completed_at": 1792875086.076519,
+  "source_sha256": {
+    "backend/app/__init__.py": "59489687fe4e7c80a64c9ec50e182e03a117e49ccbf8c555f0b7078a17b86463",
+    "backend/app/agent_memory.py": "59421c58d5ef1babce0401e902d37283ffa4a14cede85cc3de5d0bab2f4d3368",
+    "backend/app/agent_runtime.py": "8c0568b475afdafc4fe2465ad118bdb8ec7ed67f373711a8b2a8c71f02bc04ba",
+    "backend/app/answerability_guard.py": "e7917d0020ea2e3a7a43e9ebc8e6d1294166e9f6657a529ce8ecdcde2a4b4c9d",
+    "backend/app/approvals.py": "1d11a2a43a311d83f8563a85414f4437b934e4f6d8c362680dbdf9e7aaccca5a",
+    "backend/app/auth.py": "085a9b13fa0074d0873b8624a1f11fce1443de5d397e50e1550f0c460f7e2bf3",
+    "backend/app/auth_security.py": "9c5c399d2f2f2f9504e9f7dfe2c4996594644703eb9d6fc5ca1c2bd95ccdf3a5",
+    "backend/app/calculate.py": "13e8602d3a9d6262bf9ae47fc39f27d3cd744eb8dd59631307e1f159d5fbf99e",
+    "backend/app/common_replies.py": "01c61aaeb15dfa053874a9b1f9a4bfa7c9cf0f84eb1c3b31804ec665aa82833c",
+    "backend/app/compiler.py": "829b97b44b2e83f9107c028611df21990204f338462c3ccde04d1a5deb7f01c9",
+    "backend/app/conditions.py": "68305e7326bce7c4840e1be6ee6fdda380b7d63b6c5577b5d5421a050bb06031",
+    "backend/app/evidence_registry.py": "462bbafa5bc108e0bfe63fd45beb8fc26d77838be109f08be38bd6b12f488b0b",
+    "backend/app/exact_json.py": "ab438440f11d93486b746b54d6a5b5c3f1047257e7b7733da85a92fc0dcd20c6",
+    "backend/app/execution_policy.py": "debfee241869dc25598214e0ec0cb09c7011fc57cb95cdfec767ae67aa19ece1",
+    "backend/app/extraction_checks.py": "8ac5823f224db38ec0ebcecb6fb9e5fc97ccc53048b45bb460d6dca682b2fdd4",
+    "backend/app/iteration.py": "464a2fb588e96755e367a340e5be09f0da4b1a614a8a70eda98d5fdd056e669b",
+    "backend/app/kb/__init__.py": "b466075df148b1ec103d94036e1d215ae9bd891aa096c0aff9364ee155f9bad8",
+    "backend/app/kb/answerability.py": "224c4cdd6952446a56792c0c224f27ca54f7bf09e186d3bf64db28603762b5c3",
+    "backend/app/kb/embedding.py": "6c6bb4b63216ccbf5b0bf7dd1bb0ac1076e7e6120e7086f53ea6a1021504a3cc",
+    "backend/app/kb/ingestion.py": "c6f9587b14d7b353e1b33089cec27dae9394b480868e20c9e80885bc2dd478e8",
+    "backend/app/kb/management.py": "5b3985a2bab41adde0a70f1e7fa742fbb368dd9c78938a259dff1c54444a848d",
+    "backend/app/kb/management_app.py": "dbb7b6f17eef7e9a138f37a7171392573c374bb453208ef41a013d3c41886d3f",
+    "backend/app/kb/management_models.py": "2b2e65b53c4395998ef067083b81136964e3efa584eda0c62bc6d6790263d118",
+    "backend/app/kb/options.py": "064ef8e0087d8169334dbe15827f9fcf7693c278f9ffe37f5e1956c764637589",
+    "backend/app/kb/reranking.py": "31063b5307857444bdc416f0286df84b74255fdbdffb47af0ee4fde28cf32b91",
+    "backend/app/kb/rpc.py": "bf5bf4d535cf3207845be4a4904538fdfb52d29ed85f82556c711c96fe148bcd",
+    "backend/app/kb/search.py": "8e3354d9782c0e0b07b023d335f84c1f94f1106e6f3b680bf3dd44357bd6730f",
+    "backend/app/kb/search_app.py": "78945d1f66ced1125bf954765f92b1d3d561039e6f431918718f7708cd682aaa",
+    "backend/app/kb/search_models.py": "af8453c5453d515b07ff18db484b6b4c2f4a171c449dae6c75d4b64e77ac46a7",
+    "backend/app/kb/section_chunking.py": "82527dc829fa88fe1ff258f02eb243e2c0469950e00e310eb2fa1345ad77ada7",
+    "backend/app/kb_gateway.py": "efe542364c28f0f48a5605a992e37336ac8d841e471c4fec51596adcaaf0f91a",
+    "backend/app/main.py": "7046adf8f04405a730d52c70c1159e99dd36699a25a46b42e0ae64f40f1d8d38",
+    "backend/app/models.py": "8472fcbc7a4c118ef7033a5b59eae8b876151f31322fb7fb13bf6bf9eee287ea",
+    "backend/app/observability.py": "80da395254a9f3baaa16636199260e37ed77d77fa4a0d6de0f5730d9e347d9b2",
+    "backend/app/operator_metrics.py": "9c5d80078b131c1a6432456e91dbdf17c7fd367eb89a95b20f2d963899f1754d",
+    "backend/app/pdf_extract.py": "9d1aeedd5688b52b0eeb61cd435adda695a1e443dc2fd79bb18585e1216c32b1",
+    "backend/app/platform_graph.py": "d36aefed59e8bee8d1402e0f4ef6b643849a0adbca212ba9a643187e2947b7b5",
+    "backend/app/platform_nodes.py": "03ca499d16a0c22ebeff65a8463e13095962ec4115ddfb7cc81ce978777df7d5",
+    "backend/app/platform_validation.py": "5427a13803321f5b1ab3b74dffec5728539cba6a4ccbd55a99817d76a7658d93",
+    "backend/app/port_types.py": "df4e339dcbeda6eb6ffc5dd7a0123d435e717808dd531b9789da269c6bd6f073",
+    "backend/app/provenance.py": "92eb4de8d3bef76aefd67cb2290c58675474bab60b4fa75227fe638b64baf9fa",
+    "backend/app/providers.py": "ae921d5ee05b15c65f5b1e001c6f5f7578830049db94a47faeca982a6c87c84c",
+    "backend/app/readiness.py": "8ee250578eddd36a06e7e22bf1460eaa4a6490f65758de3595a93f65b5079de2",
+    "backend/app/registry.py": "8d20ed37c297f54fa522d39298f6cb7a85f9d4a79d82eb1dabf9a27a82045b6b",
+    "backend/app/request_contracts.py": "6ef6bcb561b1656b3833feb2243664583c24c05e5efa8de6958e4a25fffe3b92",
+    "backend/app/request_reader.py": "a2b7b3a7a42a15127116470f85d4f011b0e295b66b987968f9b3e4b2c1acf99d",
+    "backend/app/request_router.py": "af3292406f3b1271d650a86b4affef1fa242bc2b142429a2e80f217b24be0253",
+    "backend/app/request_safety.py": "a888f0cffac6d59cead0bcc6f31a41ab0cc975e163ea0f864c8112e8112301a7",
+    "backend/app/sandbox.py": "463c58aa45a4e12aef4a27f332369751a8eba9cebe590bce30365bd0d8997e68",
+    "backend/app/schema.py": "cbbd9eb6a2e5c65069448e48c15d2640e98d75abc0012273bec650763189d882",
+    "backend/app/storage.py": "34ec1bc23d104c841185445d99bbd35dee0940cda4da309bbef42705f4c5bc6d",
+    "backend/app/switch.py": "11a73139d0d290df26d02132173e8178e17c14d1032072f0b1ba84b6f26b2544",
+    "backend/app/token_budget.py": "3d1d4397ea767c8583d98a5cc9dcf895119e90af2c4bfd782f3c2f00e841af45",
+    "backend/app/tool_api.py": "ef5542b16f8c2ef47ca8e15f75bb6571bfd63b976fc5470cf967f72f81db379d",
+    "backend/app/tool_service.py": "92869b8f7d083dce1f418fbde49a29a6a0ad0f7d50c8b81ecb7e15bf699e6fbe",
+    "backend/app/vector_adapters.py": "ed0d207c65b917343c32406deabd8adb6452bc8ac35e2fe1db99110afc328df2",
+    "backend/app/vector_extract.py": "f1e805901e22a8c76ad50604f2a0673a077dea9b7130a605b09fc0f56d174815",
+    "backend/app/verification_receipts.py": "9e94e4b829dafcb891dacad7477daca9d70a11492fc76e2068bbe06e91d6a4c1",
+    "backend/app/worker.py": "ecbd1a73706efc1c826c29eb458a893890619ffaf970ed9533c3633a7773986d",
+    "scripts/scenarios/extraction_verification.py": "f9a0c31b6ccb92aea9ad83be54a8af7f6fe1e8d4f4540f8083317412d3e2fd48",
+    "scripts/scenarios/lab.py": "5c0a0d221893a43ab95174152a721482a42798fde5c796540f93b84f30f3dc5d",
+    "scripts/scenarios/milestone_worker.py": "019ae1e2df080b9b6833e7372edf4b5c6f8cf94e04a225fdfe7da86ac0c4f68f",
+    "scripts/scenarios/mixed_approval.py": "c504203bb31d7bc6215c8d7abe61be3dea16dc90087541944b1c0c35758d25fd",
+    "scripts/scenarios/request_enforcement.py": "21d95b7a620aac3974d60213972060b79bae95b20380ff1084e47d8cfdaf560f",
+    "scripts/scenarios/request_review_worker.py": "0aa6403203fac3a42e93e5b2cc8212913343d3dc1899d99e3b06d5427d694022",
+    "scripts/scenarios/request_routing.py": "2196899f68cc37d19a67ce0d0b0a305bc2602b7059b38c1e1284b69f8e1dd5ad",
+    "scripts/scenarios/switch_routing.py": "a8ef94dcdd892e7fabdb1b892120c5ef2e6e719ff138fda721aa18c3b0ef5c64",
+    "scripts/check_production_scenarios.py": "d20f2dd5bc766f3419c4f20b6963157547ff02bf0a61e0d0cdc232cd620aad37"
+  },
+  "source_files_changed": [],
+  "deployment": "isolated localhost API process + worker process + HTTP provider fixture; SQLite",
+  "external_services": "Jira/delivery fixtures over real HTTP; no live external writes",
+  "rows": [
+    {
+      "id": "S01",
+      "phase": "Batch1",
+      "name": "Ticket batch: approve each exact payload",
+      "status": "passed",
+      "details": {
+        "run_id": "d93fac5e1dfb4f8ca92134494afb5e37",
+        "writes": 3,
+        "distinct_approvals": 3
+      },
+      "seconds": 1.075
+    },
+    {
+      "id": "S02",
+      "phase": "Batch1",
+      "name": "Reject customer reply batch without sending",
+      "status": "passed",
+      "details": {
+        "run_id": "3d9bc6f76ea54d41826308e33604b2f0",
+        "writes": 0
+      },
+      "seconds": 0.179
+    },
+    {
+      "id": "S03",
+      "phase": "Batch1",
+      "name": "Uncertain delivery cannot continue",
+      "status": "passed",
+      "details": {
+        "run_id": "8c2125a44f6c4465ae0d5696cc169e76",
+        "received_writes": 1,
+        "resume_refused": true
+      },
+      "seconds": 0.121
+    },
+    {
+      "id": "S04",
+      "phase": "Batch1",
+      "name": "Uncertain delivery cannot route onward",
+      "status": "passed",
+      "details": {
+        "run_id": "62913e3950f246ff9ec01a4fc7ada0d7",
+        "received_writes": 1,
+        "resume_refused": true
+      },
+      "seconds": 0.12
+    },
+    {
+      "id": "S05",
+      "phase": "Batch1",
+      "name": "Worker restart between batch approvals",
+      "status": "passed",
+      "details": {
+        "run_id": "4a9fe0f6fe644005aa900280861a3131",
+        "received_writes": 2,
+        "worker_replaced": true
+      },
+      "seconds": 0.873
+    },
+    {
+      "id": "S15",
+      "phase": "Batch1",
+      "name": "Abrupt crash after a durable write item",
+      "status": "passed",
+      "details": {
+        "run_id": "c5e29eeecca24c23a99a5e1941c026f1",
+        "writes": 2,
+        "crash_after_sql_commit": true,
+        "lease_expiry": "real"
+      },
+      "seconds": 30.223
+    },
+    {
+      "id": "S16",
+      "phase": "Batch1",
+      "name": "Kill worker after receiver accepts a write",
+      "status": "passed",
+      "details": {
+        "run_id": "d46e28e6662e449fa7bf75ea156da9fa",
+        "writes": 1,
+        "uncertain_resume_refused": true
+      },
+      "seconds": 30.232
+    },
+    {
+      "id": "S06",
+      "phase": "A3",
+      "name": "Transient vendor read retries",
+      "status": "passed",
+      "details": {
+        "run_id": "f6b01fce456d43eab729ddb58df6352b",
+        "requests": 2
+      },
+      "seconds": 0.176
+    },
+    {
+      "id": "S07",
+      "phase": "A3-A4",
+      "name": "Loop body retries actually apply",
+      "status": "passed",
+      "details": {
+        "run_id": "f244ce56f02e40bcb521e9fee3600284"
+      },
+      "seconds": 0.117
+    },
+    {
+      "id": "S08",
+      "phase": "A3",
+      "name": "Invalid recovery binding rejected before execution",
+      "status": "passed",
+      "details": {
+        "invalid_binding_rejected": true
+      },
+      "seconds": 0.002
+    },
+    {
+      "id": "S09",
+      "phase": "A4",
+      "name": "Incomplete batch visible at run level",
+      "status": "passed",
+      "details": {
+        "run_id": "2d1cef9c8d5049aea373392cd09ecb9b"
+      },
+      "seconds": 0.112
+    },
+    {
+      "id": "S10",
+      "phase": "Security",
+      "name": "SSRF denied outside fixture boundary",
+      "status": "passed",
+      "details": {
+        "run_id": "ff0c95a5535f40beab7ce677bc26a5a5"
+      },
+      "seconds": 0.117
+    },
+    {
+      "id": "S11",
+      "phase": "Security",
+      "name": "Closed registration and anonymous denial",
+      "status": "passed",
+      "details": {
+        "second_registration": 403,
+        "anonymous_runs": 401
+      },
+      "seconds": 0.005
+    },
+    {
+      "id": "S12",
+      "phase": "Security",
+      "name": "Tenant isolation through authenticated HTTP",
+      "status": "passed",
+      "details": {
+        "foreign_run": 404,
+        "foreign_connections": 0
+      },
+      "seconds": 0.524
+    },
+    {
+      "id": "S13",
+      "phase": "Storage",
+      "name": "Two tabs cannot overwrite silently",
+      "status": "passed",
+      "details": {
+        "fresh": 200,
+        "stale": 409
+      },
+      "seconds": 0.005
+    },
+    {
+      "id": "S14",
+      "phase": "Approvals",
+      "name": "Changed destination invalidates reviewed write",
+      "status": "passed",
+      "details": {
+        "run_id": "ffb1f6602e624fdf9404854034fc38f8",
+        "writes": 0
+      },
+      "seconds": 0.293
+    },
+    {
+      "id": "S17",
+      "phase": "A5.1",
+      "name": "Typed condition routes an external write by amount",
+      "status": "passed",
+      "details": {
+        "branches": {
+          "1200": [
+            "desk",
+            "sent"
+          ],
+          "80": [
+            "kept"
+          ],
+          "1000.00": [
+            "kept"
+          ],
+          "1000.01": [
+            "desk",
+            "sent"
+          ],
+          "9007199254740993.0": [
+            "desk",
+            "sent"
+          ],
+          "1000.00000000000001": "routed to desk; write refused before sending"
+        },
+        "writes": 3
+      },
+      "seconds": 0.869
+    },
+    {
+      "id": "S18",
+      "phase": "A5.1",
+      "name": "Invalid comparison rejected before execution",
+      "status": "passed",
+      "details": {
+        "validation_errors": [
+          "check: gt compares numbers, but compare_to 'a thousand' is not a number."
+        ],
+        "run_created": false
+      },
+      "seconds": 0.007
+    },
+    {
+      "id": "S19",
+      "phase": "A5.1",
+      "name": "Uncomparable value fails the run and takes no branch",
+      "status": "passed",
+      "details": {
+        "run_id": "b75f5084e02947f7bdc4b7ab75d3bb06",
+        "error": "Condition field amount 'twelve hundred' is not a number.",
+        "writes": 0
+      },
+      "seconds": 0.117
+    },
+    {
+      "id": "S20",
+      "phase": "A5.2",
+      "name": "Switch routes a checked support category to exactly one receiver",
+      "status": "passed",
+      "details": {
+        "routes": {
+          "billing": {
+            "run_id": "7903eb34f6b440d088f617dd4f826db7",
+            "route": "billing",
+            "receiver": "/deliver/switch/billing"
+          },
+          "technical": {
+            "run_id": "ca41e5f272b5409fbfd1110d320ccadc",
+            "route": "technical",
+            "receiver": "/deliver/switch/technical"
+          }
+        },
+        "receivers_called": [
+          "/deliver/switch/billing",
+          "/deliver/switch/technical"
+        ],
+        "model_reads": 2
+      },
+      "seconds": 0.775
+    },
+    {
+      "id": "S21a",
+      "phase": "A5.2",
+      "name": "A forged saved route is refused before any send",
+      "status": "passed",
+      "details": {
+        "run_id": "72fb2f1f2eb84f93a83747dfa0b87a38",
+        "forged_route": "technical",
+        "error": "Switch route does not match its checked input and cases.",
+        "sends": 0
+      },
+      "seconds": 0.357
+    },
+    {
+      "id": "S21b",
+      "phase": "A5.2",
+      "name": "Routing on an unchecked HTTP value or in contract 1 is refused",
+      "status": "passed",
+      "details": {
+        "validation_errors": [
+          "route: Route on checked values, or use a Condition, which supports review."
+        ],
+        "run_status": 422,
+        "contract_1": [
+          "route: Switch requires a contract-2 workflow."
+        ],
+        "sends": 0
+      },
+      "seconds": 0.009
+    },
+    {
+      "id": "S21c",
+      "phase": "A5.2",
+      "name": "A case named \"approved\" still waits for write approval",
+      "status": "passed",
+      "details": {
+        "run_id": "da00561045924d76bbd515e976b8d8ee",
+        "approval_kind": "write",
+        "after_reject": "cancelled",
+        "sends": 0
+      },
+      "seconds": 0.126
+    },
+    {
+      "id": "M01",
+      "phase": "Batch1-contract",
+      "name": "Mixed approval modes inside one loop agent",
+      "status": "passed",
+      "details": {
+        "command": [
+          "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/bin/python",
+          "-m",
+          "scripts.scenarios.mixed_approval"
+        ],
+        "exit_code": 0
+      },
+      "seconds": 0.728
+    }
+  ],
+  "passed": true
+}

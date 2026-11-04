@@ -1,0 +1,32 @@
+[
+  {
+    "name": "live-release",
+    "command": [
+      ".venv/bin/python",
+      "-u",
+      "-m",
+      "scripts.eval_request_admission",
+      "--profile",
+      "live",
+      "--out",
+      "evals/results/request-admission-step8-2026-10-14/live-release"
+    ],
+    "exit_code": 1,
+    "seconds": 270.9110479169758
+  },
+  {
+    "name": "production-release",
+    "command": [
+      ".venv/bin/python",
+      "-u",
+      "-m",
+      "scripts.check_production_scenarios",
+      "--all",
+      "--live-models",
+      "--out",
+      "evals/results/request-admission-step8-2026-10-14/production-release"
+    ],
+    "exit_code": 0,
+    "seconds": 282.4623217500048
+  }
+]

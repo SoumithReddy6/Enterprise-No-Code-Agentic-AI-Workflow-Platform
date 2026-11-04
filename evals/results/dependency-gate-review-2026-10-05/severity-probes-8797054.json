@@ -1,0 +1,38 @@
+{
+  "policy_met": false,
+  "probes": [
+    {
+      "severity": "moderate",
+      "expected_ok": true,
+      "actual_ok": true,
+      "policy_met": true,
+      "structural_errors": [],
+      "failures": [],
+      "output": [
+        "npm audit gate: passed, no high or critical advisories (reported: 1 moderate, 1 total)"
+      ]
+    },
+    {
+      "severity": "high",
+      "expected_ok": false,
+      "actual_ok": true,
+      "policy_met": false,
+      "structural_errors": [],
+      "failures": [],
+      "output": [
+        "npm audit gate: passed, no high or critical advisories (reported: 1 high, 1 total)"
+      ]
+    },
+    {
+      "severity": "critical",
+      "expected_ok": false,
+      "actual_ok": true,
+      "policy_met": false,
+      "structural_errors": [],
+      "failures": [],
+      "output": [
+        "npm audit gate: passed, no high or critical advisories (reported: 1 critical, 1 total)"
+      ]
+    }
+  ]
+}

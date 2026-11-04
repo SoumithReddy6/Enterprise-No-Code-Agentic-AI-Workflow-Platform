@@ -1,0 +1,52 @@
+{
+  "head": "477e6981bd13a4bf69801d4ff47aa68c4b4248ab",
+  "scope": "Live local llama3.1:latest, current example, actual compiler; no tools, writes, workspace runs or configuration edits.",
+  "rows": [
+    {
+      "input": "How do AI workflows work?",
+      "expected_response": "none",
+      "actual_response": [
+        "none"
+      ],
+      "extraction": {
+        "text": "{\"amount\": null}",
+        "provider": "ollama",
+        "sources": "[]",
+        "grounding": "{}"
+      },
+      "passed": true,
+      "error": null
+    },
+    {
+      "input": "Hello!",
+      "expected_response": "none",
+      "actual_response": [
+        "none"
+      ],
+      "extraction": {
+        "text": "{\"amount\": null}",
+        "provider": "ollama",
+        "sources": "[]",
+        "grounding": "{}"
+      },
+      "passed": true,
+      "error": null
+    },
+    {
+      "input": "Please order two USB cables at $12 each. The order total is $24.",
+      "expected_response": "auto",
+      "actual_response": [
+        "auto"
+      ],
+      "extraction": {
+        "text": "{\"amount\": 24}",
+        "provider": "ollama",
+        "sources": "[]",
+        "grounding": "{}"
+      },
+      "passed": true,
+      "error": null
+    }
+  ],
+  "passed": true
+}

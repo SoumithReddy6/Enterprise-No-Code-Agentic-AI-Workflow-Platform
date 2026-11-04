@@ -1,0 +1,14 @@
+{
+  "baseline": "gate-fresh-2026-09-21.json",
+  "fresh": "product-guard-fresh-2026-09-21.json",
+  "row_metric_changes": [],
+  "changed_answer_count": 15,
+  "note": "Guarded refusals now name the answerability reader in their reason and abstention_source; baseline treated them as generic empty retrieval.",
+  "remaining_unanswerable_failures": [
+    "What is the maximum load weight a forklift is allowed to lift?",
+    "How many days of paid vacation do federal employees receive each year?",
+    "What will the IRS standard mileage rate be in 2030?",
+    "What is the IRS standard mileage rate for business driving in 2027?",
+    "How many driving hours does driver Elena Ruiz have left today after her last eight days of work?"
+  ]
+}

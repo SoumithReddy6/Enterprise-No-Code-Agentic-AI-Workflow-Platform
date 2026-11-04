@@ -1,0 +1,455 @@
+{
+  "application_root": "/private/tmp/relay-r01-plan-6IYlH1E5/backend/app",
+  "shapes": {
+    "missing_authority_refused": "out: knowledge source verification is unavailable. No answer was published.",
+    "malformed_empty_object_refused": [
+      "out: saved knowledge sources are unavailable or removed. Start a new run with current evidence."
+    ]
+  },
+  "real_cases": [
+    {
+      "case": "fresh_fail",
+      "status": "failed",
+      "error": "out: a listed knowledge source is unavailable or was removed. No answer was published. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 0,
+      "verification_calls_after_resume": null,
+      "verification_calls_after_removal": 1,
+      "response_checkpointed": false,
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "2a99e988a0b344508c78d1eb264c5a64"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "2a99e988a0b344508c78d1eb264c5a64"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "2a99e988a0b344508c78d1eb264c5a64"
+          ]
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "2a99e988a0b344508c78d1eb264c5a64"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "fresh_continue",
+      "status": "failed",
+      "error": "out: a listed knowledge source is unavailable or was removed. No answer was published. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 0,
+      "verification_calls_after_resume": null,
+      "verification_calls_after_removal": 1,
+      "response_checkpointed": false,
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "cb35a0fef70c462988fa3319d69a1f98"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "cb35a0fef70c462988fa3319d69a1f98"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "cb35a0fef70c462988fa3319d69a1f98"
+          ]
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "cb35a0fef70c462988fa3319d69a1f98"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "fresh_route",
+      "status": "failed",
+      "error": "out: a listed knowledge source is unavailable or was removed. No answer was published. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 0,
+      "verification_calls_after_resume": null,
+      "verification_calls_after_removal": 1,
+      "response_checkpointed": false,
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "95d18880016b4d599965a5d0aad4440a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "95d18880016b4d599965a5d0aad4440a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "95d18880016b4d599965a5d0aad4440a"
+          ]
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "95d18880016b4d599965a5d0aad4440a"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_response",
+      "status": "failed",
+      "error": "out: saved knowledge sources are unavailable or removed. Start a new run with current evidence.; each:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 1,
+      "verification_calls_after_resume": 2,
+      "verification_calls_after_removal": 2,
+      "response_checkpointed": true,
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "2a4e94280c58454ca5ef6cfc858fe1b7"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "2a4e94280c58454ca5ef6cfc858fe1b7"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "2a4e94280c58454ca5ef6cfc858fe1b7"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "2a4e94280c58454ca5ef6cfc858fe1b7"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "2a4e94280c58454ca5ef6cfc858fe1b7"
+          ]
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "2a4e94280c58454ca5ef6cfc858fe1b7"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "2a4e94280c58454ca5ef6cfc858fe1b7"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_loop",
+      "status": "failed",
+      "error": "each:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 0,
+      "verification_calls_after_resume": 1,
+      "verification_calls_after_removal": 1,
+      "response_checkpointed": false,
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "b0ce5252809c468798f1ad3c52ba2a4f"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "b0ce5252809c468798f1ad3c52ba2a4f"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "b0ce5252809c468798f1ad3c52ba2a4f"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "b0ce5252809c468798f1ad3c52ba2a4f"
+          ]
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "b0ce5252809c468798f1ad3c52ba2a4f"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_partial_loop",
+      "status": "failed",
+      "error": "each:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 0,
+      "verification_calls_after_resume": 1,
+      "verification_calls_after_removal": 1,
+      "response_checkpointed": false,
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "3545e174df564244a023f42026d1f9da"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "3545e174df564244a023f42026d1f9da"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "3545e174df564244a023f42026d1f9da"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "3545e174df564244a023f42026d1f9da"
+          ]
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "3545e174df564244a023f42026d1f9da"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "loop_fresh",
+      "status": "success",
+      "error": "",
+      "provider_calls": 1,
+      "output": "[{'index': 0, 'status': 'success', 'value': 'Bluebird is the project codename. [S1]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}]",
+      "response_source_count": 1,
+      "verification_calls_after_resume": null,
+      "verification_calls_after_removal": null,
+      "response_checkpointed": true,
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "38ab01105f73442aa3f05a5d3abf2775"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "38ab01105f73442aa3f05a5d3abf2775"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "38ab01105f73442aa3f05a5d3abf2775"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "38ab01105f73442aa3f05a5d3abf2775"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "38ab01105f73442aa3f05a5d3abf2775"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_loop_unchanged",
+      "status": "success",
+      "error": "",
+      "provider_calls": 1,
+      "output": "[{'index': 0, 'status': 'success', 'value': 'Bluebird is the project codename. [unsupported reference]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}]",
+      "response_source_count": 0,
+      "verification_calls_after_resume": 4,
+      "verification_calls_after_removal": null,
+      "response_checkpointed": true,
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "9430afc44510430ab02748e120ac3736"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "9430afc44510430ab02748e120ac3736"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "9430afc44510430ab02748e120ac3736"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "9430afc44510430ab02748e120ac3736"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "9430afc44510430ab02748e120ac3736"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "9430afc44510430ab02748e120ac3736"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "9430afc44510430ab02748e120ac3736"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "9430afc44510430ab02748e120ac3736"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_loop_after_reuse",
+      "status": "success",
+      "error": "",
+      "provider_calls": 1,
+      "output": "[{'index': 0, 'status': 'success', 'value': 'Bluebird is the project codename. [unsupported reference]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}]",
+      "response_source_count": 0,
+      "verification_calls_after_resume": 4,
+      "verification_calls_after_removal": 0,
+      "response_checkpointed": true,
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "290dce9e62684c2787e49bf927e5e363"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "290dce9e62684c2787e49bf927e5e363"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "290dce9e62684c2787e49bf927e5e363"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "290dce9e62684c2787e49bf927e5e363"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "290dce9e62684c2787e49bf927e5e363"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "290dce9e62684c2787e49bf927e5e363"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "290dce9e62684c2787e49bf927e5e363"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "290dce9e62684c2787e49bf927e5e363"
+          ]
+        },
+        {
+          "event": "loop_reuse_committed"
+        },
+        {
+          "event": "downstream_prompt_committed"
+        },
+        {
+          "event": "document_removed"
+        }
+      ]
+    }
+  ]
+}

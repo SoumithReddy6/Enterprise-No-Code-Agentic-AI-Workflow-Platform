@@ -1,0 +1,26 @@
+FFFFFFFFF.....FF.FFFF.F                                                  [100%]
+=========================== short test summary info ============================
+PASSED backend/tests/test_providers.py::test_invalid_usage_metadata_still_raises_and_records_nothing[claude-body0]
+PASSED backend/tests/test_providers.py::test_invalid_usage_metadata_still_raises_and_records_nothing[claude-body1]
+PASSED backend/tests/test_providers.py::test_invalid_usage_metadata_still_raises_and_records_nothing[openai-body2]
+PASSED backend/tests/test_providers.py::test_invalid_usage_metadata_still_raises_and_records_nothing[openai-body3]
+PASSED backend/tests/test_providers.py::test_a_retried_busy_attempt_adds_no_usage
+PASSED backend/tests/test_token_budget.py::test_a_used_answer_is_counted_exactly_once
+PASSED backend/tests/test_request_reader.py::test_an_invalid_reading_is_repaired_once_and_both_answers_are_counted
+FAILED backend/tests/test_providers.py::test_rejected_answer_still_records_reported_usage[ollama-body0]
+FAILED backend/tests/test_providers.py::test_rejected_answer_still_records_reported_usage[ollama-body1]
+FAILED backend/tests/test_providers.py::test_rejected_answer_still_records_reported_usage[ollama-body2]
+FAILED backend/tests/test_providers.py::test_rejected_answer_still_records_reported_usage[claude-body3]
+FAILED backend/tests/test_providers.py::test_rejected_answer_still_records_reported_usage[claude-body4]
+FAILED backend/tests/test_providers.py::test_rejected_answer_still_records_reported_usage[claude-body5]
+FAILED backend/tests/test_providers.py::test_rejected_answer_still_records_reported_usage[openai-body6]
+FAILED backend/tests/test_providers.py::test_rejected_answer_still_records_reported_usage[openai-body7]
+FAILED backend/tests/test_providers.py::test_rejected_answer_still_records_reported_usage[openai-body8]
+FAILED backend/tests/test_token_budget.py::test_a_rejected_answer_is_counted_once_and_made_durable
+FAILED backend/tests/test_token_budget.py::test_a_cancelled_call_keeps_its_usage_in_memory_and_does_not_persist
+FAILED backend/tests/test_token_budget.py::test_a_rejected_answer_spends_the_budget_before_the_next_call
+FAILED backend/tests/test_token_budget.py::test_the_reviewed_openai_length_stop_counts_150_tokens
+FAILED backend/tests/test_token_budget.py::test_a_run_that_fails_on_a_rejected_answer_records_its_tokens_durably
+FAILED backend/tests/test_request_reader.py::test_a_rejected_provider_answer_is_counted_once_and_never_repaired
+FAILED backend/tests/test_request_router.py::test_a_rejected_provider_answer_is_counted_once_and_never_repaired
+16 failed, 7 passed, 124 deselected in 0.46s

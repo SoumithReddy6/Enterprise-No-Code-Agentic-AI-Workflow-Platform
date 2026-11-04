@@ -1,0 +1,57 @@
+[
+  {
+    "name": "postgres-final",
+    "command": [
+      ".venv/bin/python",
+      "-u",
+      "-m",
+      "scripts.check_postgres"
+    ],
+    "exit_code": 0,
+    "seconds": 4.4533992080250755
+  },
+  {
+    "name": "process-reviews-final",
+    "command": [
+      ".venv/bin/python",
+      "-u",
+      "-m",
+      "scripts.scenarios.request_enforcement",
+      "--out",
+      "evals/results/request-admission-step8-2026-10-14/process-reviews-final"
+    ],
+    "exit_code": 0,
+    "seconds": 95.48242833395489
+  },
+  {
+    "name": "storage-process-final",
+    "command": [
+      ".venv/bin/python",
+      "-u",
+      "-m",
+      "scripts.check_milestone_storage",
+      "--out",
+      "evals/results/request-admission-step8-2026-10-14/storage-process-final",
+      "--checks",
+      "postgres-migrations",
+      "postgres-four-workers",
+      "postgres-stale-lease",
+      "postgres-sigkill-loop"
+    ],
+    "exit_code": 0,
+    "seconds": 79.5416074169334
+  },
+  {
+    "name": "redis-integration",
+    "command": [
+      ".venv/bin/python",
+      "-m",
+      "pytest",
+      "backend/tests/test_common_replies_redis.py",
+      "backend/tests/test_common_replies.py",
+      "-q"
+    ],
+    "exit_code": 0,
+    "seconds": 7.485583750065416
+  }
+]

@@ -1,0 +1,119 @@
+{
+  "policy_met": true,
+  "probes": [
+    {
+      "name": "reviewed control",
+      "expected_ok": true,
+      "actual_ok": true,
+      "policy_met": true,
+      "intended_reason": true,
+      "failures": [],
+      "output": [
+        "npm audit gate: passed with ACCEPTED RESIDUAL VULNERABILITY - not a clean audit (reported: 1 high, 1 total)",
+        "  - GHSA-vfj7-8cjw-p6xm (high) in braces, accepted until 2026-12-04: Stack-exhaustion denial of service when braces expands deeply nested patterns. No patched braces release exists (3.0.3 is the latest and is in range), and npm's only proposed fix downgrades vinext from 1.0.0-beta.9 to 0.0.15. The chain enters through vite-plugin-commonjs, which vinext's CLI imports with its config loader, so the code is loaded in development, build and the production process. It is used only by development, build and configuration transformation of glob patterns written in this repository's source; no request data or user input reaches it."
+      ]
+    },
+    {
+      "name": "high count with missing findings",
+      "expected_ok": false,
+      "actual_ok": false,
+      "policy_met": true,
+      "intended_reason": true,
+      "failures": [
+        "Malformed audit report: metadata reports 1 high but the report lists 0.",
+        "Malformed audit report: metadata reports 1 total but the report lists 0."
+      ],
+      "output": [
+        "npm audit gate: FAILED (reported: 1 high, 1 total)",
+        "  - Malformed audit report: metadata reports 1 high but the report lists 0.",
+        "  - Malformed audit report: metadata reports 1 total but the report lists 0."
+      ]
+    },
+    {
+      "name": "unaccepted high advisory without severity",
+      "expected_ok": false,
+      "actual_ok": false,
+      "policy_met": true,
+      "intended_reason": true,
+      "failures": [
+        "Malformed audit report: finding other has an incomplete advisory record."
+      ],
+      "output": [
+        "npm audit gate: FAILED (reported: 1 high, 1 total)",
+        "  - Malformed audit report: finding other has an incomplete advisory record."
+      ]
+    },
+    {
+      "name": "critical finding with numeric via",
+      "expected_ok": false,
+      "actual_ok": false,
+      "policy_met": true,
+      "intended_reason": true,
+      "failures": [
+        "Malformed audit report: finding other has an invalid via entry."
+      ],
+      "output": [
+        "npm audit gate: FAILED (reported: 1 critical, 1 total)",
+        "  - Malformed audit report: finding other has an invalid via entry."
+      ]
+    },
+    {
+      "name": "arrays replacing report maps",
+      "expected_ok": false,
+      "actual_ok": false,
+      "policy_met": true,
+      "intended_reason": true,
+      "failures": [
+        "Malformed audit report: vulnerabilities is missing or not an object.",
+        "Malformed audit report: metadata.vulnerabilities is missing or not an object."
+      ],
+      "output": [
+        "npm audit gate: FAILED (reported: unavailable)",
+        "  - Malformed audit report: vulnerabilities is missing or not an object.",
+        "  - Malformed audit report: metadata.vulnerabilities is missing or not an object."
+      ]
+    },
+    {
+      "name": "empty published versions",
+      "expected_ok": false,
+      "actual_ok": false,
+      "policy_met": true,
+      "intended_reason": true,
+      "failures": [
+        "GHSA-vfj7-8cjw-p6xm in braces: the published versions of braces could not be checked."
+      ],
+      "output": [
+        "npm audit gate: FAILED (reported: 1 high, 1 total)",
+        "  - GHSA-vfj7-8cjw-p6xm in braces: the published versions of braces could not be checked."
+      ]
+    },
+    {
+      "name": "invalid published versions",
+      "expected_ok": false,
+      "actual_ok": false,
+      "policy_met": true,
+      "intended_reason": true,
+      "failures": [
+        "GHSA-vfj7-8cjw-p6xm in braces: the published versions of braces include invalid entries: not-a-version."
+      ],
+      "output": [
+        "npm audit gate: FAILED (reported: 1 high, 1 total)",
+        "  - GHSA-vfj7-8cjw-p6xm in braces: the published versions of braces include invalid entries: not-a-version."
+      ]
+    },
+    {
+      "name": "dependency tree reports problems",
+      "expected_ok": false,
+      "actual_ok": false,
+      "policy_met": true,
+      "intended_reason": true,
+      "failures": [
+        "GHSA-vfj7-8cjw-p6xm in braces: the installed tree cannot be verified: npm ls: invalid: braces@3.0.3."
+      ],
+      "output": [
+        "npm audit gate: FAILED (reported: 1 high, 1 total)",
+        "  - GHSA-vfj7-8cjw-p6xm in braces: the installed tree cannot be verified: npm ls: invalid: braces@3.0.3."
+      ]
+    }
+  ]
+}

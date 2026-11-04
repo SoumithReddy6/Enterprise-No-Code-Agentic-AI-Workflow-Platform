@@ -1,0 +1,36 @@
+{
+  "commit": "06b106215de79300b2568231e73f76c7cc80ebb7",
+  "focused_command": ".venv/bin/python -m pytest -q backend/tests/test_response_source_boundary.py backend/tests/test_token_budget_recovery.py backend/tests/test_kb_workflow.py backend/tests/test_kb_services_integration.py",
+  "actual": {
+    "exit_code": 0,
+    "passed": 106,
+    "warnings": 1,
+    "seconds": 10.04
+  },
+  "diagnostic_export": {
+    "exit_code": 0,
+    "passed": 106,
+    "warnings": 1,
+    "seconds": 8.73,
+    "only_application_change": "Pass run.get('loop_progress') as the final kb_errors argument in Worker.validate_cached"
+  },
+  "revision3_probes": {
+    "exit_code": 0,
+    "worker_cases": 11,
+    "contract_cases": 2
+  },
+  "repeated_resume_actual": {
+    "exit_code": 1,
+    "reason": "Removed-source cached answer must not be published",
+    "run_status": "success",
+    "provider_calls": 1,
+    "checks_after_removal": 0
+  },
+  "repeated_resume_diagnostic": {
+    "exit_code": 0,
+    "run_status": "failed",
+    "provider_calls": 1,
+    "checks_after_removal": 1
+  },
+  "no_application_changes_in_checkout": true
+}

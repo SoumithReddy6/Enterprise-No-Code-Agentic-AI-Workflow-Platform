@@ -17,8 +17,23 @@ from sqlalchemy.orm import Session
 from .models import StrictModel
 from .storage import Base, new_id
 
+# 408/425/429 and 5xx are the provider asking for another attempt.
+RETRYABLE_TOOL_STATUS=frozenset({408,425,429,500,502,503,504,529})
+
 class UncertainWriteError(ValueError):
     """An external mutation may have completed; automatic retries must stop."""
+
+class WriteNotSent(ValueError):
+    """A write refused while it was being prepared, before anything left this machine.
+
+    Unlike UncertainWriteError it needs no reconciliation: it is an ordinary failure."""
+
+class TransientToolError(ValueError):
+    """Infrastructure failed, not the request. Only this class is eligible for node retries.
+
+    A syntax error, a permission denial or a contract violation would fail identically on
+    a second attempt, so they stay plain ValueErrors and surface immediately.
+    """
 
 class ConnectionRecord(Base):
     __tablename__='tool_connections'
@@ -39,6 +54,7 @@ class ConnectionConfig(StrictModel):
 class ToolConfig(StrictModel):
     connection_id:str=''
     enable_writes:bool=False
+    approval:bool|None=Field(default=None,description="Require human approval before sending. Unset defaults on for authenticated writes.")
     description:str=Field(default='',max_length=500)  # Shown to an agent that may call this tool.
 class HTTPConfig(ToolConfig):
     method:Literal['GET','POST','PUT','PATCH','DELETE']='GET'
@@ -81,6 +97,63 @@ def public_addresses(host,port):
 def is_write(node_type,config):
     c=config.model_dump() if hasattr(config,'model_dump') else config
     return node_type=='tool_email' or (node_type=='tool_http' and c.get('method','GET')!='GET') or c.get('operation') in ('create_issue','comment','create_page')
+
+def jira_items(text,operation,endpoint):
+    """Add a bounded projection without changing the legacy response text.
+
+    Text plus nonempty serialized items share 64 KB. Empty collections and
+    fixed diagnostic metadata add only constant framing overhead.
+    """
+    result={'items':[],'truncated':False,'warnings':[]}
+    if operation not in ('search','get_issue'):return result
+    # Anything read but not projected makes the result incomplete, not merely warned
+    # about: an empty or shortened list must never look like the full answer.
+    def unreadable(warning,reason):
+        result.update(warnings=[warning],truncated=True,truncation_reason=reason);return result
+    try:data=json.loads(text)
+    except (ValueError,TypeError,RecursionError):
+        return unreadable('Jira response was not valid JSON; items is empty.','Jira returned a response that was not valid JSON; no issues could be read.')
+    rows=data.get('issues') if operation=='search' and isinstance(data,dict) else [data] if operation=='get_issue' else None
+    if not isinstance(rows,list):
+        return unreadable('Jira response has no issues array; items is empty.','Jira returned a response without an issues array; no issues could be read.')
+    budget=max(0,64000-len(text.encode('utf-8')))
+    size=2;causes=[];more=None;skipped=0
+    def usable_string(value):
+        if not isinstance(value,str):return False
+        try:value.encode('utf-8');return True
+        except UnicodeEncodeError:return False
+    for row in rows:
+        if not isinstance(row,dict) or not usable_string(row.get('key')) or not row['key']:
+            if not result['warnings']:result['warnings'].append('Jira response contains malformed issues; invalid entries were skipped.')
+            skipped+=1;result['truncated']=True
+            continue
+        if len(result['items'])>=100:
+            result['truncated']=True;causes.append('the 100-item result limit');break
+        fields=row.get('fields') if isinstance(row.get('fields'),dict) else {}
+        def field(name,nested=None):
+            value=fields.get(name)
+            if nested:value=value.get(nested) if isinstance(value,dict) else None
+            return value if usable_string(value) else None
+        item={'key':row['key'],'summary':field('summary'),'status':field('status','name'),
+              'assignee':field('assignee','displayName'),'updated':field('updated'),
+              'url':endpoint.rstrip('/')+'/browse/'+quote(row['key'],safe='')}
+        added=len(json.dumps(item,ensure_ascii=False).encode('utf-8'))+(2 if result['items'] else 0)
+        if size+added>budget:
+            result['truncated']=True;causes.append('the 64,000-byte result budget');break
+        result['items'].append(item);size+=added
+    if operation=='search' and isinstance(data,dict):
+        total=data.get('total');start=data.get('startAt',0)
+        if data.get('nextPageToken') or data.get('isLast') is False or (isinstance(total,int) and isinstance(start,int) and total>start+len(rows)):
+            result['truncated']=True;more=total if isinstance(total,int) else None
+            causes.append('further result pages that were not fetched')
+    if result['truncated']:
+        kept=len(result['items']);available=more if more is not None else len(rows)
+        noun='issue' if (available if available>kept else kept)==1 else 'issues'
+        returned=f'{kept} of {available} matching {noun}' if available>kept else f'{kept} matching {noun}, and more exist'
+        details=([f"stopped by {' and '.join(causes)}"] if causes else [])+(
+            [f"skipped {skipped} malformed {'issue' if skipped==1 else 'issues'}"] if skipped else [])
+        result['truncation_reason']=f"Jira returned {returned}; {'; '.join(details)}."
+    return result
 
 class ToolService:
     max_output=64000
@@ -149,28 +222,38 @@ class ToolService:
         try:
             async with httpx.AsyncClient(timeout=15,follow_redirects=False,trust_env=False,transport=self.transport) as client:
                 async with client.stream(method,pinned,headers=headers,json=body,params=params,extensions={'sni_hostname':u.host}) as response:
+                    if response.status_code in RETRYABLE_TOOL_STATUS:raise TransientToolError(f'Tool provider returned HTTP {response.status_code}')
                     if response.status_code>=300:raise ValueError(f'Tool provider returned HTTP {response.status_code}')
                     output=bytearray()
                     async for block in response.aiter_bytes():
                         output.extend(block)
                         if len(output)>self.max_output:raise ValueError('Tool response exceeds 64000 bytes; narrow the request')
                     return output.decode('utf-8',errors='replace')
+        except (httpx.TimeoutException,httpx.ConnectError,httpx.ReadError,httpx.WriteError,httpx.PoolTimeout):
+            raise TransientToolError('Tool request did not complete; the provider was unreachable or timed out') from None
         except httpx.HTTPError:raise ValueError('Tool HTTP request failed; check connection and provider availability') from None
 
-    async def execute(self,node_type,config_dict,input_text,tenant_id='local'):
+    def prepare(self,node_type,config_dict,input_text,tenant_id='local'):
         if node_type not in CONFIGS:raise ValueError('Unknown tool type')
         config=CONFIGS[node_type].model_validate(config_dict);self.check(config,tenant_id)
         if len(input_text.encode())>64000:raise ValueError('Tool input exceeds 64000 bytes')
-        if node_type=='tool_python':return await self._python(config,input_text)
+        if node_type=='tool_python':raise ValueError('Python does not use external request preparation')
         c=self.resolve(config.connection_id,tenant_id)
-        if node_type=='tool_email':return await asyncio.to_thread(self._email,c,config,input_text)
+        if node_type=='tool_email':
+            payload={'transport':'smtp','method':'SEND','url':f"smtp://{c['endpoint']}:{c['port']}",'sender':c['sender'],'recipient':config.to,'subject':config.subject,'body':config.body.replace('{input}',input_text)}
+            return {'connection_id':config.connection_id,'connection':c,'payload':payload}
         method='GET';body=None;params=None
         if node_type=='tool_http':
             method=config.method;path=config.path
             rendered=config.body.replace('{input}',input_text)
             if rendered:
-                try:body=json.loads(rendered)
+                from . import exact_json
+                try:body=exact_json.loads(rendered)
+                except exact_json.UnsupportedNumber as exc:raise ValueError(f'HTTP body: {exc}') from None
                 except ValueError:body={'input':rendered}
+                # Parsed exactly, then passed on only as numbers JSON carries without rounding.
+                try:body=exact_json.plain(body)
+                except ValueError as exc:raise ValueError(f'HTTP body: {exc}') from None
         elif node_type=='tool_github':
             path='/repos/'+config.repository+'/issues'
             if config.operation=='get_issue':path+='/'+str(config.issue_number)
@@ -192,11 +275,29 @@ class ToolService:
             else:
                 from html import escape
                 method='POST';body={'type':'page','title':config.title or input_text[:100],'space':{'key':config.space},'body':{'storage':{'value':'<p>'+escape(input_text)+'</p>','representation':'storage'}}}
-        return await self._http(c,method,path,body,params)
+        payload={'transport':'http','method':method,'url':str(httpx.Request(method,c['endpoint'].rstrip('/')+path,params=params).url),'body':body}
+        return {'connection_id':config.connection_id,'connection':c,'payload':payload,'path':path,'params':params}
 
-    def _email(self,c,config,text):
+    def validate_prepared(self,prepared,tenant_id='local'):
+        if self.resolve(prepared['connection_id'],tenant_id)!=prepared['connection']:
+            raise ValueError('The connection changed after approval was requested. Start a new run to review the updated destination.')
+
+    async def execute_prepared(self,prepared,tenant_id='local'):
+        self.validate_prepared(prepared,tenant_id)
+        c=prepared['connection'];payload=prepared['payload']
+        if payload['transport']=='smtp':
+            config=EmailConfig(to=payload['recipient'],subject=payload['subject'],body=payload['body'])
+            return await asyncio.to_thread(self._email,c,config,'',True)
+        return await self._http(c,payload['method'],prepared['path'],payload['body'],prepared['params'])
+
+    async def execute(self,node_type,config_dict,input_text,tenant_id='local'):
+        if len(input_text.encode())>64000:raise ValueError('Tool input exceeds 64000 bytes')
+        if node_type=='tool_python':return await self._python(PythonConfig.model_validate(config_dict),input_text)
+        return await self.execute_prepared(self.prepare(node_type,config_dict,input_text,tenant_id),tenant_id)
+
+    def _email(self,c,config,text,prepared=False):
         addresses=public_addresses(c['endpoint'],c['port'])
-        message=EmailMessage();message['From']=c['sender'];message['To']=config.to;message['Subject']=config.subject;message.set_content(config.body.replace('{input}',text))
+        message=EmailMessage();message['From']=c['sender'];message['To']=config.to;message['Subject']=config.subject;message.set_content(config.body if prepared else config.body.replace('{input}',text))
         # Pin the socket while retaining the original hostname for TLS verification.
         class PinnedSMTP(smtplib.SMTP):
             def _get_socket(self,host,port,timeout):return socket.create_connection((addresses[0],port),timeout)
@@ -211,7 +312,8 @@ class ToolService:
 
     async def _python(self,config,text):
         name='relay-tool-'+new_id()
-        command=['docker','run','--rm','--pull=never','--name',name,'--network=none','--read-only','--cap-drop=ALL','--security-opt=no-new-privileges','--pids-limit=32','--memory=128m','--cpus=0.5','--ulimit','fsize=65536:65536','--user=65534:65534','--tmpfs','/tmp:rw,noexec,nosuid,size=16m','-i','python:3.12-alpine','python','-I','-c',"import json,sys,resource;resource.setrlimit(resource.RLIMIT_CPU,(5,5));p=json.load(sys.stdin);input_text=p['input'];exec(compile(p['code'],'<tool>','exec'))"]
+        from .sandbox import container_command
+        command=container_command(name,'python','-I','-c',"import json,sys,resource;resource.setrlimit(resource.RLIMIT_CPU,(5,5));p=json.load(sys.stdin);input_text=p['input'];exec(compile(p['code'],'<tool>','exec'))")
         process=None
         try:
             process=await asyncio.create_subprocess_exec(*command,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)

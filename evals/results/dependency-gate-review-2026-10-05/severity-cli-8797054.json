@@ -1,0 +1,39 @@
+{
+  "reviewed_commit": "87970549ed00bf0429c538a099bfad8c258e6842",
+  "input_report": {
+    "auditReportVersion": 2,
+    "vulnerabilities": {
+      "other": {
+        "name": "other",
+        "severity": "high",
+        "via": [
+          {
+            "name": "other",
+            "url": "https://github.com/advisories/GHSA-aaaa-bbbb-cccc",
+            "severity": "moderate",
+            "range": "<2.0.0"
+          }
+        ]
+      }
+    },
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 1,
+        "critical": 0,
+        "total": 1
+      }
+    }
+  },
+  "command_statuses": {
+    "audit": 1,
+    "ls": 0,
+    "view": 0
+  },
+  "expected_gate_exit": 1,
+  "actual_gate_exit": 0,
+  "stdout": "npm audit gate: passed, no high or critical advisories (reported: 1 high, 1 total)\n",
+  "stderr": ""
+}

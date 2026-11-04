@@ -1,0 +1,105 @@
+{"timestamp":"2026-10-30T16:26:36.636180+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T16:26:36.675355+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T16:26:36.700824+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T16:26:36.726591+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T16:26:36.748947+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T16:26:36.772389+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{
+  "kind": "partial-plan-Agent-candidate",
+  "guards_preserved": true,
+  "rows": [
+    {
+      "mode": "valid_final_at_limit",
+      "status": "success",
+      "provider_calls": 1,
+      "verification": [
+        {
+          "operation": "record_vector_sources",
+          "available": true
+        },
+        {
+          "operation": "verify_vector_sources",
+          "available": true
+        }
+      ],
+      "source_available_at_return": true,
+      "sources_returned": 1,
+      "abstain": false,
+      "truncated": false
+    },
+    {
+      "mode": "valid_final_revoked",
+      "status": "failed",
+      "error": "Knowledge source was removed during the call",
+      "provider_calls": 1,
+      "verification": [
+        {
+          "operation": "record_vector_sources",
+          "available": true
+        },
+        {
+          "operation": "verify_vector_sources",
+          "available": false
+        }
+      ]
+    },
+    {
+      "mode": "repair_budget_sources_valid",
+      "status": "success",
+      "provider_calls": 1,
+      "verification": [
+        {
+          "operation": "record_vector_sources",
+          "available": true
+        },
+        {
+          "operation": "verify_vector_sources",
+          "available": true
+        }
+      ],
+      "source_available_at_return": true,
+      "sources_returned": 1,
+      "abstain": true,
+      "truncated": true
+    },
+    {
+      "mode": "repair_budget_revoked",
+      "status": "failed",
+      "error": "Knowledge source was removed during the call",
+      "provider_calls": 1,
+      "verification": [
+        {
+          "operation": "record_vector_sources",
+          "available": true
+        },
+        {
+          "operation": "verify_vector_sources",
+          "available": false
+        }
+      ]
+    },
+    {
+      "mode": "step_budget_revoked",
+      "status": "failed",
+      "error": "Knowledge source was removed during the call",
+      "provider_calls": 1,
+      "verification": [
+        {
+          "operation": "record_vector_sources",
+          "available": true
+        },
+        {
+          "operation": "verify_vector_sources",
+          "available": false
+        }
+      ]
+    },
+    {
+      "mode": "structured_no_evidence",
+      "status": "failed",
+      "error": "Run token budget exhausted (100 of 100 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.",
+      "provider_calls": 1,
+      "verification": []
+    }
+  ]
+}

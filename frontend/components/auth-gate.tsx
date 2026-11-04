@@ -11,7 +11,7 @@ import { ArrowRight, LogOut, Workflow } from 'lucide-react';
 import './auth.css';
 
 type Account = { id: string; email: string; tenant_id: string };
-type Status = { enabled: boolean; needs_setup: boolean };
+type Status = { enabled: boolean; needs_setup: boolean; registration_mode: 'open' | 'invite' | 'closed' };
 
 export default function AuthGate({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status | null>(null);
@@ -31,6 +31,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       const nextStatus: Status = await response.json();
       setStatus(nextStatus);
       if (nextStatus.needs_setup) setMode('register');
+      else if (nextStatus.registration_mode === 'closed') setMode('login');
       if (nextStatus.enabled) {
         const me = await fetch('/api/auth/me', { cache: 'no-store' });
         if (!me.ok && me.status !== 401)
@@ -73,6 +74,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         body: JSON.stringify({
           email: data.get('email'),
           password: data.get('password'),
+          ...(mode === 'register' ? { invite_token: data.get('invite_token') || '' } : {}),
         }),
       });
       const body = (await response.json()) as Account & { detail?: unknown };
@@ -84,7 +86,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         );
       form.reset();
       setAccount(body);
-      setStatus({ enabled: true, needs_setup: false });
+      setStatus({ enabled: true, needs_setup: false, registration_mode: status?.registration_mode || 'closed' });
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -203,6 +205,12 @@ export default function AuthGate({ children }: { children: ReactNode }) {
                   disabled={busy}
                 />
               </label>
+              {mode === 'register' && status.registration_mode === 'invite' && (
+                <label htmlFor="auth-invite">
+                  Invitation token
+                  <input id="auth-invite" name="invite_token" type="password" autoComplete="off" maxLength={256} required disabled={busy} />
+                </label>
+              )}
               {mode === 'register' && (
                 <p className="auth-password-hint">
                   Use at least 12 characters. Choose a password you haven’t used
@@ -218,7 +226,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
                 <ArrowRight size={16} />
               </button>
             </form>
-            {!setup && (
+            {!setup && status.registration_mode !== 'closed' && (
               <button
                 className="auth-switch"
                 type="button"

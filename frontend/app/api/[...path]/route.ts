@@ -58,6 +58,9 @@ async function forward(request: Request): Promise<Response> {
           upstream.headers.get('content-type') || 'application/json',
         'Cache-Control': 'no-store',
         'X-Content-Type-Options': 'nosniff',
+        ...(upstream.headers.get('retry-after')
+          ? { 'Retry-After': upstream.headers.get('retry-after')! }
+          : {}),
         ...(upstream.headers.get('content-security-policy')
           ? {
               'Content-Security-Policy': upstream.headers.get(

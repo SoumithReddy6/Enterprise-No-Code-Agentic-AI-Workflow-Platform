@@ -1,0 +1,69 @@
+{
+  "scratch": "/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/relay-step4-mutants-y1z8bl4y",
+  "rows": [
+    {
+      "name": "duplicates accepted",
+      "selector": "test_invalid_or_ambiguous_model_output_is_not_a_route",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/request-router-step4-2026-10-11/mutation-1.log"
+    },
+    {
+      "name": "contradictory proceed accepted",
+      "selector": "test_invalid_or_ambiguous_model_output_is_not_a_route",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/request-router-step4-2026-10-11/mutation-2.log"
+    },
+    {
+      "name": "second invalid silently proceeds",
+      "selector": "test_failure_never_runs_extraction_or_platform",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/request-router-step4-2026-10-11/mutation-3.log"
+    },
+    {
+      "name": "replay skips digest comparison",
+      "selector": "test_changed_or_malformed_checkpoint_is_refused_before_downstream",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/request-router-step4-2026-10-11/mutation-4.log"
+    },
+    {
+      "name": "submission omits router authorization",
+      "selector": "test_allowlist_and_provider_credentials_apply_before_submission",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/request-router-step4-2026-10-11/mutation-5.log"
+    },
+    {
+      "name": "router becomes source evidence",
+      "selector": "test_router_uses_existing_provider_and_keeps_model_output_untrusted",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/request-router-step4-2026-10-11/mutation-6.log"
+    },
+    {
+      "name": "original leaked into trusted system",
+      "selector": "test_rules_are_in_system_and_exact_original_is_only_user_data",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/request-router-step4-2026-10-11/mutation-7.log"
+    },
+    {
+      "name": "sampling parameter forced",
+      "selector": "test_router_initial_and_repair_do_not_force_unsupported_sampling_parameters",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/request-router-step4-2026-10-11/mutation-8.log"
+    }
+  ],
+  "passed": true,
+  "setup_correction": "Initial digest mutant selected the positive replay test only and survived. Corrected selector targets all seven tampered-context cases; no implementation change was needed.",
+  "browser": {
+    "name": "Remove router model-picker integration",
+    "caught": true,
+    "reason": "Exact new browser test fails because the Model selector is absent. Final full browser suite passed 13/13.",
+    "log": "browser-mutant.log"
+  }
+}

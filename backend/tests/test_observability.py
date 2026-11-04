@@ -10,6 +10,24 @@ from backend.app.storage import Store
 from backend.app.worker import Worker
 from backend.tests.test_compiler import sample
 
+
+def test_usage_keeps_run_totals_and_separates_invocation_outcomes():
+    from backend.app import registry
+    from backend.app.execution_policy import ExecutionIdentity,usage_for
+
+    run={};config=LLMConfig(provider='ollama',model='tiny')
+    first=ExecutionIdentity('child','agent','agent:1:child','agent')
+    second=ExecutionIdentity('child','agent','agent:2:child','agent')
+    for identity,tokens in ((first,3),(second,5)):
+        registry.account_usage(
+            Context('',lambda _:'',node_id='child',checkpoint_owner='agent',
+                    execution_identity=identity,run=run),
+            {'prompt_tokens':tokens,'completion_tokens':1},config)
+
+    assert run['usage']['agent']['prompt_tokens']==8
+    assert usage_for(run,first)['prompt_tokens']==3
+    assert usage_for(run,second)['prompt_tokens']==5
+
 def transport(monkeypatch,handler):
     real=httpx.AsyncClient
     monkeypatch.setattr(providers,'client',lambda timeout:real(transport=httpx.MockTransport(handler)))
@@ -26,8 +44,13 @@ async def test_transient_provider_failures_are_retried_with_backoff(monkeypatch)
     monkeypatch.setattr(providers.asyncio,'sleep',sleep)
     ctx=Context('',lambda _:'',node_id='agent',run={'evidence':[]})
     result=await llm_node({'prompt':'Q'},LLMConfig(provider='ollama',model='tiny'),ctx)
-    assert result['text']=='Ready' and len(attempts)==3 and delays==[.5,1.]
-    assert ctx.run['usage']['agent']=={'calls':1,'prompt_tokens':12,'completion_tokens':3}
+    assert result["text"] == "Ready"
+    assert len(attempts) == 3
+
+    assert len(delays) == 2
+    assert 0 <= delays[0] <= 0.5
+    assert 0 <= delays[1] <= 1.0
+    assert ctx.run['usage']['agent']=={'calls':1,'prompt_tokens':12,'completion_tokens':3,'by_model':[{'provider':'ollama','model':'tiny','calls':1,'prompt_tokens':12,'completion_tokens':3}]}
 
 @pytest.mark.asyncio
 async def test_persistent_failure_surfaces_after_bounded_attempts(monkeypatch):
@@ -53,13 +76,13 @@ async def test_usage_reaches_the_node_event_and_the_run_journal(tmp_path,monkeyp
     store=Store(f'sqlite:///{tmp_path}/obs.db',Fernet.generate_key());store.allow_model('ollama','tiny','','local')
     raw=sample();raw['nodes'][1]={'id':'prompt','type':'llm','inputs':{'prompt':'input.message'},'config':{'provider':'ollama','model':'tiny'}}
     run=store.create_run(raw,'Hello');worker=Worker(store)
-    with caplog.at_level(logging.INFO,logger='relay.run'):
+    with caplog.at_level(logging.INFO,logger='relay.journal'):
         await worker.execute(store.claim_next(worker.owner))
     record=store.run(run['id'])
     assert record['status']=='success'
     event=next(e for e in record['events'] if e.get('node_id')=='prompt' and e['status']=='success')
-    assert event['usage']=={'calls':1,'prompt_tokens':40,'completion_tokens':7}
-    lines=[json.loads(r.message) for r in caplog.records if r.name=='relay.run']
+    assert event['usage']=={'calls':1,'prompt_tokens':40,'completion_tokens':7,'by_model':[{'provider':'ollama','model':'tiny','calls':1,'prompt_tokens':40,'completion_tokens':7}]}
+    lines=[json.loads(r.message) for r in caplog.records if r.name=='relay.journal' and json.loads(r.message)['event'].startswith(('run.','node.'))]
     assert [l['event'] for l in lines][0]=='run.start' and [l['event'] for l in lines][-1]=='run.finish'
     assert all(l['run_id']==run['id'] for l in lines)
     node_line=next(l for l in lines if l['event']=='node.success' and l['node_id']=='prompt')

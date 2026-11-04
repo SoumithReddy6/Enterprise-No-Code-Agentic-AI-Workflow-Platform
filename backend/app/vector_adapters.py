@@ -5,9 +5,10 @@ from pathlib import Path
 from urllib.parse import quote
 import httpx
 
+RETIRED_CHROMA = 'Chroma is disabled because no patched release is recorded for its security advisories. Rebuild this knowledge base with FAISS; original documents are preserved.'
+
 CAPABILITIES={
     'faiss':{'index_methods':['flat'],'modes':['similarity','keyword','hybrid','rrf'],'local':True},
-    'chroma':{'index_methods':['hnsw'],'modes':['similarity','keyword','hybrid','rrf'],'local':True},
     'elasticsearch':{'index_methods':['dense_vector'],'modes':['similarity','keyword','hybrid','rrf'],'local':False},
     'pinecone':{'index_methods':['serverless'],'modes':['similarity','keyword','hybrid','rrf'],'local':False},
 }
@@ -37,31 +38,6 @@ class FaissAdapter:
             index=faiss.read_index(str(self.path/(key+'.faiss')))
             scores,indices=index.search(q,index.ntotal)
             results.extend((allowed[int(i)],float(score)) for i,score in zip(indices[0],scores[0]) if int(i) in allowed)
-        return sorted(results,key=lambda x:-x[1])[:limit]
-
-class ChromaAdapter:
-    def __init__(self,path,resource,connection=None):self.path=str(path);self.name='resource_'+resource['id']
-    def collection(self):
-        import chromadb
-        from chromadb.config import Settings
-        return chromadb.PersistentClient(path=self.path,settings=Settings(anonymized_telemetry=False)).get_or_create_collection(self.name,metadata={'hnsw:space':'cosine'},embedding_function=None)
-    async def upsert(self,key,chunks,vectors):
-        return await asyncio.to_thread(self._upsert,key,chunks,vectors)
-    def _upsert(self,key,chunks,vectors):
-        c=self.collection()
-        for start in range(0,len(chunks),100):
-            batch=chunks[start:start+100]
-            c.upsert(ids=[r['id'] for r in batch],embeddings=vectors[start:start+100],metadatas=[{'segment':key,'chunk_id':r['id']} for r in batch])
-    async def remove(self,key):self.collection().delete(where={'segment':key})
-    async def search(self,query,rows,limit):
-        return await asyncio.to_thread(self._search,query,rows,limit)
-    def _search(self,query,rows,limit):
-        c=self.collection();results=[]
-        # Bound filter payloads without truncating the search corpus.
-        for start in range(0,len(rows),500):
-            ids=[r['id'] for r in rows[start:start+500]]
-            out=c.query(query_embeddings=[query],where={'chunk_id':{'$in':ids}},n_results=min(limit,len(ids)),include=['distances'])
-            results.extend((id,1.-float(distance)) for id,distance in zip(out['ids'][0],out['distances'][0]))
         return sorted(results,key=lambda x:-x[1])[:limit]
 
 class RemoteAdapter:
@@ -141,4 +117,4 @@ class PineconeAdapter(RemoteAdapter):
             results.extend((r['id'],float(r['score'])) for r in out.get('matches',[]))
         return sorted(results,key=lambda x:-x[1])[:limit]
 
-ADAPTERS={'faiss':FaissAdapter,'chroma':ChromaAdapter,'elasticsearch':ElasticsearchAdapter,'pinecone':PineconeAdapter}
+ADAPTERS={'faiss':FaissAdapter,'elasticsearch':ElasticsearchAdapter,'pinecone':PineconeAdapter}

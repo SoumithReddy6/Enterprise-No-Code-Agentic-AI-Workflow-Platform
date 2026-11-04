@@ -1,0 +1,11 @@
+{
+  "production_rows": 24,
+  "production_passed": 24,
+  "source_changes_during_campaign": [],
+  "current_sources_match_report": true,
+  "report_sha256": "e0355caa59033b9fa0d15d7913566960a183899655ae7cef87eb1d875c18e92b",
+  "mutants_recorded": 16,
+  "recorded_kills": 16,
+  "all_expected_killers_present": true,
+  "unrelated_recorded_failures": 0
+}

@@ -518,6 +518,11 @@ pre {
 .workflow-card.failed {
   border-color: #d77870;
 }
+/* A node a validation message points at: visible at any zoom, distinct from a failed run. */
+.workflow-card.invalid {
+  border-color: #c2410c;
+  box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.22);
+}
 .node-heading {
   display: flex;
   align-items: center;
@@ -1089,6 +1094,65 @@ pre {
 }
 .validation-errors > button {
   float: right;
+}
+.validation-errors .issue-link {
+  all: unset;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.validation-errors .issue-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.node-issues {
+  margin: 4px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #efc8be;
+  border-radius: 8px;
+  background: #fff6f2;
+  color: #a85c4e;
+  font-size: 12px;
+}
+.trust-list {
+  list-style: none;
+  margin: 6px 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.trust-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+.trust-badge {
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  background: #e6f4ea;
+  color: #1b5e20;
+}
+.trust-badge.guessed {
+  background: #fff4e5;
+  color: #9a3412;
+}
+.trust-badge.absent {
+  background: #f1f3f4;
+  color: #3c4043;
+}
+.trust-decision {
+  font-size: 12px;
+  margin: 4px 0 6px;
+}
+.trust-decision.review {
+  color: #9a3412;
+  font-weight: 600;
+}
+.node-issues ul {
+  margin: 6px 0 0;
+  padding-left: 16px;
 }
 .validation-errors ul {
   padding-left: 18px;
@@ -2238,4 +2302,104 @@ input[type='file']::file-selector-button {
   outline: 2px solid #90cabb;
   outline-offset: -2px;
   border-radius: 4px;
+}
+
+.request-checks, .approval-review, .review-feedback {
+  border: 1px solid #dce8e3;
+  background: #f5faf7;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.request-checks h3, .approval-review h3 { margin: 0 0 8px; font-size: 13px; }
+.request-checks > section + section { border-top: 1px solid #dce8e3; padding-top: 10px; margin-top: 10px; }
+.request-checks p, .approval-review p { font-size: 12px; line-height: 1.6; }
+.field-checks { padding-left: 18px; font-size: 12px; }
+.approval-review pre { padding: 10px; background: white; border-radius: 6px; }
+.review-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.review-feedback { background: #fff5ed; border-color: #edd8c5; }
+.workflow-setup { min-width: 0; }
+
+.validation-errors.validation-warnings {
+  color: #854d0e;
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.incomplete-run {
+  margin: 8px 0;
+  padding: 10px 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #854d0e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+}
+.incomplete-run p {
+  margin: 4px 0;
+}
+.incomplete-run ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.incomplete-run.unverified {
+  color: #475569;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Switch case list (inspector). Warning colours match .validation-warnings. */
+.switch-case {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px 12px;
+  margin: 0 0 12px;
+  min-width: 0;
+}
+.switch-case legend {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 4px;
+}
+.switch-case .button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 8px;
+}
+.warning-text {
+  display: block;
+  color: #854d0e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Switch routes on the canvas: one row per route with its handle on the right edge, so the
+   card grows with the case count and no label or handle overlaps another. */
+.switch-routes {
+  border-top: 1px solid var(--line);
+  padding: 4px 0;
+}
+.switch-route {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 24px;
+  padding: 0 14px 0 12px;
+}
+.port-label.route {
+  position: static;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
 }

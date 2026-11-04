@@ -1,0 +1,26 @@
+{
+  "case": "R09_frontend_cached_explanation_lost",
+  "defect_reproduced": true,
+  "before": {
+    "values": [
+      {
+        "name": "branch",
+        "label": "guessed"
+      }
+    ],
+    "decision": {
+      "label": "guessed",
+      "would_review": true,
+      "reason": "guessed",
+      "explanation": "A person would need to decide: the value was not found in the input."
+    }
+  },
+  "after": {
+    "values": [
+      {
+        "name": "branch",
+        "label": "guessed"
+      }
+    ]
+  }
+}

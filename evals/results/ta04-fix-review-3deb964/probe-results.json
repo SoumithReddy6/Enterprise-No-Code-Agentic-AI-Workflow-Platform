@@ -1,0 +1,105 @@
+{
+  "removed_source_response": {
+    "provider_calls": 3,
+    "verification": [
+      {
+        "action": "record_vector_sources",
+        "available": true
+      },
+      {
+        "action": "verify_vector_sources",
+        "available": false
+      }
+    ],
+    "specialist_failure": [
+      "Knowledge source was removed: doc"
+    ],
+    "agent_sources": [],
+    "response_sources": [
+      {
+        "id": "chunk1",
+        "knowledge_base_id": "kb1",
+        "version": 1,
+        "document_id": "doc",
+        "filename": "facts.txt",
+        "page": 1,
+        "text": "Fact 1",
+        "score": 0.5,
+        "url": "/api/knowledge-bases/kb1/documents/doc/file",
+        "citation": "S1",
+        "cited": false
+      }
+    ]
+  },
+  "approval_resume_attempt": {
+    "provider_calls": 1,
+    "deliveries": [
+      {
+        "text": "hello"
+      }
+    ],
+    "status": "success",
+    "truncated": true,
+    "truncation_reason": "agent did not run: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.",
+    "action_counter": 1,
+    "approval_status": "completed",
+    "durable_approval_result": "sent",
+    "recovered_events": [
+      {
+        "node_id": "agent",
+        "status": "failed",
+        "error": "Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.",
+        "budget_exhausted": true,
+        "recovered": true,
+        "seq": 16,
+        "timestamp": "2026-10-30T18:16:04.784563+00:00"
+      }
+    ]
+  },
+  "loop_approval_resume_attempt": {
+    "provider_calls": 1,
+    "deliveries": [
+      {
+        "text": "hello"
+      }
+    ],
+    "status": "success",
+    "truncated": true,
+    "truncation_reason": "each stopped at item 0: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost. 2 accepted items did not run.",
+    "action_counter": 2,
+    "approval_status": "completed",
+    "durable_approval_result": "sent",
+    "recovered_events": [],
+    "loop_summary": {
+      "total": 2,
+      "accepted": 2,
+      "processed": 0,
+      "failed": 0,
+      "limited": false,
+      "stopped": false,
+      "budget_exhausted": true,
+      "incomplete_items": 0,
+      "values_dropped": false,
+      "dropped_value_count": 0,
+      "details_omitted": 0,
+      "truncated": true,
+      "truncation_reason": "each stopped at item 0: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost. 2 accepted items did not run.",
+      "truncation_source": "confirmed"
+    },
+    "loop_results": [],
+    "not_run_events": [
+      {
+        "node_id": "work",
+        "invocation_id": "each:0:work",
+        "parent_node_id": "each",
+        "item_index": 0,
+        "transient": true,
+        "status": "not_run",
+        "reason": "Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.",
+        "loop_node_id": "each",
+        "seq": 22,
+        "timestamp": "2026-10-30T18:16:04.901831+00:00"
+      }
+    ]
+  }
+}

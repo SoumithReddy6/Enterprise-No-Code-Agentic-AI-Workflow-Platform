@@ -1,0 +1,7 @@
+# Isolation: git archive 06b1062 + 3 changed files, git init + commit 31e526c, 2026-10-31T19:22:58Z
+uncommitted files: 0
+changed: backend/app/worker.py
+changed: backend/tests/test_response_source_boundary.py
+changed: docs/operations.md
+imports from <scratchpad>/r01-i01-iso.7n2m/backend/app/__init__.py
+1950 passed, 4 warnings in 95.83s (0:01:35)

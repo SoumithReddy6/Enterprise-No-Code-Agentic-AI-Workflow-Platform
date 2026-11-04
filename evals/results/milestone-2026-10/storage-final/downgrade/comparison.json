@@ -1,0 +1,38 @@
+{
+  "before_results": [
+    {
+      "index": 0,
+      "status": "success",
+      "value": "accepted",
+      "error": ""
+    },
+    {
+      "index": 1,
+      "status": "success",
+      "value": "accepted",
+      "error": ""
+    }
+  ],
+  "after_results": {
+    "stored_in": "run_loop_items",
+    "count": 2,
+    "sha256": "640395b1bf7ed5eb61af9e2dfc6309aae50267be7a4ecebf437fdb0ee34da596",
+    "unavailable": "Loop each cannot be restored: 2 of 2 stored item results are missing. Start a new run."
+  },
+  "before_accounting": {
+    "action_budget": {
+      "remaining": 197,
+      "counter": 3,
+      "ceiling": 200,
+      "charged": [
+        "tickets#0",
+        "each:0:work#0",
+        "each:1:work#0"
+      ]
+    },
+    "tokens_spent": 0,
+    "usage": {},
+    "usage_by_invocation": {}
+  },
+  "after_accounting": null
+}

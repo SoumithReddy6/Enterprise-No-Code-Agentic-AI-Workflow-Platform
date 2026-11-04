@@ -1,0 +1,57 @@
+{
+  "accepted": false,
+  "checks": {
+    "live_measurement": false,
+    "complete_suite": true,
+    "valid_request_proceed_rate": true,
+    "zero_unsafe_automatic_actions": true,
+    "prepared_replies_without_models": true,
+    "measurements_complete": true,
+    "faults_reached_verification": true,
+    "fault_positive_controls": true
+  },
+  "summary": {
+    "valid_total": 20,
+    "valid_admitted": 20,
+    "valid_request_rejected": 0,
+    "review_on_valid_requests": 20,
+    "false_router_acceptances": 30,
+    "routing_errors": 30,
+    "failed_runs": 0,
+    "manual_decisions": 0,
+    "manual_deliveries": 0,
+    "automatic_decisions": 0,
+    "automatic_deliveries": 0,
+    "unsafe_automatic_actions": 0,
+    "prepared_total": 10,
+    "prepared_correct": 10,
+    "prepared_model_calls": 0,
+    "n": 60,
+    "valid_request_proceed_rate": 1.0,
+    "cache_outcomes": {
+      "not_common": 50,
+      "prepared": 10
+    },
+    "routes": {
+      "proceed": 50,
+      "prepared_reply": 10
+    },
+    "statuses": {
+      "awaiting_approval": 50,
+      "success": 10
+    },
+    "verification_verdicts": {
+      "needs_review": 50
+    },
+    "tokens": 500,
+    "latency_seconds": {
+      "p50": 0.1872441249433905,
+      "p95": 0.24631462490651757
+    },
+    "notes": [
+      "Manual actions excluded from automatic-safety numerator.",
+      "Review on a valid request is not necessarily unnecessary: admission does not prove extracted meaning.",
+      "Zero unsafe actions on 60 cases is finite evidence, not universal semantic correctness."
+    ]
+  }
+}

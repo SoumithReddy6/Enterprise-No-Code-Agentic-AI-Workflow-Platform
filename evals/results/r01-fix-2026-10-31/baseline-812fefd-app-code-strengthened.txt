@@ -1,0 +1,1533 @@
+# R01 tests after the mutant-driven strengthening of U3, U8 and U13, on application code identical to 812fefd (HEAD 9801c46; git diff 812fefd HEAD -- backend/app is empty), 2026-10-31T18:35:35Z
+FFFFFF.FFFFFFF.F.FFFFFFFF.FFFF..FFFFFFFFFFFF...FFFF                      [100%]
+=================================== FAILURES ===================================
+_________________ test_u1_a_nested_rejection_publishes_nothing _________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b9b1e00>
+
+    @pytest.mark.asyncio
+    async def test_u1_a_nested_rejection_publishes_nothing(monkeypatch):
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', LIMIT)
+        chat(monkeypatch, [(json.dumps({'action': 'call', 'target': 'spec0', 'input': 'look it up'}), 1, 0),
+                           (json.dumps({'action': 'call', 'target': 'kb0', 'input': 'query'}), 7, 2)], [])
+        workflow = team_flow(1)
+        for node in workflow.nodes:
+            if node.type == 'agent': node.config = {**node.config, **MODEL}
+        values, exc, events = await run_graph(workflow, Kb(removed=True), 'facts')
+        assert failed_event(events, 'spec0', nested=True)['error'] == REMOVED
+        assert published(events, 'agent'), 'the parent agent completes; the refusal is at the Response'
+>       assert refused(exc), exc
+E       AssertionError: None
+E       assert False
+E        +  where False = refused(None)
+
+backend/tests/test_response_source_boundary.py:126: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.016172+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":1,"completion_tokens":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.016339+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"spec0","provider":"ollama","model":"fixture","prompt_tokens":7,"completion_tokens":2}
+__ test_u3_a_removal_after_an_upstream_check_passed_publishes_nothing[agent] ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ba23d10>
+upstream = 'agent'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('upstream', ['agent', 'query'])
+    async def test_u3_a_removal_after_an_upstream_check_passed_publishes_nothing(monkeypatch, upstream):
+        calls = []; chat(monkeypatch, [(grounded('Bluebird [S1]', ['S1']), 8, 2)], calls)
+        if upstream == 'agent':
+            workflow = agent_config(graph())
+        else:
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+        # Two passages; the answer cites only S1. The uncited S2 is removed, so a check of the
+        # cited sources alone would publish (N2).
+        kb = Kb(passages=2)
+        def remove_after_upstream(event):
+            if event.get('node_id') == upstream and event.get('status') == 'success': kb.removed = {'chunk2'}
+        values, exc, events = await run_graph(workflow, kb, 'What codename?', remove_after_upstream)
+        assert published(events, upstream) and len(calls) == 1
+>       assert refused(exc), exc
+E       AssertionError: None
+E       assert False
+E        +  where False = refused(None)
+
+backend/tests/test_response_source_boundary.py:150: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.078146+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+__ test_u3_a_removal_after_an_upstream_check_passed_publishes_nothing[query] ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bf1c8d0>
+upstream = 'query'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('upstream', ['agent', 'query'])
+    async def test_u3_a_removal_after_an_upstream_check_passed_publishes_nothing(monkeypatch, upstream):
+        calls = []; chat(monkeypatch, [(grounded('Bluebird [S1]', ['S1']), 8, 2)], calls)
+        if upstream == 'agent':
+            workflow = agent_config(graph())
+        else:
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+        # Two passages; the answer cites only S1. The uncited S2 is removed, so a check of the
+        # cited sources alone would publish (N2).
+        kb = Kb(passages=2)
+        def remove_after_upstream(event):
+            if event.get('node_id') == upstream and event.get('status') == 'success': kb.removed = {'chunk2'}
+        values, exc, events = await run_graph(workflow, kb, 'What codename?', remove_after_upstream)
+        assert published(events, upstream) and len(calls) == 1
+>       assert refused(exc), exc
+E       AssertionError: None
+E       assert False
+E        +  where False = refused(None)
+
+backend/tests/test_response_source_boundary.py:150: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.130757+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"query","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+___________ test_u4_the_budget_fallback_sites_publish_nothing[step] ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bf20950>
+site = 'step'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('site', ['step', 'repair'])
+    async def test_u4_the_budget_fallback_sites_publish_nothing(monkeypatch, site):
+        """The agent's budget abstention fails its source check (T14) and routes to a fallback
+        Response. That Response reads the shared registry, which still holds the passage."""
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', LIMIT)
+        if site == 'step':
+            chat(monkeypatch, [(json.dumps({'action': 'call', 'target': 'calc', 'input': 'q'}), 8, 2)], [])
+            workflow, message = agent_config(agent_with_retrieval(), 'route'), 'facts'
+        else:
+            chat(monkeypatch, [('not json', 8, 2)], [])
+            workflow, message = agent_config(graph(), 'route'), 'What codename?'
+        values, exc, events = await run_graph(workflow, Kb(removed=True), message)
+        assert failed_event(events, 'agent')['error'] == REMOVED
+>       assert refused(exc, 'fallback'), exc
+E       AssertionError: None
+E       assert False
+E        +  where False = refused(None, 'fallback')
+
+backend/tests/test_response_source_boundary.py:168: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.164108+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.164248+00:00","request_id":null,"run_id":null,"tenant":null,"event":"node.recovered","node_id":"agent","reason_code":"route"}
+__________ test_u4_the_budget_fallback_sites_publish_nothing[repair] ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10baa2300>
+site = 'repair'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('site', ['step', 'repair'])
+    async def test_u4_the_budget_fallback_sites_publish_nothing(monkeypatch, site):
+        """The agent's budget abstention fails its source check (T14) and routes to a fallback
+        Response. That Response reads the shared registry, which still holds the passage."""
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', LIMIT)
+        if site == 'step':
+            chat(monkeypatch, [(json.dumps({'action': 'call', 'target': 'calc', 'input': 'q'}), 8, 2)], [])
+            workflow, message = agent_config(agent_with_retrieval(), 'route'), 'facts'
+        else:
+            chat(monkeypatch, [('not json', 8, 2)], [])
+            workflow, message = agent_config(graph(), 'route'), 'What codename?'
+        values, exc, events = await run_graph(workflow, Kb(removed=True), message)
+        assert failed_event(events, 'agent')['error'] == REMOVED
+>       assert refused(exc, 'fallback'), exc
+E       AssertionError: None
+E       assert False
+E        +  where False = refused(None, 'fallback')
+
+backend/tests/test_response_source_boundary.py:168: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.203344+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.203422+00:00","request_id":null,"run_id":null,"tenant":null,"event":"node.recovered","node_id":"agent","reason_code":"route"}
+____________ test_u10_listed_sources_without_a_verifier_are_refused ____________
+
+    @pytest.mark.asyncio
+    async def test_u10_listed_sources_without_a_verifier_are_refused():
+>       with pytest.raises(Exception) as exc:
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE Exception
+
+backend/tests/test_response_source_boundary.py:176: Failed
+___ test_u12_a_malformed_saved_container_is_never_zero_sources[response-{}] ____
+
+container = 'response', shape = '{}'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+__ test_u12_a_malformed_saved_container_is_never_zero_sources[response-null] ___
+
+container = 'response', shape = 'null'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+_ test_u12_a_malformed_saved_container_is_never_zero_sources[response-"text"] __
+
+container = 'response', shape = '"text"'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+____ test_u12_a_malformed_saved_container_is_never_zero_sources[response-7] ____
+
+container = 'response', shape = '7'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+___ test_u12_a_malformed_saved_container_is_never_zero_sources[response-[1]] ___
+
+container = 'response', shape = '[1]'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+_ test_u12_a_malformed_saved_container_is_never_zero_sources[response-[{"text": "no id"}]] _
+
+container = 'response', shape = '[{"text": "no id"}]'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+_____ test_u12_a_malformed_saved_container_is_never_zero_sources[query-{}] _____
+
+container = 'query', shape = '{}'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+___ test_u12_a_malformed_saved_container_is_never_zero_sources[query-"text"] ___
+
+container = 'query', shape = '"text"'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+>           raise AssertionError(f'unnamed failure: {exc!r}') from None
+E           AssertionError: unnamed failure: AttributeError("'str' object has no attribute 'items'")
+
+backend/tests/test_response_source_boundary.py:225: AssertionError
+____ test_u12_a_malformed_saved_container_is_never_zero_sources[query-[1]] _____
+
+container = 'query', shape = '[1]'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+>           raise AssertionError(f'unnamed failure: {exc!r}') from None
+E           AssertionError: unnamed failure: AttributeError("'int' object has no attribute 'items'")
+
+backend/tests/test_response_source_boundary.py:225: AssertionError
+_ test_u12_a_malformed_saved_container_is_never_zero_sources[query-[{"text": "no id"}]] _
+
+container = 'query', shape = '[{"text": "no id"}]'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+___ test_u12_a_malformed_saved_container_is_never_zero_sources[loop_item-{}] ___
+
+container = 'loop_item', shape = '{}'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+__ test_u12_a_malformed_saved_container_is_never_zero_sources[loop_item-null] __
+
+container = 'loop_item', shape = 'null'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+_ test_u12_a_malformed_saved_container_is_never_zero_sources[loop_item-"text"] _
+
+container = 'loop_item', shape = '"text"'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+___ test_u12_a_malformed_saved_container_is_never_zero_sources[loop_item-7] ____
+
+container = 'loop_item', shape = '7'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+__ test_u12_a_malformed_saved_container_is_never_zero_sources[loop_item-[1]] ___
+
+container = 'loop_item', shape = '[1]'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+_ test_u12_a_malformed_saved_container_is_never_zero_sources[loop_item-[{"text": "no id"}]] _
+
+container = 'loop_item', shape = '[{"text": "no id"}]'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', SHAPES)
+    @pytest.mark.parametrize('container', ['response', 'query', 'loop_item'])
+    async def test_u12_a_malformed_saved_container_is_never_zero_sources(container, shape):
+        calls = []; dependencies = None
+        if container == 'response':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Cached', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'}, {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            checkpoints = {'out': {'text': 'cached answer', 'sources': shape}}
+        elif container == 'query':
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Query', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'query', 'type': 'query', 'inputs': {'query': 'input.message'},
+                 'config': {'knowledge_base_id': 'kb1', 'mode': 'keyword', **MODEL}},
+                {'id': 'out', 'type': 'response', 'inputs': {'text': 'query.text'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'query'}, {'id': 'b', 'source': 'query', 'target': 'out'}]})
+            checkpoints = {'query': {'text': 'cached answer', 'sources': shape}}
+        else:
+            workflow = query_loop()
+            checkpoints = {'each': {'results': [], 'failed': '0', 'summary': '{}'}}
+            dependencies = {'each:0': json.loads(shape)}
+        try:
+            errors = await kb_errors(fake_services(calls), workflow, 'local', checkpoints, dependencies)
+        except Exception as exc:  # the baseline can crash on some shapes; that is not a named refusal
+            raise AssertionError(f'unnamed failure: {exc!r}') from None
+>       assert len(errors) == 1, errors
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend/tests/test_response_source_boundary.py:226: AssertionError
+_____ test_u14_same_id_with_different_metadata_checks_both_records[False] ______
+
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10bdb65d0>
+changed_first = False
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('changed_first', [False, True])
+    async def test_u14_same_id_with_different_metadata_checks_both_records(services, changed_first):
+        kb, _, _ = await populated(services)
+        chunk = await real_source(services, kb)
+        changed = {**chunk, 'text': chunk['text'] + ' Launch is in October.'}
+        pair = [changed, chunk] if changed_first else [chunk, changed]
+>       with pytest.raises(Exception) as exc:
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE Exception
+
+backend/tests/test_response_source_boundary.py:251: Failed
+______ test_u14_same_id_with_different_metadata_checks_both_records[True] ______
+
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10bcb9a90>
+changed_first = True
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('changed_first', [False, True])
+    async def test_u14_same_id_with_different_metadata_checks_both_records(services, changed_first):
+        kb, _, _ = await populated(services)
+        chunk = await real_source(services, kb)
+        changed = {**chunk, 'text': chunk['text'] + ' Launch is in October.'}
+        pair = [changed, chunk] if changed_first else [chunk, changed]
+>       with pytest.raises(Exception) as exc:
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE Exception
+
+backend/tests/test_response_source_boundary.py:251: Failed
+____ test_u15_more_than_120_sources_are_checked_completely_in_valid_batches ____
+
+    @pytest.mark.asyncio
+    async def test_u15_more_than_120_sources_are_checked_completely_in_valid_batches():
+        evidence = [labelled({**source(i), 'id': f'chunk{i}'}, f'S{i}') for i in range(1, 131)]
+        calls = []
+        await direct(evidence, recorder(calls))
+>       assert calls and all(len(batch) <= 120 for batch in calls)
+E       assert ([])
+
+backend/tests/test_response_source_boundary.py:261: AssertionError
+____________ test_u16_each_distinct_source_is_checked_exactly_once _____________
+
+    @pytest.mark.asyncio
+    async def test_u16_each_distinct_source_is_checked_exactly_once():
+        calls = []
+        await direct([labelled(source(1), 'S1'), labelled(source(2), 'S2'), labelled(source(1), 'S3')], recorder(calls))
+>       assert sorted(s['id'] for batch in calls for s in batch) == ['chunk1', 'chunk2']
+E       AssertionError: assert [] == ['chunk1', 'chunk2']
+E         
+E         Right contains 2 more items, first extra item: 'chunk1'
+E         Use -v to get more diff
+
+backend/tests/test_response_source_boundary.py:271: AssertionError
+______ test_u19_control_flow_from_the_check_propagates_unchanged[error0] _______
+
+error = LeaseLost('lease')
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('error', [LeaseLost('lease'), asyncio.CancelledError()])
+    async def test_u19_control_flow_from_the_check_propagates_unchanged(error):
+>       with pytest.raises(type(error)):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE LeaseLost
+
+backend/tests/test_response_source_boundary.py:294: Failed
+______ test_u19_control_flow_from_the_check_propagates_unchanged[error1] _______
+
+error = CancelledError()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('error', [LeaseLost('lease'), asyncio.CancelledError()])
+    async def test_u19_control_flow_from_the_check_propagates_unchanged(error):
+>       with pytest.raises(type(error)):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE CancelledError
+
+backend/tests/test_response_source_boundary.py:294: Failed
+_______ test_u2_a_specialist_rejection_with_a_real_kb_publishes_nothing ________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u2_a_specialist_rejection0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bd43700>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10be222c0>
+
+    @pytest.mark.asyncio
+    async def test_u2_a_specialist_rejection_with_a_real_kb_publishes_nothing(tmp_path, monkeypatch, services):
+        kb, doc, _ = await populated(services)
+        calls = []
+        async def model(*args, usage=None, **kwargs):
+            calls.append(1)
+            if len(calls) == 1: text, tokens = json.dumps({'action': 'call', 'target': 'spec0', 'input': 'project codename'}), 1
+            elif len(calls) == 2: text, tokens = json.dumps({'action': 'call', 'target': 'kb0', 'input': 'project codename'}), 1
+            elif len(calls) == 3:
+                await services.management.call('remove_document', 'local', {'kb_id': kb['id'], 'document_id': doc['id']})
+                text, tokens = 'not JSON', 8
+            else: raise AssertionError('unexpected model call')
+            providers.record_usage(usage, tokens, 0)
+            return text
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', LIMIT)
+        monkeypatch.setattr(providers, 'ollama_chat', model)
+        store, worker = durable(tmp_path, monkeypatch)
+        try:
+            worker.kbs = services
+            workflow = team_flow(1)
+            for node in workflow.nodes:
+                if node.type == 'agent': node.config = {**node.config, **MODEL}
+                elif node.type == 'retrieve': node.config['knowledge_base_id'] = kb['id']
+            row = store.create_run(workflow.model_dump(mode='json'), 'project codename')
+            await worker.execute(store.claim_next(worker.owner))
+            run = store.run(row['id'])
+            assert len(calls) == 3 and json.loads(run['checkpoints']['agent']['sources']) == []
+>           assert run['status'] == 'failed' and run['error'].startswith('out: ') and REFUSED in run['error']
+E           AssertionError: assert ('success' == 'failed'
+E             
+E             - failed
+E             + success)
+
+backend/tests/test_response_source_boundary.py:438: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.586485+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.689583+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.690424+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.104}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.695467+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"job.lease_acquired","worker_id":"e1399259b38e47e4ba2b787f3f495f12"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.695753+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.725448+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.727495+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":1,"completion_tokens":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.731134+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"model.usage","node_id":"spec0","provider":"ollama","model":"fixture","prompt_tokens":1,"completion_tokens":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.738662+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"node.success","node_id":"kb0","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.739798+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"model.usage","node_id":"spec0","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.741591+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"kb.management.failure","service":"management","action":"verify","error_type":"KeyError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.743058+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"node.failed","node_id":"spec0","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":2,"prompt_tokens":9,"completion_tokens":0}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.743842+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"node.warning","node_id":"agent","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.745106+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"node.success","node_id":"agent","transient":false,"cached":false,"duration_ms":18,"usage":{"calls":1,"prompt_tokens":1,"completion_tokens":0}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.747315+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.748706+00:00","request_id":null,"run_id":"eae5163d394d4c8f8fa2fb5966c3e8c9","tenant":"local","event":"run.finish","status":"success","seconds":0.053}
+____ test_u20_the_refusal_fails_the_run_by_name_under_every_on_error[fail] _____
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u20_the_refusal_fails_the0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10be322e0>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10d4bc5f0>
+policy = 'fail'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('policy', ['fail', 'continue', 'route'])
+    async def test_u20_the_refusal_fails_the_run_by_name_under_every_on_error(tmp_path, monkeypatch, services, policy):
+        kb, doc, ingester = await populated(services)
+        await other_document(services, kb)(ingester)
+        chat(monkeypatch, [(grounded('Bluebird is the project codename. [S1]', ['S1']), 8, 2)], [])
+        store, worker = durable(tmp_path, monkeypatch)
+        try:
+            worker.kbs = services
+            workflow = graph()
+            next(n for n in workflow.nodes if n.id == 'retrieve').config['knowledge_base_id'] = kb['id']
+            next(n for n in workflow.nodes if n.id == 'agent').config = dict(MODEL)
+            next(n for n in workflow.nodes if n.id == 'out').on_error = policy
+            assert validate_workflow(workflow) == []
+            timeline = []; remove_document = remover(services, kb, doc, timeline)
+            original = store.worker_event
+            def event(id, owner, payload):
+                saved = original(id, owner, payload)
+                if payload.get('node_id') == 'agent' and payload.get('status') == 'success': remove_document()
+                return saved
+            monkeypatch.setattr(store, 'worker_event', event)
+            row = store.create_run(workflow.model_dump(mode='json'), 'project codename')
+            await worker.execute(store.claim_next(worker.owner))
+            run = store.run(row['id'])
+            assert timeline == ['removed']
+>           assert run['status'] == 'failed' and run['error'].startswith('out: ') and REFUSED in run['error'], run.get('error')
+E           AssertionError: 
+E           assert ('success' == 'failed'
+E             
+E             - failed
+E             + success)
+
+backend/tests/test_response_source_boundary.py:468: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.874642+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.891488+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.892035+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.896497+00:00","request_id":null,"run_id":"5c85b900729e4bbaa8b67c889623d6dd","tenant":"local","event":"job.lease_acquired","worker_id":"311651c27d2d482f92e445f08ba8771a"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.896747+00:00","request_id":null,"run_id":"5c85b900729e4bbaa8b67c889623d6dd","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.931026+00:00","request_id":null,"run_id":"5c85b900729e4bbaa8b67c889623d6dd","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.938332+00:00","request_id":null,"run_id":"5c85b900729e4bbaa8b67c889623d6dd","tenant":"local","event":"node.success","node_id":"retrieve","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.940362+00:00","request_id":null,"run_id":"5c85b900729e4bbaa8b67c889623d6dd","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.944138+00:00","request_id":null,"run_id":"5c85b900729e4bbaa8b67c889623d6dd","tenant":"local","event":"node.success","node_id":"agent","transient":false,"cached":false,"duration_ms":3,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.946627+00:00","request_id":null,"run_id":"5c85b900729e4bbaa8b67c889623d6dd","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:12.948132+00:00","request_id":null,"run_id":"5c85b900729e4bbaa8b67c889623d6dd","tenant":"local","event":"run.finish","status":"success","seconds":0.051}
+__ test_u20_the_refusal_fails_the_run_by_name_under_every_on_error[continue] ___
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u20_the_refusal_fails_the1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d619e10>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10d5605a0>
+policy = 'continue'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('policy', ['fail', 'continue', 'route'])
+    async def test_u20_the_refusal_fails_the_run_by_name_under_every_on_error(tmp_path, monkeypatch, services, policy):
+        kb, doc, ingester = await populated(services)
+        await other_document(services, kb)(ingester)
+        chat(monkeypatch, [(grounded('Bluebird is the project codename. [S1]', ['S1']), 8, 2)], [])
+        store, worker = durable(tmp_path, monkeypatch)
+        try:
+            worker.kbs = services
+            workflow = graph()
+            next(n for n in workflow.nodes if n.id == 'retrieve').config['knowledge_base_id'] = kb['id']
+            next(n for n in workflow.nodes if n.id == 'agent').config = dict(MODEL)
+            next(n for n in workflow.nodes if n.id == 'out').on_error = policy
+            assert validate_workflow(workflow) == []
+            timeline = []; remove_document = remover(services, kb, doc, timeline)
+            original = store.worker_event
+            def event(id, owner, payload):
+                saved = original(id, owner, payload)
+                if payload.get('node_id') == 'agent' and payload.get('status') == 'success': remove_document()
+                return saved
+            monkeypatch.setattr(store, 'worker_event', event)
+            row = store.create_run(workflow.model_dump(mode='json'), 'project codename')
+            await worker.execute(store.claim_next(worker.owner))
+            run = store.run(row['id'])
+            assert timeline == ['removed']
+>           assert run['status'] == 'failed' and run['error'].startswith('out: ') and REFUSED in run['error'], run.get('error')
+E           AssertionError: 
+E           assert ('success' == 'failed'
+E             
+E             - failed
+E             + success)
+
+backend/tests/test_response_source_boundary.py:468: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.070495+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.087894+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.088458+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.092895+00:00","request_id":null,"run_id":"82c75e5a448d42d08d23563dfbe07575","tenant":"local","event":"job.lease_acquired","worker_id":"334fe4a876494e51bce1cb9feddeca6d"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.093158+00:00","request_id":null,"run_id":"82c75e5a448d42d08d23563dfbe07575","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.128341+00:00","request_id":null,"run_id":"82c75e5a448d42d08d23563dfbe07575","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.135064+00:00","request_id":null,"run_id":"82c75e5a448d42d08d23563dfbe07575","tenant":"local","event":"node.success","node_id":"retrieve","transient":false,"cached":false,"duration_ms":5}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.137045+00:00","request_id":null,"run_id":"82c75e5a448d42d08d23563dfbe07575","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.140820+00:00","request_id":null,"run_id":"82c75e5a448d42d08d23563dfbe07575","tenant":"local","event":"node.success","node_id":"agent","transient":false,"cached":false,"duration_ms":3,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.143106+00:00","request_id":null,"run_id":"82c75e5a448d42d08d23563dfbe07575","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.144653+00:00","request_id":null,"run_id":"82c75e5a448d42d08d23563dfbe07575","tenant":"local","event":"run.finish","status":"success","seconds":0.051}
+____ test_u20_the_refusal_fails_the_run_by_name_under_every_on_error[route] ____
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u20_the_refusal_fails_the2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d6dff50>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10d679450>
+policy = 'route'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('policy', ['fail', 'continue', 'route'])
+    async def test_u20_the_refusal_fails_the_run_by_name_under_every_on_error(tmp_path, monkeypatch, services, policy):
+        kb, doc, ingester = await populated(services)
+        await other_document(services, kb)(ingester)
+        chat(monkeypatch, [(grounded('Bluebird is the project codename. [S1]', ['S1']), 8, 2)], [])
+        store, worker = durable(tmp_path, monkeypatch)
+        try:
+            worker.kbs = services
+            workflow = graph()
+            next(n for n in workflow.nodes if n.id == 'retrieve').config['knowledge_base_id'] = kb['id']
+            next(n for n in workflow.nodes if n.id == 'agent').config = dict(MODEL)
+            next(n for n in workflow.nodes if n.id == 'out').on_error = policy
+            assert validate_workflow(workflow) == []
+            timeline = []; remove_document = remover(services, kb, doc, timeline)
+            original = store.worker_event
+            def event(id, owner, payload):
+                saved = original(id, owner, payload)
+                if payload.get('node_id') == 'agent' and payload.get('status') == 'success': remove_document()
+                return saved
+            monkeypatch.setattr(store, 'worker_event', event)
+            row = store.create_run(workflow.model_dump(mode='json'), 'project codename')
+            await worker.execute(store.claim_next(worker.owner))
+            run = store.run(row['id'])
+            assert timeline == ['removed']
+>           assert run['status'] == 'failed' and run['error'].startswith('out: ') and REFUSED in run['error'], run.get('error')
+E           AssertionError: 
+E           assert ('success' == 'failed'
+E             
+E             - failed
+E             + success)
+
+backend/tests/test_response_source_boundary.py:468: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.268658+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.284878+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.285499+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.291036+00:00","request_id":null,"run_id":"dec334094a4c45c4a9e3d2f58ef17f54","tenant":"local","event":"job.lease_acquired","worker_id":"5a4eeb7568844f4c902a4c9eda95d843"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.291309+00:00","request_id":null,"run_id":"dec334094a4c45c4a9e3d2f58ef17f54","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.327048+00:00","request_id":null,"run_id":"dec334094a4c45c4a9e3d2f58ef17f54","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.333995+00:00","request_id":null,"run_id":"dec334094a4c45c4a9e3d2f58ef17f54","tenant":"local","event":"node.success","node_id":"retrieve","transient":false,"cached":false,"duration_ms":5}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.336093+00:00","request_id":null,"run_id":"dec334094a4c45c4a9e3d2f58ef17f54","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.339629+00:00","request_id":null,"run_id":"dec334094a4c45c4a9e3d2f58ef17f54","tenant":"local","event":"node.success","node_id":"agent","transient":false,"cached":false,"duration_ms":3,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.341987+00:00","request_id":null,"run_id":"dec334094a4c45c4a9e3d2f58ef17f54","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+WARNING  langgraph:_algo.py:311 Task out with path ('__pregel_pull', 'out') wrote to unknown channel branch:to:output, ignoring it.
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.343583+00:00","request_id":null,"run_id":"dec334094a4c45c4a9e3d2f58ef17f54","tenant":"local","event":"run.finish","status":"success","seconds":0.052}
+_____________ test_u21_a_response_without_text_is_a_named_failure ______________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u21_a_response_without_te0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d869390>
+
+    @pytest.mark.asyncio
+    async def test_u21_a_response_without_text_is_a_named_failure(tmp_path, monkeypatch):
+        async def broken(inputs, config, ctx): raise ValueError('broken response')
+        monkeypatch.setattr(REGISTRY['response'], 'handler', broken)
+        store, worker = durable(tmp_path, monkeypatch)
+        try:
+            workflow = Workflow.model_validate({'version': 1, 'name': 'Recovered', 'nodes': [
+                {'id': 'input', 'type': 'chat_input'},
+                {'id': 'out', 'type': 'response', 'on_error': 'continue', 'inputs': {'text': 'input.message'}}],
+                'edges': [{'id': 'a', 'source': 'input', 'target': 'out'}]})
+            row = store.create_run(workflow.model_dump(mode='json'), 'hello')
+            await worker.execute(store.claim_next(worker.owner))
+            run = store.run(row['id'])
+>           assert run['status'] == 'failed' and run['error'] == 'out: the Response produced no answer.', run.get('error')
+E           AssertionError: Run failed unexpectedly.
+E           assert ('failed' == 'failed'
+E             
+E               failed and 'Run failed unexpectedly.' == 'out: the Res...ed no answer.'
+E             
+E             - out: the Response produced no answer.
+E             + Run failed unexpectedly.)
+
+backend/tests/test_response_source_boundary.py:487: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.352853+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.367960+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.368532+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.016}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.372588+00:00","request_id":null,"run_id":"83ba608eb1334b6db26e4fbea9a8bd25","tenant":"local","event":"job.lease_acquired","worker_id":"bc0495d902f64f65b810e12b10e36193"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.372811+00:00","request_id":null,"run_id":"83ba608eb1334b6db26e4fbea9a8bd25","tenant":"local","event":"run.start","nodes":2,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.393819+00:00","request_id":null,"run_id":"83ba608eb1334b6db26e4fbea9a8bd25","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.395888+00:00","request_id":null,"run_id":"83ba608eb1334b6db26e4fbea9a8bd25","tenant":"local","event":"node.failed","node_id":"out","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.395917+00:00","request_id":null,"run_id":"83ba608eb1334b6db26e4fbea9a8bd25","tenant":"local","event":"node.recovered","node_id":"out","reason_code":"continue"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.396174+00:00","request_id":null,"run_id":"83ba608eb1334b6db26e4fbea9a8bd25","tenant":"local","event":"run.failure","error_type":"KeyError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.397205+00:00","request_id":null,"run_id":"83ba608eb1334b6db26e4fbea9a8bd25","tenant":"local","event":"run.finish","status":"failed","seconds":0.024}
+______ test_u5_u6_a_removal_before_resume_refuses_reused_loop_work[loop] _______
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u5_u6_a_removal_before_re0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d869400>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10d907230>
+crash = 'loop'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('crash', ['loop', 'item'])
+    async def test_u5_u6_a_removal_before_resume_refuses_reused_loop_work(tmp_path, monkeypatch, services, crash):
+        case = await loop_case(tmp_path, monkeypatch, services, crash, remove='before_resume')
+        try:
+>           no_output(case)
+
+backend/tests/test_response_source_boundary.py:496: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+case = namespace(run={'approval_required': False, 'request_id': None, 'id': '6e0f5c43fcdb48ef83282496b2205cef', 'workflow': {...pp.storage.Store object at 0x10d4bf650>, id='6e0f5c43fcdb48ef83282496b2205cef', out_checks=[], checks_after_removal=[])
+
+    def no_output(case):
+>       assert case.run['status'] == 'failed', case.run.get('error')
+E       AssertionError: 
+E       assert 'success' == 'failed'
+E         
+E         - failed
+E         + success
+
+backend/tests/test_response_source_boundary.py:406: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.520379+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.536797+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.537376+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.543319+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"job.lease_acquired","worker_id":"6dbda17142d1412c995591ecf2940d64"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.543573+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.582496+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.587599+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":4}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.594822+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.597717+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"node.success","node_id":"work","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.600488+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.601692+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.603766+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.604060+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.605106+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"run.finish","status":"failed","seconds":0.062}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.609300+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"job.lease_acquired","worker_id":"6dbda17142d1412c995591ecf2940d64"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.609443+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"run.start","nodes":6,"resumed":true}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.646251+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.647920+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.649754+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.652756+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"node.success","node_id":"render","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.655004+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.656245+00:00","request_id":null,"run_id":"6e0f5c43fcdb48ef83282496b2205cef","tenant":"local","event":"run.finish","status":"success","seconds":0.047}
+______ test_u5_u6_a_removal_before_resume_refuses_reused_loop_work[item] _______
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u5_u6_a_removal_before_re1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d967620>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10da00350>
+crash = 'item'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('crash', ['loop', 'item'])
+    async def test_u5_u6_a_removal_before_resume_refuses_reused_loop_work(tmp_path, monkeypatch, services, crash):
+        case = await loop_case(tmp_path, monkeypatch, services, crash, remove='before_resume')
+        try:
+>           no_output(case)
+
+backend/tests/test_response_source_boundary.py:496: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+case = namespace(run={'approval_required': False, 'request_id': None, 'id': '7c0228e746ef4d7ab83742f03d70327d', 'workflow': {...pp.storage.Store object at 0x10da9ecf0>, id='7c0228e746ef4d7ab83742f03d70327d', out_checks=[], checks_after_removal=[])
+
+    def no_output(case):
+>       assert case.run['status'] == 'failed', case.run.get('error')
+E       AssertionError: 
+E       assert 'success' == 'failed'
+E         
+E         - failed
+E         + success
+
+backend/tests/test_response_source_boundary.py:406: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.781233+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.797575+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.798134+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.803903+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"job.lease_acquired","worker_id":"6e7b104d24b24812a54e36e2a4a4b31d"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.804150+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.847750+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.852467+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.859845+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.863080+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"node.success","node_id":"work","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.865335+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.865615+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.866776+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"run.finish","status":"failed","seconds":0.063}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.870924+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"job.lease_acquired","worker_id":"6e7b104d24b24812a54e36e2a4a4b31d"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.871048+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"run.start","nodes":6,"resumed":true}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.906295+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.910322+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.913293+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.915653+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":false,"duration_ms":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.918790+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"node.success","node_id":"render","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.921719+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:13.923231+00:00","request_id":null,"run_id":"7c0228e746ef4d7ab83742f03d70327d","tenant":"local","event":"run.finish","status":"success","seconds":0.052}
+___________ test_u7_a_removal_before_resume_refuses_a_saved_response ___________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u7_a_removal_before_resum0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dbf46e0>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10dd710d0>
+
+    @pytest.mark.asyncio
+    async def test_u7_a_removal_before_resume_refuses_a_saved_response(tmp_path, monkeypatch, services):
+        case = await loop_case(tmp_path, monkeypatch, services, 'out', remove='before_resume')
+        try:
+>           assert case.run['status'] == 'failed' and 'out: saved knowledge sources are unavailable or removed' in case.run['error'], case.run.get('error')
+E           AssertionError: 
+E           assert ('success' == 'failed'
+E             
+E             - failed
+E             + success)
+
+backend/tests/test_response_source_boundary.py:506: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.057437+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.074137+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.074731+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.080494+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"job.lease_acquired","worker_id":"a7fefc927fb84f56856aeda839f47dc5"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.080738+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.124043+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.128823+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.136344+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.139364+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.success","node_id":"work","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.142126+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.143353+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.144859+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":false,"duration_ms":14}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.147328+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.success","node_id":"render","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.150056+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.cancelled","node_id":"out","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.150333+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.151493+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"run.finish","status":"failed","seconds":0.071}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.155699+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"job.lease_acquired","worker_id":"a7fefc927fb84f56856aeda839f47dc5"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.155831+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"run.start","nodes":6,"resumed":true}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.192451+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.194173+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.195759+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.197300+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.success","node_id":"render","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.198872+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.200294+00:00","request_id":null,"run_id":"5e420a2eb14e4c59b01cc6873b60b482","tenant":"local","event":"run.finish","status":"success","seconds":0.044}
+__________ test_u8_the_resume_endpoint_refuses_reused_loop_work[loop] __________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u8_the_resume_endpoint_re0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dd17070>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10ddc6600>
+crash = 'loop'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('crash', ['loop', 'item'])  # U5's and U6's states
+    async def test_u8_the_resume_endpoint_refuses_reused_loop_work(tmp_path, monkeypatch, services, crash):
+        from cryptography.fernet import Fernet
+        from fastapi.testclient import TestClient
+        from backend.app.main import create_app
+        app = create_app(database_url=f'sqlite:///{tmp_path}/api.db', encryption_key=Fernet.generate_key(),
+                         auth_enabled=False, embedded_worker=False, knowledge_services=services)
+        with TestClient(app) as client:
+            case = await loop_case(tmp_path, monkeypatch, services, crash, remove='before_resume',
+                                   store=client.app.state.store, resume=False)
+            response = client.post(f'/api/runs/{case.id}/resume')
+>           assert response.status_code == 422, response.text
+E           AssertionError: {"id":"e2f16188f5e842b7bf7e0a7f8f695c5d","status":"queued"}
+E           assert 202 == 422
+E            +  where 202 = <Response [202 Accepted]>.status_code
+
+backend/tests/test_response_source_boundary.py:523: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.219502+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.234871+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.235442+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.016}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.406870+00:00","request_id":null,"run_id":"e2f16188f5e842b7bf7e0a7f8f695c5d","tenant":"local","event":"job.lease_acquired","worker_id":"e7b8b4b91973405f9b3956ae85a85052"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.407312+00:00","request_id":null,"run_id":"e2f16188f5e842b7bf7e0a7f8f695c5d","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.446390+00:00","request_id":null,"run_id":"e2f16188f5e842b7bf7e0a7f8f695c5d","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.451030+00:00","request_id":null,"run_id":"e2f16188f5e842b7bf7e0a7f8f695c5d","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.458176+00:00","request_id":null,"run_id":"e2f16188f5e842b7bf7e0a7f8f695c5d","tenant":"local","event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.461239+00:00","request_id":null,"run_id":"e2f16188f5e842b7bf7e0a7f8f695c5d","tenant":"local","event":"node.success","node_id":"work","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.462946+00:00","request_id":null,"run_id":"e2f16188f5e842b7bf7e0a7f8f695c5d","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.464119+00:00","request_id":null,"run_id":"e2f16188f5e842b7bf7e0a7f8f695c5d","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.466141+00:00","request_id":null,"run_id":"e2f16188f5e842b7bf7e0a7f8f695c5d","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.466436+00:00","request_id":null,"run_id":"e2f16188f5e842b7bf7e0a7f8f695c5d","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.467564+00:00","request_id":null,"run_id":"e2f16188f5e842b7bf7e0a7f8f695c5d","tenant":"local","event":"run.finish","status":"failed","seconds":0.06}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.474510+00:00","request_id":"077b0765fcba4bc2b35c4fbc43c4a7b5","run_id":"e2f16188f5e842b7bf7e0a7f8f695c5d","tenant":"local","event":"http.request","method":"POST","path":"/api/runs/{id}/resume","status":202,"duration_ms":4.084}
+__________ test_u8_the_resume_endpoint_refuses_reused_loop_work[item] __________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u8_the_resume_endpoint_re1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e1e8bb0>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10e16fa50>
+crash = 'item'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('crash', ['loop', 'item'])  # U5's and U6's states
+    async def test_u8_the_resume_endpoint_refuses_reused_loop_work(tmp_path, monkeypatch, services, crash):
+        from cryptography.fernet import Fernet
+        from fastapi.testclient import TestClient
+        from backend.app.main import create_app
+        app = create_app(database_url=f'sqlite:///{tmp_path}/api.db', encryption_key=Fernet.generate_key(),
+                         auth_enabled=False, embedded_worker=False, knowledge_services=services)
+        with TestClient(app) as client:
+            case = await loop_case(tmp_path, monkeypatch, services, crash, remove='before_resume',
+                                   store=client.app.state.store, resume=False)
+            response = client.post(f'/api/runs/{case.id}/resume')
+>           assert response.status_code == 422, response.text
+E           AssertionError: {"id":"19fc82c8983644d8aff645c7b53e168f","status":"queued"}
+E           assert 202 == 422
+E            +  where 202 = <Response [202 Accepted]>.status_code
+
+backend/tests/test_response_source_boundary.py:523: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.487817+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.552366+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.552933+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.065}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.721597+00:00","request_id":null,"run_id":"19fc82c8983644d8aff645c7b53e168f","tenant":"local","event":"job.lease_acquired","worker_id":"5b86343fbec448e9b6853091db3cba6e"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.721911+00:00","request_id":null,"run_id":"19fc82c8983644d8aff645c7b53e168f","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.761838+00:00","request_id":null,"run_id":"19fc82c8983644d8aff645c7b53e168f","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.766545+00:00","request_id":null,"run_id":"19fc82c8983644d8aff645c7b53e168f","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.773944+00:00","request_id":null,"run_id":"19fc82c8983644d8aff645c7b53e168f","tenant":"local","event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.777004+00:00","request_id":null,"run_id":"19fc82c8983644d8aff645c7b53e168f","tenant":"local","event":"node.success","node_id":"work","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.780226+00:00","request_id":null,"run_id":"19fc82c8983644d8aff645c7b53e168f","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.780502+00:00","request_id":null,"run_id":"19fc82c8983644d8aff645c7b53e168f","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.781764+00:00","request_id":null,"run_id":"19fc82c8983644d8aff645c7b53e168f","tenant":"local","event":"run.finish","status":"failed","seconds":0.06}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:14.788145+00:00","request_id":"6bddce18fe5d4603be17882ffd9be84b","run_id":"19fc82c8983644d8aff645c7b53e168f","tenant":"local","event":"http.request","method":"POST","path":"/api/runs/{id}/resume","status":202,"duration_ms":3.775}
+___ test_u22_u23_a_removal_after_the_resume_check_refuses_publication[loop] ____
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u22_u23_a_removal_after_t0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e1e8d00>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10e1e9860>
+crash = 'loop'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('crash', ['loop', 'item'])
+    async def test_u22_u23_a_removal_after_the_resume_check_refuses_publication(tmp_path, monkeypatch, services, crash):
+        two = crash == 'item'
+        case = await loop_case(tmp_path, monkeypatch, services, crash, remove='after_prompt', two_items=two)
+        try:
+>           no_output(case)
+
+backend/tests/test_response_source_boundary.py:546: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+case = namespace(run={'approval_required': False, 'request_id': None, 'id': '949ac4eb40b44ca2965cf73e001c39ff', 'workflow': {...pp.storage.Store object at 0x10d5fa190>, id='949ac4eb40b44ca2965cf73e001c39ff', out_checks=[], checks_after_removal=[])
+
+    def no_output(case):
+>       assert case.run['status'] == 'failed', case.run.get('error')
+E       AssertionError: 
+E       assert 'success' == 'failed'
+E         
+E         - failed
+E         + success
+
+backend/tests/test_response_source_boundary.py:406: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.684564+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.701356+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.701954+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.707722+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"job.lease_acquired","worker_id":"e07ca511513944ab8f7a0d4af3cf664f"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.708041+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.751226+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.755787+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.762948+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.765920+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"node.success","node_id":"work","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.767660+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.768708+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.770494+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.770764+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.771795+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"run.finish","status":"failed","seconds":0.064}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.775063+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"job.lease_acquired","worker_id":"e07ca511513944ab8f7a0d4af3cf664f"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.775191+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"run.start","nodes":6,"resumed":true}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.811290+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.812894+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.814533+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.817748+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"node.success","node_id":"render","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.819857+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.821053+00:00","request_id":null,"run_id":"949ac4eb40b44ca2965cf73e001c39ff","tenant":"local","event":"run.finish","status":"success","seconds":0.046}
+___ test_u22_u23_a_removal_after_the_resume_check_refuses_publication[item] ____
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u22_u23_a_removal_after_t1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d7ce5f0>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10d7cf770>
+crash = 'item'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('crash', ['loop', 'item'])
+    async def test_u22_u23_a_removal_after_the_resume_check_refuses_publication(tmp_path, monkeypatch, services, crash):
+        two = crash == 'item'
+        case = await loop_case(tmp_path, monkeypatch, services, crash, remove='after_prompt', two_items=two)
+        try:
+>           no_output(case)
+
+backend/tests/test_response_source_boundary.py:546: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+case = namespace(run={'approval_required': False, 'request_id': None, 'id': '389201def82b4abba1229d093cd9ee04', 'workflow': {...pp.storage.Store object at 0x10e0e4530>, id='389201def82b4abba1229d093cd9ee04', out_checks=[], checks_after_removal=[])
+
+    def no_output(case):
+>       assert case.run['status'] == 'failed', case.run.get('error')
+E       AssertionError: 
+E       assert 'success' == 'failed'
+E         
+E         - failed
+E         + success
+
+backend/tests/test_response_source_boundary.py:406: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.942038+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.959847+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.960463+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.966225+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"job.lease_acquired","worker_id":"d26d773d71e0402a9bf6cae4cbf98438"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:15.966494+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.010162+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.014961+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.022309+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.025368+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"node.success","node_id":"work","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.027618+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.027902+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.028972+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"run.finish","status":"failed","seconds":0.062}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.032264+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"job.lease_acquired","worker_id":"d26d773d71e0402a9bf6cae4cbf98438"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.032384+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"run.start","nodes":6,"resumed":true}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.070397+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.073315+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.080125+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.083095+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"node.success","node_id":"work","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.084532+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.085698+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.087258+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":false,"duration_ms":12}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.090186+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"node.success","node_id":"render","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.092632+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.093920+00:00","request_id":null,"run_id":"389201def82b4abba1229d093cd9ee04","tenant":"local","event":"run.finish","status":"success","seconds":0.062}
+_______ test_u24_the_response_checks_the_reused_items_saved_source[loop] _______
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u24_the_response_checks_t0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d4ec6e0>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10d4eeeb0>
+crash = 'loop'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('crash', ['loop', 'item'])
+    async def test_u24_the_response_checks_the_reused_items_saved_source(tmp_path, monkeypatch, services, crash):
+        two = crash == 'item'
+        case = await loop_case(tmp_path, monkeypatch, services, crash, two_items=two)
+        try:
+            assert case.run['status'] == 'success', case.run.get('error')
+            assert len(case.calls) == (2 if two else 1) and case.calls[0] == case.doc['id']
+>           assert any(case.doc['id'] in docs for docs in case.out_checks), case.out_checks
+E           AssertionError: []
+E           assert False
+E            +  where False = any(<generator object test_u24_the_response_checks_the_reused_items_saved_source.<locals>.<genexpr> at 0x10e3e6ea0>)
+
+backend/tests/test_response_source_boundary.py:564: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.217750+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.234469+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.235111+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.240788+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"job.lease_acquired","worker_id":"2e7060e75d4b4936a16ee81ab8299eeb"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.241037+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.281730+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.286444+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.293631+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.296845+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"node.success","node_id":"work","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.298415+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.299506+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.301610+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.301881+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.303039+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"run.finish","status":"failed","seconds":0.062}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.306478+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"job.lease_acquired","worker_id":"2e7060e75d4b4936a16ee81ab8299eeb"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.306607+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"run.start","nodes":6,"resumed":true}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.343229+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.345018+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.346682+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.349421+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"node.success","node_id":"render","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.351919+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.353168+00:00","request_id":null,"run_id":"1b93d334d17b4ac2925cfd228d4317ca","tenant":"local","event":"run.finish","status":"success","seconds":0.047}
+_______ test_u24_the_response_checks_the_reused_items_saved_source[item] _______
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-168/test_u24_the_response_checks_t1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dc73c40>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10dc73540>
+crash = 'item'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('crash', ['loop', 'item'])
+    async def test_u24_the_response_checks_the_reused_items_saved_source(tmp_path, monkeypatch, services, crash):
+        two = crash == 'item'
+        case = await loop_case(tmp_path, monkeypatch, services, crash, two_items=two)
+        try:
+            assert case.run['status'] == 'success', case.run.get('error')
+            assert len(case.calls) == (2 if two else 1) and case.calls[0] == case.doc['id']
+>           assert any(case.doc['id'] in docs for docs in case.out_checks), case.out_checks
+E           AssertionError: []
+E           assert False
+E            +  where False = any(<generator object test_u24_the_response_checks_the_reused_items_saved_source.<locals>.<genexpr> at 0x10e4275a0>)
+
+backend/tests/test_response_source_boundary.py:564: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.475353+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.492586+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.493258+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.499030+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"job.lease_acquired","worker_id":"c921991ba81d444a93304f61748bb240"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.499268+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.541426+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.545984+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.553372+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.556320+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"node.success","node_id":"work","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.558578+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.558869+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.560014+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"run.finish","status":"failed","seconds":0.061}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.563371+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"job.lease_acquired","worker_id":"c921991ba81d444a93304f61748bb240"}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.563488+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"run.start","nodes":6,"resumed":true}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.655589+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.658991+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.665705+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"model.usage","node_id":"work","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":2}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.668666+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"node.success","node_id":"work","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":8,"completion_tokens":2}}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.670052+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.671142+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.672568+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":false,"duration_ms":12}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.675146+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"node.success","node_id":"render","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.677430+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:28 {"timestamp":"2026-10-31T18:35:16.678705+00:00","request_id":null,"run_id":"1e5bb30d13e745548648b84d27f33c45","tenant":"local","event":"run.finish","status":"success","seconds":0.115}
+=============================== warnings summary ===============================
+backend/tests/test_response_source_boundary.py::test_u8_the_resume_endpoint_refuses_reused_loop_work[loop]
+  <repo>/.venv/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/test_response_source_boundary.py::test_u1_a_nested_rejection_publishes_nothing
+FAILED backend/tests/test_response_source_boundary.py::test_u3_a_removal_after_an_upstream_check_passed_publishes_nothing[agent]
+FAILED backend/tests/test_response_source_boundary.py::test_u3_a_removal_after_an_upstream_check_passed_publishes_nothing[query]
+FAILED backend/tests/test_response_source_boundary.py::test_u4_the_budget_fallback_sites_publish_nothing[step]
+FAILED backend/tests/test_response_source_boundary.py::test_u4_the_budget_fallback_sites_publish_nothing[repair]
+FAILED backend/tests/test_response_source_boundary.py::test_u10_listed_sources_without_a_verifier_are_refused
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[response-{}]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[response-null]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[response-"text"]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[response-7]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[response-[1]]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[response-[{"text": "no id"}]]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[query-{}]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[query-"text"]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[query-[1]]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[query-[{"text": "no id"}]]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[loop_item-{}]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[loop_item-null]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[loop_item-"text"]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[loop_item-7]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[loop_item-[1]]
+FAILED backend/tests/test_response_source_boundary.py::test_u12_a_malformed_saved_container_is_never_zero_sources[loop_item-[{"text": "no id"}]]
+FAILED backend/tests/test_response_source_boundary.py::test_u14_same_id_with_different_metadata_checks_both_records[False]
+FAILED backend/tests/test_response_source_boundary.py::test_u14_same_id_with_different_metadata_checks_both_records[True]
+FAILED backend/tests/test_response_source_boundary.py::test_u15_more_than_120_sources_are_checked_completely_in_valid_batches
+FAILED backend/tests/test_response_source_boundary.py::test_u16_each_distinct_source_is_checked_exactly_once
+FAILED backend/tests/test_response_source_boundary.py::test_u19_control_flow_from_the_check_propagates_unchanged[error0]
+FAILED backend/tests/test_response_source_boundary.py::test_u19_control_flow_from_the_check_propagates_unchanged[error1]
+FAILED backend/tests/test_response_source_boundary.py::test_u2_a_specialist_rejection_with_a_real_kb_publishes_nothing
+FAILED backend/tests/test_response_source_boundary.py::test_u20_the_refusal_fails_the_run_by_name_under_every_on_error[fail]
+FAILED backend/tests/test_response_source_boundary.py::test_u20_the_refusal_fails_the_run_by_name_under_every_on_error[continue]
+FAILED backend/tests/test_response_source_boundary.py::test_u20_the_refusal_fails_the_run_by_name_under_every_on_error[route]
+FAILED backend/tests/test_response_source_boundary.py::test_u21_a_response_without_text_is_a_named_failure
+FAILED backend/tests/test_response_source_boundary.py::test_u5_u6_a_removal_before_resume_refuses_reused_loop_work[loop]
+FAILED backend/tests/test_response_source_boundary.py::test_u5_u6_a_removal_before_resume_refuses_reused_loop_work[item]
+FAILED backend/tests/test_response_source_boundary.py::test_u7_a_removal_before_resume_refuses_a_saved_response
+FAILED backend/tests/test_response_source_boundary.py::test_u8_the_resume_endpoint_refuses_reused_loop_work[loop]
+FAILED backend/tests/test_response_source_boundary.py::test_u8_the_resume_endpoint_refuses_reused_loop_work[item]
+FAILED backend/tests/test_response_source_boundary.py::test_u22_u23_a_removal_after_the_resume_check_refuses_publication[loop]
+FAILED backend/tests/test_response_source_boundary.py::test_u22_u23_a_removal_after_the_resume_check_refuses_publication[item]
+FAILED backend/tests/test_response_source_boundary.py::test_u24_the_response_checks_the_reused_items_saved_source[loop]
+FAILED backend/tests/test_response_source_boundary.py::test_u24_the_response_checks_the_reused_items_saved_source[item]
+42 failed, 9 passed, 1 warning in 5.18s

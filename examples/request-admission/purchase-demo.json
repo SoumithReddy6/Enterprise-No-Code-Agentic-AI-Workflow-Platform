@@ -1,0 +1,286 @@
+{
+  "version": 1,
+  "contract": 2,
+  "name": "Purchase request demo",
+  "description": "Demo with no connections: the Request reader reads an item and either a total or a quantity and unit price. Code checks every value against the message, calculates the total and chooses the branch. No product records are checked.",
+  "nodes": [
+    {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "Chat input",
+      "position": {
+        "x": 300,
+        "y": 40
+      },
+      "inputs": {},
+      "config": {}
+    },
+    {
+      "id": "reader",
+      "type": "request_reader",
+      "version": 1,
+      "label": "Request reader",
+      "position": {
+        "x": 300,
+        "y": 210
+      },
+      "inputs": {
+        "message": "input.message"
+      },
+      "config": {
+        "purpose": "Draft purchase decisions for requests with a named product and either a total or a quantity and unit price.",
+        "accepted_requests": [
+          "Orders with an item and a price."
+        ],
+        "excluded_requests": [
+          "Questions about past orders, and general questions."
+        ],
+        "examples": [
+          "3 laptops at $450 each."
+        ],
+        "prepared_replies": [
+          {
+            "message": "hello",
+            "reply": "Hello! Send your request and I will check whether this workflow can help."
+          },
+          {
+            "message": "hello!",
+            "reply": "Hello! Send your request and I will check whether this workflow can help."
+          }
+        ],
+        "expected_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "item": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "quantity": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "unit_price": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "total": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          "required": [
+            "item",
+            "quantity",
+            "unit_price",
+            "total"
+          ]
+        },
+        "required_fields": [
+          "/item"
+        ],
+        "required_any": [
+          [
+            "/total"
+          ],
+          [
+            "/quantity",
+            "/unit_price"
+          ]
+        ],
+        "field_rules": [
+          {
+            "field": "/item",
+            "kind": "accept_quoted"
+          },
+          {
+            "field": "/quantity",
+            "kind": "accept_quoted"
+          },
+          {
+            "field": "/unit_price",
+            "kind": "accept_quoted"
+          },
+          {
+            "field": "/total",
+            "kind": "accept_quoted"
+          }
+        ],
+        "cross_checks": [
+          "total == quantity * unit_price"
+        ],
+        "provider": "ollama",
+        "model": "llama3.1:latest",
+        "credential_id": "",
+        "max_tokens": 2048
+      }
+    },
+    {
+      "id": "calculate",
+      "type": "calculate",
+      "version": 1,
+      "label": "Calculate total in code",
+      "position": {
+        "x": 300,
+        "y": 380
+      },
+      "inputs": {
+        "value": "reader.text"
+      },
+      "config": {
+        "mode": "compute",
+        "expression": "coalesce(total, quantity * unit_price)"
+      }
+    },
+    {
+      "id": "decision",
+      "type": "condition",
+      "version": 1,
+      "label": "Business condition",
+      "position": {
+        "x": 300,
+        "y": 550
+      },
+      "inputs": {
+        "value": "calculate.text"
+      },
+      "config": {
+        "field": "result",
+        "operator": "gt",
+        "compare_to": "1000"
+      }
+    },
+    {
+      "id": "yesText",
+      "type": "prompt",
+      "version": 1,
+      "label": "True branch explanation",
+      "position": {
+        "x": 70,
+        "y": 720
+      },
+      "inputs": {
+        "message": "calculate.text"
+      },
+      "config": {
+        "template": "Checked purchase exceeds $1,000. Follow the purchase review policy.\nChecked value: {message}"
+      }
+    },
+    {
+      "id": "yes",
+      "type": "response",
+      "version": 1,
+      "label": "True branch response",
+      "position": {
+        "x": 70,
+        "y": 890
+      },
+      "inputs": {
+        "text": "yesText.text"
+      },
+      "config": {}
+    },
+    {
+      "id": "noText",
+      "type": "prompt",
+      "version": 1,
+      "label": "False branch explanation",
+      "position": {
+        "x": 580,
+        "y": 720
+      },
+      "inputs": {
+        "message": "calculate.text"
+      },
+      "config": {
+        "template": "Checked purchase is $1,000 or less. No external action has been sent.\nChecked value: {message}"
+      }
+    },
+    {
+      "id": "no",
+      "type": "response",
+      "version": 1,
+      "label": "False branch response",
+      "position": {
+        "x": 580,
+        "y": 890
+      },
+      "inputs": {
+        "text": "noText.text"
+      },
+      "config": {}
+    },
+    {
+      "id": "readerReply",
+      "type": "response",
+      "version": 1,
+      "label": "Reader reply",
+      "position": {
+        "x": -180,
+        "y": 300
+      },
+      "inputs": {
+        "text": "reader.reply"
+      },
+      "config": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "input-reader",
+      "source": "input",
+      "target": "reader"
+    },
+    {
+      "id": "reader-calculate",
+      "source": "reader",
+      "target": "calculate",
+      "sourceHandle": "continue"
+    },
+    {
+      "id": "calculate-decision",
+      "source": "calculate",
+      "target": "decision"
+    },
+    {
+      "id": "decision-yesText",
+      "source": "decision",
+      "target": "yesText",
+      "sourceHandle": "true"
+    },
+    {
+      "id": "yesText-yes",
+      "source": "yesText",
+      "target": "yes"
+    },
+    {
+      "id": "decision-noText",
+      "source": "decision",
+      "target": "noText",
+      "sourceHandle": "false"
+    },
+    {
+      "id": "noText-no",
+      "source": "noText",
+      "target": "no"
+    },
+    {
+      "id": "reader-readerReply",
+      "source": "reader",
+      "target": "readerReply",
+      "sourceHandle": "reply"
+    }
+  ]
+}

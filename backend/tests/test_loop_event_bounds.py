@@ -1,0 +1,408 @@
+"""Events generated inside a loop carry the loop's identity and are stored as previews.
+
+An agent running as a loop body produces agent steps, tool calls, specialist
+delegations, retries and failures for every item. Before this, none of those nested
+events carried the loop's identity, so storage could not recognise them as loop work and
+stored every tool result in full, once per item. Each now carries loop_node_id and
+item_index, and large fields are previews. The durable copies - item rows, checkpoints,
+approvals and write results - stay exact.
+"""
+import asyncio
+import json
+import pytest
+from cryptography.fernet import Fernet
+from backend.app import registry
+from backend.app.compiler import compile_workflow
+from backend.app.iteration import PREVIEW_CHARS
+from backend.app.models import Workflow
+from backend.app.storage import Store
+from backend.app.tool_service import TransientToolError
+from backend.app.worker import Worker
+from backend.tests.test_execution_safety import http_connection, jira_connection, jira_payload
+
+NESTED = ('lookup', 'broken', 'helper', 'deep')
+
+
+def agent_loop(jira='c1', http='c2', items_limit=100, tools=None, approval=False):
+    """tickets -> each item -> agent 'send' with attached tools and a specialist."""
+    nodes = [{'id': 'input', 'type': 'chat_input'},
+             {'id': 'tickets', 'type': 'tool_jira', 'inputs': {'input': 'input.message'},
+              'config': {'connection_id': jira, 'operation': 'search', 'jql': 'a=b'}},
+             {'id': 'each', 'type': 'for_each', 'inputs': {'items': 'tickets.items'},
+              'config': {'body': 'send', 'max_items': items_limit}},
+             {'id': 'send', 'type': 'agent', 'config': {'provider': 'demo'}},
+             {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}]
+    edges = [{'id': 'a', 'source': 'input', 'target': 'tickets'}, {'id': 'b', 'source': 'tickets', 'target': 'each'},
+             {'id': 'c', 'source': 'each', 'target': 'out'},
+             {'id': 'd', 'source': 'each', 'target': 'send', 'kind': 'loop', 'sourceHandle': 'body', 'targetHandle': 'input'}]
+    for id, config, owner in (tools or []):
+        nodes.append({'id': id, 'type': config.pop('type', 'tool_http'), 'config': config, **({'retry': {'attempts': 1, 'base_delay': 0}} if id == 'lookup' else {})})
+        kind = 'agent' if nodes[-1]['type'] == 'agent' else 'tool'
+        edges.append({'id': f'{owner}-{id}', 'source': owner if kind == 'agent' else id, 'target': id if kind == 'agent' else owner,
+                      'kind': kind, **({'sourceHandle': 'agents', 'targetHandle': 'input'} if kind == 'agent' else {'targetHandle': 'tools'})})
+    return Workflow.model_validate({'version': 1, 'name': 'Agent loop', 'nodes': nodes, 'edges': edges})
+
+
+def full_agent_loop():
+    return agent_loop(tools=[('lookup', {'connection_id': 'c2', 'method': 'GET'}, 'send'),
+                             ('broken', {'connection_id': 'c2', 'method': 'GET'}, 'send'),
+                             ('helper', {'type': 'agent', 'provider': 'demo'}, 'send'),
+                             ('deep', {'connection_id': 'c2', 'method': 'GET'}, 'helper')])
+
+
+ITEM_SCRIPT = [('send', 'lookup'), ('send', 'broken'), ('send', 'helper'), ('helper', 'deep'), ('helper', None), ('send', None)]
+
+
+def scripted_model(monkeypatch):
+    """Each item: the agent calls lookup, broken and helper; helper calls deep; both answer."""
+    script = []
+    async def model(inputs, config, ctx):
+        if not script: script.extend(ITEM_SCRIPT)
+        agent, target = script.pop(0)
+        assert ctx.node_id == agent, (ctx.node_id, agent)
+        action = {'action': 'call', 'target': target, 'input': 'x' * 3000} if target else {'action': 'final', 'text': f'{agent} done'}
+        return {'text': json.dumps(action), 'provider': 'demo'}
+    monkeypatch.setattr(registry, 'llm_node', model)
+
+
+@pytest.mark.asyncio
+async def test_every_nested_event_carries_the_loop_identity(monkeypatch):
+    scripted_model(monkeypatch)
+    lookups = {}
+    async def platform(action, node_type, settings, text, identity):
+        if node_type == 'tool_jira': return {'text': '{}', 'items': json.loads(jira_payload(2))['issues'], 'truncated': False, 'warnings': []}
+        if identity.node_id == 'broken': raise ValueError('broken tool')
+        if identity.node_id == 'lookup':
+            lookups[identity.invocation_id] = lookups.get(identity.invocation_id, 0) + 1
+            if lookups[identity.invocation_id] == 1: raise TransientToolError('busy')
+        return 'y' * 10000
+    events = []
+    async def emit(event): events.append(dict(event))
+    await compile_workflow(full_agent_loop(), message='go', platform_resolver=platform, emit=emit).graph.ainvoke({'values': {}})
+    nested = [e for e in events if e.get('node_id') in NESTED]
+    kinds = {(e['node_id'], e['status']) for e in nested}
+    for expected in [('lookup', 'retrying'), ('lookup', 'success'), ('broken', 'failed'), ('helper', 'running'),
+                     ('helper', 'success'), ('deep', 'running'), ('deep', 'success')]:
+        assert expected in kinds, f'{expected} not observed: {sorted(kinds)}'
+    missing = [e for e in nested if e.get('loop_node_id') != 'each' or e.get('item_index') not in (0, 1)]
+    assert not missing, missing[:2]
+    for index in (0, 1):
+        assert {e['node_id'] for e in nested if e['item_index'] == index} == set(NESTED)
+
+
+@pytest.mark.asyncio
+async def test_events_emitted_through_the_context_carry_it_too(monkeypatch):
+    """Retrieval emits its guard decision through ctx.emit, not the emit it was handed."""
+    from backend.app import answerability_guard
+    from backend.tests.test_agent_grounding import source
+    async def decide(query, sources, node_id): return {'decision': 'allow', 'reason': 'answerable'}
+    monkeypatch.setattr(answerability_guard, 'check', decide)
+    workflow = agent_loop()
+    raw = workflow.model_dump(mode='json')
+    body = next(n for n in raw['nodes'] if n['id'] == 'send')
+    body.update(type='retrieve', config={'knowledge_base_id': 'kb1', 'mode': 'keyword', 'answerability_guard': True})
+    async def platform(action, *args):
+        if action == 'tool': return {'text': '{}', 'items': json.loads(jira_payload(2))['issues'], 'truncated': False, 'warnings': []}
+        if action == 'kb_retrieve': return {'query': args[1], 'knowledge_base_id': 'kb1', 'version': 1, 'sources': [source(1)]}
+        if action == 'record_vector_sources': return None
+        if action == 'verify_vector_sources': return args[0]  # The Response checks what it publishes (R01).
+        raise AssertionError(action)
+    events = []
+    async def emit(event): events.append(dict(event))
+    await compile_workflow(Workflow.model_validate(raw), message='go', platform_resolver=platform, emit=emit).graph.ainvoke({'values': {}})
+    decisions = [e for e in events if e.get('kind') == 'answerability']
+    assert [(e['loop_node_id'], e['item_index']) for e in decisions] == [('each', 0), ('each', 1)]
+
+
+# --------------------------------------------------------------------------- storage
+
+def durable(tmp_path, monkeypatch, tool_bytes=40000, items=3):
+    store = Store(f'sqlite:///{tmp_path}/events.db', Fernet.generate_key())
+    worker = Worker(store)
+    calls = []
+    async def prepared(p, *args):
+        if p['connection']['provider'] == 'jira': return jira_payload(items)
+        calls.append(('approved', p['payload'])); return 'sent'
+    async def execute(node_type, settings, text, tenant_id='local'):
+        calls.append(('executed', text)); return 'y' * tool_bytes
+    monkeypatch.setattr(worker.tools, 'execute_prepared', prepared)
+    monkeypatch.setattr(worker.tools, 'execute', execute)
+    return store, worker, calls
+
+
+def lookup_loop(store):
+    http = http_connection(store)
+    return agent_loop(jira_connection(store), http, tools=[('lookup', {'connection_id': http, 'method': 'GET'}, 'send')])
+
+
+def lookup_model(monkeypatch):
+    """Call lookup once per item, then answer once its result is in the request."""
+    async def model(inputs, config, ctx):
+        seen = 'y' * 64 in inputs['prompt']
+        action = {'action': 'final', 'text': 'handled'} if seen else {'action': 'call', 'target': 'lookup', 'input': 'details'}
+        return {'text': json.dumps(action), 'provider': 'demo'}
+    monkeypatch.setattr(registry, 'llm_node', model)
+
+
+@pytest.mark.asyncio
+async def test_stored_loop_events_are_bounded_regardless_of_tool_output(tmp_path, monkeypatch):
+    lookup_model(monkeypatch)
+    store, worker, calls = durable(tmp_path, monkeypatch)
+    row = store.create_run(lookup_loop(store).model_dump(mode='json'), 'go')
+    await worker.execute(store.claim_next(worker.owner))
+    run = store.run(row['id'])
+    assert run['status'] == 'success' and len(calls) == 3
+    loop_events = [e for e in run['events'] if e.get('loop_node_id') == 'each']
+    assert loop_events and all(len(json.dumps(e)) <= 4 * PREVIEW_CHARS for e in loop_events), max(len(json.dumps(e)) for e in loop_events)
+    results = [e for e in loop_events if e.get('node_id') == 'lookup' and e['status'] == 'success']
+    assert len(results) == 3 and all(e['outputs']['text'] == 'y' * PREVIEW_CHARS and 'outputs.text' in e['preview_of'] for e in results)
+    # The durable copies are exact.
+    assert [r['value'] for r in run['checkpoints']['each']['results']] == ['handled'] * 3
+    assert all(entry['value'] == 'handled' for entry in run['loop_progress']['each'].values())
+
+
+@pytest.mark.asyncio
+async def test_approval_inside_a_looped_agent_keeps_the_exact_payload(tmp_path, monkeypatch):
+    """The agent's write input is 5,000 characters. Its events are previews; the approval
+    record and the write executed after approval use the exact text."""
+    from backend.app.approvals import decide
+    store, worker, calls = durable(tmp_path, monkeypatch, items=1)
+    http = http_connection(store)
+    workflow = agent_loop(jira_connection(store), http, tools=[('post', {'connection_id': http, 'method': 'POST', 'body': '{input}', 'enable_writes': True, 'approval': True}, 'send')])
+    payload = 'p' * 5000
+    replies = iter([{'action': 'call', 'target': 'post', 'input': payload}, {'action': 'final', 'text': 'posted'}])
+    async def model(inputs, config, ctx): return {'text': json.dumps(next(replies)), 'provider': 'demo'}
+    monkeypatch.setattr(registry, 'llm_node', model)
+    row = store.create_run(workflow.model_dump(mode='json'), 'go', approval_required=True)
+    await worker.execute(store.claim_next(worker.owner))
+    paused = store.run(row['id'])
+    approval = next(a for a in paused['approvals'] if a['status'] == 'pending')
+    assert json.dumps(approval['payload']).count('p' * 5000) == 1, 'the approval shows the exact outgoing text'
+    running = next(e for e in paused['events'] if e.get('node_id') == 'post' and e['status'] == 'running')
+    assert running['inputs']['input'] == payload[:PREVIEW_CHARS] and running['item_index'] == 0
+    decide(store, row['id'], 'local', approval['id'], approval['digest'], 'approve')
+    await worker.execute(store.claim_next(worker.owner))
+    assert store.run(row['id'])['status'] == 'success'
+    sent = [p for kind, p in calls if kind == 'approved']
+    assert len(sent) == 1 and json.dumps(sent[0]).count('p' * 5000) == 1, 'the executed write used the exact text'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('crash_after', [0, 1])
+async def test_resuming_a_looped_agent_ends_like_an_uninterrupted_run(tmp_path, monkeypatch, crash_after):
+    lookup_model(monkeypatch)
+    (tmp_path / 'a').mkdir(); (tmp_path / 'b').mkdir()
+    store, worker, _ = durable(tmp_path / 'a', monkeypatch)
+    row = store.create_run(lookup_loop(store).model_dump(mode='json'), 'go')
+    await worker.execute(store.claim_next(worker.owner))
+    baseline = store.run(row['id'])
+
+    store, worker, calls = durable(tmp_path / 'b', monkeypatch)
+    original = store.worker_event
+    def crash(id, owner, event, **kwargs):
+        persisted = original(id, owner, event, **kwargs)
+        if event.get('kind') == 'loop_item' and event.get('item_index') == crash_after: raise asyncio.CancelledError()
+        return persisted
+    monkeypatch.setattr(store, 'worker_event', crash)
+    row = store.create_run(lookup_loop(store).model_dump(mode='json'), 'go')
+    await worker.execute(store.claim_next(worker.owner))
+    monkeypatch.setattr(store, 'worker_event', original)
+    store.resume_run(row['id'])
+    await worker.execute(store.claim_next(worker.owner))
+    resumed = store.run(row['id'])
+    assert resumed['status'] == 'success'
+    assert len([c for c in calls if c[0] == 'executed']) == 3, 'no finished item repeats its tool call'
+    assert resumed['checkpoints']['each'] == baseline['checkpoints']['each']
+    assert (resumed['truncated'], resumed['output']) == (baseline['truncated'], baseline['output'])
+
+
+# --------------------------------------------------------------------------- the preview policy
+
+def test_fields_other_records_are_derived_from_stay_exact():
+    """Guard decision rows and token usage rows are built from the stored event: at their
+    normal size they are stored exactly."""
+    from backend.app.storage import observed
+    reason = 'r' * 300
+    event = {'loop_node_id': 'each', 'item_index': 0, 'node_id': 'kb', 'status': 'success', 'kind': 'answerability',
+             'answerability': {'decision': 'abstain', 'reason': reason}, 'usage': {'prompt_tokens': 7, 'by_model': [{'model': 'm' * 3000}]},
+             'outputs': {'text': 't' * (3 * PREVIEW_CHARS)}}
+    stored = observed(event)
+    assert stored['answerability'] == event['answerability'] and stored['usage'] == event['usage']
+    assert stored['outputs']['text'] == 't' * PREVIEW_CHARS and stored['preview_of'] == ['outputs.text']
+    assert len(json.dumps(event['usage'])) > PREVIEW_CHARS, 'usage above the preview size still stays exact'
+
+
+def test_a_dict_of_many_medium_values_is_bounded_as_a_whole():
+    """Shortening each value is not enough: fifty 1,500-character values still add up."""
+    from backend.app.storage import observed
+    event = {'loop_node_id': 'each', 'item_index': 3, 'node_id': 'send', 'status': 'success',
+             'outputs': {f'field{i}': 'v' * 1500 for i in range(50)}}
+    stored = observed(event)
+    assert isinstance(stored['outputs'], str) and len(stored['outputs']) == PREVIEW_CHARS
+    assert 'outputs' in stored['preview_of'] and len(json.dumps(stored)) <= 4 * PREVIEW_CHARS
+
+
+def test_events_outside_loops_are_untouched():
+    from backend.app.storage import observed
+    event = {'node_id': 'send', 'status': 'success', 'outputs': {'text': 'x' * (5 * PREVIEW_CHARS)}}
+    assert observed(event) is event
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('spoof', [{'loop_node_id': 'spoofed', 'item_index': 999}, {'loop_node_id': '', 'item_index': None}])
+async def test_a_nested_event_cannot_override_its_loop_identity(monkeypatch, spoof):
+    """Through either path a nested node emits, the identity is the loop's. Blanking it
+    would also have escaped the storage preview."""
+    from backend.app import iteration
+    from backend.app.storage import observed
+    async def body(node, text, ctx, identity, emit, **_):
+        await ctx.emit({'node_id': 'deep', 'status': 'success', 'transient': True, 'outputs': {'text': 'z' * 9000}, **spoof})
+        await emit({'node_id': 'deep', 'status': 'running', 'transient': True, 'inputs': {'input': 'z' * 9000}, **spoof})
+        return {'text': 'done'}
+    monkeypatch.setattr(iteration, 'invoke_attached', body)
+    resolver_items = json.loads(jira_payload(2))['issues']
+    async def platform(action, node_type, settings, text, identity):
+        return {'text': '{}', 'items': resolver_items, 'truncated': False, 'warnings': []}
+    events = []
+    async def emit(event): events.append(dict(event))
+    await compile_workflow(agent_loop(), message='go', platform_resolver=platform, emit=emit).graph.ainvoke({'values': {}})
+    deep = [e for e in events if e.get('node_id') == 'deep']
+    assert [(e['loop_node_id'], e['item_index']) for e in deep] == [('each', 0), ('each', 0), ('each', 1), ('each', 1)]
+    assert all(len(json.dumps(observed(e))) <= 4 * PREVIEW_CHARS for e in deep), 'a spoofed identity must not escape the preview'
+
+
+# --------------------------------------------------------------------------- the absolute ceiling
+
+def stored_bytes(event):
+    return len(json.dumps(event, ensure_ascii=False, default=str).encode('utf-8'))
+
+
+def test_an_oversized_exact_field_keeps_its_shape_and_its_record(tmp_path, monkeypatch):
+    """The audit's synthetic case: a 200 KB answerability field in a loop event. It is
+    bounded, stays a dict, and the guard decision record is still written from it."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import Session
+    from backend.app.operator_metrics import GuardDecisionRecord
+    from backend.app.storage import MAX_EVENT_BYTES, observed
+    from backend.tests.test_loop_completeness import durable_setup, jira_connection, loop_flow
+    event = {'kind': 'answerability', 'node_id': 'kb', 'status': 'success', 'transient': True, 'loop_node_id': 'each',
+             'item_index': 4, 'answerability': {'decision': 'abstain', 'reason': 'r' * 200_000}}
+    stored = observed(event)
+    assert isinstance(stored['answerability'], dict) and stored['answerability']['decision'] == 'abstain'
+    assert len(stored['answerability']['reason']) == PREVIEW_CHARS and 'answerability.reason' in stored['preview_of']
+    assert stored_bytes(stored) <= MAX_EVENT_BYTES
+    store, *_ = durable_setup(tmp_path, monkeypatch)
+    row = store.create_run(loop_flow(connection_id=jira_connection(store)).model_dump(mode='json'), 'go')
+    store.claim_next('worker')
+    assert store.worker_event(row['id'], 'worker', event) is True
+    with Session(store.engine) as s:
+        decisions = s.scalars(select(GuardDecisionRecord).where(GuardDecisionRecord.run_id == row['id'])).all()
+    assert [d.decision for d in decisions] == ['abstain']
+
+
+def test_the_list_of_shortened_paths_is_capped_with_a_count():
+    from backend.app.storage import MAX_EVENT_BYTES, MAX_PREVIEW_PATHS, observed
+    event = {'node_id': 'send', 'status': 'success', 'loop_node_id': 'each', 'item_index': 0,
+             'outputs': {f'field{i}': 'v' * (PREVIEW_CHARS + 1) for i in range(1000)}}
+    stored = observed(event)
+    assert len(stored['preview_of']) == MAX_PREVIEW_PATHS and stored['preview_omitted'] == 1001 - MAX_PREVIEW_PATHS
+    assert stored_bytes(stored) <= MAX_EVENT_BYTES
+
+
+IDENTITY = {'kind': 'node', 'node_id': 'deep', 'status': 'success', 'loop_node_id': 'each', 'item_index': 7,
+            'invocation_id': 'each:7:send>3:deep', 'parent_node_id': 'send', 'transient': True}
+
+
+def hostile_event(rng):
+    """Hostile in size and shape - many fields, nesting, long keys, characters JSON escapes
+    to six bytes, oversized exact fields - within a budget of about two million characters,
+    so each case builds quickly."""
+    budget = [2_000_000]
+    def text(n):
+        n = min(n, budget[0]); budget[0] -= n
+        return ''.join(rng.choices(['\x01', 'é', '"', 'a', '漢'], k=n))
+    def nested(depth):
+        if depth == 0 or budget[0] <= 0 or rng.random() < 0.3: return text(rng.choice([5, 1500, 30000]))
+        if rng.random() < 0.5: return [nested(depth - 1) for _ in range(rng.choice([1, 3, 25]))]
+        return {text(rng.choice([3, 300])) + str(i): nested(depth - 1) for i in range(rng.choice([1, 3, 60]))}
+    event = dict(IDENTITY)
+    for i in range(rng.choice([1, 5, 15])): event[f'field{i}'] = nested(3)
+    if rng.random() < 0.7: event['answerability'] = {'decision': 'allow', 'reason': text(rng.choice([10, 50_000])), 'extra': nested(2)}
+    if rng.random() < 0.7: event['usage'] = {'prompt_tokens': 3, 'by_model': [{'model': text(rng.choice([5, 3000])), 'calls': 1} for _ in range(rng.choice([1, 60]))]}
+    return event
+
+
+@pytest.mark.parametrize('seed', range(40))
+def test_any_loop_event_is_stored_within_the_absolute_ceiling(seed):
+    import random
+    from backend.app.storage import EXACT_EVENT_FIELDS, MAX_EVENT_BYTES, observed
+    event = hostile_event(random.Random(seed))
+    stored = observed(event)
+    assert stored_bytes(stored) <= MAX_EVENT_BYTES, stored_bytes(stored)
+    assert {k: stored[k] for k in IDENTITY} == IDENTITY, 'identity is never shortened'
+    for field in EXACT_EVENT_FIELDS & set(event):
+        assert field not in stored or isinstance(stored[field], dict), 'exact fields keep their type or are removed'
+
+
+# --------------------------------------------------------------------------- the ceiling over the finished event
+
+BOUNDARY_IDENTITY = {'kind': 'node', 'node_id': 'deep', 'status': 'success', 'loop_node_id': 'each', 'item_index': 7,
+                     'invocation_id': 'each:7:send>3:deep', 'transient': True}
+
+
+def shortened_fields(count, char, length=2001):
+    return {**BOUNDARY_IDENTITY, **{f'field{i:02d}': char * length for i in range(count)}}
+
+
+def test_the_audited_boundary_case_fits_once_preview_metadata_is_attached():
+    """15 shortened fields of two-byte characters: the ceiling used to run before
+    preview_of was attached, and the stored event came out over the limit."""
+    from backend.app.storage import MAX_EVENT_BYTES, observed
+    stored = observed(shortened_fields(15, 'é'))
+    assert stored_bytes(stored) <= MAX_EVENT_BYTES
+    assert isinstance(stored.get('preview_of', []), list)
+
+
+@pytest.mark.parametrize('char,length', [('x', 2001), ('é', 2001), ('漢', 2001), ('\x01', 2001), ('x', 9000), ('é', 1999)])
+def test_no_count_of_fields_crosses_the_ceiling(char, length):
+    """A sweep that lands right at the boundary: some of these stored events end within a
+    few bytes of the limit, which random cases rarely reach."""
+    from backend.app.storage import MAX_EVENT_BYTES, observed
+    for count in range(1, 61):
+        stored = observed(shortened_fields(count, char, length))
+        assert stored_bytes(stored) <= MAX_EVENT_BYTES, (count, stored_bytes(stored))
+        assert {k: stored[k] for k in BOUNDARY_IDENTITY} == BOUNDARY_IDENTITY
+        assert 'preview_of' not in stored or isinstance(stored['preview_of'], list)
+
+
+def test_the_ceiling_removes_ordinary_fields_then_the_path_list_then_exact_fields(monkeypatch):
+    from backend.app import storage
+    event = {**BOUNDARY_IDENTITY, 'outputs': 'o' * 3000, 'inputs': 'i' * 3000,
+             'usage': {'prompt_tokens': 1, 'note': 'u' * 1000}, 'answerability': {'decision': 'allow', 'reason': 'a' * 1000}}
+    sizes = {}
+    for limit in (10_000, 3_200, 1_200, 600):
+        monkeypatch.setattr(storage, 'MAX_EVENT_BYTES', limit)
+        stored = storage.observed(event)
+        sizes[limit] = stored
+        assert stored_bytes(stored) <= limit
+    # A roomy limit keeps everything; then ordinary fields go, then exact ones.
+    assert sizes[10_000]['outputs'] == 'o' * storage_preview() and 'omitted_fields' not in sizes[10_000]
+    assert sizes[3_200]['outputs'] == storage.EVENT_FIELD_OMITTED and isinstance(sizes[3_200]['usage'], dict)
+    assert 'usage' not in sizes[1_200] or 'answerability' not in sizes[1_200]
+    assert 'preview_of' not in sizes[600] and sizes[600]['preview_omitted'] == 2, 'the path list became a count'
+
+
+def storage_preview():
+    from backend.app.iteration import PREVIEW_CHARS
+    return PREVIEW_CHARS
+
+
+def test_the_ceiling_is_an_invariant_with_an_identity_only_fallback(monkeypatch):
+    from backend.app import storage
+    event = {**BOUNDARY_IDENTITY, 'outputs': 'o' * 3000}
+    monkeypatch.setattr(storage, 'MAX_EVENT_BYTES', stored_bytes(BOUNDARY_IDENTITY) + 30)
+    stored = storage.observed(event)
+    assert {k: stored[k] for k in BOUNDARY_IDENTITY} == BOUNDARY_IDENTITY and stored['omitted_fields'] == ['*']
+    monkeypatch.setattr(storage, 'MAX_EVENT_BYTES', 50)
+    with pytest.raises(ValueError, match='exceeds the stored event ceiling'):
+        storage.observed(event)

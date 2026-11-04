@@ -1,0 +1,104 @@
+{
+  "uncertain_write_continue": {
+    "validation": [],
+    "out": {
+      "text": "go",
+      "sources": "[]"
+    },
+    "error": null
+  },
+  "error_branch_reads_failed_output": {
+    "validation": [],
+    "error": "KeyError: 'text'"
+  },
+  "body_retry_ignored": {
+    "validation": [],
+    "calls": 1,
+    "results": {
+      "results": [
+        {
+          "index": 0,
+          "status": "failed",
+          "value": "",
+          "error": "temporary"
+        }
+      ],
+      "failed": "1"
+    }
+  },
+  "retrieve_body_data_lost": {
+    "results": [
+      {
+        "index": 0,
+        "status": "success",
+        "value": "",
+        "error": ""
+      }
+    ],
+    "failed": "0"
+  },
+  "resume_bypasses_size_cap": {
+    "bytes": 1200122,
+    "calls": 0,
+    "summary": {
+      "kind": "loop_summary",
+      "node_id": "each",
+      "status": "info",
+      "transient": true,
+      "total": 2,
+      "processed": 2,
+      "failed": 0,
+      "truncated": false,
+      "values_dropped": false
+    }
+  },
+  "resume_ignores_stop": {
+    "calls_after_failed_index": 2,
+    "results": [
+      {
+        "index": 0,
+        "status": "failed",
+        "value": "",
+        "error": "failed before crash"
+      },
+      {
+        "index": 1,
+        "status": "success",
+        "value": "done:{\"key\":\"PROJ-1\",\"summary\":\"Issue 1\",\"status\":\"Open\",\"assignee\":\"Ana\",\"updated\":\"2026-09-01\",\"url\":\"https://j/browse/PROJ-1\"}",
+        "error": ""
+      },
+      {
+        "index": 2,
+        "status": "success",
+        "value": "done:{\"key\":\"PROJ-2\",\"summary\":\"Issue 2\",\"status\":\"Open\",\"assignee\":\"Ana\",\"updated\":\"2026-09-01\",\"url\":\"https://j/browse/PROJ-2\"}",
+        "error": ""
+      }
+    ]
+  },
+  "approval_swallowed": {
+    "results": [
+      {
+        "index": 0,
+        "status": "failed",
+        "value": "",
+        "error": "Item execution failed."
+      },
+      {
+        "index": 1,
+        "status": "failed",
+        "value": "",
+        "error": "Item execution failed."
+      }
+    ],
+    "failed": "2"
+  },
+  "action_budget_resets_per_item": {
+    "budget": 1,
+    "tool_calls": 2,
+    "invocation_ids": [
+      "each:1:calc",
+      "each:1:calc"
+    ],
+    "error": null
+  }
+}

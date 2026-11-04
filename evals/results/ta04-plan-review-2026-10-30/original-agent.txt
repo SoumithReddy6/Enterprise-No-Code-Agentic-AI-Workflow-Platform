@@ -1,0 +1,3 @@
+{"timestamp":"2026-10-30T15:48:04.629260+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+fail provider calls 1 raised ValueError Run token budget exhausted (100 of 100 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a mo
+  failed events [('agent', 'Run token budget exhausted (100 of 100 provider-reported tok', None)]

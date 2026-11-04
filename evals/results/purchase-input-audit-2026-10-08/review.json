@@ -1,0 +1,27 @@
+{
+  "head": "477e6981bd13a4bf69801d4ff47aa68c4b4248ab",
+  "screenshot_runs_confirmed": 3,
+  "controlled_probe": {
+    "cases": 11,
+    "safe_cases_passed": 8,
+    "unsafe_cases_reproduced": [
+      "screenshot_old",
+      "new_unknown_zero",
+      "new_unknown_other_number"
+    ]
+  },
+  "live_current_example": {
+    "cases": 3,
+    "passed": 3
+  },
+  "limitations": [
+    "Controlled invented-amount responses show a runtime validation gap; they do not claim the updated prompt naturally returned those responses in the three live cases.",
+    "No external write nodes exist in this example. The approval is rendered text, not a durable approval decision or purchase.",
+    "No whole-system campaign or complete backend suite rerun."
+  ],
+  "source_hashes": {
+    "examples/purchase-routing.json": "88d42f72157e403d17f982868599a18e78f82f2006a263ce1297facbd6be938a",
+    "backend/app/agent_runtime.py": "aa3fc4a16d901f2539a27b881234efb0e7dcaa3374ff1eed040f3baec0017002",
+    "backend/app/conditions.py": "68305e7326bce7c4840e1be6ee6fdda380b7d63b6c5577b5d5421a050bb06031"
+  }
+}

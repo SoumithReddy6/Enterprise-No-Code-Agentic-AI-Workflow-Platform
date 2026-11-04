@@ -53,12 +53,14 @@ def test_invalid_schema_is_rejected_at_validation():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize('config',[{'role':'extraction'},{'role':'classification'},{'output_schema':SCHEMA}])
-async def test_empty_evidence_cannot_succeed_with_plain_text_for_structured_agent(monkeypatch,config):
+async def test_empty_evidence_returns_machine_readable_abstention_for_structured_agent(monkeypatch,config):
     from backend.tests.test_kb_workflow import graph
     from backend.tests.test_agent_grounding import platform_with
     workflow=graph()
     next(n for n in workflow.nodes if n.type=='agent').config.update(config)
     async def unexpected(*args):raise AssertionError('No model call expected')
     monkeypatch.setattr('backend.app.registry.llm_node',unexpected)
-    with pytest.raises(ValueError,match='Insufficient evidence.*structured'):
-        await compile_workflow(workflow,platform_resolver=platform_with([],[]),message='Q').graph.ainvoke({'values':{}})
+    result=await compile_workflow(workflow,platform_resolver=platform_with([],[]),message='Q').graph.ainvoke({'values':{}})
+    contract=json.loads(result['values']['agent']['grounding'])
+    assert contract['abstain'] is True and contract['answer']=='' and contract['citations']==[]
+    assert contract['reason'] and result['values']['agent']['sources']=='[]'

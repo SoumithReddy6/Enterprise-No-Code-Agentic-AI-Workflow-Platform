@@ -1,0 +1,80 @@
+{
+  "M1 OpenAI record_usage after content checks": {
+    "killed": true,
+    "failed_tests": [
+      "test_rejected_answer_still_records_reported_usage[openai-body6]",
+      "test_rejected_answer_still_records_reported_usage[openai-body7]",
+      "test_rejected_answer_still_records_reported_usage[openai-body8]",
+      "test_the_reviewed_openai_length_stop_counts_150_tokens"
+    ],
+    "summary": "4 failed, 143 passed in 4.93s"
+  },
+  "M2 Ollama record_usage after message checks": {
+    "killed": true,
+    "failed_tests": [
+      "test_a_rejected_provider_answer_is_counted_once_and_never_repaired",
+      "test_a_rejected_provider_answer_is_counted_once_and_never_repaired",
+      "test_a_run_that_fails_on_a_rejected_answer_records_its_tokens_durably",
+      "test_rejected_answer_still_records_reported_usage[ollama-body0]",
+      "test_rejected_answer_still_records_reported_usage[ollama-body1]",
+      "test_rejected_answer_still_records_reported_usage[ollama-body2]"
+    ],
+    "summary": "6 failed, 141 passed in 4.73s"
+  },
+  "M3 Claude record_usage after content checks": {
+    "killed": true,
+    "failed_tests": [
+      "test_rejected_answer_still_records_reported_usage[claude-body3]",
+      "test_rejected_answer_still_records_reported_usage[claude-body4]",
+      "test_rejected_answer_still_records_reported_usage[claude-body5]"
+    ],
+    "summary": "3 failed, 144 passed in 4.82s"
+  },
+  "M4 no accounting in the except Exception branch": {
+    "killed": true,
+    "failed_tests": [
+      "test_a_rejected_answer_is_counted_once_and_made_durable",
+      "test_a_rejected_answer_spends_the_budget_before_the_next_call",
+      "test_a_rejected_provider_answer_is_counted_once_and_never_repaired",
+      "test_a_rejected_provider_answer_is_counted_once_and_never_repaired",
+      "test_a_run_that_fails_on_a_rejected_answer_records_its_tokens_durably",
+      "test_the_reviewed_openai_length_stop_counts_150_tokens"
+    ],
+    "summary": "6 failed, 141 passed in 4.74s"
+  },
+  "M5 account twice in the except Exception branch": {
+    "killed": true,
+    "failed_tests": [
+      "test_a_rejected_answer_is_counted_once_and_made_durable",
+      "test_a_rejected_answer_spends_the_budget_before_the_next_call",
+      "test_a_rejected_provider_answer_is_counted_once_and_never_repaired",
+      "test_a_rejected_provider_answer_is_counted_once_and_never_repaired",
+      "test_a_run_that_fails_on_a_rejected_answer_records_its_tokens_durably",
+      "test_the_reviewed_openai_length_stop_counts_150_tokens"
+    ],
+    "summary": "6 failed, 141 passed in 4.74s"
+  },
+  "M6 account twice on the success path": {
+    "killed": true,
+    "failed_tests": [
+      "test_a_used_answer_is_counted_exactly_once",
+      "test_an_invalid_reading_is_repaired_once_and_both_answers_are_counted",
+      "test_content_free_journal_and_no_action_debit",
+      "test_exactly_one_repair_is_paid_for_and_persisted",
+      "test_plain_model_node_runs_when_under_the_limit",
+      "test_real_worker_persists_both_calls_and_replays_after_downstream_failure",
+      "test_router_initial_and_repair_do_not_force_unsupported_sampling_parameters",
+      "test_router_uses_existing_provider_and_keeps_model_output_untrusted[clarify]",
+      "test_router_uses_existing_provider_and_keeps_model_output_untrusted[out_of_scope]",
+      "test_router_uses_existing_provider_and_keeps_model_output_untrusted[proceed]"
+    ],
+    "summary": "10 failed, 137 passed in 4.70s"
+  },
+  "M7 persist in the cancellation branch": {
+    "killed": true,
+    "failed_tests": [
+      "test_a_cancelled_call_keeps_its_usage_in_memory_and_does_not_persist"
+    ],
+    "summary": "1 failed, 146 passed in 4.75s"
+  }
+}

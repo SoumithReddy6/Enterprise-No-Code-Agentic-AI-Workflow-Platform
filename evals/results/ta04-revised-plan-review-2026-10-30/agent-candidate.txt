@@ -1,0 +1,102 @@
+{"timestamp":"2026-10-30T16:22:33.139528+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T16:22:33.193731+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T16:22:33.220845+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T16:22:33.248162+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T16:22:33.269514+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T16:22:33.292550+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{
+  "kind": "partial-plan-Agent-candidate",
+  "rows": [
+    {
+      "mode": "valid_final_at_limit",
+      "status": "success",
+      "provider_calls": 1,
+      "verification": [
+        {
+          "operation": "record_vector_sources",
+          "available": true
+        },
+        {
+          "operation": "verify_vector_sources",
+          "available": true
+        }
+      ],
+      "source_available_at_return": true,
+      "sources_returned": 1,
+      "abstain": false,
+      "truncated": false
+    },
+    {
+      "mode": "valid_final_revoked",
+      "status": "failed",
+      "error": "Knowledge source was removed during the call",
+      "provider_calls": 1,
+      "verification": [
+        {
+          "operation": "record_vector_sources",
+          "available": true
+        },
+        {
+          "operation": "verify_vector_sources",
+          "available": false
+        }
+      ]
+    },
+    {
+      "mode": "repair_budget_sources_valid",
+      "status": "success",
+      "provider_calls": 1,
+      "verification": [
+        {
+          "operation": "record_vector_sources",
+          "available": true
+        }
+      ],
+      "source_available_at_return": true,
+      "sources_returned": 1,
+      "abstain": true,
+      "truncated": true
+    },
+    {
+      "mode": "repair_budget_revoked",
+      "status": "success",
+      "provider_calls": 1,
+      "verification": [
+        {
+          "operation": "record_vector_sources",
+          "available": true
+        }
+      ],
+      "source_available_at_return": false,
+      "sources_returned": 1,
+      "abstain": true,
+      "truncated": true
+    },
+    {
+      "mode": "step_budget_revoked",
+      "status": "success",
+      "provider_calls": 1,
+      "verification": [
+        {
+          "operation": "record_vector_sources",
+          "available": true
+        }
+      ],
+      "source_available_at_return": false,
+      "sources_returned": 1,
+      "abstain": true,
+      "truncated": true
+    },
+    {
+      "mode": "structured_no_evidence",
+      "status": "success",
+      "provider_calls": 1,
+      "verification": [],
+      "source_available_at_return": true,
+      "sources_returned": 0,
+      "abstain": true,
+      "truncated": true,
+      "business_output_matches_schema": false
+    }
+  ]
+}

@@ -19,7 +19,7 @@ export function parseSources(value: unknown): KnowledgeSource[] {
   try {
     const parsed: unknown =
       typeof value === 'string' ? JSON.parse(value) : value;
-    if (!Array.isArray(parsed) || parsed.length > 100) return [];
+    if (!Array.isArray(parsed)) return [];
     const candidates: Record<string, unknown>[] = parsed.flatMap(
       (source: unknown, index: number) => {
         if (!source || typeof source !== 'object') return [];
@@ -51,7 +51,7 @@ export function parseSources(value: unknown): KnowledgeSource[] {
           typeof s.score === 'number' &&
           Number.isFinite(s.score) &&
           typeof s.citation === 'string' &&
-          /^S([1-9][0-9]?|100)$/.test(s.citation) &&
+          /^S[1-9][0-9]*$/.test(s.citation) &&
           typeof s.cited === 'boolean',
         ),
       );

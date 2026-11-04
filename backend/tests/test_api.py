@@ -68,12 +68,12 @@ def test_drafts_can_be_saved_but_not_run(client):
 
 
 def test_run_failure_is_visible_and_secret_safe(client,monkeypatch):
-    from backend.app import registry
+    from backend.app import providers
     import httpx
     key=client.post('/api/credentials',json={'name':'Test','secret':'never-expose-this'}).json()
     client.post('/api/models',json={'provider':'openai','model':'gpt-4.1-mini','credential_id':key['id']})
     original=httpx.AsyncClient
-    monkeypatch.setattr(registry.httpx,'AsyncClient',lambda **kwargs:original(transport=httpx.MockTransport(lambda _:httpx.Response(401,json={'error':'never-expose-this'}))))
+    monkeypatch.setattr(providers.httpx,'AsyncClient',lambda **kwargs:original(transport=httpx.MockTransport(lambda _:httpx.Response(401,json={'error':'never-expose-this'}))))
     raw=sample()
     raw['nodes'][1]={'id':'prompt','type':'llm','inputs':{'prompt':'input.message'},'config':{'provider':'openai','credential_id':key['id']}}
     response=client.post('/api/runs',json={'workflow':raw,'message':'Hello'})

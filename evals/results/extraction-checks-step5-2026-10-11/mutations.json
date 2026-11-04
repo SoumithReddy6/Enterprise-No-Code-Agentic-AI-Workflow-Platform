@@ -1,0 +1,111 @@
+{
+  "scratch": "/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/relay-step5-mutants-etnlw7lz",
+  "rows": [
+    {
+      "name": "duplicate keys accepted",
+      "selector": "test_malformed_values_schema_types_and_forbidden_negatives_clarify",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-1.log"
+    },
+    {
+      "name": "boolean aliases number",
+      "selector": "test_rounded_values_and_boolean_number_equality_never_pass",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-2.log"
+    },
+    {
+      "name": "quotation grants suitability",
+      "selector": "test_invented_zero_explicit_zero_and_absence_remain_distinct",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-3.log"
+    },
+    {
+      "name": "cross tenant catalogue accepted",
+      "selector": "test_reference_wrong_tenant_binding_or_shape_cannot_pass",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-4.log"
+    },
+    {
+      "name": "HTTP echo becomes reference",
+      "selector": "test_echo_model_and_non_record_read_references_are_not_authoritative",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-5.log"
+    },
+    {
+      "name": "failed arithmetic ignored",
+      "selector": "test_cross_checks_reject_inconsistent_total_and_allow_exact_derived_total",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-6.log"
+    },
+    {
+      "name": "boolean path becomes leaf lookup",
+      "selector": "test_boolean_enum_origin",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-7.log"
+    },
+    {
+      "name": "schema indirection not inspected",
+      "selector": "test_local_reference_cannot_hide_remote_resolution_or_regex",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-8.log"
+    },
+    {
+      "name": "validator remote retrieval enabled",
+      "selector": "test_validator_itself_refuses_retrieval_even_if_precheck_misses_a_reference",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-9.log"
+    },
+    {
+      "name": "another run receipt accepted",
+      "selector": "test_changed_values_contexts_and_another_run_invalidate_receipt",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-10.log"
+    },
+    {
+      "name": "changed value receipt accepted",
+      "selector": "test_changed_values_contexts_and_another_run_invalidate_receipt",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-11.log"
+    },
+    {
+      "name": "changed policy receipt accepted",
+      "selector": "test_changed_values_contexts_and_another_run_invalidate_receipt",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-12.log"
+    },
+    {
+      "name": "report tampering not checked",
+      "selector": "test_malformed_restore_never_becomes_a_grant",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-13.log"
+    },
+    {
+      "name": "successful coverage may be partial",
+      "selector": "test_receipt_constructor_refuses_partial_or_unrelated_passed_coverage",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-14.log"
+    },
+    {
+      "name": "empty report allowed",
+      "selector": "test_empty_passed_report_is_invalid_in_contract_constructor_and_restore",
+      "exit_code": 1,
+      "caught": true,
+      "log": "evals/results/extraction-checks-step5-2026-10-11/mutation-15.log"
+    }
+  ],
+  "passed": true
+}

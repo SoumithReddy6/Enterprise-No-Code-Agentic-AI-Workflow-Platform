@@ -7,53 +7,196 @@ import time
 from pathlib import Path
 from .storage import Store, local_key, new_id
 from .models import Workflow
-from .compiler import compile_workflow
-from .tool_service import ToolService,CONFIGS,is_write,UncertainWriteError
+from .compiler import compile_workflow,PersistedNodeCancellation
+from .tool_service import ToolService,CONFIGS,is_write,UncertainWriteError,WriteNotSent
 from .agent_memory import MemoryService
 from .platform_validation import platform_errors,kb_errors
 from .kb_gateway import KnowledgeServices
+from . import approvals
+from .execution_policy import ExecutionIdentity
+from .accounting_state import AccountingDurability,AccountingUnavailable,LEGACY_APPROVED_WRITE,accounting_trusted
 
 RUN_TIMEOUT_SECONDS=120
-log=logging.getLogger('relay.run')
+from .observability import journal,request_id,run_id,tenant_id
 
-def journal(**fields):
-    """One JSON line per lifecycle event, always keyed by run_id; inputs and outputs stay in the run record."""
-    log.info(json.dumps(fields,ensure_ascii=False,default=str))
+def run_truncation(workflow,values):
+    """Fold every node's incompleteness into the run's verdict, with one cause per node.
+
+    Agents report it in grounding, loops in summary; both are outputs, so values restored
+    from checkpoints on resume report it too. Other nodes report it under TRUNCATION_KEY:
+    beside their outputs when a tool capped its result, or as their only value when the
+    node recovered from an exhausted action budget. truncation_causes lists each with its
+    node, kind (loop, agent, tool or budget), source and reason, so a reader can see what
+    was skipped and why. A confirmed cause anywhere outranks unverifiable legacy
+    completeness elsewhere.
+    """
+    from .execution_policy import TRUNCATION_KEY
+    causes=[]
+    loops={n.id for n in workflow.nodes if n.type=='for_each'}
+    for node_id,outputs in values.items():
+        found=[]
+        if node_id in loops:found.append(('loop',json.loads(outputs.get('summary') or '{}'),'A loop did not run every item.'))
+        else:found.append(('agent',json.loads(outputs.get('grounding') or '{}'),'Agent work was incomplete.'))
+        if outputs.get(TRUNCATION_KEY):
+            found.append(('budget' if set(outputs)=={TRUNCATION_KEY} else 'tool',outputs[TRUNCATION_KEY],'A tool returned incomplete results.'))
+        for kind,metadata,default in found:
+            if metadata.get('truncated'):
+                causes.append({'node_id':node_id,'kind':kind,'source':metadata.get('truncation_source') or 'confirmed',
+                               'reason':str(metadata.get('truncation_reason') or default)[:1000]})
+    reasons=[cause['reason'] for cause in causes];sources={cause['source'] for cause in causes}
+    return {'truncated':bool(causes),'truncation_reason':'; '.join(dict.fromkeys(reasons)),
+            'truncation_source':'confirmed' if 'confirmed' in sources else next(iter(sources),''),
+            'truncation_causes':causes}
+
 
 class Worker:
     def __init__(self,store,concurrency=4):
         self.store=store;self.owner=new_id();self.concurrency=concurrency;self.tools=ToolService(store);self.memory=MemoryService(store);self.kbs=KnowledgeServices()
 
     async def execute(self,run):
+        tokens=[(request_id,request_id.set(run.get('request_id'))),(run_id,run_id.set(run['id'])),(tenant_id,tenant_id.set(run.get('tenant_id')))]
+        try:return await self._execute(run)
+        finally:
+            for var,token in reversed(tokens):var.reset(token)
+
+    async def _execute(self,run):
         id=run['id'];owner=run.get('_claim_owner',self.owner);started=time.perf_counter()
         journal(event='run.start',run_id=id,tenant=run.get('tenant_id'),workflow=run['workflow'].get('name'),nodes=len(run['workflow'].get('nodes',[])),resumed=bool(run.get('checkpoints')))
+        accounting={}
+        # Trust is decided at claim, inside graph_run, so a malformed snapshot fails the run.
+        durability=AccountingDurability(False)
+        async def persist_accounting(snapshot):
+            # The generation the caller's snapshot was taken at; a later one stays pending.
+            generation=durability.generation
+            accounting.update(snapshot)
+            saved=await asyncio.to_thread(self.store.reserve_accounting,id,owner,snapshot)
+            if saved is True:durability.acknowledge(generation)
+            return saved
+        # Platform work this attempt performed: a request sent now, or the stored result of
+        # a write this run already sent. Neither is charged here. The policy reads it to tell
+        # a token refusal after work (an approved write sent against its earlier
+        # reservation) from one before any work.
+        work={'count':0}
+        def did_work():work['count']+=1
+        async def action_settled(invocation):
+            return await asyncio.to_thread(self.store.completed_action,id,invocation) is not None
+        async def persist_spend(snapshot):
+            generation=durability.generation
+            accounting.update(snapshot)
+            saved=await asyncio.to_thread(self.store.record_accounting,id,owner,snapshot)
+            if saved is True:durability.acknowledge(generation)
+            return saved
         async def emit(event):
-            if not self.store.worker_event(id,owner,event):raise asyncio.CancelledError()
+            # Frozen before the thread starts: the event commits with the spend known when it
+            # was emitted, and only that version is acknowledged.
+            generation,frozen=durability.capture(accounting) if accounting else (None,None)
+            write=asyncio.create_task(asyncio.to_thread(self.store.worker_event,id,owner,event,accounting=frozen));cancelled=False
+            while True:
+                try:
+                    persisted=await asyncio.shield(write);break
+                except asyncio.CancelledError:
+                    if write.cancelled():raise
+                    cancelled=True
+            if not persisted:raise asyncio.CancelledError()
+            if frozen is not None:durability.acknowledge(generation)
             if event.get('node_id') and event['status']!='running':
                 journal(event='node.'+event['status'],run_id=id,node_id=event['node_id'],transient=event.get('transient',False),cached=event.get('cached',False),duration_ms=event.get('duration_ms'),usage=event.get('usage'),error=event.get('error'))
+            if cancelled:
+                if event.get('node_id') and event['status'] in ('success','failed','cancelled') and not event.get('transient'):
+                    raise PersistedNodeCancellation()
+                raise asyncio.CancelledError()
         async def graph_run():
             workflow=Workflow.model_validate(run['workflow'])
             tenant_id=self.store.run_tenant(id,owner)
             self.store.check_resume_writes(run)
-            errors=self.store.model_errors(workflow,tenant_id)+platform_errors(self.store,workflow,tenant_id)+await kb_errors(self.kbs,workflow,tenant_id,run.get('checkpoints'),run.get('vector_dependencies'))
+            durability.trusted=accounting_trusted(run)
+            # Before any node runs: an older run cannot send an approved write it has not
+            # started, since its past spend cannot be verified. The approval record decides,
+            # not the run status, which approval already changed to queued.
+            if not durability.trusted and approvals.has_unstarted_approved_write(self.store,id,tenant_id):
+                raise AccountingUnavailable(LEGACY_APPROVED_WRITE)
+            from . import sandbox
+            # Checked again here: Docker may have stopped after the run was submitted.
+            errors=self.store.model_errors(workflow,tenant_id)+platform_errors(self.store,workflow,tenant_id)+await kb_errors(self.kbs,workflow,tenant_id,run.get('checkpoints'),run.get('vector_dependencies'),run.get('loop_progress'))+await sandbox.preflight_errors(workflow,fresh=True)
             if errors:raise ValueError('; '.join(errors))
             resolver=lambda credential_id:self.store.resolve_run_credential(id,owner,credential_id)
             async def platform_resolver(action,*args):
                 tenant=self.store.run_tenant(id,owner)
                 try:
+                    if action in ('review','checked_review'):
+                        from .request_safety import UnsafeExecutionError
+                        try:
+                            if action=='checked_review':return approvals.checked_review(self.store,id,owner,*args)
+                            kind,payload,identity=args
+                            confirmed=approvals.consume_review(self.store,id,owner,identity.invocation_id+':review:'+kind,kind,payload)
+                            if confirmed is None:raise approvals.ReviewPause(identity,kind,payload)
+                            return confirmed
+                        except ValueError as exc:raise UnsafeExecutionError(str(exc)) from None
+                    if action=='common_reply':
+                        from .common_replies import common_reply_scope,lookup_common_reply
+                        message,config=args
+                        scope=common_reply_scope(tenant,run['workflow'],config)
+                        return lookup_common_reply(message,config),scope
                     if action=='tool':
-                        node_type,settings,input_text,checkpoint_owner=args
+                        node_type,settings,input_text,identity=args
+                        if not isinstance(identity,ExecutionIdentity):
+                            raise ValueError('Tool execution requires a typed execution identity.')
+                        checkpoint_owner=identity.checkpoint_owner
                         config=CONFIGS[node_type].model_validate(settings)
                         self.tools.check(config,tenant)
                         write=is_write(node_type,config)
-                        if write:self.store.mark_write(id,owner,checkpoint_owner)
+                        def prepare_write():
+                            # Building and checking the request sends nothing, so a failure here
+                            # is an ordinary error, not an outcome to reconcile.
+                            try:return self.tools.prepare(node_type,settings,input_text,tenant)
+                            except ValueError as exc:raise WriteNotSent(str(exc)) from None
+                        if node_type=='tool_jira' and not write:
+                            from .tool_service import jira_items
+                            prepared=self.tools.prepare(node_type,settings,input_text,tenant)
+                            did_work()
+                            text=await self.tools.execute_prepared(prepared,tenant)
+                            return {'text':text,**jira_items(text,config.operation,prepared['connection']['endpoint'])}
+                        invocation=identity.invocation_id
+                        node_id=identity.node_id
+                        required=write and (config.approval if config.approval is not None else run.get('approval_required',True))
+                        if required:
+                            saved=approvals.resolve(self.store,id,owner,invocation)
+                            if saved is None:
+                                raise approvals.ApprovalPause(node_id,checkpoint_owner,invocation,prepare_write())
+                            if saved['kind']!='write':raise ValueError('This approval is not an external write.')
+                            candidate=prepare_write()
+                            if candidate['payload']!=saved['prepared']['payload'] or candidate['connection_id']!=saved['prepared']['connection_id']:
+                                raise ValueError('The resumed action differs from the reviewed request. Start a new run.')
+                            if saved['status']=='completed':did_work();return saved['result']
+                            self.tools.validate_prepared(saved['prepared'],tenant)
+                            approvals.begin(self.store,id,owner,saved['id'])
+                            did_work()
+                            try:
+                                result=await self.tools.execute_prepared(saved['prepared'],tenant)
+                                approvals.complete(self.store,id,owner,saved['id'],result)
+                                return result
+                            except Exception:
+                                raise UncertainWriteError('Approved write outcome is uncertain; reconciliation is required before another attempt.') from None
+                        # Intent is recorded per action, not per node, so one completed
+                        # write does not leave a sibling action looking unresolved.
+                        marker=invocation if write else checkpoint_owner
+                        if write:
+                            done=self.store.completed_action(id,marker)
+                            if done is not None:did_work();return done  # Already sent; never send again.
+                            # Check the request before marking: a refusal here sends nothing, and
+                            # only the send itself can leave an outcome unknown.
+                            prepare_write()
+                            self.store.mark_write(id,owner,marker)
+                        did_work()
                         try:
-                            return await self.tools.execute(node_type,settings,input_text,tenant)
+                            result=await self.tools.execute(node_type,settings,input_text,tenant)
                         except Exception:
                             if write:
                                 raise UncertainWriteError('External write outcome is uncertain; reconciliation is required before trying again. Check the remote system.') from None
                             raise
-                    if action=='kb_retrieve':return await self.kbs.retrieve(*args,tenant)
+                        if write:self.store.settle_write(id,owner,marker,result)
+                        return result
+                    if action=='kb_retrieve':did_work();return await self.kbs.retrieve(*args,tenant)
                     if action=='verify_vector_sources':return await self.kbs.verify(args[0],tenant)
                     if action=='record_vector_sources':
                         checkpoint_owner,sources=args
@@ -63,23 +206,46 @@ class Worker:
                 except KeyError:raise ValueError('Platform resource is unavailable in this workspace.') from None
                 raise ValueError('Unsupported platform operation.')
             async def validate_cached(node,outputs):
-                issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'))
+                results=outputs.get('results')
+                if isinstance(results,dict) and results.get('unavailable'):raise ValueError(results['unavailable'])
+                # With progress, a restored Response also checks the reused loop items behind its
+                # text: when it was saved after a loop resume, it lists none of their sources.
+                issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'),run.get('loop_progress'))
                 if issues:raise ValueError('; '.join(issues))
-            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver).graph
+            graph=compile_workflow(workflow,resolver,emit,run['message'],completed=run.get('checkpoints',{}),authorize_model=lambda config:self.store.authorize_run_model(id,owner,config),validate_cached=validate_cached,platform_resolver=platform_resolver,citation_counter=run.get('citation_counter',0),agent_frames=run.get('agent_frames',{}),loop_progress=run.get('loop_progress',{}),accounting=run.get('accounting',{}),accounting_sink=accounting,persist_accounting=persist_accounting,persist_spend=persist_spend,action_settled=action_settled,platform_work=work,saved_dependencies=run.get('vector_dependencies'),run_id=id,tenant_id=tenant_id,durability=durability).graph
             result=await graph.ainvoke({'values':{}},{'recursion_limit':150})
-            return '\n\n'.join(result['values'][n.id]['text'] for n in workflow.nodes if n.type=='response' and n.id in result['values'])
+            answers=[n.id for n in workflow.nodes if n.type=='response' and n.id in result['values']]
+            for response_id in answers:
+                # A Response recovered under on_error continue holds no text; that is not an answer.
+                if 'text' not in result['values'][response_id]:raise ValueError(f'{response_id}: the Response produced no answer.')
+            return {'output':'\n\n'.join(result['values'][n]['text'] for n in answers),
+                    **run_truncation(workflow,result['values'])}
         async def bounded_run():
             # The deadline covers knowledge-service preflight as well as graph execution.
-            async with asyncio.timeout(RUN_TIMEOUT_SECONDS):return await graph_run()
+            async with asyncio.timeout(RUN_TIMEOUT_SECONDS):
+                try:return await graph_run()
+                except PersistedNodeCancellation:raise asyncio.CancelledError() from None
         task=asyncio.create_task(bounded_run())
         try:
             while not task.done():
-                if self.store.cancel_requested(id,owner) or not self.store.heartbeat(id,owner):
+                if await asyncio.to_thread(self.store.cancel_requested,id,owner) or not await asyncio.to_thread(self.store.heartbeat,id,owner):
                     task.cancel();break
                 await asyncio.wait({task},timeout=.2)
             output=await task
-            self.store.finish_run(id,owner,'success',output=output)
+            self.store.finish_run(id,owner,'success',**output)
             journal(event='run.finish',run_id=id,status='success',seconds=round(time.perf_counter()-started,3))
+        except approvals.ApprovalPause as exc:
+            try:
+                # The frame commits with the in-memory spend, not the older database copy.
+                generation,frozen=durability.capture(accounting) if accounting else (None,None)
+                approvals.pause(self.store,id,owner,exc,accounting=frozen)
+                durability.acknowledge(generation)
+                journal(event='run.awaiting_approval',run_id=id)
+            except Exception as pause_error:
+                cancelled=self.store.cancel_requested(id,owner)
+                error='' if cancelled else str(pause_error) if isinstance(pause_error,AccountingUnavailable) else 'Unable to persist approval request.'
+                self.store.finish_run(id,owner,'cancelled' if cancelled else 'failed',error=error)
+                journal(event='approval.pause_failure',run_id=id,error_type=type(pause_error).__name__)
         except asyncio.CancelledError:
             task.cancel();await asyncio.gather(task,return_exceptions=True)
             cancelled=self.store.cancel_requested(id,owner)
@@ -88,21 +254,34 @@ class Worker:
             journal(event='run.finish',run_id=id,status='cancelled' if cancelled else 'released',seconds=round(time.perf_counter()-started,3))
         except Exception as exc:
             error=f'Run timed out after {RUN_TIMEOUT_SECONDS} seconds.' if isinstance(exc,TimeoutError) else str(exc) if isinstance(exc,ValueError) else 'Run failed unexpectedly.'
-            if not isinstance(exc,(ValueError,TimeoutError)):log.exception('run %s failed unexpectedly',id)
+            journal(event='run.failure',error_type=type(exc).__name__)
             self.store.finish_run(id,owner,'failed',error=error)
             journal(event='run.finish',run_id=id,status='failed',error=error,seconds=round(time.perf_counter()-started,3))
 
     async def serve(self):
-        active=set()
+        active=set();last_seen=0
         try:
             while True:
-                active={t for t in active if not t.done()}
-                while len(active)<self.concurrency:
-                    claim_owner=new_id()
-                    job=self.store.claim_next(claim_owner)
-                    if not job:break
-                    job['_claim_owner']=claim_owner
-                    active.add(asyncio.create_task(self.execute(job)))
+                for task in list(active):
+                    if task.done():
+                        active.remove(task)
+                        try:task.result()
+                        except asyncio.CancelledError:pass
+                        except Exception as exc:journal(event='worker.execution_failure',error_type=type(exc).__name__)
+                try:
+                    if time.monotonic()-last_seen>=5:
+                        await asyncio.to_thread(self.store.worker_seen,self.owner)
+                        await asyncio.to_thread(approvals.expire_pending,self.store)
+                        last_seen=time.monotonic()
+                    while len(active)<self.concurrency:
+                        claim_owner=new_id()
+                        job=await asyncio.to_thread(self.store.claim_next,claim_owner)
+                        if not job:break
+                        job['_claim_owner']=claim_owner
+                        active.add(asyncio.create_task(self.execute(job)))
+                except Exception as exc:
+                    journal(event='worker.poll_failure',worker_id=self.owner,error_type=type(exc).__name__)
+                    await asyncio.sleep(1)
                 await asyncio.sleep(.1)
         finally:
             for task in active:task.cancel()

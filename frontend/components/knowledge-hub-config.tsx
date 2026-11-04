@@ -28,6 +28,14 @@ export function SearchFields({
           onChange({ ...value, mode: v as SearchOptions['mode'] })
         }
       />
+      <ConfigField
+        name="reranker"
+        property={{ title: 'Reranker', enum: ['none', 'local_cross_encoder'] }}
+        value={value.reranker ?? 'none'}
+        disabled={disabled}
+        onChange={(v) => onChange({ ...value, reranker: v as SearchOptions['reranker'] })}
+      />
+      <p className="helper">Local cross-encoder requires installed reranker weights on the search service. Minimum score filters the original search score before reranking.</p>
       {(
         [
           'top_k',
@@ -178,7 +186,7 @@ export default function KnowledgeConfig({
       ))}
       <ConfigField
         name="chunking"
-        property={{ title: 'Chunking strategy', enum: ['fixed', 'paragraph'] }}
+        property={{ title: 'Chunking strategy', enum: ['fixed', 'paragraph', 'section'], description: 'Section keeps headings and related list items together. Rebuild the knowledge base to apply a different strategy.' }}
         value={value.chunking}
         disabled={disabled}
         onChange={(v) => set('chunking', v)}

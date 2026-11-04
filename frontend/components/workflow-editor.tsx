@@ -1,4 +1,11 @@
 'use client';
+import { approvalDecision, type RunApproval } from '@/lib/approvals';
+import ApprovalReview from './approval-review';
+import WorkflowSetup from './workflow-setup';
+import RequestChecks from './request-checks';
+import SwitchCases from './switch-cases';
+import { defaultSwitchConfig, removeCase, routeLabel } from '@/lib/switch';
+import { createRequestWorkflow, requestTemplates, admissionDetails, ACCEPT_QUOTED_RISK, fieldsReadDownstream, withSuggestedFields } from '@/lib/request-routing';
 
 import {
   useCallback,
@@ -19,6 +26,7 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   useReactFlow,
+  useUpdateNodeInternals,
   type Node as FlowNode,
   type Edge,
   type Connection,
@@ -57,6 +65,7 @@ import {
   Workflow as WorkflowIcon,
   X,
   Zap,
+  Calculator,
 } from 'lucide-react';
 import {
   api,
@@ -65,6 +74,7 @@ import {
   friendlyStatus,
   sameExecutionGraph,
   saveCompletion,
+  ApiError,
   importableWorkflow,
   connectionKind,
   paletteCategory,
@@ -78,6 +88,17 @@ import {
   type RunEvent,
   type Credential,
   type SavedWorkflow,
+  conditionSettingVisible,
+  withConditionOperator,
+  unparsedJsonSettings,
+  bindableOutputs,
+  trustSummary,
+  trustText,
+  type Issue,
+  isControl,
+  nodeRoutes,
+  inputPorts,
+  setInputBinding,
 } from '@/lib/workflow';
 import '@xyflow/react/dist/style.css';
 import StudioDialog from './studio-dialog';
@@ -90,6 +111,7 @@ import PlatformSettings, {
   type ToolConnection,
 } from './platform-settings';
 import { sourcesForRun } from '@/lib/knowledge';
+import { eventNotes, incompleteRun } from '@/lib/run-status';
 import {
   type AllowedModel,
   selectedModelId,
@@ -100,11 +122,19 @@ import {
 const displayValue = (value: unknown) =>
   ['string', 'number', 'boolean'].includes(typeof value) ? String(value) : '';
 
+type Validation = {
+  valid: boolean;
+  errors: string[];
+  warnings?: string[];
+  issues?: Issue[];
+  warning_issues?: Issue[];
+};
 type CanvasNode = FlowNode<
   {
     spec: WorkflowNode;
     definition?: Definition;
     status?: string;
+    invalid?: boolean;
   },
   'workflow'
 >;
@@ -120,15 +150,23 @@ const icons: Record<string, typeof Zap> = {
   tool_email: Send,
   tool_python: Code2,
   condition: GitBranch,
+  calculate: Calculator,
   response: Send,
 };
 
-function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
-  const { spec, definition, status } = data;
+function WorkflowCard({ id, data, selected }: NodeProps<CanvasNode>) {
+  const { spec, definition, status, invalid } = data;
   const Icon = Object.hasOwn(icons, spec.type) ? icons[spec.type] : Layers3;
+  const routes = isControl(definition) ? nodeRoutes(definition, spec) : [];
+  const labels = spec.type === 'switch' ? routes.map((route) => routeLabel(spec.config, route)) : routes;
+  // React Flow caches handle positions. When routes are added, removed, reordered or
+  // relabelled, measure again, or drawn connections keep pointing at old positions.
+  const updateInternals = useUpdateNodeInternals();
+  const routeKey = JSON.stringify([routes, labels]);
+  useEffect(() => updateInternals(id), [id, routeKey, updateInternals]);
   return (
     <div
-      className={`workflow-card ${selected ? 'selected' : ''} ${status || ''}`}
+      className={`workflow-card ${selected ? 'selected' : ''} ${status || ''} ${invalid ? 'invalid' : ''}`}
     >
       <div className="node-heading">
         <span className={`node-icon ${accent[spec.type] || 'blue'}`}>
@@ -138,7 +176,7 @@ function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
         <MoreHorizontal size={17} className="muted" />
       </div>
       <p>
-        {['llm', 'agent', 'query'].includes(spec.type)
+        {['llm', 'agent', 'query', 'request_router', 'request_reader'].includes(spec.type)
           ? spec.config.provider === 'demo'
             ? 'Demo provider'
             : String(spec.config.model)
@@ -168,27 +206,26 @@ function WorkflowCard({ data, selected }: NodeProps<CanvasNode>) {
           <span className="port-label right">specialists</span>
         </>
       )}
-      {spec.type === 'condition' ? (
-        <>
-          <Handle
-            type="source"
-            id="true"
-            position={Position.Bottom}
-            style={{ left: '30%' }}
-          />
-          <span className="port-label bottom" style={{ left: '25%' }}>
-            true
-          </span>
-          <Handle
-            type="source"
-            id="false"
-            position={Position.Bottom}
-            style={{ left: '75%' }}
-          />
-          <span className="port-label bottom" style={{ left: '70%' }}>
-            false
-          </span>
-        </>
+      {spec.type === 'switch' ? (
+        // One row per route: the card grows, so up to 15 cases and Default never overlap.
+        <div className="switch-routes" aria-label="Routes">
+          {routes.length ? routes.map((route, index) => (
+            <div className="switch-route" key={route}>
+              <span className="port-label route" title={labels[index]}>{labels[index]}</span>
+              <Handle type="source" id={route} position={Position.Right} />
+            </div>
+          )) : <span className="helper">Fix the cases to draw routes.</span>}
+        </div>
+      ) : isControl(definition) ? (
+        routes.map((route, index) => (
+          <div key={route}>
+            <Handle type="source" id={route} position={Position.Bottom}
+              style={{ left: `${30 + index * 45 / (routes.length - 1)}%` }} />
+            <span className="port-label bottom" style={{ left: `${25 + index * 45 / (routes.length - 1)}%` }}>
+              {route}
+            </span>
+          </div>
+        ))
       ) : (
         spec.type !== 'response' && (
           <Handle type="source" position={Position.Bottom} />
@@ -213,7 +250,10 @@ function Editor() {
   >(seed.edges);
   const [name, setName] = useState(seed.name);
   const [description, setDescription] = useState(seed.description);
+  const [contract, setContract] = useState<1 | 2>(seed.contract ?? 1);
   const [workflowId, setWorkflowId] = useState<string>();
+  const [workflowVersion, setWorkflowVersion] = useState<string>();
+  const [saveConflict, setSaveConflict] = useState<{ id: string; workflow: Workflow; updated_at: string }>();
   const [dirty, setDirty] = useState(true);
   const [catalog, setCatalog] = useState<Definition[]>([]);
   const [saved, setSaved] = useState<SavedWorkflow[]>([]);
@@ -221,15 +261,38 @@ function Editor() {
   const [selected, setSelected] = useState<string>('agent');
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
-  const [errors, setErrors] = useState<string[]>([]);
+  const [errors, setErrors] = useState<Issue[]>([]);
+  const [warnings, setWarnings] = useState<Issue[]>([]);
   const [busy, setBusy] = useState(false);
   const [running, setRunning] = useState(false);
   const [message, setMessage] = useState('How do AI workflows work?');
   const [run, setRun] = useState<Run>();
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [history, setHistory] = useState<Run[]>([]);
+  const [historyCursor, setHistoryCursor] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const historyVersion = useRef(0);
+  const applyHistory = useCallback((page: { items: Run[]; next_cursor: string | null }) => {
+    historyVersion.current += 1;
+    setHistory(page.items);
+    setHistoryCursor(page.next_cursor);
+  }, []);
+  async function loadMoreHistory() {
+    if (!historyCursor || historyLoading) return;
+    const version = historyVersion.current;
+    setHistoryLoading(true);
+    try {
+      const page = await api<{ items: Run[]; next_cursor: string | null }>(`/runs/page?cursor=${encodeURIComponent(historyCursor)}`);
+      if (historyVersion.current !== version) return;
+      setHistory((previous) => [...new Map([...previous, ...page.items].map((item) => [item.id, item])).values()]);
+      setHistoryCursor(page.next_cursor);
+    } catch (error) {
+      setNotice((error as Error).message);
+    } finally { setHistoryLoading(false); }
+  }
   const [tab, setTab] = useState('output');
-  const [modal, setModal] = useState<'files' | 'help' | null>(null);
+  const [modal, setModal] = useState<'files' | 'help' | 'setup' | null>(null);
+  const [reviewError, setReviewError] = useState('');
   const [connected, setConnected] = useState(false);
   const [leftPanel, setLeftPanel] = useState<
     'nodes' | 'providers' | 'knowledge' | 'connections'
@@ -247,6 +310,7 @@ function Editor() {
   const documentToken = useRef(0);
   const workflow: Workflow = {
     version: 1,
+    contract,
     name,
     description,
     nodes: nodes.map((n) => ({ ...n.data.spec, position: n.position })),
@@ -265,6 +329,7 @@ function Editor() {
   const chosen = nodes.find((n) => n.id === selected)?.data.spec;
   const definition = catalog.find((d) => d.type === chosen?.type);
   const activeRun = useRef<string | undefined>(undefined);
+  const runViewVersion = useRef(0);
 
   const initialModelChosen = useRef(false);
   const beginReload = useRef(latestRequestGuard());
@@ -275,7 +340,7 @@ function Editor() {
         api<Definition[]>('/nodes'),
         api<SavedWorkflow[]>('/workflows'),
         api<Credential[]>('/credentials'),
-        api<Run[]>('/runs'),
+        api<{ items: Run[]; next_cursor: string | null }>('/runs/page'),
         api<AllowedModel[]>('/models'),
         api<ToolConnection[]>('/connections'),
         api<KnowledgeHubBase[]>('/knowledge-bases').catch(() => []),
@@ -295,7 +360,7 @@ function Editor() {
           toCanvas({
             ...seed,
             nodes: seed.nodes.map((n) =>
-              n.type === 'agent'
+              ['agent', 'request_router', 'request_reader'].includes(n.type)
                 ? { ...n, config: modelConfig(n.config, first) }
                 : n,
             ),
@@ -304,9 +369,9 @@ function Editor() {
     }
     setHubBases(unifiedBases);
     setConnections(toolConnections);
-    setHistory(runs);
+    applyHistory(runs);
     setConnected(true);
-  }, []);
+  }, [applyHistory]);
   useEffect(() => {
     void Promise.resolve()
       .then(reloadLists)
@@ -326,13 +391,34 @@ function Editor() {
     return () => window.removeEventListener('beforeunload', fn);
   }, [dirty]);
 
+
+  // Located issues from the server; plain messages from an older server stay unlocated.
+  function located(issues: Issue[] | undefined, messages: string[]): Issue[] {
+    return issues ?? messages.map((message) => ({ node_id: null, message }));
+  }
+  function showNode(id: string) {
+    setSelected(id);
+    setInspectorOpen(true);
+    void canvas.fitView({ nodes: [{ id }], duration: 300, maxZoom: 1.2 });
+  }
+  function IssueRow({ issue }: { issue: Issue }) {
+    const node = nodes.find((n) => n.id === issue.node_id)?.data.spec;
+    if (!node) return <>{issue.message}</>;
+    return (
+      <button className="issue-link" onClick={() => showNode(node.id)}>
+        <strong>{node.label || node.id}</strong>: {issue.message}
+      </button>
+    );
+  }
   function snapshot() {
     setUndo((s) => [...s.slice(-39), structuredClone(current.current)]);
     setRedo([]);
     setDirty(true);
     setErrors([]);
+    setWarnings([]);
   }
   function apply(w: Workflow) {
+    setContract(w.contract ?? 1);
     setNodes(toCanvas(w));
     setEdges(w.edges);
     setName(w.name);
@@ -341,6 +427,7 @@ function Editor() {
       w.nodes.find((n) => n.type === 'agent')?.id || w.nodes[0]?.id || '',
     );
     setErrors([]);
+    setWarnings([]);
   }
   function undo() {
     if (!undoStack.length || running) return;
@@ -367,14 +454,32 @@ function Editor() {
       ),
     );
   }
+  // Removing or repairing a Switch case changes its connections in the same step (one undo entry).
+  function removeSwitchCase(caseId: string) {
+    if (chosen) applySwitchRepair(removeCase(chosen.config, edges, chosen.id, caseId));
+  }
+  function applySwitchRepair(result: { config: Record<string, unknown>; edges: Edge[] }) {
+    if (!chosen || result.config === chosen.config) return;
+    snapshot();
+    setNodes((ns) =>
+      ns.map((n) =>
+        n.id === chosen.id
+          ? { ...n, data: { ...n.data, spec: { ...n.data.spec, config: result.config } } }
+          : n,
+      ),
+    );
+    setEdges(result.edges);
+  }
   function clearRun() {
+    runViewVersion.current += 1;
     source.current?.close();
     source.current = null;
     activeRun.current = undefined;
     setRun(undefined);
     setEvents([]);
+    setReviewError('');
   }
-  function loadDocument(w: Workflow, id?: string) {
+  function loadDocument(w: Workflow, id?: string, updatedAt?: string) {
     documentToken.current += 1;
     clearRun();
     if (!id && sameExecutionGraph(w, seed)) {
@@ -385,7 +490,7 @@ function Editor() {
         w = {
           ...w,
           nodes: w.nodes.map((n) =>
-            n.type === 'agent'
+            ['agent', 'request_router', 'request_reader'].includes(n.type)
               ? { ...n, config: modelConfig(n.config, first) }
               : n,
           ),
@@ -393,6 +498,8 @@ function Editor() {
     }
     apply(w);
     setWorkflowId(id);
+    setWorkflowVersion(updatedAt);
+    setSaveConflict(undefined);
     setDirty(!id);
     setUndo([]);
     setRedo([]);
@@ -404,13 +511,21 @@ function Editor() {
       !dirty || window.confirm('Discard unsaved changes to this workflow?')
     );
   }
+  function createDraft(draft: Workflow) {
+    const first = allowedModels.find(m => m.enabled && m.provider === 'ollama') || allowedModels.find(m => m.enabled);
+    const template = requestTemplates.find(t => createRequestWorkflow(t.id).name === draft.name);
+    if (first) draft = { ...draft, nodes: draft.nodes.map(n => ['agent', 'request_router', 'request_reader', 'llm', 'query'].includes(n.type) ? { ...n, config: modelConfig(n.config, first) } : n) };
+    loadDocument(draft);
+    if (template) setMessage(template.sample);
+    setSelected('reader');
+  }
   async function load(id: string) {
     if (!discardAllowed()) return;
     try {
-      const result = await api<{ workflow: Workflow; id: string }>(
+      const result = await api<{ workflow: Workflow; id: string; updated_at: string }>(
         `/workflows/${id}`,
       );
-      loadDocument(result.workflow, id);
+      loadDocument(result.workflow, id, result.updated_at);
     } catch (e) {
       setNotice((e as Error).message);
     }
@@ -420,10 +535,10 @@ function Editor() {
     const savedSnapshot = structuredClone(current.current);
     setBusy(true);
     try {
-      const result = await api<{ id: string }>(
+      const result = await api<{ id: string; updated_at: string }>(
         workflowId ? `/workflows/${workflowId}` : '/workflows',
         workflowId ? 'PUT' : 'POST',
-        savedSnapshot,
+        workflowId ? { ...savedSnapshot, updated_at: workflowVersion } : savedSnapshot,
       );
       const completion = saveCompletion(
         startToken,
@@ -433,6 +548,8 @@ function Editor() {
       );
       if (completion.sameDocument) {
         setWorkflowId(result.id);
+        setWorkflowVersion(result.updated_at);
+        setSaveConflict(undefined);
         setDirty(completion.dirty);
         setNotice(
           completion.dirty
@@ -442,22 +559,30 @@ function Editor() {
       }
       setSaved(await api<SavedWorkflow[]>('/workflows'));
     } catch (e) {
+      if (e instanceof ApiError && e.status === 409 && startToken === documentToken.current) {
+        const data = e.data as { current?: { id: string; workflow: Workflow; updated_at: string } };
+        if (data.current) setSaveConflict(data.current);
+      }
       setNotice((e as Error).message);
     } finally {
       setBusy(false);
     }
   }
   async function validate() {
+    const unparsed = unparsedJsonSettings(current.current, catalog);
+    if (unparsed.length) {
+      setErrors(unparsed);
+      setWarnings([]);
+      setNotice('Fix the validation issues below.');
+      return false;
+    }
     try {
-      const result = await api<{ valid: boolean; errors: string[] }>(
-        '/validate',
-        'POST',
-        current.current,
-      );
-      setErrors(result.errors);
+      const result = await api<Validation>('/validate', 'POST', current.current);
+      setErrors(located(result.issues, result.errors));
+      setWarnings(located(result.warning_issues, result.warnings ?? []));
       setNotice(
         result.valid
-          ? 'Workflow is valid and ready to run.'
+          ? (result.warnings?.length ? 'Workflow is valid. Review the advisory warnings below.' : 'Workflow is valid and ready to run.')
           : 'Fix the validation issues below.',
       );
       return result.valid;
@@ -502,7 +627,7 @@ function Editor() {
           if (source.current !== stream) return;
           setRun(final);
           setEvents(final.events);
-          setHistory(await api<Run[]>('/runs'));
+          applyHistory(await api<{ items: Run[]; next_cursor: string | null }>('/runs/page'));
         } catch (e) {
           setNotice((e as Error).message);
         } finally {
@@ -540,7 +665,7 @@ function Editor() {
       } else {
         setRunning(false);
         activeRun.current = undefined;
-        setHistory(await api<Run[]>('/runs'));
+        applyHistory(await api<{ items: Run[]; next_cursor: string | null }>('/runs/page'));
       }
     } catch {
       setNotice(
@@ -548,6 +673,30 @@ function Editor() {
       );
       setRunning(false);
       activeRun.current = undefined;
+    }
+  }
+  async function decideApproval(approval: RunApproval, action: 'approve' | 'reject', choice?: boolean) {
+    if (!run) return;
+    const runId = run.id;
+    const viewVersion = runViewVersion.current;
+    setBusy(true);
+    setReviewError('');
+    try {
+      const decision = await approvalDecision(approval, choice, action);
+      if (runViewVersion.current !== viewVersion) return;
+      await api(`/runs/${runId}/${action}`, 'POST', decision);
+      if (runViewVersion.current !== viewVersion) return;
+      activeRun.current = runId;
+      setRunning(action === 'approve');
+      await recoverRun(runId);
+    } catch (e) {
+      if (runViewVersion.current !== viewVersion) return;
+      setNotice((e as Error).message);
+      setReviewError((e as Error).message);
+      activeRun.current = runId;
+      await recoverRun(runId);
+    } finally {
+      setBusy(false);
     }
   }
   async function resumeRun() {
@@ -616,7 +765,9 @@ function Editor() {
           .map(([k, p]) => [k, p.default]),
       ),
     };
-    if (['agent', 'query', 'llm'].includes(type)) {
+    // A new Switch starts with one case, so its handle and Default are drawn at once.
+    if (type === 'switch') spec.config = { ...defaultSwitchConfig() };
+    if (['agent', 'query', 'llm', 'request_router', 'request_reader'].includes(type)) {
       const model =
         allowedModels.find((m) => m.enabled && m.provider === 'ollama') ||
         allowedModels.find((m) => m.enabled);
@@ -706,7 +857,7 @@ function Editor() {
       if (file.size > 1000000)
         throw new Error('Workflow files must be smaller than 1 MB.');
       const value = JSON.parse(await file.text());
-      const normalized = await api<{ workflow: Workflow; errors: string[] }>(
+      const normalized = await api<Validation & { workflow: Workflow }>(
         '/validate',
         'POST',
         value,
@@ -717,7 +868,8 @@ function Editor() {
       );
       if (discardAllowed()) {
         loadDocument(imported);
-        setErrors(normalized.errors);
+        setErrors(located(normalized.issues, normalized.errors));
+        setWarnings(located(normalized.warning_issues, normalized.warnings ?? []));
       }
     } catch (e) {
       setNotice(`Import failed: ${(e as Error).message}`);
@@ -728,10 +880,23 @@ function Editor() {
   const statuses = Object.fromEntries(
     events.filter((e) => e.node_id).map((e) => [e.node_id, e.status]),
   );
+  const invalidNodes = new Set(errors.map((e) => e.node_id));
+  // Labels from the run on screen, only when it ran this same graph.
+  const trust =
+    chosen && run && sameExecutionGraph(run.workflow, workflow)
+      ? trustSummary(
+          events.filter((e) => e.node_id === chosen.id && e.status === 'success').at(-1),
+        )
+      : null;
+  const bindable = bindableOutputs(
+    { nodes: nodes.map((n) => n.data.spec), edges },
+    (type) => Object.keys(catalog.find((d) => d.type === type)?.outputs ?? {}),
+  );
   const renderedNodes = nodes.map((n) => ({
     ...n,
     data: {
       ...n.data,
+      invalid: invalidNodes.has(n.id),
       definition: catalog.find((d) => d.type === n.data.spec.type),
       status:
         run && sameExecutionGraph(run.workflow, workflow)
@@ -1139,6 +1304,13 @@ function Editor() {
                 <span>·</span> {edges.length} connections
               </div>
             </div>
+            {warnings.length > 0 && (
+              <div className="validation-errors validation-warnings" aria-live="polite" aria-label="Validation warnings">
+                <button className="icon-button" aria-label="Dismiss validation warnings" onClick={() => setWarnings([])}><X size={16} /></button>
+                <strong>Advisory warnings — running is still allowed</strong>
+                <ul>{warnings.map((warning, i) => <li key={i}><IssueRow issue={warning} /></li>)}</ul>
+              </div>
+            )}
             {errors.length > 0 && (
               <div className="validation-errors" role="alert">
                 <strong>Workflow needs attention</strong>
@@ -1150,7 +1322,9 @@ function Editor() {
                 </button>
                 <ul>
                   {errors.map((error, i) => (
-                    <li key={i}>{error}</li>
+                    <li key={i}>
+                      <IssueRow issue={error} />
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -1226,7 +1400,7 @@ function Editor() {
                   <div className="response-output">
                     <div className="output-label">
                       <span>Response</span>
-                      {run && ['failed', 'cancelled'].includes(run.status) && (
+                      {run && !run.approval_terminal && ['failed', 'cancelled'].includes(run.status) && (
                         <button
                           className="text-button"
                           disabled={running || busy}
@@ -1254,14 +1428,42 @@ function Editor() {
                         </button>
                       )}
                     </div>
+                    {events.some((e) => e.answerability?.decision === 'skip') && <output className="helper">An answerability check was skipped. The run used ordinary generation; inspect the execution log and worker model installation.</output>}
+                    {events.some((e) => e.answerability?.decision === 'abstain') && <output className="helper">The answerability guard rejected retrieved evidence in this run.</output>}
                     {/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Scroll regions need keyboard focus for arrow and page navigation. */}
                     <section
                       className="response-scroll"
                       aria-label="Response and sources"
                       tabIndex={0}
                     >
+                      {/* Inside the scroll region so every cause, and the response below, stay reachable. */}
+                      {(() => {
+                        const incomplete = incompleteRun(run);
+                        if (!incomplete) return null;
+                        return (
+                          <section className={`incomplete-run${incomplete.unverified ? ' unverified' : ''}`} aria-live="polite" aria-label="Incomplete run">
+                            <strong>{incomplete.title}</strong>
+                            <p>{incomplete.certainty}</p>
+                            <ul>
+                              {incomplete.causes.map((cause, i) => (
+                                <li key={i}>
+                                  {cause.node && <span className="mono">{cause.node}</span>} {cause.label}
+                                  {cause.unverified ? ' (unverified)' : ''}: {cause.reason}
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        );
+                      })()}
+                      <RequestChecks run={run} events={events} />
+                      {reviewError && <section aria-label="Review feedback" className="review-feedback" role="alert">{reviewError}</section>}
+                      {run?.status === 'awaiting_approval' && <button className="text-button" disabled={busy} onClick={() => void showRun(run.id)}>Refresh approval status</button>}
+                      {run?.approvals?.filter((a) => a.status === 'pending').map((approval) => (
+                        <ApprovalReview key={approval.id} approval={approval} disabled={busy || running}
+                          onDecision={(a, action, choice) => void decideApproval(a, action, choice)} />
+                      ))}
                       {run?.output ? (
-                        <pre>{run.output}</pre>
+                        <pre data-run-answer>{run.output}</pre>
                       ) : run?.error ? (
                         <p className="error-text">{run.error}</p>
                       ) : (
@@ -1315,10 +1517,17 @@ function Editor() {
                           </span>
                           <ChevronDown size={13} />
                         </summary>
+                        {eventNotes(e).map((note, i) => (
+                          <p className="helper" key={i}>
+                            {note}
+                          </p>
+                        ))}
+                        {(() => { const node = run?.workflow.nodes.find(n => n.id === e.node_id);const detail = node ? admissionDetails(e, node.type) : null;
+                          return detail ? <p className="helper">{detail.title}: {detail.explanation}{detail.missingFields.length ? ' Missing: ' + detail.missingFields.join(', ') : ''}</p> : null; })()}
                         <pre>
                           {JSON.stringify(
                             e.inputs ||
-                              e.outputs || { status: e.status, error: e.error },
+                              e.outputs || { status: e.status, error: e.error, reason: e.reason, truncated: e.truncated },
                             null,
                             2,
                           )}
@@ -1354,6 +1563,7 @@ function Editor() {
                       No runs yet. Your executions will be saved here.
                     </p>
                   )}
+                  {historyCursor && <button type="button" disabled={historyLoading || running} onClick={() => void loadMoreHistory()}>{historyLoading ? 'Loading…' : 'Load older runs'}</button>}
                 </div>
               )}
             </section>
@@ -1401,64 +1611,112 @@ function Editor() {
                       />
                     </label>
                     {definition &&
-                      Object.keys(definition.inputs).length > 0 &&
+                      Object.keys(inputPorts(definition)).length > 0 &&
                       !edges.some(
                         (e) =>
                           (e.kind === 'tool' && e.source === chosen.id) ||
                           (e.kind === 'agent' && e.target === chosen.id),
                       ) && (
                         <section className="settings-section">
+                          {errors.some((e) => e.node_id === chosen.id) && (
+                            <div className="node-issues" role="alert">
+                              <strong>This node needs attention</strong>
+                              <ul>
+                                {errors
+                                  .filter((e) => e.node_id === chosen.id)
+                                  .map((e, i) => (
+                                    <li key={i}>{e.message}</li>
+                                  ))}
+                              </ul>
+                            </div>
+                          )}
                           <h3>INPUT BINDINGS</h3>
-                          {Object.keys(definition.inputs).map((port) => (
+                          {Object.keys(inputPorts(definition)).map((port) => (
                             <label key={port}>
-                              {port}
+                              {port}{Object.hasOwn(definition.optional_inputs ?? {}, port) ? ' (optional)' : ''}
                               <select
                                 disabled={running}
                                 value={chosen.inputs[port] || ''}
                                 onChange={(e) =>
                                   modifyNode({
-                                    inputs: {
-                                      ...chosen.inputs,
-                                      [port]: e.target.value,
-                                    },
+                                    inputs: setInputBinding(definition, chosen.inputs, port, e.target.value),
                                   })
                                 }
                               >
                                 <option value="">Choose upstream output</option>
-                                {nodes
-                                  .filter((n) =>
-                                    edges.some(
-                                      (e) =>
-                                        (!e.kind || e.kind === 'flow') &&
-                                        e.source === n.id &&
-                                        e.target === chosen.id,
-                                    ),
-                                  )
-                                  .flatMap((n) =>
-                                    Object.keys(
-                                      catalog.find(
-                                        (d) => d.type === n.data.spec.type,
-                                      )?.outputs || {},
-                                    ).map((output) => (
-                                      <option
-                                        key={`${n.id}.${output}`}
-                                        value={`${n.id}.${output}`}
-                                      >
-                                        {n.data.spec.label || n.id} → {output}
-                                      </option>
-                                    )),
+                                {(bindable[chosen.id] ?? []).map((ref) => {
+                                  const [source, output] = ref.split('.');
+                                  const node = nodes.find((n) => n.id === source)?.data.spec;
+                                  return (
+                                    <option key={ref} value={ref}>
+                                      {node?.label || source} → {output}
+                                    </option>
+                                  );
+                                })}
+                                {chosen.inputs[port] &&
+                                  !(bindable[chosen.id] ?? []).includes(chosen.inputs[port]) && (
+                                    <option value={chosen.inputs[port]}>
+                                      {chosen.inputs[port]} (not available on every path here)
+                                    </option>
                                   )}
                               </select>
                             </label>
                           ))}
                         </section>
                       )}
-                    {definition &&
+                    {chosen.type === 'request_reader' &&
+                      (() => {
+                        const properties = (chosen.config.expected_schema as { properties?: Record<string, unknown> } | undefined)?.properties ?? {};
+                        const suggestions = fieldsReadDownstream(workflow, chosen.id);
+                        const fresh = suggestions.filter((f) => !Object.hasOwn(properties, f.field));
+                        return (
+                          <section className="settings-section" aria-label="Request contract help">
+                            <h3>REQUEST CONTRACT</h3>
+                            <p className="helper">{ACCEPT_QUOTED_RISK}</p>
+                            {suggestions.length > 0 ? (
+                              <p className="helper">
+                                Suggested from this workflow:{' '}
+                                {suggestions.map((f, i) => (
+                                  <span key={f.field}>
+                                    {i ? ', ' : ''}
+                                    <span className="mono">{f.field}</span> (read by {f.readers.join(', ')})
+                                  </span>
+                                ))}
+                                .
+                              </p>
+                            ) : (
+                              <p className="helper">No later Condition or Calculate node reads a field of this reader yet.</p>
+                            )}
+                            {fresh.length > 0 && (
+                              <button
+                                className="text-button"
+                                disabled={running}
+                                onClick={() => modifyNode({ config: withSuggestedFields(chosen.config, fresh) })}
+                              >
+                                Add {fresh.length} suggested field{fresh.length === 1 ? '' : 's'}
+                              </button>
+                            )}
+                          </section>
+                        );
+                      })()}
+                    {chosen.type === 'switch' && definition && (
+                      <SwitchCases
+                        nodeId={chosen.id}
+                        config={chosen.config}
+                        predicate={definition.config_schema.$defs?.ConditionConfig?.properties ?? {}}
+                        edges={edges}
+                        disabled={running}
+                        onChange={(config) => modifyNode({ config })}
+                        onRemove={removeSwitchCase}
+                        onRepair={(result) => applySwitchRepair(result as { config: Record<string, unknown>; edges: Edge[] })}
+                      />
+                    )}
+                    {definition && chosen.type !== 'switch' &&
                       Object.keys(definition.config_schema.properties).length >
                         0 && (
                         <section className="settings-section">
                           <h3>CONFIGURATION</h3>
-                          {['llm', 'agent', 'query'].includes(chosen.type) && (
+                          {['llm', 'agent', 'query', 'request_router', 'request_reader'].includes(chosen.type) && (
                             <label>
                               Model
                               <select
@@ -1541,18 +1799,38 @@ function Editor() {
                                   key === 'storage_path'
                                 ) &&
                                 !(
-                                  ['llm', 'agent', 'query'].includes(
-                                    chosen.type,
-                                  ) &&
+                                  [
+                                    'llm',
+                                    'agent',
+                                    'query',
+                                    'request_router',
+                                    'request_reader',
+                                  ].includes(chosen.type) &&
                                   [
                                     'provider',
                                     'model',
                                     'credential_id',
                                   ].includes(key)
+                                ) &&
+                                !(
+                                  chosen.type === 'condition' &&
+                                  !conditionSettingVisible(chosen.config, key)
                                 ),
                             )
                             .map(([key, property]) => {
                               const update = (value: unknown) => {
+                                if (
+                                  chosen.type === 'condition' &&
+                                  key === 'operator'
+                                ) {
+                                  modifyNode({
+                                    config: withConditionOperator(
+                                      chosen.config,
+                                      String(value),
+                                    ),
+                                  });
+                                  return;
+                                }
                                 const config = { ...chosen.config };
                                 if (value === undefined) delete config[key];
                                 else config[key] = value;
@@ -1669,6 +1947,29 @@ function Editor() {
                         ),
                       )}
                     </section>
+                    {trust && (
+                      <section className="settings-section trust" aria-label="Trust in the last run">
+                        <h3>TRUST IN THE LAST RUN</h3>
+                        {trust.decision && (
+                          <p className={`trust-decision ${trust.decision.would_review ? 'review' : ''}`}>
+                            {trust.decision.explanation}
+                          </p>
+                        )}
+                        <ul className="trust-list">
+                          {trust.values.map((value) => (
+                            <li key={value.name}>
+                              <code>{value.name}</code>
+                              <span className={`trust-badge ${value.label}`}>
+                                {trustText[value.label]}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="helper">
+                          Labels are recorded for every run. Runs are not paused for a person yet.
+                        </p>
+                      </section>
+                    )}
                     <button
                       className="button delete-node"
                       disabled={running}
@@ -1709,6 +2010,17 @@ function Editor() {
           </span>
         </footer>
       </div>
+      {saveConflict && (
+        <StudioDialog title="Workflow changed elsewhere" onClose={() => setSaveConflict(undefined)}>
+          <h2>Workflow changed elsewhere</h2>
+          <p>This workflow changed elsewhere. Your local edits have been preserved. Export them before reloading if you want to keep both versions.</p>
+          <button className="button" onClick={exportFile}>Export local edits</button>
+          <button className="button primary" onClick={() => {
+            if (discardAllowed()) loadDocument(saveConflict.workflow, saveConflict.id, saveConflict.updated_at);
+          }}>Reload server version</button>
+          <button className="button" onClick={() => setSaveConflict(undefined)}>Keep editing</button>
+        </StudioDialog>
+      )}
       {notice && (
         <output className="toast">
           <span>{notice}</span>
@@ -1729,14 +2041,12 @@ function Editor() {
       />
       {modal && (
         <StudioDialog
-          title={modal === 'files' ? 'Saved workflows' : 'Quick guide'}
+          title={modal === 'files' ? 'Saved workflows' : modal === 'setup' ? 'Set up a new workflow' : 'Quick guide'}
           onClose={() => setModal(null)}
         >
           <div className="modal-heading">
             <h2>
-              {modal === 'files'
-                ? 'Your workflows'
-                : 'Build your first workflow'}
+              {modal === 'files' ? 'Your workflows' : modal === 'setup' ? 'Set up a new workflow' : 'Build your first workflow'}
             </h2>
             <button
               className="icon-button"
@@ -1752,7 +2062,7 @@ function Editor() {
                 className="button primary"
                 disabled={running}
                 onClick={() => {
-                  if (discardAllowed()) loadDocument(structuredClone(seed));
+                  if (discardAllowed()) setModal('setup');
                 }}
               >
                 <Plus size={16} /> New workflow
@@ -1779,6 +2089,7 @@ function Editor() {
               </div>
             </>
           )}
+          {modal === 'setup' && <WorkflowSetup disabled={running} onCreate={createDraft} />}
           {modal === 'help' && (
             <>
               <ol className="guide">

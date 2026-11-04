@@ -1,0 +1,179 @@
+{
+  "started_at": "2026-09-21T19:46:36.053405+00:00",
+  "base_commit": "33f7da4938cde516c48027abfe93f8abbe636b16",
+  "calibration_commit": "33f7da4",
+  "command": [
+    ".venv/bin/python",
+    "-u",
+    "-m",
+    "scripts.eval_retrieval",
+    "--corpus",
+    "evals/real",
+    "--questions",
+    "evals/real/questions-expanded.json",
+    "--chunking",
+    "section",
+    "--modes",
+    "hybrid",
+    "--candidate-k",
+    "50",
+    "--reranker",
+    "local_cross_encoder",
+    "--generate",
+    "llama3.1:latest",
+    "--generate-mode",
+    "hybrid",
+    "--product-answerability-guard",
+    "--out",
+    "evals/results/product-guard-fresh-2026-09-21.json"
+  ],
+  "environment": {
+    "ANSWERABILITY_MODEL_DIR": "/tmp/agentic-answerability-reader"
+  },
+  "working_tree_status": " M README.md\n M backend/app/agent_runtime.py\n M backend/app/auth.py\n M backend/app/compiler.py\n M backend/app/kb/answerability.py\n M backend/app/main.py\n M backend/app/observability.py\n M backend/app/operator_metrics.py\n M backend/app/platform_nodes.py\n M backend/app/readiness.py\n M backend/app/registry.py\n M backend/app/storage.py\n M backend/app/tool_service.py\n M backend/app/worker.py\n M backend/tests/test_operations.py\n M backend/tests/test_operator_metrics.py\n M docs/operations.md\n M docs/section-retrieval.md\n M evals/real/questions-expanded.json\n M evals/results/workflows-latest.json\n M frontend/components/platform-settings.tsx\n M frontend/components/workflow-editor.tsx\n M frontend/lib/workflow.ts\n M scripts/eval_retrieval.py\n?? backend/app/answerability_guard.py\n?? backend/app/approvals.py\n?? backend/tests/test_approvals.py\n?? backend/tests/test_runtime_answerability.py\n?? docs/evaluations/2026-09-21-grounding-fresh-result.md\n?? docs/evaluations/2026-09-21-product-guard.md\n?? docs/superpowers/plans/2026-09-20-write-approvals.md\n?? evals/results/gate-fresh-2026-09-21-check.json\n?? evals/results/gate-fresh-2026-09-21-comparison.json\n?? evals/results/gate-fresh-2026-09-21-provenance.json\n?? evals/results/gate-fresh-2026-09-21.json\n?? evals/results/grounding-gate-recheck-2026-09-20.json\n?? frontend/components/approval-review.tsx\n?? frontend/lib/approvals.ts\n?? frontend/tests/approvals.test.ts\n",
+  "file_sha256": {
+    "backend/app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "backend/app/agent_memory.py": "59421c58d5ef1babce0401e902d37283ffa4a14cede85cc3de5d0bab2f4d3368",
+    "backend/app/agent_runtime.py": "9b96132b9f1b5b8cb39d7539bdb3b75dd840b776bd11e6e8d12f00821df1aab8",
+    "backend/app/answerability_guard.py": "e7917d0020ea2e3a7a43e9ebc8e6d1294166e9f6657a529ce8ecdcde2a4b4c9d",
+    "backend/app/approvals.py": "fc0596bf01ae23e3a19e4877161b3cb1be6652862c73eaa5e0c5baf8bacf8c8c",
+    "backend/app/auth.py": "9bb493c49be7b80c859d38b42962deddf4d2d4c5d34034dca945138e96a8f288",
+    "backend/app/auth_security.py": "9c5c399d2f2f2f9504e9f7dfe2c4996594644703eb9d6fc5ca1c2bd95ccdf3a5",
+    "backend/app/compiler.py": "42cd88923710aac4bbdbc96125b3b7a24f6d9772a407d809c851351d775806d1",
+    "backend/app/evidence_registry.py": "462bbafa5bc108e0bfe63fd45beb8fc26d77838be109f08be38bd6b12f488b0b",
+    "backend/app/kb/__init__.py": "b466075df148b1ec103d94036e1d215ae9bd891aa096c0aff9364ee155f9bad8",
+    "backend/app/kb/answerability.py": "224c4cdd6952446a56792c0c224f27ca54f7bf09e186d3bf64db28603762b5c3",
+    "backend/app/kb/embedding.py": "6c6bb4b63216ccbf5b0bf7dd1bb0ac1076e7e6120e7086f53ea6a1021504a3cc",
+    "backend/app/kb/ingestion.py": "c6f9587b14d7b353e1b33089cec27dae9394b480868e20c9e80885bc2dd478e8",
+    "backend/app/kb/management.py": "5b3985a2bab41adde0a70f1e7fa742fbb368dd9c78938a259dff1c54444a848d",
+    "backend/app/kb/management_app.py": "dbb7b6f17eef7e9a138f37a7171392573c374bb453208ef41a013d3c41886d3f",
+    "backend/app/kb/management_models.py": "2b2e65b53c4395998ef067083b81136964e3efa584eda0c62bc6d6790263d118",
+    "backend/app/kb/options.py": "064ef8e0087d8169334dbe15827f9fcf7693c278f9ffe37f5e1956c764637589",
+    "backend/app/kb/reranking.py": "31063b5307857444bdc416f0286df84b74255fdbdffb47af0ee4fde28cf32b91",
+    "backend/app/kb/rpc.py": "bf5bf4d535cf3207845be4a4904538fdfb52d29ed85f82556c711c96fe148bcd",
+    "backend/app/kb/search.py": "8e3354d9782c0e0b07b023d335f84c1f94f1106e6f3b680bf3dd44357bd6730f",
+    "backend/app/kb/search_app.py": "78945d1f66ced1125bf954765f92b1d3d561039e6f431918718f7708cd682aaa",
+    "backend/app/kb/search_models.py": "af8453c5453d515b07ff18db484b6b4c2f4a171c449dae6c75d4b64e77ac46a7",
+    "backend/app/kb/section_chunking.py": "82527dc829fa88fe1ff258f02eb243e2c0469950e00e310eb2fa1345ad77ada7",
+    "backend/app/kb_gateway.py": "efe542364c28f0f48a5605a992e37336ac8d841e471c4fec51596adcaaf0f91a",
+    "backend/app/main.py": "b020d9fe89417bb3114cbb1a0718ab8fe891eade61bf7867013868a8239751d8",
+    "backend/app/models.py": "2086137af90409fa3931d344a4b38484425920fd0dff1e686a42886f0abfc04f",
+    "backend/app/observability.py": "1ab89943a3c58247622213f809515fdbb0ef2fe5814bfca442400492040e10db",
+    "backend/app/operator_metrics.py": "39ba3b61d240ec35974128ca4969470668d130326ab7069f841eec34cbd727a7",
+    "backend/app/pdf_extract.py": "9d1aeedd5688b52b0eeb61cd435adda695a1e443dc2fd79bb18585e1216c32b1",
+    "backend/app/platform_graph.py": "f6cf52af33a726e2fa3875e940964944219b9c4f1feef5108438d5072fcca539",
+    "backend/app/platform_nodes.py": "03ca499d16a0c22ebeff65a8463e13095962ec4115ddfb7cc81ce978777df7d5",
+    "backend/app/platform_validation.py": "5427a13803321f5b1ab3b74dffec5728539cba6a4ccbd55a99817d76a7658d93",
+    "backend/app/providers.py": "9c092feea137d64219177b4685d214e928d58267991c79375bc4404989ab288a",
+    "backend/app/readiness.py": "1f0d50a31fa925136bff22c32d04b93ff3ac933cba39994638249dd90d10d4c5",
+    "backend/app/registry.py": "83e7cea16fb208322fcca88cb4e21cf5a845909780912a67f6b17c6a43badc39",
+    "backend/app/storage.py": "11c853ce8f4e6a1e21a773d08c7955cce91e10fe83674f7597ab30fafa5d8196",
+    "backend/app/tool_api.py": "ef5542b16f8c2ef47ca8e15f75bb6571bfd63b976fc5470cf967f72f81db379d",
+    "backend/app/tool_service.py": "31b3556487a7460d22f2e75c6ffb0cd7bbef80cc7c332dac43162b5a92509cf9",
+    "backend/app/vector_adapters.py": "ed0d207c65b917343c32406deabd8adb6452bc8ac35e2fe1db99110afc328df2",
+    "backend/app/vector_extract.py": "f1e805901e22a8c76ad50604f2a0673a077dea9b7130a605b09fc0f56d174815",
+    "backend/app/worker.py": "41d8cc03210343bd7ad353fd1ac546ec332a2d53e188cb2886d7eba087b9886d",
+    "evals/real/29-cfr-1910.178-powered-industrial-trucks.html": "8c01453da568110c080d808543975de10c99bb775694e35d26c5b8439a837dba",
+    "evals/real/49-cfr-part-395-hours-of-service.html": "01e202ecb20122cbcf2203257ace885ee987d13e31daecd4ee1b488f97e2e5c0",
+    "evals/real/answerability-labels.md": "c28cbfcfef77795e42767f2d2ebf6f77acf9a586835726230aee9eca5a070cc9",
+    "evals/real/corpus-manifest.json": "d339da6ce79d47c137e1c0842998de4297e36acfcbdb0b9c9f228ec73cbc2971",
+    "evals/real/irs-publication-463-travel-gift-car-expenses.pdf": "ddc3bb15e437bd65c37da2036debdae78c1a0bf5a080b19d5301c81f5ec5ae5d",
+    "evals/real/nist-sp-800-63b-4-authentication.pdf": "d9ab89576b5ae2cfb3ba37781110788dea27a85a5079496dbfc1a79834670afd",
+    "evals/real/questions-expanded.json": "c5a2a7f255705e401cb64411472a02d65eb9b42d129e4d5bb6c142daec53ff91",
+    "evals/real/questions.json": "e1e0addf3b4bbf55c1fdb73dc8b659ada85095f098bc6fe1a470fe8264e45cd1",
+    "scripts/analyze_answerability.py": "b0f88ae375d6ae8033bd5372b81b29838374ec781b69256400c898fa7cf1fed8",
+    "scripts/auth_admin.py": "86dfc4e06f0d9babb625effc4d4b13256fc86ae3cba7449e378dfcefe9773d77",
+    "scripts/calibrate_claim_judge.py": "01d77f10fd6f0093820c348472ff94d071b2e687777843b458b6caeb0d8cf7dd",
+    "scripts/check_grounding_eval.py": "0a0159cb5b6f243f4199e26851327db41009e2f87b19b92c9f34cbe2560e409a",
+    "scripts/check_kb_postgres.py": "70b8d1d1c1a079bb72829120c2a16649ece6ceaad37dd615e4d79f96da622c04",
+    "scripts/check_knowledge_services.py": "aa3cb349da33104c3fff246cd54f83de963189c32b07d802f6fadef1d27e2e6f",
+    "scripts/check_postgres.py": "e71e38737f73fd4724cf40e3c67929c6b2a56b262e5157c7f5381d1f890850c8",
+    "scripts/check_workflows.py": "b443ce4d8a16267ce2637052f13d2cc4d96255c496e10c9de29b6ee033147724",
+    "scripts/dev.py": "dee09b1685ce101aa48558a7bf2f11667634510bb6558f048fdc2dd46332a06e",
+    "scripts/eval_answerability_reader.py": "364552f63861d5a5894cab0dfc4ab5f04c6e36e82466e9c45dd752b9fbfed733",
+    "scripts/eval_claims.py": "4099b38b2bfb983aa80f0b4bc7734835766223a103a97bae4b3027b849551028",
+    "scripts/eval_nli.py": "fcd4c7c43de5927962d508b8503f688356a19620cc037a2a64be1998de3a0117",
+    "scripts/eval_retrieval.py": "08cd311b4470ab1c98883ffc9951c5d1005a7e895591af25adbaee3bbea2a22e",
+    "scripts/install_answerability.py": "4c2b91aae7e5689a617f66e9a88219a21288e44a90ae1a08db53c7f08a6fbac0",
+    "scripts/install_nli.py": "de47a600babf3fcfc362db6d420ac0fced51309cde61c0b70a0c0de3d752077e",
+    "scripts/install_reranker.py": "8e75c648a90161f2ac6b9a25b28dd01a8538d413e68d2a31dd62bf6639f6d5d7",
+    "scripts/smoke.py": "da5e237c36aaf71867b9f744b8188401277222473fdf101d7a8109786446789d"
+  },
+  "reader_manifest": {
+    "model": "onnx-community/tinyroberta-squad2-ONNX",
+    "revision": "7c9f69b7e6228375169a4553bcfa6639152e3a69",
+    "files": {
+      "model.onnx": "onnx/model_quantized.onnx",
+      "tokenizer.json": "tokenizer.json",
+      "config.json": "config.json"
+    },
+    "sha256": {
+      "model.onnx": "4db70e7a019e32bf652fb9d30a5c24d18b6949fae2f1dd00d9fe6d43052b77cd",
+      "tokenizer.json": "7b62d797c95d1563d3467f48daad0eca3e150f2d587e7e687b557c9ef1b25473",
+      "config.json": "c2321a2d8d4945ef0f26abfbb4aa9dded2a7ce14aa35bb8daa2eb94765629538"
+    },
+    "output_mapping": {
+      "start_logits": "start token logits",
+      "end_logits": "end token logits",
+      "cls_token_id": 0
+    }
+  },
+  "configuration": "Product Retrieve node guard enabled; offline eval wrapper disabled",
+  "ollama_models": [
+    {
+      "name": "embeddinggemma:latest",
+      "model": "embeddinggemma:latest",
+      "modified_at": "2026-08-01T14:46:24.736251915-04:00",
+      "size": 621875917,
+      "digest": "85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "gemma3",
+        "families": [
+          "gemma3"
+        ],
+        "parameter_size": "307.58M",
+        "quantization_level": "BF16"
+      }
+    },
+    {
+      "name": "llama3.1:latest",
+      "model": "llama3.1:latest",
+      "modified_at": "2026-03-09T15:23:09.139191355-04:00",
+      "size": 4920753328,
+      "digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "8.0B",
+        "quantization_level": "Q4_K_M"
+      }
+    }
+  ],
+  "completed_at": "2026-09-21T19:53:32.359649+00:00",
+  "evaluation_exit_code": 0,
+  "gate_exit_code": 0,
+  "gate_command": [
+    ".venv/bin/python",
+    "-m",
+    "scripts.check_grounding_eval",
+    "evals/results/product-guard-fresh-2026-09-21.json"
+  ],
+  "source_files_changed_during_run": [],
+  "gate_matches_calibration_commit": true,
+  "result_sha256": {
+    "product-guard-fresh-2026-09-21.json": "153e8d2db3341ae7cdb5cb6902937cbc9ddebaa2012599fd0369113bf690cfcd",
+    "product-guard-fresh-2026-09-21-check.json": "5d2b6b95e5e39e4935f9dafcb49a0ebd2e59f5a186621e2fa699f4f1a45878b4"
+  },
+  "product_guard_decisions": {
+    "allow": 38,
+    "abstain": 15,
+    "skip": 0
+  },
+  "log_sha256": "4cd7ca65239491c357fa8a04acc47022208b20275ca3e5b1331b0f600ef3d529"
+}

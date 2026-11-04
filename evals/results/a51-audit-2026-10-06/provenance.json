@@ -1,0 +1,31 @@
+{
+  "audited_head": "6d42c411d8c9383958d8e347b7086f2788574494",
+  "origin_tracking_ref": "00bb6802c47763a50d8710a2c45091756af4323c",
+  "source_sha256": {
+    "backend/app/conditions.py": "72ff93eea41c3a1fa9131845b4f796244340137bf0f75f31949cd77da8585c55",
+    "backend/app/compiler.py": "7df81a758c9a596fbe20a87e52b7c1725537ab769116ae3a77cd331da9c8d615",
+    "backend/app/registry.py": "1a77041113617c9a8c6c9c31d2b06e201885bd41430a5d3293008df89420b9c0",
+    "frontend/components/platform-settings.tsx": "f85a8e9c9e29aaf42651bc77c8d7ca12fb0205a065f00a573578c131f21219db",
+    "frontend/components/workflow-editor.tsx": "53e9cc63794559718dbfcf6ae8a2dacb2632f7366b4c572a352a7b6bd6d66320",
+    "backend/tests/test_sandbox.py": "8615a5aa6e4fe8d59188a0861826d2ea6199b6d001956e3328adf7d49f398ddb",
+    "frontend/package.json": "374e2f285fc114c0a6faca6235d89bcdbc1753476424daa186490951d59e2f11",
+    "frontend/package-lock.json": "cb3eabe99cea48233dc62fa343c4b417687950640a9fd3efb1e35200c56799d2"
+  },
+  "working_tree": " M backend/tests/test_sandbox.py\n?? evals/results/a51-audit-2026-10-06/\n?? evals/results/loop-marker-production-rerun/\n?? evals/results/loop-marker-production/\n?? evals/results/milestone-2026-10/browser-original-bug-trace.zip\n?? evals/results/milestone-2026-10/npm-audit.json\n?? evals/results/milestone-2026-10/pip-audit.json\n?? evals/results/milestone-2026-10/storage-validation/\n?? evals/results/milestone-2026-10/storage/\n",
+  "note": "Sandbox PATH fix was changed by another process during this review. Auditor did not alter product code or tests.",
+  "source_changes_after_manifest": [],
+  "verification": {
+    "backend_full": "988 passed, exit 0; one process; working tree includes independently applied sandbox PATH fix",
+    "backend_focused": "99 passed",
+    "sandbox": "21 passed",
+    "frontend": "64 passed",
+    "typecheck": "exit 0",
+    "lint": "exit 0",
+    "browser_existing": "7 passed",
+    "dependency_gate": "accepted residual; 6 high / 6 total; exit 0",
+    "conditions_probe": "control passed; 6 expectations failed; exit 1",
+    "deployed_probe": "2 expectations failed; exit 1",
+    "inspector_probe": "stale options reproduced; exit 1",
+    "production_campaign": "saved 27/27 artifact and all 52 recorded hashes checked; not rerun"
+  }
+}

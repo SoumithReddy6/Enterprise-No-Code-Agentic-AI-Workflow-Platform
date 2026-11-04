@@ -1,0 +1,254 @@
+{
+  "head_at_start": "deb2063ca631f919d8124b11e4ac4aa316c23a12",
+  "head": "deb2063ca631f919d8124b11e4ac4aa316c23a12",
+  "working_tree": " M backend/app/agent_runtime.py\n M backend/app/compiler.py\n M backend/app/iteration.py\n M backend/app/main.py\n M backend/app/registry.py\n M backend/app/worker.py\n M backend/tests/test_agent_tools.py\n M backend/tests/test_iteration.py\n M backend/tests/test_node_error_policy.py\n M evals/results/workflows-latest.json\n M frontend/app/globals.css\n M frontend/components/workflow-editor.tsx\n M frontend/lib/workflow.ts\n?? .github/workflows/production-scenarios.yml\n?? backend/app/execution_policy.py\n?? backend/tests/test_execution_policy.py\n?? backend/tests/test_scenario_gate.py\n?? docs/production-scenario-testing.md\n?? docs/reviews/batch1-production-audit-2026-09-26.md\n?? evals/results/batch1-clean-checkout.json\n?? evals/results/batch1-production-audit/\n?? evals/results/batch1-production-final/\n?? evals/results/batch1-runtime-recheck.json\n?? evals/results/junit/\n?? evals/results/port-types-workflows-2026-09-22.json\n?? evals/results/s07-production-scenarios.json/\n?? scripts/check_production_scenarios.py\n?? scripts/scenarios/\n",
+  "started_at": 1790480123.840273,
+  "completed_at": 1790480189.843474,
+  "source_sha256": {
+    "backend/app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "backend/app/agent_memory.py": "59421c58d5ef1babce0401e902d37283ffa4a14cede85cc3de5d0bab2f4d3368",
+    "backend/app/agent_runtime.py": "c0b4f820ca8c320a4f07864e598e19bd2ef2c3e7454c873a33d8b4ab658d3d49",
+    "backend/app/answerability_guard.py": "e7917d0020ea2e3a7a43e9ebc8e6d1294166e9f6657a529ce8ecdcde2a4b4c9d",
+    "backend/app/approvals.py": "fc0596bf01ae23e3a19e4877161b3cb1be6652862c73eaa5e0c5baf8bacf8c8c",
+    "backend/app/auth.py": "085a9b13fa0074d0873b8624a1f11fce1443de5d397e50e1550f0c460f7e2bf3",
+    "backend/app/auth_security.py": "9c5c399d2f2f2f9504e9f7dfe2c4996594644703eb9d6fc5ca1c2bd95ccdf3a5",
+    "backend/app/compiler.py": "11302c53fec27a0810ff7918e3b03f6faaa6312875ef5c1f9f271767996f27a1",
+    "backend/app/evidence_registry.py": "462bbafa5bc108e0bfe63fd45beb8fc26d77838be109f08be38bd6b12f488b0b",
+    "backend/app/execution_policy.py": "680fc99dccc3b0498dbccafc260b823966b9cc6607a2f9c644e6a7c8c8b4f0b3",
+    "backend/app/iteration.py": "15f4cf508cd6ad0bbb4581e5c976cbb743198b77cae46e46cee952c1f5776994",
+    "backend/app/kb/__init__.py": "b466075df148b1ec103d94036e1d215ae9bd891aa096c0aff9364ee155f9bad8",
+    "backend/app/kb/answerability.py": "224c4cdd6952446a56792c0c224f27ca54f7bf09e186d3bf64db28603762b5c3",
+    "backend/app/kb/embedding.py": "6c6bb4b63216ccbf5b0bf7dd1bb0ac1076e7e6120e7086f53ea6a1021504a3cc",
+    "backend/app/kb/ingestion.py": "c6f9587b14d7b353e1b33089cec27dae9394b480868e20c9e80885bc2dd478e8",
+    "backend/app/kb/management.py": "5b3985a2bab41adde0a70f1e7fa742fbb368dd9c78938a259dff1c54444a848d",
+    "backend/app/kb/management_app.py": "dbb7b6f17eef7e9a138f37a7171392573c374bb453208ef41a013d3c41886d3f",
+    "backend/app/kb/management_models.py": "2b2e65b53c4395998ef067083b81136964e3efa584eda0c62bc6d6790263d118",
+    "backend/app/kb/options.py": "064ef8e0087d8169334dbe15827f9fcf7693c278f9ffe37f5e1956c764637589",
+    "backend/app/kb/reranking.py": "31063b5307857444bdc416f0286df84b74255fdbdffb47af0ee4fde28cf32b91",
+    "backend/app/kb/rpc.py": "bf5bf4d535cf3207845be4a4904538fdfb52d29ed85f82556c711c96fe148bcd",
+    "backend/app/kb/search.py": "8e3354d9782c0e0b07b023d335f84c1f94f1106e6f3b680bf3dd44357bd6730f",
+    "backend/app/kb/search_app.py": "78945d1f66ced1125bf954765f92b1d3d561039e6f431918718f7708cd682aaa",
+    "backend/app/kb/search_models.py": "af8453c5453d515b07ff18db484b6b4c2f4a171c449dae6c75d4b64e77ac46a7",
+    "backend/app/kb/section_chunking.py": "82527dc829fa88fe1ff258f02eb243e2c0469950e00e310eb2fa1345ad77ada7",
+    "backend/app/kb_gateway.py": "efe542364c28f0f48a5605a992e37336ac8d841e471c4fec51596adcaaf0f91a",
+    "backend/app/main.py": "6ba8dc5ec7caa173b5375b3209a62cf84ee13195dbd514120acb09087d27efc7",
+    "backend/app/models.py": "dce6b21386e15cadd125a3a8778ebf9de420f8d2b39945bedd3c1b04e096b552",
+    "backend/app/observability.py": "1ab89943a3c58247622213f809515fdbb0ef2fe5814bfca442400492040e10db",
+    "backend/app/operator_metrics.py": "39ba3b61d240ec35974128ca4969470668d130326ab7069f841eec34cbd727a7",
+    "backend/app/pdf_extract.py": "9d1aeedd5688b52b0eeb61cd435adda695a1e443dc2fd79bb18585e1216c32b1",
+    "backend/app/platform_graph.py": "c2d3f0231d3f5d12ef7a76b4ec86114fbd9a37feedc5df5217e05965bf27c24c",
+    "backend/app/platform_nodes.py": "03ca499d16a0c22ebeff65a8463e13095962ec4115ddfb7cc81ce978777df7d5",
+    "backend/app/platform_validation.py": "5427a13803321f5b1ab3b74dffec5728539cba6a4ccbd55a99817d76a7658d93",
+    "backend/app/port_types.py": "df4e339dcbeda6eb6ffc5dd7a0123d435e717808dd531b9789da269c6bd6f073",
+    "backend/app/providers.py": "ae921d5ee05b15c65f5b1e001c6f5f7578830049db94a47faeca982a6c87c84c",
+    "backend/app/readiness.py": "1f0d50a31fa925136bff22c32d04b93ff3ac933cba39994638249dd90d10d4c5",
+    "backend/app/registry.py": "21600b7a7721d4bf9062ea6d14b20a622b64071977c1ed3a202257fe66a0e4a0",
+    "backend/app/schema.py": "376d2c13043ef3036e8879dd021b2bac6174f78c83a52cfb102dc8943f8836ef",
+    "backend/app/storage.py": "d837325a50f45a2018bddfd592577e72b500402e030c9909480195c056fac834",
+    "backend/app/token_budget.py": "1ac44a2a7838334b9082908b3c42fbd53cac8a0a9c49719499c14e80aa6e86ec",
+    "backend/app/tool_api.py": "ef5542b16f8c2ef47ca8e15f75bb6571bfd63b976fc5470cf967f72f81db379d",
+    "backend/app/tool_service.py": "8474268a5225db9f128ad64e178e2ed73762e3d46563c2501e3070af324a1ec8",
+    "backend/app/vector_adapters.py": "ed0d207c65b917343c32406deabd8adb6452bc8ac35e2fe1db99110afc328df2",
+    "backend/app/vector_extract.py": "f1e805901e22a8c76ad50604f2a0673a077dea9b7130a605b09fc0f56d174815",
+    "backend/app/worker.py": "6367857ddf0aa26d848704460522b5f3ed7658707ace8e2d5c01f13fd772c25c",
+    "scripts/scenarios/lab.py": "5c0a0d221893a43ab95174152a721482a42798fde5c796540f93b84f30f3dc5d",
+    "scripts/scenarios/mixed_approval.py": "c504203bb31d7bc6215c8d7abe61be3dea16dc90087541944b1c0c35758d25fd",
+    "scripts/check_production_scenarios.py": "aea07e398b0e0a21be6233adf8d22a68584cf6accf0f9eedaf891ac95cf646c6"
+  },
+  "source_files_changed": [],
+  "deployment": "isolated localhost API process + worker process + HTTP provider fixture; SQLite",
+  "external_services": "Jira/delivery fixtures over real HTTP; no live external writes",
+  "rows": [
+    {
+      "id": "S01",
+      "phase": "Batch1",
+      "name": "Ticket batch: approve each exact payload",
+      "status": "passed",
+      "details": {
+        "run_id": "23fc21585a1d4c2aaf679c2a13114a00",
+        "writes": 3,
+        "distinct_approvals": 3
+      },
+      "seconds": 0.889
+    },
+    {
+      "id": "S02",
+      "phase": "Batch1",
+      "name": "Reject customer reply batch without sending",
+      "status": "passed",
+      "details": {
+        "run_id": "a4de322b2f8348a9aa4325d47ab07032",
+        "writes": 0
+      },
+      "seconds": 0.119
+    },
+    {
+      "id": "S03",
+      "phase": "Batch1",
+      "name": "Uncertain delivery cannot continue",
+      "status": "passed",
+      "details": {
+        "run_id": "cd39c5f2b328452b8a999972692fb01e",
+        "received_writes": 1,
+        "resume_refused": true
+      },
+      "seconds": 0.119
+    },
+    {
+      "id": "S04",
+      "phase": "Batch1",
+      "name": "Uncertain delivery cannot route onward",
+      "status": "passed",
+      "details": {
+        "run_id": "83338c31c6954857badf8e3a60c46696",
+        "received_writes": 1,
+        "resume_refused": true
+      },
+      "seconds": 0.118
+    },
+    {
+      "id": "S05",
+      "phase": "Batch1",
+      "name": "Worker restart between batch approvals",
+      "status": "passed",
+      "details": {
+        "run_id": "e936628da25341b98416bb8a4a0ca860",
+        "received_writes": 2,
+        "worker_replaced": true
+      },
+      "seconds": 0.804
+    },
+    {
+      "id": "S15",
+      "phase": "Batch1",
+      "name": "Abrupt crash after a durable write item",
+      "status": "passed",
+      "details": {
+        "run_id": "39aecf83e8d44877b59a9c5d0ef75fe6",
+        "writes": 2,
+        "crash_after_sql_commit": true,
+        "lease_expiry": "real"
+      },
+      "seconds": 30.206
+    },
+    {
+      "id": "S16",
+      "phase": "Batch1",
+      "name": "Kill worker after receiver accepts a write",
+      "status": "passed",
+      "details": {
+        "run_id": "10261a365b40473fb585cd5fb044b90f",
+        "writes": 1,
+        "uncertain_resume_refused": true
+      },
+      "seconds": 30.192
+    },
+    {
+      "id": "S06",
+      "phase": "A3",
+      "name": "Transient vendor read retries",
+      "status": "passed",
+      "details": {
+        "run_id": "5b3ab0b1e5764cd689d7c9c237b90ba1",
+        "requests": 2
+      },
+      "seconds": 0.177
+    },
+    {
+      "id": "S07",
+      "phase": "A3-A4",
+      "name": "Loop body retries actually apply",
+      "status": "passed",
+      "details": {
+        "run_id": "88f9c6c49e094003b15888b4d76f8a78"
+      },
+      "seconds": 0.111
+    },
+    {
+      "id": "S08",
+      "phase": "A3",
+      "name": "Invalid recovery binding rejected before execution",
+      "status": "failed",
+      "error": "AssertionError: {'valid': True, 'errors': [], 'warnings': [], 'workflow': {'version': 1, 'name': 'Scenario', 'description': '', 'nodes': [{'id': 'input', 'type': 'chat_input', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {}, 'config': {}, 'on_error': 'fail', 'retry': {'attempts': 0, 'base_delay': 0.5}}, {'id': 'work', 'type': 'tool_http', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {'input': 'input.message'}, 'config': {'connection_id': '3aa6579ffcc8463e971694be41a284b2', 'path': '/read', 'method': 'GET', 'enable_writes': False, 'body': '{input}'}, 'on_error': 'route', 'retry': {'attempts': 0, 'base_delay': 0.0}}, {'id': 'out', 'type': 'response', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {'text': 'work.text'}, 'config': {}, 'on_error': 'fail', 'retry': {'attempts': 0, 'base_delay': 0.5}}, {'id': 'fallback', 'type': 'response', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {'text': 'work.text'}, 'config': {}, 'on_error': 'fail', 'retry': {'attempts': 0, 'base_delay': 0.5}}], 'edges': [{'id': '0', 'source': 'input', 'target': 'work', 'sourceHandle': None, 'targetHandle': None, 'kind': 'flow'}, {'id': '1', 'source': 'work', 'target': 'out', 'sourceHandle': None, 'targetHandle': None, 'kind': 'flow'}, {'id': 'err', 'source': 'work', 'target': 'fallback', 'sourceHandle': 'error', 'targetHandle': None, 'kind': 'flow'}]}}",
+      "seconds": 0.003
+    },
+    {
+      "id": "S09",
+      "phase": "A4",
+      "name": "Incomplete batch visible at run level",
+      "status": "failed",
+      "error": "AssertionError: {'run_id': '209d109b9ea04baf871cda8a2c414812', 'truncated': False}",
+      "seconds": 0.116
+    },
+    {
+      "id": "S10",
+      "phase": "Security",
+      "name": "SSRF denied outside fixture boundary",
+      "status": "passed",
+      "details": {
+        "run_id": "15b9b11ba4bc48efa1481b19771311a0"
+      },
+      "seconds": 0.116
+    },
+    {
+      "id": "S11",
+      "phase": "Security",
+      "name": "Closed registration and anonymous denial",
+      "status": "passed",
+      "details": {
+        "second_registration": 403,
+        "anonymous_runs": 401
+      },
+      "seconds": 0.007
+    },
+    {
+      "id": "S12",
+      "phase": "Security",
+      "name": "Tenant isolation through authenticated HTTP",
+      "status": "passed",
+      "details": {
+        "foreign_run": 404,
+        "foreign_connections": 0
+      },
+      "seconds": 0.472
+    },
+    {
+      "id": "S13",
+      "phase": "Storage",
+      "name": "Two tabs cannot overwrite silently",
+      "status": "passed",
+      "details": {
+        "fresh": 200,
+        "stale": 409
+      },
+      "seconds": 0.005
+    },
+    {
+      "id": "S14",
+      "phase": "Approvals",
+      "name": "Changed destination invalidates reviewed write",
+      "status": "passed",
+      "details": {
+        "run_id": "a17c3ebca6454aa0ae5d5f6dbf9b7a5c",
+        "writes": 0
+      },
+      "seconds": 0.24
+    },
+    {
+      "id": "M01",
+      "phase": "Batch1-contract",
+      "name": "Mixed approval modes inside one loop agent",
+      "status": "passed",
+      "details": {
+        "command": [
+          "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/bin/python",
+          "-m",
+          "scripts.scenarios.mixed_approval"
+        ],
+        "exit_code": 0
+      },
+      "seconds": 0.827
+    }
+  ],
+  "passed": false
+}

@@ -1,0 +1,28 @@
+{
+  "reviewed_commit": "dded39de7da6b475083a4febeac7d147b16502cb",
+  "verified_at_utc": "2026-10-06T01:46:18Z",
+  "source_sha256": {
+    "frontend/scripts/audit-gate-core.mjs": "cac872524da1a138d0f1c2a333353405fb033e127a1825a77f795e372e217674",
+    "frontend/scripts/audit-gate.mjs": "c4117a350b5658de9e3e6ca3cabcb713296a6d70a6706aae4c4355b19aa8b877",
+    "frontend/audit-exceptions.json": "395a98fa3603bb2a0db3db03a318f6e314f0cb38cb9ebb3fcf05e84665d38f5f",
+    "frontend/package-lock.json": "6141fadc48a89800281dd033d89d9e02fdf15d2a2c3f489f6e05d8b8e4c152e2",
+    "backend/requirements.txt": "424106ba6e47aee0e8008cd9800468ed60848a8573c6d6314ea87b3d468d3862"
+  },
+  "fresh_checks": {
+    "frontend_tests": {
+      "passed": 43,
+      "exit_code": 0
+    },
+    "declared_python_audit": {
+      "exit_code": 0,
+      "known_vulnerabilities": 0
+    },
+    "npm_gate": {
+      "exit_code": 1,
+      "high": 7,
+      "critical": 2,
+      "total_package_findings": 9
+    }
+  },
+  "scope": "dependency changes and security gate; backend suite, browser tests and production campaign not rerun"
+}

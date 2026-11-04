@@ -1,0 +1,14 @@
+{"timestamp":"2026-10-30T15:49:46.245997+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{
+  "kind": "plan-counterexample-with-typed-repair-shims",
+  "provider_calls": 1,
+  "outcome": "Agent fails under on_error=fail",
+  "error_type": "ValueError",
+  "error": "Run token budget exhausted (100 of 100 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.",
+  "typed_refusal_escaped_agent_finalization": [
+    "ProposedTokenBudgetExhausted"
+  ],
+  "model_received_evidence": [
+    true
+  ]
+}

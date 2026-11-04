@@ -1,0 +1,7 @@
+{
+  "description": "Test-only Jira search response fixtures. These records are not embedded in the workflow and do not confer authority by themselves. Configure a real tenant-scoped connection for actual use.",
+  "purchase": {"issues": [{"key": "CAT-1", "fields": {"summary": "Laptop product", "product": "laptops"}}], "total": 1},
+  "refund": {"issues": [{"key": "ORDER-1", "fields": {"summary": "Example order"}}], "total": 1},
+  "yesno": {"issues": [{"key": "MEMBER-1", "fields": {"summary": "Example member", "eligible": true}}, {"key": "MEMBER-2", "fields": {"summary": "Another member", "eligible": false}}], "total": 2},
+  "unavailable": {"issues": [], "total": 0}
+}

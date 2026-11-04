@@ -1,0 +1,1462 @@
+{
+  "complete": true,
+  "offline_only": true,
+  "model_manifest": {
+    "model": "cross-encoder/nli-MiniLM2-L6-H768",
+    "revision": "b95119ce93d3e065de6214e38cd4a97b0f2f2c6d",
+    "files": {
+      "model.onnx": "onnx/model_qint8_arm64.onnx",
+      "tokenizer.json": "tokenizer.json",
+      "config.json": "config.json"
+    },
+    "sha256": {
+      "model.onnx": "449024a8711a3e655cad410cb2192158f9897fc2a32b65dbb817922351150db7",
+      "tokenizer.json": "82139106e603ee4e1d5bc99d056ccbed5a92bc24848b1b5a7137c26e00d0dbf6",
+      "config.json": "8b0e41caff7567c0f53e6983f35591c3dec59507c9173ab125c5823394fb57f3"
+    },
+    "id2label": {
+      "0": "contradiction",
+      "1": "entailment",
+      "2": "neutral"
+    }
+  },
+  "annotation": {
+    "annotator": "Codex assistant",
+    "independent_human_review": false,
+    "labels_frozen_before_judge": true,
+    "source_artifact": "evals/results/f11-before.json",
+    "method": "Manually inspected saved passage text; labels assess substantive claims against cited passages, including scope when stated. Questions are retained for review but the existing judge API does not receive them. Unsupported maps to insufficient_evidence.",
+    "limitations": [
+      "These are assistant annotations, not human-labelled gold data.",
+      "Known batch failure 23 is literally supported by a scope-stripped excerpt; it must not be counted as a judge failure to recognize contradiction.",
+      "Short fragment answers require question context, which the current judge API lacks. Calibration exposes this limitation.",
+      "Eight counterfactuals broaden negative coverage; the set is diagnostic, not representative of production prevalence."
+    ]
+  },
+  "elapsed_seconds": 0.816,
+  "summary": {
+    "n": 24,
+    "valid_judgments": 24,
+    "errors": 0,
+    "contract_compliance_rate": 1.0,
+    "validity_threshold_met": true,
+    "runtime_influence_allowed": false,
+    "false_acceptances": 2,
+    "false_acceptance_denominator": 11,
+    "false_acceptance_rate": 0.1818,
+    "false_rejections": 11,
+    "false_rejection_denominator": 13,
+    "false_rejection_rate": 0.8462,
+    "coverage_by_label": {
+      "contradicted": 1.0,
+      "supported": 1.0,
+      "insufficient_evidence": 1.0
+    },
+    "three_class_accuracy": 0.3333,
+    "confusion_matrix_expected_rows_predicted_columns": {
+      "contradicted": {
+        "contradicted": 1,
+        "supported": 1,
+        "insufficient_evidence": 3
+      },
+      "supported": {
+        "contradicted": 1,
+        "supported": 2,
+        "insufficient_evidence": 10
+      },
+      "insufficient_evidence": {
+        "contradicted": 0,
+        "supported": 1,
+        "insufficient_evidence": 5
+      }
+    },
+    "limitation": "Validity is not accuracy. Errors are unjudged, never passes. Assistant labels are not human gold; whole-answer NLI does not prove atomic claim completeness or scope recovery."
+  },
+  "rows": [
+    {
+      "id": "real-0",
+      "origin": "f11-before",
+      "row_index": 0,
+      "question": "What is the standard mileage rate for business use of a car in 2025?",
+      "answer": "70 cents ($0.70) per mile [S1][S2][S3]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 34,
+          "text": "of your car, depreciation was inclu-\nded in that rate. The rate of depreciation that was allowed \nin the standard mileage rate is shown in the Rate of De-\npreciation Allowed in Standard Mileage Rate  table, later. \nY ou must reduce your basis in your car (but not below \nzero) by the amount of this depreciation.\nIf your basis is reduced to zero (but not below zero) \nthrough the use of the standard mileage rate, and you \ncontinue to use your car for business, no adjustment (re-\nduction) to the standard mileage rate is necessary. Use \nthe full standard mileage rate (70 cents ($0.70) per mile \nfrom January 1\u2013December 31 for 2025) for business miles \ndriven.\nTip: These rates don\u2019t apply for any year in which the \nactual expenses method was used.\nRate of Depreciation Allowed in Standard Mileage"
+        },
+        {
+          "citation": "S2",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 20,
+          "text": "n deduct. See Leasing a Car, \nlater.\nIn this publication, \u201ccar\u201d includes a van, pickup, or panel \ntruck. For the definition of \u201ccar\u201d for depreciation purposes, \nsee Car defined under Actual Car Expenses, later.\nStandard Mileage Rate\nFor 2025, the standard mileage rate for the cost of operat-\ning your car for business use is 70 cents ($0.70) per mile.\nCaution: If you use the standard mileage rate for a \nyear, you can\u2019t deduct your actual car expenses for that \nyear. Y ou can\u2019t deduct depreciation, lease payments, \nmaintenance and repairs, gasoline (including gasoline \ntaxes), oil, insurance, or vehicle registration fees. See \nChoosing the standard mileage rate  and Standard mile-\nage rate not allowed, later.\nY ou can generally use the standard mileage rate \nwhether or not you are reimbursed"
+        },
+        {
+          "citation": "S3",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 1,
+          "text": ") depreciation \nallowance on qualified property (including cars, trucks, \nand vans) is 100% for qualified property acquired and \nplaced in service after January 19, 2025. However, the \nspecial depreciation allowance remains 40% for qualified \nproperty placed in service during 2025 that is acquired af-\nter September 27, 2017, and before January 20, 2025. \nSpecial depreciation allowance is explained in chapter 4.\nStandard mileage rate. For 2025, the standard mileage \nrate for the cost of operating your car for business use is \n70 cents ($0.70) per mile. Car expenses and use of the \nstandard mileage rate are explained in chapter 4.\nDepreciation limits on cars, trucks, and vans. The de-\npreciation limitations for passenger automobiles acquired \nafter September 27, 2017, and placed in service d"
+        },
+        {
+          "citation": "S4",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 44,
+          "text": "thod 2: Prorate the standard meal allowance using \nany method you consistently apply in accordance with \nreasonable business practice. For example, an em-\nployer can treat 2 full days of per diem (that includes \nM&IE) paid for travel away from home from 9 a.m. of \none day to 5 p.m. of the next day as being no more \nthan the federal rate. This is true even though a fed-\neral employee would be limited to a reimbursement of \nM&IE for only 11/2 days of the federal M&IE rate.\nThe standard mileage rate. This is a set rate per mile \nthat you can use to figure your deductible car expenses. \nFor 2025, the standard mileage rate for the cost of operat-\ning your car for business use is 70 cents ($0.70) per mile.\n44 Chapter 6 How T o Report Publication 463 (2025)"
+        }
+      ],
+      "label": "supported",
+      "rationale": "The cited passages explicitly state the 2025 business mileage rate is 70 cents ($0.70) per mile.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "contradicted",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "of your car, depreciation was inclu-\nded in that rate. The rate of depreciation that was allowed \nin the standard mileage rate is shown in the Rate of De-\npreciation Allowed in Standard Mileage Rate  table, later. \nY ou must reduce your basis in your car (but not below \nzero) by the amount of this depreciation.\nIf your basis is reduced to zero (but not below zero) \nthrough the use of the standard mileage rate, and you \ncontinue to use your car for business, no adjustment (re-\nduction) to the standard mileage rate is necessary. Use \nthe full standard mileage rate (70 cents ($0.70) per mile \nfrom January 1\u2013December 31 for 2025) for business miles \ndriven.\nTip: These rates don\u2019t apply for any year in which the \nactual expenses method was used.\nRate of Depreciation Allowed in Standard Mileage",
+            "hypothesis": "Question: What is the standard mileage rate for business use of a car in 2025?\nAnswer: 70 cents ($0.70) per mile",
+            "token_count": 236,
+            "verdict": "contradicted",
+            "scores": {
+              "contradicted": 0.6949381110197523,
+              "supported": 0.05198115609461216,
+              "insufficient_evidence": 0.25308073288563554
+            }
+          },
+          {
+            "citation": "S2",
+            "premise": "n deduct. See Leasing a Car, \nlater.\nIn this publication, \u201ccar\u201d includes a van, pickup, or panel \ntruck. For the definition of \u201ccar\u201d for depreciation purposes, \nsee Car defined under Actual Car Expenses, later.\nStandard Mileage Rate\nFor 2025, the standard mileage rate for the cost of operat-\ning your car for business use is 70 cents ($0.70) per mile.\nCaution: If you use the standard mileage rate for a \nyear, you can\u2019t deduct your actual car expenses for that \nyear. Y ou can\u2019t deduct depreciation, lease payments, \nmaintenance and repairs, gasoline (including gasoline \ntaxes), oil, insurance, or vehicle registration fees. See \nChoosing the standard mileage rate  and Standard mile-\nage rate not allowed, later.\nY ou can generally use the standard mileage rate \nwhether or not you are reimbursed",
+            "hypothesis": "Question: What is the standard mileage rate for business use of a car in 2025?\nAnswer: 70 cents ($0.70) per mile",
+            "token_count": 246,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.2139355649135658,
+              "supported": 0.30610406445308425,
+              "insufficient_evidence": 0.47996037063335
+            }
+          },
+          {
+            "citation": "S3",
+            "premise": ") depreciation \nallowance on qualified property (including cars, trucks, \nand vans) is 100% for qualified property acquired and \nplaced in service after January 19, 2025. However, the \nspecial depreciation allowance remains 40% for qualified \nproperty placed in service during 2025 that is acquired af-\nter September 27, 2017, and before January 20, 2025. \nSpecial depreciation allowance is explained in chapter 4.\nStandard mileage rate. For 2025, the standard mileage \nrate for the cost of operating your car for business use is \n70 cents ($0.70) per mile. Car expenses and use of the \nstandard mileage rate are explained in chapter 4.\nDepreciation limits on cars, trucks, and vans. The de-\npreciation limitations for passenger automobiles acquired \nafter September 27, 2017, and placed in service d",
+            "hypothesis": "Question: What is the standard mileage rate for business use of a car in 2025?\nAnswer: 70 cents ($0.70) per mile",
+            "token_count": 213,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.1089448838465871,
+              "supported": 0.2375436527205574,
+              "insufficient_evidence": 0.6535114634328556
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "real-1",
+      "origin": "f11-before",
+      "row_index": 1,
+      "question": "Under an accountable plan, within how many days must you return any excess reimbursement?",
+      "answer": "120 days [S3]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 43,
+          "text": "non-\naccountable plan (discussed later).\nFailure to return excess reimbursements. If you are \nreimbursed under an accountable plan, but you fail to re-\nturn, within a reasonable time, any amounts in excess of \nthe substantiated amounts, the amounts paid in excess of \nthe substantiated expenses are treated as paid under a \nnonaccountable plan. See Reasonable period of time , \nearlier, and Returning Excess Reimbursements, later.\nReimbursement of nondeductible expenses.  Y ou \nmay be reimbursed under your employer\u2019s accountable \nplan for expenses related to that employer\u2019s business, \nsome of which would be allowable as employee business \nexpense deductions and some of which wouldn\u2019t. The re-\nimbursements you receive for the nondeductible expen-\nses don\u2019t meet rule (1) for accountable plans, a"
+        },
+        {
+          "citation": "S2",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 46,
+          "text": "mized deduction.\nReturning Excess Reimbursements\nUnder an accountable plan, you are required to return any \nexcess reimbursement or other expense allowances for \nyour business expenses to the person paying the reim-\nbursement or allowance. Excess reimbursement means \nany amount for which you didn\u2019t adequately account within \na reasonable period of time. For example, if you received \na travel advance and you didn\u2019t spend all the money on \nbusiness-related expenses or you don\u2019t have proof of all \nyour expenses, you have an excess reimbursement.\nAdequate accounting  and reasonable period of time \nwere discussed earlier in this chapter.\nTravel advance. Y ou receive a travel advance if your em-\nployer provides you with an expense allowance before you \nactually have the expense, and the allowanc"
+        },
+        {
+          "citation": "S3",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 43,
+          "text": "ithin the times specified in the following list will be trea-\nted as taking place within a reasonable period of time.\n\u2022 Y ou receive an advance within 30 days of the time you \nhave an expense.\n\u2022 Y ou adequately account for your expenses within 60 \ndays after they were paid or incurred.\n\u2022 Y ou return any excess reimbursement within 120 days \nafter the expense was paid or incurred.\n\u2022 Y ou are given a periodic statement (at least quarterly) \nthat asks you to either return or adequately account for \noutstanding advances and you comply within 120 \ndays of the statement.\nEmployee meets accountable plan rules.  If you meet \nthe three rules for accountable plans, your employer \nshouldn\u2019t include any reimbursements in your income in \nbox 1 of your Form W-2. If your expenses equal your reim-\nburseme"
+        },
+        {
+          "citation": "S4",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 42,
+          "text": "ly account to your employer for \nthese expenses within a reasonable period of time.\n3. Y ou must return any excess reimbursement or allow-\nance within a reasonable period of time.\n42 Chapter 6 How T o Report Publication 463 (2025)"
+        }
+      ],
+      "label": "supported",
+      "rationale": "The cited bullet explicitly requires excess reimbursement returned within 120 days.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "supported",
+        "pairs": [
+          {
+            "citation": "S3",
+            "premise": "ithin the times specified in the following list will be trea-\nted as taking place within a reasonable period of time.\n\u2022 Y ou receive an advance within 30 days of the time you \nhave an expense.\n\u2022 Y ou adequately account for your expenses within 60 \ndays after they were paid or incurred.\n\u2022 Y ou return any excess reimbursement within 120 days \nafter the expense was paid or incurred.\n\u2022 Y ou are given a periodic statement (at least quarterly) \nthat asks you to either return or adequately account for \noutstanding advances and you comply within 120 \ndays of the statement.\nEmployee meets accountable plan rules.  If you meet \nthe three rules for accountable plans, your employer \nshouldn\u2019t include any reimbursements in your income in \nbox 1 of your Form W-2. If your expenses equal your reim-\nburseme",
+            "hypothesis": "Question: Under an accountable plan, within how many days must you return any excess reimbursement?\nAnswer: 120 days",
+            "token_count": 221,
+            "verdict": "supported",
+            "scores": {
+              "contradicted": 0.06249443762774323,
+              "supported": 0.624784988354451,
+              "insufficient_evidence": 0.3127205740178058
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "real-2",
+      "origin": "f11-before",
+      "row_index": 2,
+      "question": "What is the high-low per diem rate for high-cost localities effective October 1, 2025?",
+      "answer": "$319 (which includes $86 for M&IE) [S1]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 48,
+          "text": "-cost localities \nthat are eligible for $319 (which includes $86 for meals \nand incidental expenses (M&IE)) per diem, effective Octo-\nber 1, 2024. For travel on or after October 1, 2024, all \nother localities within the continental United States \n(CONUS) are eligible for $225 (which includes $74 for \nM&IE) per diem under the high-low method.\nNotice 2025 -54, available at IRS.gov/irb/\n2025-41_IRB#NOT -2025-54, lists the high -cost localities \nthat are eligible for $319 (which includes $86 for M&IE) \nper diem, effective October 1, 2025. For travel on or after \nOctober 1, 2025, the per diem for all other localities re-\nmained $225 (which includes $74 for M&IE).\nRegular federal per diem rate method. Regular federal \nper diem rates are published by the General Services Ad-\nministration (GSA)."
+        },
+        {
+          "citation": "S2",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 44,
+          "text": "gh -cost loca-\ntions. All other areas have a per diem amount of $225 \n(which includes $74 for M&IE). For more information, see \nNotice 2024 -68, which can be found at IRS.gov/irb/\n2024-41_IRB#NOT -2024-68.\nEffective October 1, 2025, the per diem rate for certain \nhigh-cost locations remained $319 (which includes $86 for \nM&IE). The rate for all other locations remained $225 \n(which includes $74 for M&IE). For more information, see \nNotice 2025 -54, which can be found at IRS.gov/irb/\n2025-41_IRB#NOT -2025-54, and Revenue Procedure \n2019-48 at IRS.gov/irb/2019-51_IRB#REV-\nPROC-2019-48.\nCaution: Employers who didn\u2019t use the high -low \nmethod during the first 9 months of 2025 can\u2019t begin to \nuse it before 2026.\nProrating the standard meal allowance on partial \ndays of travel. The standard meal"
+        },
+        {
+          "citation": "S3",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 44,
+          "text": "ing.\n\u2022 Doesn\u2019t have a reasonable belief that you had (or will \nhave) lodging expenses, such as when you stay with \nfriends or relatives or sleep in the cab of your truck.\n\u2022 Figures the allowance on a basis similar to that used \nin figuring your compensation, such as number of \nhours worked or miles traveled.\nHigh-low rate. This is a simplified method of figuring \nthe federal per diem rate for travel within the continental \nUnited States. It eliminates the need to keep a current list \nof the per diem rates for each city.\nUnder the high -low method, the per diem amount for \ntravel during January through September of 2025 is $319 \n(which includes $86 for M&IE) for certain high -cost loca-\ntions. All other areas have a per diem amount of $225 \n(which includes $74 for M&IE). For more informatio"
+        },
+        {
+          "citation": "S4",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 48,
+          "text": "ral per diem rate method. Regular federal \nper diem rates are published by the General Services Ad-\nministration (GSA). Both tables include the separate rate \nfor M&IE for each locality. The rates listed for FY2025 at \nGSA.gov/travel/plan-book/per-diem-rates are effective Oc-\ntober 1, 2024, and those listed for FY2026 are effective \nOctober 1, 2025. The standard rate for all locations within \nCONUS not specifically listed for FY2025 is $178 ($110 \nfor lodging and $68 for M&IE). For FY2026, this rate re-\nmains $178 ($110 for lodging and $68 for M&IE).\nTransition Rules\nThe transition period covers the last 3 months of the cal-\nendar year, from the time that new rates are effective (gen-\nerally, October 1) through December 31. During this pe-\nriod, you may generally change to the new rates or"
+        }
+      ],
+      "label": "supported",
+      "rationale": "The cited passage states the October 2025 high-cost rate is $319 including $86 M&IE.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "-cost localities \nthat are eligible for $319 (which includes $86 for meals \nand incidental expenses (M&IE)) per diem, effective Octo-\nber 1, 2024. For travel on or after October 1, 2024, all \nother localities within the continental United States \n(CONUS) are eligible for $225 (which includes $74 for \nM&IE) per diem under the high-low method.\nNotice 2025 -54, available at IRS.gov/irb/\n2025-41_IRB#NOT -2025-54, lists the high -cost localities \nthat are eligible for $319 (which includes $86 for M&IE) \nper diem, effective October 1, 2025. For travel on or after \nOctober 1, 2025, the per diem for all other localities re-\nmained $225 (which includes $74 for M&IE).\nRegular federal per diem rate method. Regular federal \nper diem rates are published by the General Services Ad-\nministration (GSA).",
+            "hypothesis": "Question: What is the high-low per diem rate for high-cost localities effective October 1, 2025?\nAnswer: $319 (which includes $86 for M&IE)",
+            "token_count": 278,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.18905462448135757,
+              "supported": 0.036505631727666105,
+              "insufficient_evidence": 0.7744397437909764
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "real-3",
+      "origin": "f11-before",
+      "row_index": 3,
+      "question": "How much of the $319 high-cost per diem rate is for M&IE?",
+      "answer": "$86 [S1]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 48,
+          "text": "-cost localities \nthat are eligible for $319 (which includes $86 for meals \nand incidental expenses (M&IE)) per diem, effective Octo-\nber 1, 2024. For travel on or after October 1, 2024, all \nother localities within the continental United States \n(CONUS) are eligible for $225 (which includes $74 for \nM&IE) per diem under the high-low method.\nNotice 2025 -54, available at IRS.gov/irb/\n2025-41_IRB#NOT -2025-54, lists the high -cost localities \nthat are eligible for $319 (which includes $86 for M&IE) \nper diem, effective October 1, 2025. For travel on or after \nOctober 1, 2025, the per diem for all other localities re-\nmained $225 (which includes $74 for M&IE).\nRegular federal per diem rate method. Regular federal \nper diem rates are published by the General Services Ad-\nministration (GSA)."
+        },
+        {
+          "citation": "S2",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 44,
+          "text": "ing.\n\u2022 Doesn\u2019t have a reasonable belief that you had (or will \nhave) lodging expenses, such as when you stay with \nfriends or relatives or sleep in the cab of your truck.\n\u2022 Figures the allowance on a basis similar to that used \nin figuring your compensation, such as number of \nhours worked or miles traveled.\nHigh-low rate. This is a simplified method of figuring \nthe federal per diem rate for travel within the continental \nUnited States. It eliminates the need to keep a current list \nof the per diem rates for each city.\nUnder the high -low method, the per diem amount for \ntravel during January through September of 2025 is $319 \n(which includes $86 for M&IE) for certain high -cost loca-\ntions. All other areas have a per diem amount of $225 \n(which includes $74 for M&IE). For more informatio"
+        },
+        {
+          "citation": "S3",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 44,
+          "text": "gh -cost loca-\ntions. All other areas have a per diem amount of $225 \n(which includes $74 for M&IE). For more information, see \nNotice 2024 -68, which can be found at IRS.gov/irb/\n2024-41_IRB#NOT -2024-68.\nEffective October 1, 2025, the per diem rate for certain \nhigh-cost locations remained $319 (which includes $86 for \nM&IE). The rate for all other locations remained $225 \n(which includes $74 for M&IE). For more information, see \nNotice 2025 -54, which can be found at IRS.gov/irb/\n2025-41_IRB#NOT -2025-54, and Revenue Procedure \n2019-48 at IRS.gov/irb/2019-51_IRB#REV-\nPROC-2019-48.\nCaution: Employers who didn\u2019t use the high -low \nmethod during the first 9 months of 2025 can\u2019t begin to \nuse it before 2026.\nProrating the standard meal allowance on partial \ndays of travel. The standard meal"
+        },
+        {
+          "citation": "S4",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 44,
+          "text": "n also find federal per diem rates at GSA.gov/travel/\nplan-book/per-diem-rates.\nThe standard meal allowance.  The standard meal \nallowance is the federal M&IE rate. For travel in 2025, the \nrate for most small localities in the United States is $68 \nper day. Most major cities and many other localities qualify \nfor higher rates. Y ou can find this information at GSA.gov/\ntravel/plan-book/per-diem-rates.\nY ou receive an allowance only for M&IE when your em-\nployer does one of the following.\n\u2022 Provides you with lodging (furnishes it in kind).\n\u2022 Reimburses you, based on your receipts, for the ac-\ntual cost of your lodging.\n\u2022 Pays the hotel, motel, etc., directly for your lodging.\n\u2022 Doesn\u2019t have a reasonable belief that you had (or will \nhave) lodging expenses, such as when you stay with \nfrien"
+        }
+      ],
+      "label": "supported",
+      "rationale": "The cited passage explicitly assigns $86 to M&IE.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "-cost localities \nthat are eligible for $319 (which includes $86 for meals \nand incidental expenses (M&IE)) per diem, effective Octo-\nber 1, 2024. For travel on or after October 1, 2024, all \nother localities within the continental United States \n(CONUS) are eligible for $225 (which includes $74 for \nM&IE) per diem under the high-low method.\nNotice 2025 -54, available at IRS.gov/irb/\n2025-41_IRB#NOT -2025-54, lists the high -cost localities \nthat are eligible for $319 (which includes $86 for M&IE) \nper diem, effective October 1, 2025. For travel on or after \nOctober 1, 2025, the per diem for all other localities re-\nmained $225 (which includes $74 for M&IE).\nRegular federal per diem rate method. Regular federal \nper diem rates are published by the General Services Ad-\nministration (GSA).",
+            "hypothesis": "Question: How much of the $319 high-cost per diem rate is for M&IE?\nAnswer: $86",
+            "token_count": 265,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.14403529553270963,
+              "supported": 0.03845756672084032,
+              "insufficient_evidence": 0.8175071377464501
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "real-4",
+      "origin": "f11-before",
+      "row_index": 4,
+      "question": "What is the per diem amount for all other (non-high-cost) localities under the high-low method?",
+      "answer": "$225 (which includes $74 for M&IE) [S1]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 48,
+          "text": "-cost localities \nthat are eligible for $319 (which includes $86 for meals \nand incidental expenses (M&IE)) per diem, effective Octo-\nber 1, 2024. For travel on or after October 1, 2024, all \nother localities within the continental United States \n(CONUS) are eligible for $225 (which includes $74 for \nM&IE) per diem under the high-low method.\nNotice 2025 -54, available at IRS.gov/irb/\n2025-41_IRB#NOT -2025-54, lists the high -cost localities \nthat are eligible for $319 (which includes $86 for M&IE) \nper diem, effective October 1, 2025. For travel on or after \nOctober 1, 2025, the per diem for all other localities re-\nmained $225 (which includes $74 for M&IE).\nRegular federal per diem rate method. Regular federal \nper diem rates are published by the General Services Ad-\nministration (GSA)."
+        },
+        {
+          "citation": "S2",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 44,
+          "text": "ing.\n\u2022 Doesn\u2019t have a reasonable belief that you had (or will \nhave) lodging expenses, such as when you stay with \nfriends or relatives or sleep in the cab of your truck.\n\u2022 Figures the allowance on a basis similar to that used \nin figuring your compensation, such as number of \nhours worked or miles traveled.\nHigh-low rate. This is a simplified method of figuring \nthe federal per diem rate for travel within the continental \nUnited States. It eliminates the need to keep a current list \nof the per diem rates for each city.\nUnder the high -low method, the per diem amount for \ntravel during January through September of 2025 is $319 \n(which includes $86 for M&IE) for certain high -cost loca-\ntions. All other areas have a per diem amount of $225 \n(which includes $74 for M&IE). For more informatio"
+        },
+        {
+          "citation": "S3",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 48,
+          "text": "Page 48 of 62  Fileid: \u2026 cation-463/2025/a/xml/cycle05/source 10:06 - 27-Feb-2026\nThe type and rule above prints on all proofs including departmental reproduction proofs. MUST be removed before printing.\nHow To Use Per Diem Rate \nTables\nThis section contains information about the per diem rate \nsubstantiation methods available and the choice of rates \nyou must make for the last 3 months of the year.\nThe Two Substantiation Methods\nHigh-low method. IRS Notices list the localities that are \ntreated under the high -low substantiation method as \nhigh-cost localities for all or part of the year. Notice \n2024-68, available at IRS.gov/irb/\n2024-41_IRB#NOT -2024-68, lists the high -cost localities \nthat are eligible for $319 (which includes $86 for meals \nand incidental expenses (M&IE)) per diem, e"
+        },
+        {
+          "citation": "S4",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 44,
+          "text": "gh -cost loca-\ntions. All other areas have a per diem amount of $225 \n(which includes $74 for M&IE). For more information, see \nNotice 2024 -68, which can be found at IRS.gov/irb/\n2024-41_IRB#NOT -2024-68.\nEffective October 1, 2025, the per diem rate for certain \nhigh-cost locations remained $319 (which includes $86 for \nM&IE). The rate for all other locations remained $225 \n(which includes $74 for M&IE). For more information, see \nNotice 2025 -54, which can be found at IRS.gov/irb/\n2025-41_IRB#NOT -2025-54, and Revenue Procedure \n2019-48 at IRS.gov/irb/2019-51_IRB#REV-\nPROC-2019-48.\nCaution: Employers who didn\u2019t use the high -low \nmethod during the first 9 months of 2025 can\u2019t begin to \nuse it before 2026.\nProrating the standard meal allowance on partial \ndays of travel. The standard meal"
+        }
+      ],
+      "label": "supported",
+      "rationale": "The cited passage gives the other-locality per diem as $225 including $74 M&IE.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "-cost localities \nthat are eligible for $319 (which includes $86 for meals \nand incidental expenses (M&IE)) per diem, effective Octo-\nber 1, 2024. For travel on or after October 1, 2024, all \nother localities within the continental United States \n(CONUS) are eligible for $225 (which includes $74 for \nM&IE) per diem under the high-low method.\nNotice 2025 -54, available at IRS.gov/irb/\n2025-41_IRB#NOT -2025-54, lists the high -cost localities \nthat are eligible for $319 (which includes $86 for M&IE) \nper diem, effective October 1, 2025. For travel on or after \nOctober 1, 2025, the per diem for all other localities re-\nmained $225 (which includes $74 for M&IE).\nRegular federal per diem rate method. Regular federal \nper diem rates are published by the General Services Ad-\nministration (GSA).",
+            "hypothesis": "Question: What is the per diem amount for all other (non-high-cost) localities under the high-low method?\nAnswer: $225 (which includes $74 for M&IE)",
+            "token_count": 282,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.1345728323683583,
+              "supported": 0.05373369367831831,
+              "insufficient_evidence": 0.8116934739533234
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "real-5",
+      "origin": "f11-before",
+      "row_index": 5,
+      "question": "What percentage limit generally applies to meal expenses?",
+      "answer": "50% [S1]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 15,
+          "text": "Fig-\nure A  can help you determine if the 50% limit applies to \nyou.\nThe 50% limit also applies to certain meal expenses \nthat aren\u2019t business related. It applies to meal expenses \nyou have for the production of income, including rental or \nroyalty income. It also applies to the cost of meals inclu-\nded in deductible educational expenses.\nWhen to apply the 50% limit.  The 50% limit will apply \nafter determining the amount that would otherwise qualify \nfor a deduction. Y ou first have to determine the amount of \nmeal expenses that would be deductible under the other \nrules discussed in this publication.\nFigure A. Does the 50% Limit Apply to Your Expenses?\nThere are exceptions to these rules. See Exceptions to the 50% Limit for Meals, later.\nAll employees and self-employed persons can use th"
+        },
+        {
+          "citation": "S2",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 15,
+          "text": "nding on whether the expen-\nses are reimbursed.\nExamples of meals might include:\n\u2022 Meals while traveling away from home (whether eating \nalone or with others) on business, or\n\u2022 Meal at a business convention or business league \nmeeting.\nCosts to include or exclude. T axes and tips relating to a \nbusiness meal are included as a cost of the meal and are \nsubject to the 50% limit. However, the cost of transporta-\ntion to and from the meal isn\u2019t treated as part of the cost \nand wouldn\u2019t be subject to the limit.\nApplication of 50% limit.  The 50% limit on meal expen-\nses applies if the expense is otherwise deductible and \nisn\u2019t covered by one of the exceptions discussed later. Fig-\nure A  can help you determine if the 50% limit applies to \nyou.\nThe 50% limit also applies to certain meal expenses"
+        },
+        {
+          "citation": "S3",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 15,
+          "text": "es\nYesNo\nStart Here\nYour meal and entertainment \nexpenses are NOT subject to \nthe limitations. However, since \nthe reimbursement wasn\u2019t \ntreated as wages or as other \ntaxable income, you can\u2019t \ndeduct the expenses.\nYour meal expenses ARE \nsubject to the 50% limit. \nYour entertainment \nexpenses are nondeduct-\nible.\nPublication 463 (2025) Chapter 2 Meals and Entertainment 15"
+        },
+        {
+          "citation": "S4",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 7,
+          "text": "nses won\u2019t be dis-\nallowed merely because they are more than a fixed dollar \namount or because the meals take place at deluxe restau-\nrants, hotels, or resorts.\n50% limit on meals.  Y ou can figure your meal expenses \nusing either of the following methods.\n\u2022 Actual cost.\n\u2022 The standard meal allowance.\nBoth of these methods are explained below. But, regard-\nless of the method you use, you can generally deduct only \n50% of the unreimbursed cost of your meals.\nIf you are reimbursed for the cost of your meals, how \nyou apply the 50% limit depends on whether your employ-\ner\u2019s reimbursement plan was accountable or nonaccount-\nable. If you aren\u2019t reimbursed, the 50% limit applies even if \nthe unreimbursed meal expense is for business travel. \nChapter 2 discusses the 50% limit  in more detail, and"
+        }
+      ],
+      "label": "supported",
+      "rationale": "The cited passage explicitly applies a 50% limit to meals.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "Fig-\nure A  can help you determine if the 50% limit applies to \nyou.\nThe 50% limit also applies to certain meal expenses \nthat aren\u2019t business related. It applies to meal expenses \nyou have for the production of income, including rental or \nroyalty income. It also applies to the cost of meals inclu-\nded in deductible educational expenses.\nWhen to apply the 50% limit.  The 50% limit will apply \nafter determining the amount that would otherwise qualify \nfor a deduction. Y ou first have to determine the amount of \nmeal expenses that would be deductible under the other \nrules discussed in this publication.\nFigure A. Does the 50% Limit Apply to Your Expenses?\nThere are exceptions to these rules. See Exceptions to the 50% Limit for Meals, later.\nAll employees and self-employed persons can use th",
+            "hypothesis": "Question: What percentage limit generally applies to meal expenses?\nAnswer: 50%",
+            "token_count": 213,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.09212592491434755,
+              "supported": 0.06373230409599576,
+              "insufficient_evidence": 0.8441417709896567
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "real-11",
+      "origin": "f11-before",
+      "row_index": 11,
+      "question": "What is the minimum password length when a password is used as a single-factor authentication mechanism?",
+      "answer": "15 characters [S1]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 25,
+          "text": "onale for this is presented in Appendix A, Strength of Passwords.\n3.1.1.2. Password Verifiers\nThe following requirements apply to passwords.\n1. Verifiers and CSPs SHALL  require passwords that are used as a single-factor \nauthentication mechanism to be a minimum of 15 characters in length. Verifiers \nand CSPs MAY  allow passwords that are only used as part of multi-factor \nauthentication processes to be shorter but SHALL  require them to be a minimum \nof eight characters in length.\n2. Verifiers and CSPs SHOULD  permit a maximum password length of at least 64 \ncharacters.\n3. Verifiers and CSPs SHOULD  accept all printing ASCII [RFC20] characters and the \nspace character in passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code poi"
+        },
+        {
+          "citation": "S2",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 98,
+          "text": "strength [Strength]\n[Composition]. Passwords that are too short yield to brute-force attacks and dictionary \nattacks. The minimum password length required depends on the threat model being \naddressed. Online attacks in which the attacker attempts to log in by guessing the \npassword can be mitigated by limiting the permitted login attempt rate. To prevent an \nattacker (or a persistent claimant with poor typing skills) from quickly inflicting a denial-\nof-service attack on the subscriber by making many incorrect guesses, passwords need \nto be complex enough that a reasonable number of attempts can be permitted with a \nlow probability of a successful guess, and rate limiting, as described in Sec. 3.2.2 can be \napplied before there is a significant chance of a successful guess.\n87"
+        },
+        {
+          "citation": "S3",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 17,
+          "text": "hentication (Sec. 3.1.7)\nWhen a combination of two single-factor authenticators is used, the combination SHALL  \ninclude one physical authenticator (i.e., \u201csomething you have\u201d) from the following list in \nconjunction with either a password (Sec. 3.1.1) or a biometric comparison:\n\u2022 Look-up secret (Sec. 3.1.2)\n\u2022 Out-of-band device (Sec. 3.1.3)\n\u2022 Single-factor OTP (Sec. 3.1.4)\n\u2022 Single-factor cryptographic authentication (Sec. 3.1.6)\n6"
+        },
+        {
+          "citation": "S4",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 17,
+          "text": "Approved cryptographic techniques are required.\n2.2.1. Permitted Authenticator Types\nAt AAL2, authentication SHALL  use either a multi-factor authenticator or a combination \nof two separate authentication factors. A multi-factor authenticator requires two factors \nto execute a single authentication event, such as a cryptographically secure device with \nan integrated biometric sensor that is required to activate the device. Authenticator \nrequirements are specified in Sec. 3.\nWhen a multi-factor authenticator is used, any of the following MAY  be used:\n\u2022 Multi-factor out-of-band authenticator (Sec. 3.1.3.4)\n\u2022 Multi-factor OTP (Sec. 3.1.5)\n\u2022 Multi-factor cryptographic authentication (Sec. 3.1.7)\nWhen a combination of two single-factor authenticators is used, the combination SHALL  \ninclude"
+        }
+      ],
+      "label": "supported",
+      "rationale": "The cited numbered rule requires at least 15 characters for single-factor passwords.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "onale for this is presented in Appendix A, Strength of Passwords.\n3.1.1.2. Password Verifiers\nThe following requirements apply to passwords.\n1. Verifiers and CSPs SHALL  require passwords that are used as a single-factor \nauthentication mechanism to be a minimum of 15 characters in length. Verifiers \nand CSPs MAY  allow passwords that are only used as part of multi-factor \nauthentication processes to be shorter but SHALL  require them to be a minimum \nof eight characters in length.\n2. Verifiers and CSPs SHOULD  permit a maximum password length of at least 64 \ncharacters.\n3. Verifiers and CSPs SHOULD  accept all printing ASCII [RFC20] characters and the \nspace character in passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code poi",
+            "hypothesis": "Question: What is the minimum password length when a password is used as a single-factor authentication mechanism?\nAnswer: 15 characters",
+            "token_count": 234,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.26150357368976673,
+              "supported": 0.15168072446177525,
+              "insufficient_evidence": 0.5868157018484581
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "real-12",
+      "origin": "f11-before",
+      "row_index": 12,
+      "question": "What is the minimum length for passwords used only as part of multi-factor authentication?",
+      "answer": "8 characters [S1]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 25,
+          "text": "onale for this is presented in Appendix A, Strength of Passwords.\n3.1.1.2. Password Verifiers\nThe following requirements apply to passwords.\n1. Verifiers and CSPs SHALL  require passwords that are used as a single-factor \nauthentication mechanism to be a minimum of 15 characters in length. Verifiers \nand CSPs MAY  allow passwords that are only used as part of multi-factor \nauthentication processes to be shorter but SHALL  require them to be a minimum \nof eight characters in length.\n2. Verifiers and CSPs SHOULD  permit a maximum password length of at least 64 \ncharacters.\n3. Verifiers and CSPs SHOULD  accept all printing ASCII [RFC20] characters and the \nspace character in passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code poi"
+        },
+        {
+          "citation": "S2",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 98,
+          "text": "strength [Strength]\n[Composition]. Passwords that are too short yield to brute-force attacks and dictionary \nattacks. The minimum password length required depends on the threat model being \naddressed. Online attacks in which the attacker attempts to log in by guessing the \npassword can be mitigated by limiting the permitted login attempt rate. To prevent an \nattacker (or a persistent claimant with poor typing skills) from quickly inflicting a denial-\nof-service attack on the subscriber by making many incorrect guesses, passwords need \nto be complex enough that a reasonable number of attempts can be permitted with a \nlow probability of a successful guess, and rate limiting, as described in Sec. 3.2.2 can be \napplied before there is a significant chance of a successful guess.\n87"
+        },
+        {
+          "citation": "S3",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 83,
+          "text": "cluding passphrases.\nIntermittent Events\nUsability considerations for intermittent events include:\n\u2022 When users create and change passwords\n\u2013 Clearly communicate information on how to create and change passwords.\n\u2013 Clearly communicate password requirements, as specified in Sec. 3.1.1.\n\u2013 Allow at least 64 characters in length to support the use of passphrases. \nEncourage users to make passwords as lengthy as they want and use any \ncharacters that they like (including spaces) to aid memorization. Ensure that \nuser interfaces support sufficient password lengths.\n\u2013 Do not impose other composition rules (e.g., mixtures of different character \ntypes) on passwords.\n72"
+        },
+        {
+          "citation": "S4",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 100,
+          "text": "ing such secrets will be. This is an additional motivation for not requiring \nexcessively long or complex passwords.\nA.4. Central vs. Local Verification\nWhile passwords that are used as a separate authentication factor are often centrally \nverified by the CSP\u2019s verifier, those that are used as an activation factor for a multi-\nfactor authenticator are either verified locally by the authenticator or used to derive the \nauthenticator output, which will be incorrect if the wrong activation factor is used. Both \nof these situations are referred to as \u201clocal verification.\u201d\nThe attack surfaces and vulnerabilities for central and local verification are very different. \nAccordingly, the requirements for centrally verified passwords differ from those verified \nlocally. Centrally verified passwords"
+        }
+      ],
+      "label": "supported",
+      "rationale": "The cited numbered rule permits eight characters for multi-factor passwords.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "onale for this is presented in Appendix A, Strength of Passwords.\n3.1.1.2. Password Verifiers\nThe following requirements apply to passwords.\n1. Verifiers and CSPs SHALL  require passwords that are used as a single-factor \nauthentication mechanism to be a minimum of 15 characters in length. Verifiers \nand CSPs MAY  allow passwords that are only used as part of multi-factor \nauthentication processes to be shorter but SHALL  require them to be a minimum \nof eight characters in length.\n2. Verifiers and CSPs SHOULD  permit a maximum password length of at least 64 \ncharacters.\n3. Verifiers and CSPs SHOULD  accept all printing ASCII [RFC20] characters and the \nspace character in passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code poi",
+            "hypothesis": "Question: What is the minimum length for passwords used only as part of multi-factor authentication?\nAnswer: 8 characters",
+            "token_count": 232,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.32974008275136746,
+              "supported": 0.15922351151522596,
+              "insufficient_evidence": 0.5110364057334066
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "real-14",
+      "origin": "f11-before",
+      "row_index": 14,
+      "question": "May verifiers require subscribers to change passwords periodically?",
+      "answer": "No, verifiers SHALL NOT require subscribers to change passwords periodically. [S1]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 25,
+          "text": "passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code point SHALL  be counted as a single character when \nevaluating password length.\n5. Verifiers and CSPs SHALL NOT  impose other composition rules (e.g., requiring \nmixtures of different character types) for passwords.\n6. Verifiers and CSPs SHALL NOT  require subscribers to change passwords periodically. \nHowever, verifiers SHALL  force a change if there is evidence that the authenticator \nhas been compromised.\n7. Verifiers and CSPs SHALL NOT  permit the subscriber to store a hint (e.g., a reminder \nof how the password was created) that is accessible to an unauthenticated \nclaimant.\n8. Verifiers and CSPs SHALL NOT  prompt subscribers to use knowledge-based \nauthentication (KBA)"
+        },
+        {
+          "citation": "S2",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 26,
+          "text": "help the subscriber choose a strong \npassword. This is particularly important following the rejection of a password on the \nblocklist as it discourages trivial modifications of listed weak passwords [Blocklists].\nVerifiers SHALL  implement a rate-limiting mechanism that effectively limits the number \nof failed authentication attempts that can be made on the subscriber account, as \ndescribed in Sec. 3.2.2.\nVerifiers SHALL  allow the use of password managers and autofill functionality. Verifiers \nSHOULD  permit claimants to use the \u201cpaste\u201d function when entering a password to \nfacilitate password manager use when password autofill APIs are unavailable. Password \nmanagers have been shown to increase the likelihood that subscribers will choose \n15"
+        },
+        {
+          "citation": "S3",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 25,
+          "text": "uthenticated \nclaimant.\n8. Verifiers and CSPs SHALL NOT  prompt subscribers to use knowledge-based \nauthentication (KBA) (e.g., \u201cWhat was the name of your first pet?\u201d) or security \nquestions when choosing passwords.\n14"
+        },
+        {
+          "citation": "S4",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 33,
+          "text": "described in this section and \nSHALL  satisfy the requirements of Sec. 3.2.9. Setting or changing the pre-registered \ntelephone number is considered to be the binding of a new authenticator and SHALL  \nonly occur as described in Sec. 4.1.2.\nSome subscribers may be unable to use PSTN to deliver out-of-band authentication \nsecrets in areas with limited telephone coverage, particularly without mobile phone \nservice. Accordingly, verifiers SHALL  ensure that alternative authenticator types are \navailable to all subscribers and SHOULD  remind subscribers of this limitation of PSTN out-\nof-band authenticators before binding one or more devices controlled by the subscriber.\nVerifiers SHOULD  consider risk indicators (e.g., device swap, SIM change, number \nporting, other abnormal behavior) before"
+        }
+      ],
+      "label": "supported",
+      "rationale": "The cited rule explicitly prohibits periodic password changes except compromise; the answer states the general rule.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code point SHALL  be counted as a single character when \nevaluating password length.\n5. Verifiers and CSPs SHALL NOT  impose other composition rules (e.g., requiring \nmixtures of different character types) for passwords.\n6. Verifiers and CSPs SHALL NOT  require subscribers to change passwords periodically. \nHowever, verifiers SHALL  force a change if there is evidence that the authenticator \nhas been compromised.\n7. Verifiers and CSPs SHALL NOT  permit the subscriber to store a hint (e.g., a reminder \nof how the password was created) that is accessible to an unauthenticated \nclaimant.\n8. Verifiers and CSPs SHALL NOT  prompt subscribers to use knowledge-based \nauthentication (KBA)",
+            "hypothesis": "Question: May verifiers require subscribers to change passwords periodically?\nAnswer: No, verifiers SHALL NOT require subscribers to change passwords periodically.",
+            "token_count": 235,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.19316782214991776,
+              "supported": 0.17098854572028171,
+              "insufficient_evidence": 0.6358436321298006
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "real-18",
+      "origin": "f11-before",
+      "row_index": 18,
+      "question": "When measuring password length, how is a single Unicode code point counted?",
+      "answer": "Each Unicode code point SHALL be counted as a single character when evaluating password length [S2].",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 25,
+          "text": "onale for this is presented in Appendix A, Strength of Passwords.\n3.1.1.2. Password Verifiers\nThe following requirements apply to passwords.\n1. Verifiers and CSPs SHALL  require passwords that are used as a single-factor \nauthentication mechanism to be a minimum of 15 characters in length. Verifiers \nand CSPs MAY  allow passwords that are only used as part of multi-factor \nauthentication processes to be shorter but SHALL  require them to be a minimum \nof eight characters in length.\n2. Verifiers and CSPs SHOULD  permit a maximum password length of at least 64 \ncharacters.\n3. Verifiers and CSPs SHOULD  accept all printing ASCII [RFC20] characters and the \nspace character in passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code poi"
+        },
+        {
+          "citation": "S2",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 25,
+          "text": "passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code point SHALL  be counted as a single character when \nevaluating password length.\n5. Verifiers and CSPs SHALL NOT  impose other composition rules (e.g., requiring \nmixtures of different character types) for passwords.\n6. Verifiers and CSPs SHALL NOT  require subscribers to change passwords periodically. \nHowever, verifiers SHALL  force a change if there is evidence that the authenticator \nhas been compromised.\n7. Verifiers and CSPs SHALL NOT  permit the subscriber to store a hint (e.g., a reminder \nof how the password was created) that is accessible to an unauthenticated \nclaimant.\n8. Verifiers and CSPs SHALL NOT  prompt subscribers to use knowledge-based \nauthentication (KBA)"
+        },
+        {
+          "citation": "S3",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 96,
+          "text": "(2012) Guess again (and again and again): Measuring password \n85"
+        },
+        {
+          "citation": "S4",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "Data Length: 1 character."
+        }
+      ],
+      "label": "supported",
+      "rationale": "The cited rule explicitly counts each Unicode code point as one character.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "supported",
+        "pairs": [
+          {
+            "citation": "S2",
+            "premise": "passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code point SHALL  be counted as a single character when \nevaluating password length.\n5. Verifiers and CSPs SHALL NOT  impose other composition rules (e.g., requiring \nmixtures of different character types) for passwords.\n6. Verifiers and CSPs SHALL NOT  require subscribers to change passwords periodically. \nHowever, verifiers SHALL  force a change if there is evidence that the authenticator \nhas been compromised.\n7. Verifiers and CSPs SHALL NOT  permit the subscriber to store a hint (e.g., a reminder \nof how the password was created) that is accessible to an unauthenticated \nclaimant.\n8. Verifiers and CSPs SHALL NOT  prompt subscribers to use knowledge-based \nauthentication (KBA)",
+            "hypothesis": "Question: When measuring password length, how is a single Unicode code point counted?\nAnswer: Each Unicode code point SHALL be counted as a single character when evaluating password length .",
+            "token_count": 242,
+            "verdict": "supported",
+            "scores": {
+              "contradicted": 0.08470428595013141,
+              "supported": 0.6331427346988275,
+              "insufficient_evidence": 0.282152979351041
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "real-21",
+      "origin": "f11-before",
+      "row_index": 21,
+      "question": "How many consecutive hours off duty must a property-carrying driver take before driving at the start of a work shift?",
+      "answer": "10 consecutive hours [S1][S2]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(1) Start of work shift. A driver may not drive without first taking 10 consecutive hours off duty;"
+        },
+        {
+          "citation": "S2",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(ii) After a property-carrying commercial motor vehicle driver completes the run, that driver must be off-duty for at least 10 consecutive hours before he/she drives again; and"
+        },
+        {
+          "citation": "S3",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(iii)(A) A property-carrying commercial motor vehicle driver has at least 10 consecutive hours off-duty separating each 14 hours on-duty;"
+        },
+        {
+          "citation": "S4",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(j) Travel time\u2014(1) When a property-carrying commercial motor vehicle driver at the direction of the motor carrier is traveling, but not driving or assuming any other responsibility to the carrier, such time must be counted as on-duty time unless the driver is afforded at least 10 consecutive hours off duty when arriving at destination, in which case he/she must be considered off duty for the entire period."
+        }
+      ],
+      "label": "supported",
+      "rationale": "Both cited passages state 10 consecutive off-duty hours; this supports the fragment.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "(1) Start of work shift. A driver may not drive without first taking 10 consecutive hours off duty;",
+            "hypothesis": "Question: How many consecutive hours off duty must a property-carrying driver take before driving at the start of a work shift?\nAnswer: 10 consecutive hours",
+            "token_count": 58,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.019105741261827205,
+              "supported": 0.06771899380896686,
+              "insufficient_evidence": 0.913175264929206
+            }
+          },
+          {
+            "citation": "S2",
+            "premise": "(ii) After a property-carrying commercial motor vehicle driver completes the run, that driver must be off-duty for at least 10 consecutive hours before he/she drives again; and",
+            "hypothesis": "Question: How many consecutive hours off duty must a property-carrying driver take before driving at the start of a work shift?\nAnswer: 10 consecutive hours",
+            "token_count": 74,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.017338525614573365,
+              "supported": 0.2587146765256661,
+              "insufficient_evidence": 0.7239467978597606
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "real-26",
+      "origin": "f11-before",
+      "row_index": 26,
+      "question": "How often must an evaluation of each powered industrial truck operator's performance be conducted?",
+      "answer": "at least once every three years [S1]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "(iii) An evaluation of each powered industrial truck operator's performance shall be conducted at least once every three years."
+        },
+        {
+          "citation": "S2",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "(iii) All operator training and evaluation shall be conducted by persons who have the knowledge, training, and experience to train powered industrial truck operators and evaluate their competence."
+        },
+        {
+          "citation": "S3",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "(4) Refresher training and evaluation. (i) Refresher training, including an evaluation of the effectiveness of that training, shall be conducted as required by paragraph (l)(4)(ii) to ensure that the operator has the knowledge and skills needed to operate the powered industrial truck safely."
+        },
+        {
+          "citation": "S4",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "(l) Operator training. (1) Safe operation. (i) The employer shall ensure that each powered industrial truck operator is competent to operate a powered industrial truck safely, as demonstrated by the successful completion of the training and evaluation specified in this paragraph (l)."
+        }
+      ],
+      "label": "supported",
+      "rationale": "The cited rule explicitly says at least once every three years.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "(iii) An evaluation of each powered industrial truck operator's performance shall be conducted at least once every three years.",
+            "hypothesis": "Question: How often must an evaluation of each powered industrial truck operator's performance be conducted?\nAnswer: at least once every three years",
+            "token_count": 54,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.008138956585072434,
+              "supported": 0.16642133883754825,
+              "insufficient_evidence": 0.8254397045773794
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "failure-23",
+      "origin": "f11-before",
+      "row_index": 23,
+      "batch_failure": true,
+      "question": "What is the on-duty limit over 8 consecutive days for a trucker whose company runs vehicles every day of the week?",
+      "answer": "80 hours [S1]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(iv) After having been on-duty for 80 hours in any period of 8 consecutive days, if the motor carrier for which the driver drives operates every day in the week."
+        },
+        {
+          "citation": "S2",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(D) After having been on-duty for 80 hours in any period of 8 consecutive days, if the motor carrier for which the driver drives operates every day in the week."
+        },
+        {
+          "citation": "S3",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(2) Having been on duty 70 hours in any period of 8 consecutive days if the employing motor carrier operates commercial motor vehicles every day of the week."
+        },
+        {
+          "citation": "S4",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(2) Having been on duty 70 hours in any period of 8 consecutive days if the employing motor carrier operates commercial motor vehicles every day of the week.\n[70 FR 50073, Aug. 25, 2005]"
+        }
+      ],
+      "label": "supported",
+      "rationale": "The isolated cited excerpt explicitly says 80 hours in eight days. This is a known wrong answer for the question's intended general rule, but the missing section scope makes its literal citation support indistinguishable from a correct quotation. A citation-only judge cannot recover lost source context.",
+      "expected": "supported",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "(iv) After having been on-duty for 80 hours in any period of 8 consecutive days, if the motor carrier for which the driver drives operates every day in the week.",
+            "hypothesis": "Question: What is the on-duty limit over 8 consecutive days for a trucker whose company runs vehicles every day of the week?\nAnswer: 80 hours",
+            "token_count": 72,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.07209925726800995,
+              "supported": 0.3711061044302113,
+              "insufficient_evidence": 0.5567946383017787
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "failure-24",
+      "origin": "f11-before",
+      "row_index": 24,
+      "batch_failure": true,
+      "question": "How long must a driver stay off duty to restart the 7- or 8-day on-duty clock?",
+      "answer": "at least 8 consecutive hours [S4]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(iv) The driver may not return to driving subject to the normal limits under \u00a7 395.5 without taking at least 8 consecutive hours off duty, at least 8 consecutive hours in the sleeper berth, or a combination of at least 8 consecutive hours off duty and sleeper berth time."
+        },
+        {
+          "citation": "S2",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(3) The driver has not taken this exemption within the previous 6 consecutive days, except when the driver has begun a new 7- or 8-consecutive day period with the beginning of any off-duty period of 34 or more consecutive hours as allowed by \u00a7 395.3(c)."
+        },
+        {
+          "citation": "S3",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(iv) After having been on-duty for 80 hours in any period of 8 consecutive days, if the motor carrier for which the driver drives operates every day in the week."
+        },
+        {
+          "citation": "S4",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(iii) After a passenger-carrying commercial motor vehicle driver completes the run, that driver must be off-duty for at least 8 consecutive hours before he/she drives again."
+        }
+      ],
+      "label": "insufficient_evidence",
+      "rationale": "The cited text states eight hours after a passenger-carrying driver's run, not the weekly 7/8-day clock restart requested by the question. It does not support that answer in the question's scope. The current judge does not receive the question, a deliberate calibration limitation.",
+      "expected": "insufficient_evidence",
+      "judgment": {
+        "status": "judged",
+        "verdict": "supported",
+        "pairs": [
+          {
+            "citation": "S4",
+            "premise": "(iii) After a passenger-carrying commercial motor vehicle driver completes the run, that driver must be off-duty for at least 8 consecutive hours before he/she drives again.",
+            "hypothesis": "Question: How long must a driver stay off duty to restart the 7- or 8-day on-duty clock?\nAnswer: at least 8 consecutive hours",
+            "token_count": 73,
+            "verdict": "supported",
+            "scores": {
+              "contradicted": 0.011669131415886887,
+              "supported": 0.6097968801203135,
+              "insufficient_evidence": 0.37853398846379954
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "failure-33",
+      "origin": "f11-before",
+      "row_index": 33,
+      "batch_failure": true,
+      "question": "What is the maximum load weight a forklift is allowed to lift?",
+      "answer": "30,000 pounds [S3]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": ", the operator should always check the data plate to determine the maximum allowable weight at the rated load center."
+        },
+        {
+          "citation": "S2",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "inch load center), the maximum allowable load-moment is 72,000 inch-pounds (3,000 times 24). If a load is 60 inches long (30-inch load center), then the maximum that this load can weigh is 2,400 pounds (72,000 divided by 30)."
+        },
+        {
+          "citation": "S3",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "A-5.2. To determine the maximum safe load-moment, the truck manufacturer normally rates the truck at a maximum load at a given distance from the front face of the forks. The specified distance from the front face of the forks to the line of action of the load is commonly called the load center. Because larger trucks normally handle loads that are physically larger, these vehicles have greater load centers. Trucks with a capacity of 30,000 pounds or less are normally rated at a given load weight at a 24-inch load center. Trucks with a capacity greater than 30,000 pounds are normally rated at a given load weight at a 36- or 48-inch load center. To safely operate the vehicle, the operator should always check the data plate to determine the maximum allowable weight at the rated load center."
+        },
+        {
+          "citation": "S4",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "A-5.3. Although the true load-moment distance is measured from the front wheels, this distance is greater than the distance from the front face of the forks. Calculating the maximum allowable load-moment using the load-center distance always provides a lower load-moment than the truck was designed to handle. When handling unusual loads, such as those that are larger than 48 inches long (the center of gravity is greater than 24 inches) or that have an offset center of gravity, etc., a maximum allowable load-moment should be calculated and used to determine whether a load can be safely handled. For example, if an operator is operating a 3000 pound capacity truck (with a 24-inch load center), the maximum allowable load-moment is 72,000 inch-pounds (3,000 times 24). If a load is 60 inches long"
+        }
+      ],
+      "label": "contradicted",
+      "rationale": "The cited text explicitly discusses trucks with capacity greater than 30,000 pounds, contradicting a universal maximum of 30,000 pounds; it says the data plate determines the actual limit.",
+      "expected": "contradicted",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S3",
+            "premise": "A-5.2. To determine the maximum safe load-moment, the truck manufacturer normally rates the truck at a maximum load at a given distance from the front face of the forks. The specified distance from the front face of the forks to the line of action of the load is commonly called the load center. Because larger trucks normally handle loads that are physically larger, these vehicles have greater load centers. Trucks with a capacity of 30,000 pounds or less are normally rated at a given load weight at a 24-inch load center. Trucks with a capacity greater than 30,000 pounds are normally rated at a given load weight at a 36- or 48-inch load center. To safely operate the vehicle, the operator should always check the data plate to determine the maximum allowable weight at the rated load center.",
+            "hypothesis": "Question: What is the maximum load weight a forklift is allowed to lift?\nAnswer: 30,000 pounds",
+            "token_count": 193,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.1937485972754758,
+              "supported": 0.04969444547904994,
+              "insufficient_evidence": 0.7565569572454742
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "failure-35",
+      "origin": "f11-before",
+      "row_index": 35,
+      "batch_failure": true,
+      "question": "How many days of paid vacation do federal employees receive each year?",
+      "answer": "21/2 days [S2]",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 48,
+          "text": "ocalities for the high -low method \nare included each year in a notice that is generally pub-\nlished in mid-to-late September. Y ou can find the notice in \nthe weekly Internal Revenue Bulletin (IRB) at IRS.gov/IRB, \nor visit IRS.gov and enter \u201cSpecial Per Diem Rates\u201d in the \nsearch box.\nFederal per diem rate method.  New CONUS per diem \nrates become effective on October 1 of each year and re-\nmain in effect through September 30 of the following year. \nEmployees being reimbursed under the per diem rate \nmethod during the first 9 months of a year (January 1\u2013\nSeptember 30) must continue under the same method \nthrough the end of that calendar year (December 31). \nHowever, for travel by these employees from October 1 \nthrough December 31, you can choose to continue using \nthe same per diem rate"
+        },
+        {
+          "citation": "S2",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 8,
+          "text": "e daily \nrate for Wednesday and Friday (the days you departed \nand returned), and the full daily rate for Thursday.\nUnder Method 2 , you could also use any method that \nyou apply consistently and that is in accordance with rea-\nsonable business practice. For example, you could claim 3 \ndays of the standard meal allowance even though a fed-\neral employee would have to use Method 1 and be limited \nto only 21/2 days.\nTravel in the United States\nThe following discussion applies to travel in the United \nStates. For this purpose, the United States includes the 50 \nstates and the District of Columbia. The treatment of your \ntravel expenses depends on how much of your trip was \nbusiness related and on how much of your trip occurred \nwithin the United States. See Part of T rip Outside the Uni-\nted"
+        },
+        {
+          "citation": "S3",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 44,
+          "text": "n also find federal per diem rates at GSA.gov/travel/\nplan-book/per-diem-rates.\nThe standard meal allowance.  The standard meal \nallowance is the federal M&IE rate. For travel in 2025, the \nrate for most small localities in the United States is $68 \nper day. Most major cities and many other localities qualify \nfor higher rates. Y ou can find this information at GSA.gov/\ntravel/plan-book/per-diem-rates.\nY ou receive an allowance only for M&IE when your em-\nployer does one of the following.\n\u2022 Provides you with lodging (furnishes it in kind).\n\u2022 Reimburses you, based on your receipts, for the ac-\ntual cost of your lodging.\n\u2022 Pays the hotel, motel, etc., directly for your lodging.\n\u2022 Doesn\u2019t have a reasonable belief that you had (or will \nhave) lodging expenses, such as when you stay with \nfrien"
+        },
+        {
+          "citation": "S4",
+          "filename": "49-cfr-part-395-hours-of-service.html",
+          "page": 1,
+          "text": "(2) Any period of 8 consecutive days may end with the beginning of an off-duty period of 34 or more consecutive hours.\n[76 FR 81188, Dec. 27, 2011, as amended at 78 FR 58485, Sept. 24, 2013; 78 FR 64181, Oct. 28, 2013; 84 FR 48081, Sept. 12, 2019; 85 FR 33452, June 1, 2020]"
+        }
+      ],
+      "label": "insufficient_evidence",
+      "rationale": "The 2.5 days in the cited text are meal-allowance days for a trip, not federal employees' annual paid vacation. The passage does not support the answer in the question's scope.",
+      "expected": "insufficient_evidence",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S2",
+            "premise": "e daily \nrate for Wednesday and Friday (the days you departed \nand returned), and the full daily rate for Thursday.\nUnder Method 2 , you could also use any method that \nyou apply consistently and that is in accordance with rea-\nsonable business practice. For example, you could claim 3 \ndays of the standard meal allowance even though a fed-\neral employee would have to use Method 1 and be limited \nto only 21/2 days.\nTravel in the United States\nThe following discussion applies to travel in the United \nStates. For this purpose, the United States includes the 50 \nstates and the District of Columbia. The treatment of your \ntravel expenses depends on how much of your trip was \nbusiness related and on how much of your trip occurred \nwithin the United States. See Part of T rip Outside the Uni-\nted",
+            "hypothesis": "Question: How many days of paid vacation do federal employees receive each year?\nAnswer: 21/2 days",
+            "token_count": 211,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.08155872195484275,
+              "supported": 0.012527698939307302,
+              "insufficient_evidence": 0.90591357910585
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "counter-mileage",
+      "origin": "assistant-authored counterfactual with unchanged real evidence",
+      "row_index": 0,
+      "question": "What is the standard mileage rate for business use of a car in 2025?",
+      "answer": "The 2025 business mileage rate is 50 cents per mile [S2].",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 34,
+          "text": "of your car, depreciation was inclu-\nded in that rate. The rate of depreciation that was allowed \nin the standard mileage rate is shown in the Rate of De-\npreciation Allowed in Standard Mileage Rate  table, later. \nY ou must reduce your basis in your car (but not below \nzero) by the amount of this depreciation.\nIf your basis is reduced to zero (but not below zero) \nthrough the use of the standard mileage rate, and you \ncontinue to use your car for business, no adjustment (re-\nduction) to the standard mileage rate is necessary. Use \nthe full standard mileage rate (70 cents ($0.70) per mile \nfrom January 1\u2013December 31 for 2025) for business miles \ndriven.\nTip: These rates don\u2019t apply for any year in which the \nactual expenses method was used.\nRate of Depreciation Allowed in Standard Mileage"
+        },
+        {
+          "citation": "S2",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 20,
+          "text": "n deduct. See Leasing a Car, \nlater.\nIn this publication, \u201ccar\u201d includes a van, pickup, or panel \ntruck. For the definition of \u201ccar\u201d for depreciation purposes, \nsee Car defined under Actual Car Expenses, later.\nStandard Mileage Rate\nFor 2025, the standard mileage rate for the cost of operat-\ning your car for business use is 70 cents ($0.70) per mile.\nCaution: If you use the standard mileage rate for a \nyear, you can\u2019t deduct your actual car expenses for that \nyear. Y ou can\u2019t deduct depreciation, lease payments, \nmaintenance and repairs, gasoline (including gasoline \ntaxes), oil, insurance, or vehicle registration fees. See \nChoosing the standard mileage rate  and Standard mile-\nage rate not allowed, later.\nY ou can generally use the standard mileage rate \nwhether or not you are reimbursed"
+        },
+        {
+          "citation": "S3",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 1,
+          "text": ") depreciation \nallowance on qualified property (including cars, trucks, \nand vans) is 100% for qualified property acquired and \nplaced in service after January 19, 2025. However, the \nspecial depreciation allowance remains 40% for qualified \nproperty placed in service during 2025 that is acquired af-\nter September 27, 2017, and before January 20, 2025. \nSpecial depreciation allowance is explained in chapter 4.\nStandard mileage rate. For 2025, the standard mileage \nrate for the cost of operating your car for business use is \n70 cents ($0.70) per mile. Car expenses and use of the \nstandard mileage rate are explained in chapter 4.\nDepreciation limits on cars, trucks, and vans. The de-\npreciation limitations for passenger automobiles acquired \nafter September 27, 2017, and placed in service d"
+        },
+        {
+          "citation": "S4",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 44,
+          "text": "thod 2: Prorate the standard meal allowance using \nany method you consistently apply in accordance with \nreasonable business practice. For example, an em-\nployer can treat 2 full days of per diem (that includes \nM&IE) paid for travel away from home from 9 a.m. of \none day to 5 p.m. of the next day as being no more \nthan the federal rate. This is true even though a fed-\neral employee would be limited to a reimbursement of \nM&IE for only 11/2 days of the federal M&IE rate.\nThe standard mileage rate. This is a set rate per mile \nthat you can use to figure your deductible car expenses. \nFor 2025, the standard mileage rate for the cost of operat-\ning your car for business use is 70 cents ($0.70) per mile.\n44 Chapter 6 How T o Report Publication 463 (2025)"
+        }
+      ],
+      "label": "contradicted",
+      "rationale": "S2 explicitly states 70 cents, not 50.",
+      "expected": "contradicted",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S2",
+            "premise": "n deduct. See Leasing a Car, \nlater.\nIn this publication, \u201ccar\u201d includes a van, pickup, or panel \ntruck. For the definition of \u201ccar\u201d for depreciation purposes, \nsee Car defined under Actual Car Expenses, later.\nStandard Mileage Rate\nFor 2025, the standard mileage rate for the cost of operat-\ning your car for business use is 70 cents ($0.70) per mile.\nCaution: If you use the standard mileage rate for a \nyear, you can\u2019t deduct your actual car expenses for that \nyear. Y ou can\u2019t deduct depreciation, lease payments, \nmaintenance and repairs, gasoline (including gasoline \ntaxes), oil, insurance, or vehicle registration fees. See \nChoosing the standard mileage rate  and Standard mile-\nage rate not allowed, later.\nY ou can generally use the standard mileage rate \nwhether or not you are reimbursed",
+            "hypothesis": "Question: What is the standard mileage rate for business use of a car in 2025?\nAnswer: The 2025 business mileage rate is 50 cents per mile .",
+            "token_count": 248,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.30563642071915365,
+              "supported": 0.09250659014793616,
+              "insufficient_evidence": 0.6018569891329102
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "counter-return",
+      "origin": "assistant-authored counterfactual with unchanged real evidence",
+      "row_index": 1,
+      "question": "Under an accountable plan, within how many days must you return any excess reimbursement?",
+      "answer": "Excess reimbursement must be returned within 30 days [S3].",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 43,
+          "text": "non-\naccountable plan (discussed later).\nFailure to return excess reimbursements. If you are \nreimbursed under an accountable plan, but you fail to re-\nturn, within a reasonable time, any amounts in excess of \nthe substantiated amounts, the amounts paid in excess of \nthe substantiated expenses are treated as paid under a \nnonaccountable plan. See Reasonable period of time , \nearlier, and Returning Excess Reimbursements, later.\nReimbursement of nondeductible expenses.  Y ou \nmay be reimbursed under your employer\u2019s accountable \nplan for expenses related to that employer\u2019s business, \nsome of which would be allowable as employee business \nexpense deductions and some of which wouldn\u2019t. The re-\nimbursements you receive for the nondeductible expen-\nses don\u2019t meet rule (1) for accountable plans, a"
+        },
+        {
+          "citation": "S2",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 46,
+          "text": "mized deduction.\nReturning Excess Reimbursements\nUnder an accountable plan, you are required to return any \nexcess reimbursement or other expense allowances for \nyour business expenses to the person paying the reim-\nbursement or allowance. Excess reimbursement means \nany amount for which you didn\u2019t adequately account within \na reasonable period of time. For example, if you received \na travel advance and you didn\u2019t spend all the money on \nbusiness-related expenses or you don\u2019t have proof of all \nyour expenses, you have an excess reimbursement.\nAdequate accounting  and reasonable period of time \nwere discussed earlier in this chapter.\nTravel advance. Y ou receive a travel advance if your em-\nployer provides you with an expense allowance before you \nactually have the expense, and the allowanc"
+        },
+        {
+          "citation": "S3",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 43,
+          "text": "ithin the times specified in the following list will be trea-\nted as taking place within a reasonable period of time.\n\u2022 Y ou receive an advance within 30 days of the time you \nhave an expense.\n\u2022 Y ou adequately account for your expenses within 60 \ndays after they were paid or incurred.\n\u2022 Y ou return any excess reimbursement within 120 days \nafter the expense was paid or incurred.\n\u2022 Y ou are given a periodic statement (at least quarterly) \nthat asks you to either return or adequately account for \noutstanding advances and you comply within 120 \ndays of the statement.\nEmployee meets accountable plan rules.  If you meet \nthe three rules for accountable plans, your employer \nshouldn\u2019t include any reimbursements in your income in \nbox 1 of your Form W-2. If your expenses equal your reim-\nburseme"
+        },
+        {
+          "citation": "S4",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 42,
+          "text": "ly account to your employer for \nthese expenses within a reasonable period of time.\n3. Y ou must return any excess reimbursement or allow-\nance within a reasonable period of time.\n42 Chapter 6 How T o Report Publication 463 (2025)"
+        }
+      ],
+      "label": "contradicted",
+      "rationale": "S3 assigns 30 days to receiving advances and 120 days to returning excess reimbursement.",
+      "expected": "contradicted",
+      "judgment": {
+        "status": "judged",
+        "verdict": "supported",
+        "pairs": [
+          {
+            "citation": "S3",
+            "premise": "ithin the times specified in the following list will be trea-\nted as taking place within a reasonable period of time.\n\u2022 Y ou receive an advance within 30 days of the time you \nhave an expense.\n\u2022 Y ou adequately account for your expenses within 60 \ndays after they were paid or incurred.\n\u2022 Y ou return any excess reimbursement within 120 days \nafter the expense was paid or incurred.\n\u2022 Y ou are given a periodic statement (at least quarterly) \nthat asks you to either return or adequately account for \noutstanding advances and you comply within 120 \ndays of the statement.\nEmployee meets accountable plan rules.  If you meet \nthe three rules for accountable plans, your employer \nshouldn\u2019t include any reimbursements in your income in \nbox 1 of your Form W-2. If your expenses equal your reim-\nburseme",
+            "hypothesis": "Question: Under an accountable plan, within how many days must you return any excess reimbursement?\nAnswer: Excess reimbursement must be returned within 30 days .",
+            "token_count": 229,
+            "verdict": "supported",
+            "scores": {
+              "contradicted": 0.07967807796649203,
+              "supported": 0.5574059661096451,
+              "insufficient_evidence": 0.36291595592386283
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "counter-password",
+      "origin": "assistant-authored counterfactual with unchanged real evidence",
+      "row_index": 11,
+      "question": "What is the minimum password length when a password is used as a single-factor authentication mechanism?",
+      "answer": "Single-factor passwords need only 6 characters [S1].",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 25,
+          "text": "onale for this is presented in Appendix A, Strength of Passwords.\n3.1.1.2. Password Verifiers\nThe following requirements apply to passwords.\n1. Verifiers and CSPs SHALL  require passwords that are used as a single-factor \nauthentication mechanism to be a minimum of 15 characters in length. Verifiers \nand CSPs MAY  allow passwords that are only used as part of multi-factor \nauthentication processes to be shorter but SHALL  require them to be a minimum \nof eight characters in length.\n2. Verifiers and CSPs SHOULD  permit a maximum password length of at least 64 \ncharacters.\n3. Verifiers and CSPs SHOULD  accept all printing ASCII [RFC20] characters and the \nspace character in passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code poi"
+        },
+        {
+          "citation": "S2",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 98,
+          "text": "strength [Strength]\n[Composition]. Passwords that are too short yield to brute-force attacks and dictionary \nattacks. The minimum password length required depends on the threat model being \naddressed. Online attacks in which the attacker attempts to log in by guessing the \npassword can be mitigated by limiting the permitted login attempt rate. To prevent an \nattacker (or a persistent claimant with poor typing skills) from quickly inflicting a denial-\nof-service attack on the subscriber by making many incorrect guesses, passwords need \nto be complex enough that a reasonable number of attempts can be permitted with a \nlow probability of a successful guess, and rate limiting, as described in Sec. 3.2.2 can be \napplied before there is a significant chance of a successful guess.\n87"
+        },
+        {
+          "citation": "S3",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 17,
+          "text": "hentication (Sec. 3.1.7)\nWhen a combination of two single-factor authenticators is used, the combination SHALL  \ninclude one physical authenticator (i.e., \u201csomething you have\u201d) from the following list in \nconjunction with either a password (Sec. 3.1.1) or a biometric comparison:\n\u2022 Look-up secret (Sec. 3.1.2)\n\u2022 Out-of-band device (Sec. 3.1.3)\n\u2022 Single-factor OTP (Sec. 3.1.4)\n\u2022 Single-factor cryptographic authentication (Sec. 3.1.6)\n6"
+        },
+        {
+          "citation": "S4",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 17,
+          "text": "Approved cryptographic techniques are required.\n2.2.1. Permitted Authenticator Types\nAt AAL2, authentication SHALL  use either a multi-factor authenticator or a combination \nof two separate authentication factors. A multi-factor authenticator requires two factors \nto execute a single authentication event, such as a cryptographically secure device with \nan integrated biometric sensor that is required to activate the device. Authenticator \nrequirements are specified in Sec. 3.\nWhen a multi-factor authenticator is used, any of the following MAY  be used:\n\u2022 Multi-factor out-of-band authenticator (Sec. 3.1.3.4)\n\u2022 Multi-factor OTP (Sec. 3.1.5)\n\u2022 Multi-factor cryptographic authentication (Sec. 3.1.7)\nWhen a combination of two single-factor authenticators is used, the combination SHALL  \ninclude"
+        }
+      ],
+      "label": "contradicted",
+      "rationale": "S1 requires a minimum of 15 characters.",
+      "expected": "contradicted",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "onale for this is presented in Appendix A, Strength of Passwords.\n3.1.1.2. Password Verifiers\nThe following requirements apply to passwords.\n1. Verifiers and CSPs SHALL  require passwords that are used as a single-factor \nauthentication mechanism to be a minimum of 15 characters in length. Verifiers \nand CSPs MAY  allow passwords that are only used as part of multi-factor \nauthentication processes to be shorter but SHALL  require them to be a minimum \nof eight characters in length.\n2. Verifiers and CSPs SHOULD  permit a maximum password length of at least 64 \ncharacters.\n3. Verifiers and CSPs SHOULD  accept all printing ASCII [RFC20] characters and the \nspace character in passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code poi",
+            "hypothesis": "Question: What is the minimum password length when a password is used as a single-factor authentication mechanism?\nAnswer: Single-factor passwords need only 6 characters .",
+            "token_count": 241,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.35619008932689417,
+              "supported": 0.036110798481780663,
+              "insufficient_evidence": 0.6076991121913252
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "counter-evaluation",
+      "origin": "assistant-authored counterfactual with unchanged real evidence",
+      "row_index": 26,
+      "question": "How often must an evaluation of each powered industrial truck operator's performance be conducted?",
+      "answer": "Operator performance must be evaluated at least every five years [S1].",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "(iii) An evaluation of each powered industrial truck operator's performance shall be conducted at least once every three years."
+        },
+        {
+          "citation": "S2",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "(iii) All operator training and evaluation shall be conducted by persons who have the knowledge, training, and experience to train powered industrial truck operators and evaluate their competence."
+        },
+        {
+          "citation": "S3",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "(4) Refresher training and evaluation. (i) Refresher training, including an evaluation of the effectiveness of that training, shall be conducted as required by paragraph (l)(4)(ii) to ensure that the operator has the knowledge and skills needed to operate the powered industrial truck safely."
+        },
+        {
+          "citation": "S4",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "(l) Operator training. (1) Safe operation. (i) The employer shall ensure that each powered industrial truck operator is competent to operate a powered industrial truck safely, as demonstrated by the successful completion of the training and evaluation specified in this paragraph (l)."
+        }
+      ],
+      "label": "contradicted",
+      "rationale": "S1 requires evaluation at least once every three years.",
+      "expected": "contradicted",
+      "judgment": {
+        "status": "judged",
+        "verdict": "contradicted",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "(iii) An evaluation of each powered industrial truck operator's performance shall be conducted at least once every three years.",
+            "hypothesis": "Question: How often must an evaluation of each powered industrial truck operator's performance be conducted?\nAnswer: Operator performance must be evaluated at least every five years .",
+            "token_count": 59,
+            "verdict": "contradicted",
+            "scores": {
+              "contradicted": 0.889590116978175,
+              "supported": 0.02292049797636186,
+              "insufficient_evidence": 0.08748938504546304
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "unsupported-bank",
+      "origin": "assistant-authored counterfactual with unchanged real evidence",
+      "row_index": 1,
+      "question": "Under an accountable plan, within how many days must you return any excess reimbursement?",
+      "answer": "The company payroll bank is Northstar Bank [S3].",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 43,
+          "text": "non-\naccountable plan (discussed later).\nFailure to return excess reimbursements. If you are \nreimbursed under an accountable plan, but you fail to re-\nturn, within a reasonable time, any amounts in excess of \nthe substantiated amounts, the amounts paid in excess of \nthe substantiated expenses are treated as paid under a \nnonaccountable plan. See Reasonable period of time , \nearlier, and Returning Excess Reimbursements, later.\nReimbursement of nondeductible expenses.  Y ou \nmay be reimbursed under your employer\u2019s accountable \nplan for expenses related to that employer\u2019s business, \nsome of which would be allowable as employee business \nexpense deductions and some of which wouldn\u2019t. The re-\nimbursements you receive for the nondeductible expen-\nses don\u2019t meet rule (1) for accountable plans, a"
+        },
+        {
+          "citation": "S2",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 46,
+          "text": "mized deduction.\nReturning Excess Reimbursements\nUnder an accountable plan, you are required to return any \nexcess reimbursement or other expense allowances for \nyour business expenses to the person paying the reim-\nbursement or allowance. Excess reimbursement means \nany amount for which you didn\u2019t adequately account within \na reasonable period of time. For example, if you received \na travel advance and you didn\u2019t spend all the money on \nbusiness-related expenses or you don\u2019t have proof of all \nyour expenses, you have an excess reimbursement.\nAdequate accounting  and reasonable period of time \nwere discussed earlier in this chapter.\nTravel advance. Y ou receive a travel advance if your em-\nployer provides you with an expense allowance before you \nactually have the expense, and the allowanc"
+        },
+        {
+          "citation": "S3",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 43,
+          "text": "ithin the times specified in the following list will be trea-\nted as taking place within a reasonable period of time.\n\u2022 Y ou receive an advance within 30 days of the time you \nhave an expense.\n\u2022 Y ou adequately account for your expenses within 60 \ndays after they were paid or incurred.\n\u2022 Y ou return any excess reimbursement within 120 days \nafter the expense was paid or incurred.\n\u2022 Y ou are given a periodic statement (at least quarterly) \nthat asks you to either return or adequately account for \noutstanding advances and you comply within 120 \ndays of the statement.\nEmployee meets accountable plan rules.  If you meet \nthe three rules for accountable plans, your employer \nshouldn\u2019t include any reimbursements in your income in \nbox 1 of your Form W-2. If your expenses equal your reim-\nburseme"
+        },
+        {
+          "citation": "S4",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 42,
+          "text": "ly account to your employer for \nthese expenses within a reasonable period of time.\n3. Y ou must return any excess reimbursement or allow-\nance within a reasonable period of time.\n42 Chapter 6 How T o Report Publication 463 (2025)"
+        }
+      ],
+      "label": "insufficient_evidence",
+      "rationale": "No bank is identified in the expense timing passage.",
+      "expected": "insufficient_evidence",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S3",
+            "premise": "ithin the times specified in the following list will be trea-\nted as taking place within a reasonable period of time.\n\u2022 Y ou receive an advance within 30 days of the time you \nhave an expense.\n\u2022 Y ou adequately account for your expenses within 60 \ndays after they were paid or incurred.\n\u2022 Y ou return any excess reimbursement within 120 days \nafter the expense was paid or incurred.\n\u2022 Y ou are given a periodic statement (at least quarterly) \nthat asks you to either return or adequately account for \noutstanding advances and you comply within 120 \ndays of the statement.\nEmployee meets accountable plan rules.  If you meet \nthe three rules for accountable plans, your employer \nshouldn\u2019t include any reimbursements in your income in \nbox 1 of your Form W-2. If your expenses equal your reim-\nburseme",
+            "hypothesis": "Question: Under an accountable plan, within how many days must you return any excess reimbursement?\nAnswer: The company payroll bank is Northstar Bank .",
+            "token_count": 228,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.11583319066305912,
+              "supported": 0.0043076102295204885,
+              "insufficient_evidence": 0.8798591991074204
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "unsupported-vacation",
+      "origin": "assistant-authored counterfactual with unchanged real evidence",
+      "row_index": 2,
+      "question": "What is the high-low per diem rate for high-cost localities effective October 1, 2025?",
+      "answer": "Federal employees receive 25 paid vacation days per year [S1].",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 48,
+          "text": "-cost localities \nthat are eligible for $319 (which includes $86 for meals \nand incidental expenses (M&IE)) per diem, effective Octo-\nber 1, 2024. For travel on or after October 1, 2024, all \nother localities within the continental United States \n(CONUS) are eligible for $225 (which includes $74 for \nM&IE) per diem under the high-low method.\nNotice 2025 -54, available at IRS.gov/irb/\n2025-41_IRB#NOT -2025-54, lists the high -cost localities \nthat are eligible for $319 (which includes $86 for M&IE) \nper diem, effective October 1, 2025. For travel on or after \nOctober 1, 2025, the per diem for all other localities re-\nmained $225 (which includes $74 for M&IE).\nRegular federal per diem rate method. Regular federal \nper diem rates are published by the General Services Ad-\nministration (GSA)."
+        },
+        {
+          "citation": "S2",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 44,
+          "text": "gh -cost loca-\ntions. All other areas have a per diem amount of $225 \n(which includes $74 for M&IE). For more information, see \nNotice 2024 -68, which can be found at IRS.gov/irb/\n2024-41_IRB#NOT -2024-68.\nEffective October 1, 2025, the per diem rate for certain \nhigh-cost locations remained $319 (which includes $86 for \nM&IE). The rate for all other locations remained $225 \n(which includes $74 for M&IE). For more information, see \nNotice 2025 -54, which can be found at IRS.gov/irb/\n2025-41_IRB#NOT -2025-54, and Revenue Procedure \n2019-48 at IRS.gov/irb/2019-51_IRB#REV-\nPROC-2019-48.\nCaution: Employers who didn\u2019t use the high -low \nmethod during the first 9 months of 2025 can\u2019t begin to \nuse it before 2026.\nProrating the standard meal allowance on partial \ndays of travel. The standard meal"
+        },
+        {
+          "citation": "S3",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 44,
+          "text": "ing.\n\u2022 Doesn\u2019t have a reasonable belief that you had (or will \nhave) lodging expenses, such as when you stay with \nfriends or relatives or sleep in the cab of your truck.\n\u2022 Figures the allowance on a basis similar to that used \nin figuring your compensation, such as number of \nhours worked or miles traveled.\nHigh-low rate. This is a simplified method of figuring \nthe federal per diem rate for travel within the continental \nUnited States. It eliminates the need to keep a current list \nof the per diem rates for each city.\nUnder the high -low method, the per diem amount for \ntravel during January through September of 2025 is $319 \n(which includes $86 for M&IE) for certain high -cost loca-\ntions. All other areas have a per diem amount of $225 \n(which includes $74 for M&IE). For more informatio"
+        },
+        {
+          "citation": "S4",
+          "filename": "irs-publication-463-travel-gift-car-expenses.pdf",
+          "page": 48,
+          "text": "ral per diem rate method. Regular federal \nper diem rates are published by the General Services Ad-\nministration (GSA). Both tables include the separate rate \nfor M&IE for each locality. The rates listed for FY2025 at \nGSA.gov/travel/plan-book/per-diem-rates are effective Oc-\ntober 1, 2024, and those listed for FY2026 are effective \nOctober 1, 2025. The standard rate for all locations within \nCONUS not specifically listed for FY2025 is $178 ($110 \nfor lodging and $68 for M&IE). For FY2026, this rate re-\nmains $178 ($110 for lodging and $68 for M&IE).\nTransition Rules\nThe transition period covers the last 3 months of the cal-\nendar year, from the time that new rates are effective (gen-\nerally, October 1) through December 31. During this pe-\nriod, you may generally change to the new rates or"
+        }
+      ],
+      "label": "insufficient_evidence",
+      "rationale": "The passage discusses travel per diem rates, not leave entitlements.",
+      "expected": "insufficient_evidence",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "-cost localities \nthat are eligible for $319 (which includes $86 for meals \nand incidental expenses (M&IE)) per diem, effective Octo-\nber 1, 2024. For travel on or after October 1, 2024, all \nother localities within the continental United States \n(CONUS) are eligible for $225 (which includes $74 for \nM&IE) per diem under the high-low method.\nNotice 2025 -54, available at IRS.gov/irb/\n2025-41_IRB#NOT -2025-54, lists the high -cost localities \nthat are eligible for $319 (which includes $86 for M&IE) \nper diem, effective October 1, 2025. For travel on or after \nOctober 1, 2025, the per diem for all other localities re-\nmained $225 (which includes $74 for M&IE).\nRegular federal per diem rate method. Regular federal \nper diem rates are published by the General Services Ad-\nministration (GSA).",
+            "hypothesis": "Question: What is the high-low per diem rate for high-cost localities effective October 1, 2025?\nAnswer: Federal employees receive 25 paid vacation days per year .",
+            "token_count": 276,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.17195617231987928,
+              "supported": 0.02889029442116585,
+              "insufficient_evidence": 0.7991535332589548
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "unsupported-password-storage",
+      "origin": "assistant-authored counterfactual with unchanged real evidence",
+      "row_index": 11,
+      "question": "What is the minimum password length when a password is used as a single-factor authentication mechanism?",
+      "answer": "Passwords are stored using AES-256 encryption [S1].",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 25,
+          "text": "onale for this is presented in Appendix A, Strength of Passwords.\n3.1.1.2. Password Verifiers\nThe following requirements apply to passwords.\n1. Verifiers and CSPs SHALL  require passwords that are used as a single-factor \nauthentication mechanism to be a minimum of 15 characters in length. Verifiers \nand CSPs MAY  allow passwords that are only used as part of multi-factor \nauthentication processes to be shorter but SHALL  require them to be a minimum \nof eight characters in length.\n2. Verifiers and CSPs SHOULD  permit a maximum password length of at least 64 \ncharacters.\n3. Verifiers and CSPs SHOULD  accept all printing ASCII [RFC20] characters and the \nspace character in passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code poi"
+        },
+        {
+          "citation": "S2",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 98,
+          "text": "strength [Strength]\n[Composition]. Passwords that are too short yield to brute-force attacks and dictionary \nattacks. The minimum password length required depends on the threat model being \naddressed. Online attacks in which the attacker attempts to log in by guessing the \npassword can be mitigated by limiting the permitted login attempt rate. To prevent an \nattacker (or a persistent claimant with poor typing skills) from quickly inflicting a denial-\nof-service attack on the subscriber by making many incorrect guesses, passwords need \nto be complex enough that a reasonable number of attempts can be permitted with a \nlow probability of a successful guess, and rate limiting, as described in Sec. 3.2.2 can be \napplied before there is a significant chance of a successful guess.\n87"
+        },
+        {
+          "citation": "S3",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 17,
+          "text": "hentication (Sec. 3.1.7)\nWhen a combination of two single-factor authenticators is used, the combination SHALL  \ninclude one physical authenticator (i.e., \u201csomething you have\u201d) from the following list in \nconjunction with either a password (Sec. 3.1.1) or a biometric comparison:\n\u2022 Look-up secret (Sec. 3.1.2)\n\u2022 Out-of-band device (Sec. 3.1.3)\n\u2022 Single-factor OTP (Sec. 3.1.4)\n\u2022 Single-factor cryptographic authentication (Sec. 3.1.6)\n6"
+        },
+        {
+          "citation": "S4",
+          "filename": "nist-sp-800-63b-4-authentication.pdf",
+          "page": 17,
+          "text": "Approved cryptographic techniques are required.\n2.2.1. Permitted Authenticator Types\nAt AAL2, authentication SHALL  use either a multi-factor authenticator or a combination \nof two separate authentication factors. A multi-factor authenticator requires two factors \nto execute a single authentication event, such as a cryptographically secure device with \nan integrated biometric sensor that is required to activate the device. Authenticator \nrequirements are specified in Sec. 3.\nWhen a multi-factor authenticator is used, any of the following MAY  be used:\n\u2022 Multi-factor out-of-band authenticator (Sec. 3.1.3.4)\n\u2022 Multi-factor OTP (Sec. 3.1.5)\n\u2022 Multi-factor cryptographic authentication (Sec. 3.1.7)\nWhen a combination of two single-factor authenticators is used, the combination SHALL  \ninclude"
+        }
+      ],
+      "label": "insufficient_evidence",
+      "rationale": "The cited passage states password rules but gives no storage encryption algorithm.",
+      "expected": "insufficient_evidence",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "onale for this is presented in Appendix A, Strength of Passwords.\n3.1.1.2. Password Verifiers\nThe following requirements apply to passwords.\n1. Verifiers and CSPs SHALL  require passwords that are used as a single-factor \nauthentication mechanism to be a minimum of 15 characters in length. Verifiers \nand CSPs MAY  allow passwords that are only used as part of multi-factor \nauthentication processes to be shorter but SHALL  require them to be a minimum \nof eight characters in length.\n2. Verifiers and CSPs SHOULD  permit a maximum password length of at least 64 \ncharacters.\n3. Verifiers and CSPs SHOULD  accept all printing ASCII [RFC20] characters and the \nspace character in passwords.\n4. Verifiers and CSPs SHOULD  accept Unicode [ISO/ISC 10646] characters in \npasswords. Each Unicode code poi",
+            "hypothesis": "Question: What is the minimum password length when a password is used as a single-factor authentication mechanism?\nAnswer: Passwords are stored using AES-256 encryption .",
+            "token_count": 242,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.07273113276635755,
+              "supported": 0.003898505924002147,
+              "insufficient_evidence": 0.9233703613096402
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    },
+    {
+      "id": "unsupported-salary",
+      "origin": "assistant-authored counterfactual with unchanged real evidence",
+      "row_index": 26,
+      "question": "How often must an evaluation of each powered industrial truck operator's performance be conducted?",
+      "answer": "Forklift operators earn 30 dollars per hour [S1].",
+      "passages": [
+        {
+          "citation": "S1",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "(iii) An evaluation of each powered industrial truck operator's performance shall be conducted at least once every three years."
+        },
+        {
+          "citation": "S2",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "(iii) All operator training and evaluation shall be conducted by persons who have the knowledge, training, and experience to train powered industrial truck operators and evaluate their competence."
+        },
+        {
+          "citation": "S3",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "(4) Refresher training and evaluation. (i) Refresher training, including an evaluation of the effectiveness of that training, shall be conducted as required by paragraph (l)(4)(ii) to ensure that the operator has the knowledge and skills needed to operate the powered industrial truck safely."
+        },
+        {
+          "citation": "S4",
+          "filename": "29-cfr-1910.178-powered-industrial-trucks.html",
+          "page": 1,
+          "text": "(l) Operator training. (1) Safe operation. (i) The employer shall ensure that each powered industrial truck operator is competent to operate a powered industrial truck safely, as demonstrated by the successful completion of the training and evaluation specified in this paragraph (l)."
+        }
+      ],
+      "label": "insufficient_evidence",
+      "rationale": "The cited sentence specifies evaluation frequency, not pay.",
+      "expected": "insufficient_evidence",
+      "judgment": {
+        "status": "judged",
+        "verdict": "insufficient_evidence",
+        "pairs": [
+          {
+            "citation": "S1",
+            "premise": "(iii) An evaluation of each powered industrial truck operator's performance shall be conducted at least once every three years.",
+            "hypothesis": "Question: How often must an evaluation of each powered industrial truck operator's performance be conducted?\nAnswer: Forklift operators earn 30 dollars per hour .",
+            "token_count": 57,
+            "verdict": "insufficient_evidence",
+            "scores": {
+              "contradicted": 0.015489880558971785,
+              "supported": 0.0022140972546364724,
+              "insufficient_evidence": 0.9822960221863918
+            }
+          }
+        ],
+        "review_required": true,
+        "atomic_claim_completeness": "not_measured"
+      }
+    }
+  ],
+  "dataset_sha256": "cf425d0dde292aca14f6963fb466116927087688728c3ccc19c8e724608c6fe9"
+}

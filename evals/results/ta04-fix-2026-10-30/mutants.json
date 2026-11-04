@@ -1,0 +1,395 @@
+{
+  "M1 policy does not catch TokenBudgetExhausted": {
+    "killed": true,
+    "expected_killers": [
+      "T1",
+      "T2",
+      "T5"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T1",
+      "T10b",
+      "T2",
+      "T5",
+      "T6",
+      "T7",
+      "T7b",
+      "T7c",
+      "T8",
+      "T9",
+      "T9b"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[classification-False]",
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[classification-True]",
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[extraction-False]",
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[extraction-True]",
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[output_schema-False]",
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[output_schema-True]",
+      "backend/tests/test_token_budget_recovery.py::test_t1_a_token_refused_node_that_recovers_marks_the_run_incomplete[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t1_a_token_refused_node_that_recovers_marks_the_run_incomplete[route]",
+      "backend/tests/test_token_budget_recovery.py::test_t2_the_recovered_event_keeps_the_typed_token_exhaustion[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t2_the_recovered_event_keeps_the_typed_token_exhaustion[route]",
+      "backend/tests/test_token_budget_recovery.py::test_t5_the_durable_run_stores_a_budget_cause[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t5_the_durable_run_stores_a_budget_cause[route]",
+      "backend/tests/test_token_budget_recovery.py::test_t6_resume_after_the_recovery_reaches_the_same_verdict_without_a_new_call",
+      "backend/tests/test_token_budget_recovery.py::test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[stop]",
+      "backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[stop]",
+      "backend/tests/test_token_budget_recovery.py::test_t7c_a_compacted_halt_survives_crash_and_resume",
+      "backend/tests/test_token_budget_recovery.py::test_t8_a_query_whose_repair_is_refused_is_a_budget_failure",
+      "backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[classification]",
+      "backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[extraction]",
+      "backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[output_schema]",
+      "backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[classification]",
+      "backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[extraction]",
+      "backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[output_schema]"
+    ],
+    "summary": "25 failed, 104 passed in 8.98s"
+  },
+  "M2 llm_node raises a plain ValueError": {
+    "killed": true,
+    "expected_killers": [
+      "T1",
+      "T2",
+      "T11"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T1",
+      "T11",
+      "T11b",
+      "T14",
+      "T14b",
+      "T2",
+      "T5",
+      "T6",
+      "T7",
+      "T7b",
+      "T7c",
+      "T8",
+      "T9",
+      "T9b",
+      "T9c",
+      "T9d"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t11_a_request_reader_repair_refusal_keeps_its_type",
+      "backend/tests/test_token_budget_recovery.py::test_t11b_a_request_router_repair_refusal_keeps_its_type",
+      "backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_the_budget_abstention[repair]",
+      "backend/tests/test_token_budget_recovery.py::test_t14b_an_unchanged_source_is_checked_exactly_once[repair]",
+      "backend/tests/test_token_budget_recovery.py::test_t1_a_token_refused_node_that_recovers_marks_the_run_incomplete[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t1_a_token_refused_node_that_recovers_marks_the_run_incomplete[route]",
+      "backend/tests/test_token_budget_recovery.py::test_t2_the_recovered_event_keeps_the_typed_token_exhaustion[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t2_the_recovered_event_keeps_the_typed_token_exhaustion[route]",
+      "backend/tests/test_token_budget_recovery.py::test_t5_the_durable_run_stores_a_budget_cause[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t5_the_durable_run_stores_a_budget_cause[route]",
+      "backend/tests/test_token_budget_recovery.py::test_t6_resume_after_the_recovery_reaches_the_same_verdict_without_a_new_call",
+      "backend/tests/test_token_budget_recovery.py::test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[stop]",
+      "backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[stop]",
+      "backend/tests/test_token_budget_recovery.py::test_t7c_a_compacted_halt_survives_crash_and_resume",
+      "backend/tests/test_token_budget_recovery.py::test_t8_a_query_whose_repair_is_refused_is_a_budget_failure",
+      "backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[classification]",
+      "backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[extraction]",
+      "backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[output_schema]",
+      "backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[classification]",
+      "backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[extraction]",
+      "backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[output_schema]",
+      "backend/tests/test_token_budget_recovery.py::test_t9c_a_free_text_agent_whose_repair_is_refused_returns_the_budget_abstention",
+      "backend/tests/test_token_budget_recovery.py::test_t9d_a_free_text_agent_with_no_evidence_whose_repair_is_refused_keeps_the_no_evidence_abstention"
+    ],
+    "summary": "25 failed, 104 passed in 8.25s"
+  },
+  "M3 no re-raise in finalize_grounded_answer": {
+    "killed": true,
+    "expected_killers": [
+      "T8",
+      "T9b",
+      "T9c"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T14",
+      "T14b",
+      "T8",
+      "T9b",
+      "T9c",
+      "T9d"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_the_budget_abstention[repair]",
+      "backend/tests/test_token_budget_recovery.py::test_t14b_an_unchanged_source_is_checked_exactly_once[repair]",
+      "backend/tests/test_token_budget_recovery.py::test_t8_a_query_whose_repair_is_refused_is_a_budget_failure",
+      "backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[classification]",
+      "backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[extraction]",
+      "backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[output_schema]",
+      "backend/tests/test_token_budget_recovery.py::test_t9c_a_free_text_agent_whose_repair_is_refused_returns_the_budget_abstention",
+      "backend/tests/test_token_budget_recovery.py::test_t9d_a_free_text_agent_with_no_evidence_whose_repair_is_refused_keeps_the_no_evidence_abstention"
+    ],
+    "summary": "8 failed, 121 passed in 8.32s"
+  },
+  "M4 no re-raise in the structured-only repair": {
+    "killed": true,
+    "expected_killers": [
+      "T9"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T9"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[classification]",
+      "backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[extraction]",
+      "backend/tests/test_token_budget_recovery.py::test_t9_a_structured_agent_without_evidence_fails_typed_when_its_repair_is_refused[output_schema]"
+    ],
+    "summary": "3 failed, 126 passed in 8.31s"
+  },
+  "M5 a token refusal never counts its attempt": {
+    "killed": true,
+    "expected_killers": [
+      "T7",
+      "T8"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T7",
+      "T7b",
+      "T7c",
+      "T8"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[stop]",
+      "backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[stop]",
+      "backend/tests/test_token_budget_recovery.py::test_t7c_a_compacted_halt_survives_crash_and_resume",
+      "backend/tests/test_token_budget_recovery.py::test_t8_a_query_whose_repair_is_refused_is_a_budget_failure"
+    ],
+    "summary": "6 failed, 123 passed in 8.18s"
+  },
+  "M6 a token refusal always counts its attempt": {
+    "killed": true,
+    "expected_killers": [
+      "T1"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T1"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t1_a_token_refused_node_that_recovers_marks_the_run_incomplete[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t1_a_token_refused_node_that_recovers_marks_the_run_incomplete[route]"
+    ],
+    "summary": "2 failed, 127 passed in 8.33s"
+  },
+  "M7 agent with evidence calls the model again at the step": {
+    "killed": true,
+    "expected_killers": [
+      "T10"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T10",
+      "T10c",
+      "T14",
+      "T14b"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t10_a_free_text_agent_with_evidence_makes_no_call_after_exhaustion",
+      "backend/tests/test_token_budget_recovery.py::test_t10c_a_nested_free_text_specialist_returns_the_budget_abstention",
+      "backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_a_nested_specialist_budget_abstention",
+      "backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_the_budget_abstention[step]",
+      "backend/tests/test_token_budget_recovery.py::test_t14b_an_unchanged_source_is_checked_exactly_once[step]"
+    ],
+    "summary": "5 failed, 124 passed in 8.34s"
+  },
+  "M8 agent boundary does not catch a refused repair": {
+    "killed": true,
+    "expected_killers": [
+      "T9c"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T14",
+      "T14b",
+      "T9c",
+      "T9d"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_the_budget_abstention[repair]",
+      "backend/tests/test_token_budget_recovery.py::test_t14b_an_unchanged_source_is_checked_exactly_once[repair]",
+      "backend/tests/test_token_budget_recovery.py::test_t9c_a_free_text_agent_whose_repair_is_refused_returns_the_budget_abstention",
+      "backend/tests/test_token_budget_recovery.py::test_t9d_a_free_text_agent_with_no_evidence_whose_repair_is_refused_keeps_the_no_evidence_abstention"
+    ],
+    "summary": "4 failed, 125 passed in 8.31s"
+  },
+  "M9 budget_abstention uses the no-evidence text": {
+    "killed": true,
+    "expected_killers": [
+      "T9c",
+      "T10"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T10",
+      "T10c",
+      "T14b",
+      "T9c"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t10_a_free_text_agent_with_evidence_makes_no_call_after_exhaustion",
+      "backend/tests/test_token_budget_recovery.py::test_t10c_a_nested_free_text_specialist_returns_the_budget_abstention",
+      "backend/tests/test_token_budget_recovery.py::test_t14b_an_unchanged_source_is_checked_exactly_once[repair]",
+      "backend/tests/test_token_budget_recovery.py::test_t14b_an_unchanged_source_is_checked_exactly_once[step]",
+      "backend/tests/test_token_budget_recovery.py::test_t9c_a_free_text_agent_whose_repair_is_refused_returns_the_budget_abstention"
+    ],
+    "summary": "5 failed, 124 passed in 8.29s"
+  },
+  "M10 replay ignores budget_halt": {
+    "killed": true,
+    "expected_killers": [
+      "T7b"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T7b",
+      "T7c"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[stop]",
+      "backend/tests/test_token_budget_recovery.py::test_t7c_a_compacted_halt_survives_crash_and_resume"
+    ],
+    "summary": "3 failed, 126 passed in 8.36s"
+  },
+  "M11 compact drops budget_halt": {
+    "killed": true,
+    "expected_killers": [
+      "T7c"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T7c"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t7c_a_compacted_halt_survives_crash_and_resume",
+      "backend/tests/test_token_budget_recovery.py::test_t7c_compact_keeps_the_budget_halt_within_its_reserve"
+    ],
+    "summary": "2 failed, 127 passed in 8.38s"
+  },
+  "M12 budget_abstention skips the source check": {
+    "killed": true,
+    "expected_killers": [
+      "T14"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T10c",
+      "T14",
+      "T14b"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t10c_a_nested_free_text_specialist_returns_the_budget_abstention",
+      "backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_a_nested_specialist_budget_abstention",
+      "backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_the_budget_abstention[repair]",
+      "backend/tests/test_token_budget_recovery.py::test_t14_a_removed_source_fails_the_budget_abstention[step]",
+      "backend/tests/test_token_budget_recovery.py::test_t14b_an_unchanged_source_is_checked_exactly_once[repair]",
+      "backend/tests/test_token_budget_recovery.py::test_t14b_an_unchanged_source_is_checked_exactly_once[step]"
+    ],
+    "summary": "6 failed, 123 passed in 8.29s"
+  },
+  "M13 B also applied to structured agents": {
+    "killed": true,
+    "expected_killers": [
+      "T9b",
+      "T10b"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T10b",
+      "T9b"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[classification-False]",
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[classification-True]",
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[extraction-False]",
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[extraction-True]",
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[output_schema-False]",
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[output_schema-True]",
+      "backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[classification]",
+      "backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[extraction]",
+      "backend/tests/test_token_budget_recovery.py::test_t9b_a_structured_agent_with_evidence_fails_typed_when_its_repair_is_refused[output_schema]"
+    ],
+    "summary": "9 failed, 120 passed in 8.31s"
+  },
+  "M14 summary reason comes from the item error text": {
+    "killed": true,
+    "expected_killers": [
+      "T7c"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T7",
+      "T7b",
+      "T7c"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t7_a_loop_refused_by_tokens_after_work_halts_with_the_budget_reason[stop]",
+      "backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[continue]",
+      "backend/tests/test_token_budget_recovery.py::test_t7b_resume_after_the_halted_item_is_saved_repeats_no_work[stop]",
+      "backend/tests/test_token_budget_recovery.py::test_t7c_a_compacted_halt_survives_crash_and_resume"
+    ],
+    "summary": "5 failed, 124 passed in 8.35s"
+  },
+  "M15 structured check after the no-evidence branch": {
+    "killed": true,
+    "expected_killers": [
+      "T10b"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T10b"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[classification-False]",
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[extraction-False]",
+      "backend/tests/test_token_budget_recovery.py::test_t10b_a_structured_agent_fails_typed_at_a_step_with_or_without_evidence[output_schema-False]"
+    ],
+    "summary": "3 failed, 126 passed in 8.36s"
+  },
+  "M16 refused repair without evidence returns the budget abstention": {
+    "killed": true,
+    "expected_killers": [
+      "T9d"
+    ],
+    "expected_missing": [],
+    "new_tests_failed": [
+      "T9d"
+    ],
+    "other_tests_failed": [],
+    "failed_tests": [
+      "backend/tests/test_token_budget_recovery.py::test_t9d_a_free_text_agent_with_no_evidence_whose_repair_is_refused_keeps_the_no_evidence_abstention"
+    ],
+    "summary": "1 failed, 128 passed in 8.36s"
+  }
+}

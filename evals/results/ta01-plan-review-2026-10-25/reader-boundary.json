@@ -1,0 +1,7 @@
+{
+  "provider_calls": 1,
+  "repair_attempted": false,
+  "error": "Ollama returned no text. Choose a chat-capable model.",
+  "accounted_tokens": 0,
+  "plan_unchanged": true
+}

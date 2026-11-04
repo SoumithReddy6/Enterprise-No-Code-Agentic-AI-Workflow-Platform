@@ -1,0 +1,66 @@
+{
+  "rows": [
+    {
+      "case": "decimal_text_control",
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "case": "1000.00000000000001",
+      "message": "{\"amount\":1000.00000000000001}",
+      "operator": "gt",
+      "target": "1000",
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "case": "9007199254740993.0",
+      "message": "{\"amount\":9007199254740993.0}",
+      "operator": "gt",
+      "target": "9007199254740992",
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "case": "0.100000000000000005",
+      "message": "{\"amount\":0.100000000000000005}",
+      "operator": "eq",
+      "target": "0.1",
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "case": "1e309",
+      "message": "{\"amount\":1e309}",
+      "operator": "gt",
+      "target": "1e308",
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "case": "compiled_branch",
+      "expected": "true",
+      "actual": "true",
+      "executed": [
+        "input",
+        "check",
+        "yes"
+      ],
+      "passed": true
+    },
+    {
+      "case": "extraction_agent_to_condition",
+      "provider_text": "{\"amount\":1000.00000000000001}",
+      "extracted_text": "{\"amount\": 1000.00000000000001}",
+      "expected": "true",
+      "actual": "true",
+      "passed": true
+    }
+  ],
+  "passed": true
+}

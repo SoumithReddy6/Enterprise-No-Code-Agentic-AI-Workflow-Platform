@@ -1,0 +1,438 @@
+{
+  "version": 1,
+  "suite_sha256": "d4d8f48b1902a839c1be95814df6df4e42af081ac2b41f5e810323cce1974100",
+  "labelled_before_measurement": true,
+  "notes": [
+    "Companion semantic oracle; original suite and routing labels unchanged.",
+    "Expected values are hand-labelled from the source messages, never derived from model outputs.",
+    "Support category inference and yes/no field remapping are not established by the source-field checker; manual review is disclosed, not waived.",
+    "All natural-language cases may require review under the unchanged editor rules. This does not excuse low request admission."
+  ],
+  "cases": {
+    "purchase-proceed-1": {
+      "expected_value": {
+        "item": "laptops",
+        "quantity": 3,
+        "unit_price": 450
+      },
+      "safe_branch": "true",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "purchase-proceed-2": {
+      "expected_value": {
+        "item": "laptops",
+        "quantity": 3,
+        "unit_price": 450
+      },
+      "safe_branch": "true",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "purchase-proceed-3": {
+      "expected_value": {
+        "item": "monitor",
+        "quantity": 1,
+        "unit_price": 1200
+      },
+      "safe_branch": "true",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "purchase-proceed-4": {
+      "expected_value": {
+        "item": "chairs",
+        "quantity": 4,
+        "unit_price": 300
+      },
+      "safe_branch": "true",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "purchase-proceed-5": {
+      "expected_value": {
+        "item": "licences",
+        "quantity": 7,
+        "unit_price": 142.86
+      },
+      "safe_branch": "false",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "purchase-clarify-1": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "purchase-clarify-2": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "purchase-clarify-3": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "purchase-clarify-4": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "purchase-clarify-5": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "support-proceed-1": {
+      "expected_value": {
+        "summary": "my printer shows error E17",
+        "category": "technical"
+      },
+      "safe_branch": "false",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "support-proceed-2": {
+      "expected_value": {
+        "summary": "checkout returning HTTP 500",
+        "category": "technical"
+      },
+      "safe_branch": "false",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "support-proceed-3": {
+      "expected_value": {
+        "summary": "VPN disconnecting every minute",
+        "category": "technical"
+      },
+      "safe_branch": "false",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "support-proceed-4": {
+      "expected_value": {
+        "summary": "login failure on account ID A42",
+        "category": "account"
+      },
+      "safe_branch": "false",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "support-proceed-5": {
+      "expected_value": {
+        "summary": "damaged monitor delivered today",
+        "category": "technical"
+      },
+      "safe_branch": "false",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "support-clarify-1": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "support-clarify-2": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "support-clarify-3": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "support-clarify-4": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "support-clarify-5": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "refund-proceed-1": {
+      "expected_value": {
+        "order_id": "R123",
+        "amount": 45
+      },
+      "safe_branch": "true",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "refund-proceed-2": {
+      "expected_value": {
+        "order_id": "R124",
+        "amount": 120
+      },
+      "safe_branch": "false",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "refund-proceed-3": {
+      "expected_value": {
+        "order_id": "R125",
+        "amount": 0
+      },
+      "safe_branch": "true",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "refund-proceed-4": {
+      "expected_value": {
+        "order_id": "R126",
+        "amount": 15.5
+      },
+      "safe_branch": "true",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "refund-proceed-5": {
+      "expected_value": {
+        "order_id": "R127",
+        "amount": 300
+      },
+      "safe_branch": "false",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "refund-clarify-1": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "refund-clarify-2": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "refund-clarify-3": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "refund-clarify-4": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "refund-clarify-5": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "yes_no-proceed-1": {
+      "expected_value": {
+        "record_id": "A1",
+        "eligible": true
+      },
+      "safe_branch": "true",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "yes_no-proceed-2": {
+      "expected_value": {
+        "record_id": "A2",
+        "eligible": false
+      },
+      "safe_branch": "false",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "yes_no-proceed-3": {
+      "expected_value": {
+        "record_id": "T1",
+        "eligible": true
+      },
+      "safe_branch": "true",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "yes_no-proceed-4": {
+      "expected_value": {
+        "record_id": "O1",
+        "eligible": false
+      },
+      "safe_branch": "false",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "yes_no-proceed-5": {
+      "expected_value": {
+        "record_id": "D1",
+        "eligible": true
+      },
+      "safe_branch": "true",
+      "automatic_eligibility_expected": false,
+      "reason": "Natural-language role mapping or classification needs suitable independent evidence or explicit review; routing alone is insufficient."
+    },
+    "yes_no-clarify-1": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "yes_no-clarify-2": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "yes_no-clarify-3": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "yes_no-clarify-4": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "yes_no-clarify-5": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "out-of-scope-1": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "out-of-scope-2": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "out-of-scope-3": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "out-of-scope-4": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "out-of-scope-5": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "out-of-scope-6": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "out-of-scope-7": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "out-of-scope-8": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "out-of-scope-9": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "out-of-scope-10": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "prepared-reply-1": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "prepared-reply-2": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "prepared-reply-3": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "prepared-reply-4": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "prepared-reply-5": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "prepared-reply-6": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "prepared-reply-7": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "prepared-reply-8": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "prepared-reply-9": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    },
+    "prepared-reply-10": {
+      "expected_value": null,
+      "safe_branch": null,
+      "automatic_eligibility_expected": false,
+      "reason": "No business decision or delivery is allowed automatically for this input."
+    }
+  }
+}

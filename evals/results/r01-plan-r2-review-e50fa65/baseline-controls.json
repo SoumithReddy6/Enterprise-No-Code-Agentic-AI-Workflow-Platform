@@ -1,0 +1,79 @@
+{
+  "application_root": "/private/tmp/relay-r01-plan-baseline-avLClilm/backend/app",
+  "real_cases": [
+    {
+      "case": "loop_fresh",
+      "status": "success",
+      "error": "",
+      "provider_calls": 1,
+      "output": "[{'index': 0, 'status': 'success', 'value': 'Bluebird is the project codename. [S1]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}]",
+      "response_source_count": 1,
+      "verification_calls_after_resume": null,
+      "verification_calls_after_removal": null,
+      "response_checkpointed": true,
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "aff2950dcd224aaabe44ece7e40a1e7c"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "aff2950dcd224aaabe44ece7e40a1e7c"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "aff2950dcd224aaabe44ece7e40a1e7c"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "aff2950dcd224aaabe44ece7e40a1e7c"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_loop_unchanged",
+      "status": "success",
+      "error": "",
+      "provider_calls": 1,
+      "output": "[{'index': 0, 'status': 'success', 'value': 'Bluebird is the project codename. [unsupported reference]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}]",
+      "response_source_count": 0,
+      "verification_calls_after_resume": 0,
+      "verification_calls_after_removal": null,
+      "response_checkpointed": true,
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "335e89a7f22c422c8026a6b2765cc5fe"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "335e89a7f22c422c8026a6b2765cc5fe"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "335e89a7f22c422c8026a6b2765cc5fe"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "335e89a7f22c422c8026a6b2765cc5fe"
+          ]
+        }
+      ]
+    }
+  ]
+}

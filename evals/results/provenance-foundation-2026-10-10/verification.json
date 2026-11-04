@@ -1,0 +1,98 @@
+{
+  "base_commit": "dad766ed3302441d2ba2503b7457672cd3cba131",
+  "branch": "codex/retrieval-answerability-safety",
+  "python": "3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "scope": "Task 1 only; no admission/enforcement claim",
+  "backend": {
+    "passed_per_seed": 1245,
+    "hash_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "source_changed": []
+  },
+  "clean_export": {
+    "passed": 1245,
+    "exit_code": 0
+  },
+  "frontend": {
+    "unit_passed": 76,
+    "browser_passed": 11,
+    "typecheck": 0,
+    "lint": 0,
+    "build": 0
+  },
+  "production": {
+    "passed": 20,
+    "total": 20,
+    "source_changed": []
+  },
+  "mutations": {
+    "caught": 14,
+    "total": 14
+  },
+  "audit_defects_reproduced_after": 0,
+  "live": {
+    "count": 30,
+    "suite_identical": true,
+    "workflow_identical": true,
+    "model_identical": true,
+    "identical_answers": 30,
+    "identical_routes": 30,
+    "error_count_before": 6,
+    "error_count_after": 6,
+    "shadow_reviews_before": 2,
+    "shadow_reviews_after": 2,
+    "source_files_changed_during_after_run": [],
+    "notes": [
+      "These are matched inputs with greedy local model decoding, not a completed admission gate.",
+      "No external writes were used; original workflow keeps running in shadow mode.",
+      "Other domains in the frozen 60-case suite have no current workflow."
+    ],
+    "rows": []
+  },
+  "files": {
+    "backend/app/agent_runtime.py": "e27b7de965172cef2e8cf74a9466d78eee9d22d4588f225882d6759e10c76847",
+    "backend/app/calculate.py": "8e3e5d3fc5c2ab11c7a097cc672d7cfca33f80e0ee824084eaf1d0b052cab0f3",
+    "backend/app/compiler.py": "2a7c2a0baa5000478fed57bbb13ab282bed872dc0264b04021b02cf5328e1728",
+    "backend/app/execution_policy.py": "c39036416134fc5486ac96ceec59a101b1f7a7ad6d98104dd7feb3a97b6621fa",
+    "backend/app/iteration.py": "dba2687bdbcff7e018a8650a023805828b590d5af076c9ddbc04fc29e2a97303",
+    "backend/app/provenance.py": "53a290eb21a7a3e7cce43d345459067fe8617008ea8987f9f317abebb36bec9a",
+    "backend/app/registry.py": "2fccde22ad18a6c36c07a7027e9e6675d971fd1610aa43d3af207cfd03587369",
+    "backend/tests/test_calculate.py": "7dc6afccddf2f0b35ebef43f560dd9369021ef04f7187d0ec1231382ef0c0453",
+    "backend/tests/test_loop_completeness.py": "186c6e124768c2e9fb5cd50aa3764ab0b5be0da5f94a25ed4192990f15b948fa",
+    "backend/tests/test_node_error_policy.py": "ef60d00cf6ef7f69b46521d4a6497c93127d719d00e5ec463e6e3600dee01be4",
+    "backend/tests/test_provenance.py": "5a3e9c1357620b963fa0d6c5c42bcafbdf23374cbde5012d8eae0b8af4e1e418",
+    "backend/tests/test_provenance_foundation.py": "107d7bf5f74f82a074eea83ea776a32d14b6a226e14cd7f0df7d33bbedfa7660",
+    "backend/tests/test_provenance_static.py": "765ad77852dde641888abb644c491558660cd9688190552e39c6bb50163bb363",
+    "backend/tests/test_recovery_bindings.py": "9c0db4769e47816f64ea3de07e8d5f9b39d6c6e01489320df2503d2f1e69e9e6",
+    "docs/operations.md": "1cdc57feb018361a6406ea8b382d50998c7dddfba263e9b1ad3aa2ee96a3dd41",
+    "docs/reviews/provenance-foundation-repair-2026-10-10.md": "ddf847b5202172c4b5d15729271cb8ed14ca1edfc5db6b606806f374be8f1eae",
+    "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md": "84fc65ad1e837bb9d53bf266423aa2a25f05be4ba8d3e8d1cb0f2f6b2ddcc5cf",
+    "docs/superpowers/specs/2026-10-10-request-routing-and-extraction-checks-design.md": "8310f66212f1d426ae9ddbce512e487814b28bde598dfa403975b77f9d8644dc",
+    "evals/request-admission/questions.json": "d4d8f48b1902a839c1be95814df6df4e42af081ac2b41f5e810323cce1974100",
+    "frontend/tests/browser/trust.spec.ts": "3c1b643c08bac1f8651ba53b778f3f78678fda8e88e3e9af7d007c1db6fcc89b",
+    "frontend/tests/trust.test.ts": "a33413b326f916c8b5cb8c63c573ec67a1b6ed14032e5723284ba52b62d3b637"
+  },
+  "original_audit_files": {
+    "evals/results/decision-provenance-audit-2026-10-09/probe-run.log": "f9a16f3def2ec457845fe2b5ea0dc21bbd281421a46ea1ea64ddc025f39118a2",
+    "evals/results/decision-provenance-audit-2026-10-09/backend-junit.xml": "a962af34baf161039e8a2490a860372a7224f7d981617b557eb2d83eecdfa4b9",
+    "evals/results/decision-provenance-audit-2026-10-09/frontend-probe-results.json": "7f01f5a89a03397d06415e12a4216db431fd22e27255bce8ff60d87bf2881710",
+    "evals/results/decision-provenance-audit-2026-10-09/probe-results.json": "0f5113c44e224e8dae168634b0ee908af1c2172d636e039985ac89792ab891d6",
+    "evals/results/decision-provenance-audit-2026-10-09/probe_frontend.mjs": "6c05667caff6a8c5beba86097e3f467893dd90fe8df0cc04b76778eefe8b6942",
+    "evals/results/decision-provenance-audit-2026-10-09/verification.json": "b4e7ed101538c5da496ede26392c7e8bd720f9c835f1aa7e0912a81a89218845",
+    "evals/results/decision-provenance-audit-2026-10-09/probe_phases.py": "712eaadb9e65623f392e90eb8dadc4cec28813ea6ccdde5dfeffb9e0bc6adf16",
+    "evals/results/decision-provenance-audit-2026-10-09/backend-suite.log": "28755414538be68f3fcb9b3c437d7aa441b69d1e08af6f47cacf651948fb2831",
+    "evals/results/decision-provenance-audit-2026-10-09/frontend-build.log": "16da40ef9193a0b30f1cbccc2e3b7dad9f9dd7cfc54c5f79a6d88ae997245b74"
+  }
+}

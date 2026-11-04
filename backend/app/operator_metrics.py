@@ -1,0 +1,118 @@
+"""Indexed, SQL-computed operator summaries; no prompts or outputs are returned."""
+import json
+from datetime import datetime,timezone,timedelta
+from sqlalchemy import Column,String,Integer,Boolean,select,func,case
+from sqlalchemy.orm import Session
+from .storage import Base,RunRecord,RunEventRecord,SchemaMigrationRecord
+
+class RunAdmissionRecord(Base):
+    __tablename__='run_admission_metrics'
+    run_id=Column(String(64),primary_key=True)
+    seq=Column(Integer,primary_key=True)
+    stage=Column(String(24),nullable=False)
+    status=Column(String(16),nullable=False)
+    outcome=Column(String(24),nullable=False)
+    replay=Column(Boolean,nullable=False)
+
+
+def admission_values(event):
+    stage=event.get('request_stage');status=event.get('status')
+    if stage not in ('greeting_cache','request_router','verify_extraction','request_reader') or status not in ('success','failed','paused'):return None
+    outcome='error' if status=='failed' else 'needs_review' if status=='paused' else 'unavailable'
+    outputs=event.get('outputs') or {}
+    try:
+        if status=='success':
+            if stage=='greeting_cache':outcome=json.loads(outputs['receipt'])['outcome']
+            elif stage=='request_router':outcome=json.loads(outputs['decision'])['route']
+            elif stage=='request_reader' and outputs.get('reading')=='':outcome='prepared'
+            else:outcome=json.loads(outputs['report'])['verdict']
+    except (ValueError,KeyError,TypeError):pass
+    allowed={'hit','filled','local_fallback','not_common','prepared','proceed','clarify','out_of_scope','passed','needs_review','error','unavailable'}
+    if not isinstance(outcome,str) or outcome not in allowed:outcome='unavailable'
+    return {'stage':stage,'status':status,'outcome':outcome,'replay':event.get('cached') is True}
+
+class GuardDecisionRecord(Base):
+    __tablename__='run_guard_decisions'
+    run_id=Column(String(64),primary_key=True)
+    seq=Column(Integer,primary_key=True)
+    decision=Column(String(16),nullable=False,index=True)
+    reason=Column(String(32),nullable=False)
+
+class RunTokenRecord(Base):
+    __tablename__='run_token_usage'
+    run_id=Column(String(64),primary_key=True)
+    seq=Column(Integer,primary_key=True)
+    provider=Column(String(24),primary_key=True)
+    model=Column(String(100),primary_key=True)
+    prompt_tokens=Column(Integer,nullable=False)
+    completion_tokens=Column(Integer,nullable=False)
+    calls=Column(Integer,nullable=False)
+
+def usage_rows(event,workflow):
+    if event.get('cached'):return []
+    usage=event.get('usage') or {}
+    if not isinstance(usage,dict):return []
+    rows=usage.get('by_model')
+    if rows is None:
+        config=next((n.get('config',{}) for n in workflow.get('nodes',[]) if n.get('id')==event.get('node_id')), {})
+        rows=[{**usage,'provider':config.get('provider','unknown'),'model':config.get('model','unknown')}] if usage else []
+    grouped={}
+    for row in rows:
+        provider=str(row.get('provider','unknown'))[:24];model=str(row.get('model','unknown'))[:100]
+        key=(provider,model);total=grouped.setdefault(key,{'provider':provider,'model':model,'prompt_tokens':0,'completion_tokens':0,'calls':0})
+        for field in ('prompt_tokens','completion_tokens','calls'):
+            value=row.get(field,0)
+            if isinstance(value,int) and 0<=value<=10**12:total[field]+=value
+    return list(grouped.values())
+
+def run_values(data):
+    duration=None
+    if data.get('finished_at') and data.get('created_at'):
+        try:duration=max(0,(datetime.fromisoformat(data['finished_at'])-datetime.fromisoformat(data['created_at'])).total_seconds())
+        except (ValueError,TypeError):pass
+    grounding=[]
+    for output in data.get('checkpoints',{}).values():
+        try:value=json.loads(output.get('grounding','{}'))
+        except (ValueError,TypeError):continue
+        if isinstance(value,dict) and isinstance(value.get('abstain'),bool):grounding.append(value['abstain'])
+    truncated=bool(data.get('truncated'))
+    return {'duration_seconds':duration,'grounded':bool(grounding),'abstained':any(grounding),'truncated':truncated,
+            'truncation_source':(data.get('truncation_source') or 'confirmed') if truncated else ''}
+
+def migrate(conn):
+    version='20260920_operator_metrics'
+    if conn.scalar(select(SchemaMigrationRecord.version).where(SchemaMigrationRecord.version==version)):return
+    for row in conn.execute(select(RunRecord.__table__)).mappings().yield_per(100):
+        conn.execute(RunRecord.__table__.update().where(RunRecord.id==row['id']).values(**run_values(row['data'])))
+    query=select(RunEventRecord.run_id,RunEventRecord.seq,RunEventRecord.payload,RunRecord.data).join(RunRecord,RunRecord.id==RunEventRecord.run_id)
+    for row in conn.execute(query).yield_per(100):
+        for usage in usage_rows(row.payload,row.data.get('workflow',{})):
+            conn.execute(RunTokenRecord.__table__.insert().values(run_id=row.run_id,seq=row.seq,**usage))
+    conn.execute(SchemaMigrationRecord.__table__.insert().values(version=version))
+
+def metrics(store,hours=168):
+    from .approvals import ApprovalRecord
+    end=datetime.now(timezone.utc);start=end-timedelta(hours=hours)
+    window=(RunRecord.created_at>=start.isoformat(),RunRecord.created_at<end.isoformat())
+    with Session(store.engine) as session:
+        admission=[dict(r._mapping) for r in session.execute(select(RunAdmissionRecord.stage,RunAdmissionRecord.status,RunAdmissionRecord.outcome,func.count().label('count')).join(RunRecord,RunRecord.id==RunAdmissionRecord.run_id).where(*window,RunAdmissionRecord.replay.is_(False)).group_by(RunAdmissionRecord.stage,RunAdmissionRecord.status,RunAdmissionRecord.outcome).order_by(RunAdmissionRecord.stage,RunAdmissionRecord.status,RunAdmissionRecord.outcome))]
+        replays=session.scalar(select(func.count()).select_from(RunAdmissionRecord).join(RunRecord,RunRecord.id==RunAdmissionRecord.run_id).where(*window,RunAdmissionRecord.replay.is_(True)))
+        reviews={}
+        for kind,status,count in session.execute(select(ApprovalRecord.kind,ApprovalRecord.status,func.count()).join(RunRecord,RunRecord.id==ApprovalRecord.run_id).where(*window).group_by(ApprovalRecord.kind,ApprovalRecord.status)):
+            reviews.setdefault(kind,{})[status]=count
+        guard_counts=dict(session.execute(select(GuardDecisionRecord.decision,func.count()).join(RunRecord,RunRecord.id==GuardDecisionRecord.run_id).where(*window).group_by(GuardDecisionRecord.decision)).all())
+        guard_skips=dict(session.execute(select(GuardDecisionRecord.reason,func.count()).join(RunRecord,RunRecord.id==GuardDecisionRecord.run_id).where(*window,GuardDecisionRecord.decision=='skip').group_by(GuardDecisionRecord.reason)).all())
+        counts=dict(session.execute(select(RunRecord.status,func.count()).where(*window).group_by(RunRecord.status)).all())
+        total,grounded,abstained,truncated=session.execute(select(func.count(),func.sum(case((RunRecord.grounded,1),else_=0)),func.sum(case((RunRecord.abstained,1),else_=0)),func.sum(case((RunRecord.truncated,1),else_=0))).where(*window,RunRecord.status=='success')).one()
+        unverified=session.scalar(select(func.count()).where(*window,RunRecord.status=='success',RunRecord.truncation_source=='legacy_checkpoint_unverified'))
+        # SQL window ranks implement portable nearest-rank percentiles on SQLite/PostgreSQL.
+        ranked=select(RunRecord.duration_seconds.label('duration'),func.row_number().over(order_by=RunRecord.duration_seconds).label('rank'),func.count().over().label('n')).where(*window,RunRecord.duration_seconds.is_not(None),RunRecord.status.in_(('success','failed','cancelled'))).subquery()
+        percentiles={}
+        for name,p in (('p50',.5),('p95',.95)):
+            percentiles[name]=session.scalar(select(func.min(ranked.c.duration)).where(ranked.c.rank>=ranked.c.n*p))
+        tokens=[dict(row._mapping) for row in session.execute(select(RunTokenRecord.provider,RunTokenRecord.model,func.sum(RunTokenRecord.prompt_tokens).label('prompt_tokens'),func.sum(RunTokenRecord.completion_tokens).label('completion_tokens'),func.sum(RunTokenRecord.calls).label('calls')).join(RunRecord,RunRecord.id==RunTokenRecord.run_id).where(*window).group_by(RunTokenRecord.provider,RunTokenRecord.model).order_by(RunTokenRecord.provider,RunTokenRecord.model))]
+    return {'request_admission':{'outcomes':admission,'checkpoint_replays':replays,'basis':'Uncached stage outcomes from revision 0005 onward; no historical backfill. Review pauses and human confirmations are separate.'},'human_reviews':{'by_kind':reviews,'basis':'Durable approval rows by kind and current status for runs created in the window; completed decision/verification rows are human confirmations, not automatic checks'},'answerability_guard':{'decisions':guard_counts,'skipped_by_reason':guard_skips,'basis':'Uncached retrieval/query decisions across runs created in the window; not unique runs or model refusals'},'window':{'start':start.isoformat(),'end':end.isoformat(),'basis':'run_created_at'},'runs_by_status':counts,'duration_seconds':percentiles,'tokens':tokens,
+            'abstention_rate':abstained/grounded if grounded else None,'truncation_rate':truncated/total if total else None,
+            'truncated_runs_by_source':{'confirmed':(truncated or 0)-unverified,'legacy_checkpoint_unverified':unverified},
+            'denominators':{'successful_runs':total,'successful_grounded_runs':grounded or 0},
+            'definitions':{'scope':'deployment-wide','abstention':'Any grounded node abstained in a successful run','duration':'Creation to final completion, including queue and resumed attempts','tokens':'Provider-reported tokens; not monetary cost; missing usage is not estimated','truncation':'Successful runs that did not deliver all intended work; legacy_checkpoint_unverified counts runs whose loop completeness an older checkpoint cannot prove, and is included in truncation_rate'}}

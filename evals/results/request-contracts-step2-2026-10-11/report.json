@@ -1,0 +1,115 @@
+{
+  "step": 2,
+  "scope": "Shared interfaces, structural validation and generic editor plumbing; no new handlers or runtime enforcement",
+  "recorded_at": "2026-10-11T15:18:02.059867+00:00",
+  "base_commit": "79216b8d5a90a8362cbb8085c01d180737834ac1",
+  "step1_hosted_ci": {
+    "commit": "79216b8d5a90a8362cbb8085c01d180737834ac1",
+    "run_id": 38148390994,
+    "jobs": [
+      "backend",
+      "native-macos",
+      "frontend",
+      "browser-layout",
+      "postgres-conformance"
+    ],
+    "conclusion": "success"
+  },
+  "backend": [
+    {
+      "hash_seed": 0,
+      "tests": 1334,
+      "failures": 0,
+      "exit_code": 0
+    },
+    {
+      "hash_seed": 1,
+      "tests": 1334,
+      "failures": 0,
+      "exit_code": 0
+    },
+    {
+      "hash_seed": 2,
+      "tests": 1334,
+      "failures": 0,
+      "exit_code": 0
+    }
+  ],
+  "focused_contract_tests": 89,
+  "frontend_unit_tests": 79,
+  "browser_tests": 12,
+  "typecheck": "passed",
+  "lint": "passed",
+  "build": "passed",
+  "diff_check": "passed",
+  "clean_export": {
+    "backend_tests": 1334,
+    "exit_code": 0,
+    "source_files_match": true,
+    "dependency_install": "reused unchanged local environment"
+  },
+  "production": {
+    "report": "production-final/report.json",
+    "passed": 20,
+    "total": 20,
+    "exit_code": 0,
+    "source_files_changed": [],
+    "live_models": false
+  },
+  "tdd": {
+    "initial_contract_run": {
+      "failed": 38,
+      "passed": 9,
+      "errors": 15
+    },
+    "cached_branch_and_malformed_rules": {
+      "red_failures": 3
+    },
+    "attached_models_review": {
+      "red_failures": 4,
+      "green_passed": 4
+    },
+    "browser_old_editor": {
+      "exit_code": 1,
+      "reason": "Declared continue/reply handles absent"
+    },
+    "browser_current_editor": {
+      "exit_code": 0
+    }
+  },
+  "independent_review": {
+    "model": "gpt-6-astra",
+    "critical": 0,
+    "important_found": 1,
+    "important_fixed": 1,
+    "finding": "Attached loop model outputs absent from static dependency tracing",
+    "tests": "test_attached_model_results_cannot_authorise_decisions"
+  },
+  "rulings": [
+    "Keep starter contract 1 until Task 7 full path exists; preserve loaded contracts.",
+    "No production handlers registered for greeting_cache/request_router/verify_extraction.",
+    "Graph validation is structural; exact runtime receipts/enforcement remain later tasks."
+  ],
+  "source_sha256": {
+    "backend/app/compiler.py": "5614a9d137891593187e9ce95e9e6a25484b7a639f484b8fab7b878c42341d1d",
+    "backend/app/models.py": "8472fcbc7a4c118ef7033a5b59eae8b876151f31322fb7fb13bf6bf9eee287ea",
+    "backend/app/platform_graph.py": "407b00c9b59acaa701cce63ecc7cfe942b168acc536135e4590a0adb015e92af",
+    "backend/app/registry.py": "cfd742b374fd4f732e69634fffe068f62d7a60e176e9aacec1267901b04320f2",
+    "backend/app/request_contracts.py": "950275f422f40bc237975e5f527f1ecc97753adfe3ad1df7ff048036599d688a",
+    "backend/tests/test_request_contract_validation.py": "f43750b8b3ef85fac21e25f102f02c141b83f0dea2dd901154c5d9a8b9e96825",
+    "backend/tests/test_request_contracts.py": "20e200d80c79e252fe7afa159b08da49c78ae5fcbca9ae875ad7b57a80adc0e3",
+    "backend/tests/test_request_control_flow.py": "686cead7aa2dfd1629b2f799577be9fa7727e31ef3f9f629cd70e09ff9945558",
+    "docs/request-contract-interfaces.md": "359bd08fcb8742e0277e248d5eb57918b9a20d16206add8051a089290121ff83",
+    "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md": "f085036e8d7d815b956eb28672825064d9553131fcba917f1803e6a2083edb26",
+    "frontend/components/workflow-editor.tsx": "c96a1c24e2a3c920300dbbaf86632200d99ffab8ba4519ba02c2a6651b3537d3",
+    "frontend/lib/workflow.ts": "4c09e0cd34fd316c1912b20aff80ef306003d30afb4cf0acbe43b9e0d737d14e",
+    "frontend/tests/browser/condition-node.json": "3b00d7a17ce66d1b40ee5cc8863464fa50ebb2fff757b73aeda593dd8db54a6c",
+    "frontend/tests/browser/example-catalog.json": "c426b186cfc2eec3de6983913da4865826cd1457c9a23959f6db949247b203ac",
+    "frontend/tests/browser/request-control.spec.ts": "f0a8ab60cf4142165dac9a51ad87424c22e666b69ee05d7fc3f2a66f44c3a694",
+    "frontend/tests/request-contracts.test.ts": "549559b5bf3186945081c0b236c7cdb9f33d55e064173196f92055105de6ac1b"
+  },
+  "not_rerun": [
+    "Live-model/grounding evaluations (no provider, prompt or retrieval changes)."
+  ],
+  "working_tree": " M backend/app/compiler.py\n M backend/app/models.py\n M backend/app/platform_graph.py\n M backend/app/registry.py\n M docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md\n M frontend/components/workflow-editor.tsx\n M frontend/lib/workflow.ts\n M frontend/tests/browser/condition-node.json\n M frontend/tests/browser/example-catalog.json\n?? backend/app/request_contracts.py\n?? backend/tests/test_request_contract_validation.py\n?? backend/tests/test_request_contracts.py\n?? backend/tests/test_request_control_flow.py\n?? docs/request-contract-interfaces.md\n?? evals/results/loop-marker-production-rerun/\n?? evals/results/loop-marker-production/\n?? evals/results/milestone-2026-10/browser-original-bug-trace.zip\n?? evals/results/milestone-2026-10/npm-audit.json\n?? evals/results/milestone-2026-10/pip-audit.json\n?? evals/results/milestone-2026-10/storage-validation/\n?? evals/results/milestone-2026-10/storage/\n?? evals/results/request-contracts-step2-2026-10-11/\n?? frontend/tests/browser/request-control.spec.ts\n?? frontend/tests/request-contracts.test.ts\n"
+}

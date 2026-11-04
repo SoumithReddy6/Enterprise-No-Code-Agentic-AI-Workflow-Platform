@@ -69,7 +69,8 @@ def test_old_credentials_migrate_as_openai_without_losing_keys(tmp_path):
     assert store.models('owner')==[]
     store.engine.dispose()
 
-def test_catalog_ownership_is_claimed_on_first_registration(tmp_path):
+def test_catalog_ownership_is_claimed_on_first_registration(tmp_path,monkeypatch):
+    monkeypatch.setenv('AUTH_REGISTRATION_MODE','open')
     from backend.app.storage import Store
     url=f'sqlite:///{tmp_path}/claim.db';key=Fernet.generate_key()
     store=Store(url,key)

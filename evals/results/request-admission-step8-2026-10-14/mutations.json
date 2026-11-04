@@ -1,0 +1,42 @@
+[
+  {
+    "name": "duplicate-send",
+    "caught": true,
+    "exit_code": 1
+  },
+  {
+    "name": "wrong-destination",
+    "caught": true,
+    "exit_code": 1
+  },
+  {
+    "name": "wrong-value",
+    "caught": true,
+    "exit_code": 1
+  },
+  {
+    "name": "missing-confirmation",
+    "caught": true,
+    "exit_code": 1
+  },
+  {
+    "name": "missing-manifest",
+    "caught": true,
+    "exit_code": 1
+  },
+  {
+    "name": "fault-not-exercised",
+    "caught": true,
+    "exit_code": 1
+  },
+  {
+    "name": "missing-controls",
+    "caught": true,
+    "exit_code": 1
+  },
+  {
+    "name": "missing-worker-tags",
+    "caught": true,
+    "exit_code": 1
+  }
+]

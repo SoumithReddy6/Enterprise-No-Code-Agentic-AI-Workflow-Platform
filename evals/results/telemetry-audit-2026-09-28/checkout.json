@@ -1,0 +1,5 @@
+{
+  "path": "/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/relay-telemetry-audit-jk47dua9",
+  "commit": "dc41a3a6f088b848886857bc61138fa1e8cee6cf",
+  "method": "git archive HEAD; no overlays"
+}

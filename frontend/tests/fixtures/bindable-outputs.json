@@ -1,0 +1,735 @@
+{
+ "outputs": {
+  "agent": [
+   "text",
+   "provider",
+   "sources",
+   "grounding"
+  ],
+  "calculate": [
+   "text"
+  ],
+  "chat_input": [
+   "message"
+  ],
+  "condition": [
+   "branch"
+  ],
+  "prompt": [
+   "text"
+  ],
+  "response": [
+   "text",
+   "sources"
+  ],
+  "tool_python": [
+   "text"
+  ]
+ },
+ "cases": {
+  "linear": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "inputs": {}
+     },
+     {
+      "id": "agent",
+      "type": "agent",
+      "inputs": {
+       "input": "input.message"
+      }
+     },
+     {
+      "id": "out",
+      "type": "response",
+      "inputs": {
+       "text": "agent.text"
+      }
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-agent-",
+      "source": "input",
+      "target": "agent"
+     },
+     {
+      "id": "agent-out-",
+      "source": "agent",
+      "target": "out"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "agent": [
+     "input.message"
+    ],
+    "out": [
+     "input.message",
+     "agent.text",
+     "agent.provider",
+     "agent.sources",
+     "agent.grounding"
+    ]
+   }
+  },
+  "condition_branches": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "Purchase request",
+      "position": {
+       "x": 300,
+       "y": 40
+      },
+      "inputs": {},
+      "config": {}
+     },
+     {
+      "id": "extract",
+      "type": "agent",
+      "version": 1,
+      "label": "Extract amount",
+      "position": {
+       "x": 300,
+       "y": 220
+      },
+      "inputs": {
+       "input": "input.message"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "llama3.1:latest",
+       "credential_id": "",
+       "role": "extraction",
+       "system": "You read purchase requests. Whatever the message is (an order, a greeting, a question or anything else), respond with only one JSON object with the keys item, quantity, unit_price and total, and nothing else. item is the name of the product being bought, never a verb such as \"buy\" or \"order\". Copy each value exactly as the message states it, and use null for anything it does not state. If the message gives a price per item, put it in unit_price; if it gives one price for the whole order, put it in total. Never calculate a total yourself, and never guess. For \"3 laptops at $450 each\" respond {\"item\": \"laptops\", \"quantity\": 3, \"unit_price\": 450, \"total\": null}. For \"a monitor for $1,200\" respond {\"item\": \"monitor\", \"quantity\": null, \"unit_price\": null, \"total\": 1200}.",
+       "user_prompt": "{input}",
+       "temperature": 0,
+       "max_tokens": 200,
+       "max_steps": 6,
+       "memory_key": "default",
+       "output_schema": {
+        "type": "object",
+        "properties": {
+         "item": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "quantity": {
+          "type": [
+           "number",
+           "null"
+          ],
+          "minimum": 0
+         },
+         "unit_price": {
+          "type": [
+           "number",
+           "null"
+          ],
+          "minimum": 0
+         },
+         "total": {
+          "type": [
+           "number",
+           "null"
+          ],
+          "minimum": 0
+         }
+        },
+        "required": [
+         "item",
+         "quantity",
+         "unit_price",
+         "total"
+        ]
+       }
+      }
+     },
+     {
+      "id": "total",
+      "type": "calculate",
+      "version": 1,
+      "label": "Order total",
+      "position": {
+       "x": 300,
+       "y": 400
+      },
+      "inputs": {
+       "value": "extract.text"
+      },
+      "config": {
+       "expression": "coalesce(total, quantity * unit_price)",
+       "mode": "compute"
+      }
+     },
+     {
+      "id": "gate",
+      "type": "condition",
+      "version": 1,
+      "label": "Order total found?",
+      "position": {
+       "x": 300,
+       "y": 580
+      },
+      "inputs": {
+       "value": "total.text"
+      },
+      "config": {
+       "operator": "empty",
+       "field": "result",
+       "case_sensitive": false
+      }
+     },
+     {
+      "id": "check",
+      "type": "condition",
+      "version": 1,
+      "label": "Over $1,000?",
+      "position": {
+       "x": 140,
+       "y": 760
+      },
+      "inputs": {
+       "value": "total.text"
+      },
+      "config": {
+       "operator": "gt",
+       "compare_to": "1000",
+       "field": "result",
+       "case_sensitive": false
+      }
+     },
+     {
+      "id": "review_note",
+      "type": "prompt",
+      "version": 1,
+      "label": "Review message",
+      "position": {
+       "x": -60,
+       "y": 940
+      },
+      "inputs": {
+       "message": "total.text"
+      },
+      "config": {
+       "template": "Routed to human review: the order total is over $1,000. A manager must approve it before purchase.\nCalculated: {message}"
+      }
+     },
+     {
+      "id": "auto_note",
+      "type": "prompt",
+      "version": 1,
+      "label": "Approval message",
+      "position": {
+       "x": 320,
+       "y": 940
+      },
+      "inputs": {
+       "message": "total.text"
+      },
+      "config": {
+       "template": "Auto-approved: the order total is $1,000 or less. No review needed.\nCalculated: {message}"
+      }
+     },
+     {
+      "id": "none_note",
+      "type": "prompt",
+      "version": 1,
+      "label": "Rejection message",
+      "position": {
+       "x": 620,
+       "y": 760
+      },
+      "inputs": {
+       "message": "input.message"
+      },
+      "config": {
+       "template": "Not a purchase request: no order total was found, so nothing was approved or sent for review.\nMessage: {message}"
+      }
+     },
+     {
+      "id": "review",
+      "type": "response",
+      "version": 1,
+      "label": "Needs review",
+      "position": {
+       "x": -60,
+       "y": 1120
+      },
+      "inputs": {
+       "text": "review_note.text"
+      },
+      "config": {}
+     },
+     {
+      "id": "auto",
+      "type": "response",
+      "version": 1,
+      "label": "Auto-approved",
+      "position": {
+       "x": 320,
+       "y": 1120
+      },
+      "inputs": {
+       "text": "auto_note.text"
+      },
+      "config": {}
+     },
+     {
+      "id": "none",
+      "type": "response",
+      "version": 1,
+      "label": "Not a purchase request",
+      "position": {
+       "x": 620,
+       "y": 940
+      },
+      "inputs": {
+       "text": "none_note.text"
+      },
+      "config": {}
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-extract",
+      "source": "input",
+      "target": "extract"
+     },
+     {
+      "id": "check-review-note",
+      "source": "check",
+      "target": "review_note",
+      "sourceHandle": "true"
+     },
+     {
+      "id": "review-note-review",
+      "source": "review_note",
+      "target": "review"
+     },
+     {
+      "id": "check-auto-note",
+      "source": "check",
+      "target": "auto_note",
+      "sourceHandle": "false"
+     },
+     {
+      "id": "auto-note-auto",
+      "source": "auto_note",
+      "target": "auto"
+     },
+     {
+      "id": "gate-none",
+      "source": "gate",
+      "target": "none_note",
+      "sourceHandle": "true"
+     },
+     {
+      "id": "gate-check",
+      "source": "gate",
+      "target": "check",
+      "sourceHandle": "false"
+     },
+     {
+      "id": "none-note-none",
+      "source": "none_note",
+      "target": "none"
+     },
+     {
+      "id": "extract-total",
+      "source": "extract",
+      "target": "total"
+     },
+     {
+      "id": "total-gate",
+      "source": "total",
+      "target": "gate"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "extract": [
+     "input.message"
+    ],
+    "total": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding"
+    ],
+    "gate": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding",
+     "total.text"
+    ],
+    "check": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding",
+     "total.text",
+     "gate.branch"
+    ],
+    "auto_note": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding",
+     "total.text",
+     "gate.branch",
+     "check.branch"
+    ],
+    "auto": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding",
+     "total.text",
+     "gate.branch",
+     "check.branch",
+     "auto_note.text"
+    ],
+    "none_note": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding",
+     "total.text",
+     "gate.branch"
+    ],
+    "none": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding",
+     "total.text",
+     "gate.branch",
+     "none_note.text"
+    ],
+    "review_note": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding",
+     "total.text",
+     "gate.branch",
+     "check.branch"
+    ],
+    "review": [
+     "input.message",
+     "extract.text",
+     "extract.provider",
+     "extract.sources",
+     "extract.grounding",
+     "total.text",
+     "gate.branch",
+     "check.branch",
+     "review_note.text"
+    ]
+   }
+  },
+  "branches_rejoin": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "inputs": {}
+     },
+     {
+      "id": "check",
+      "type": "condition",
+      "inputs": {
+       "value": "input.message"
+      },
+      "config": {
+       "contains": "x"
+      }
+     },
+     {
+      "id": "yes",
+      "type": "prompt",
+      "inputs": {
+       "message": "input.message"
+      }
+     },
+     {
+      "id": "no",
+      "type": "prompt",
+      "inputs": {
+       "message": "input.message"
+      }
+     },
+     {
+      "id": "join",
+      "type": "prompt",
+      "inputs": {
+       "message": "input.message"
+      }
+     },
+     {
+      "id": "out",
+      "type": "response",
+      "inputs": {
+       "text": "join.text"
+      }
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-check-",
+      "source": "input",
+      "target": "check"
+     },
+     {
+      "id": "check-yes-true",
+      "source": "check",
+      "target": "yes",
+      "sourceHandle": "true"
+     },
+     {
+      "id": "check-no-false",
+      "source": "check",
+      "target": "no",
+      "sourceHandle": "false"
+     },
+     {
+      "id": "yes-join-",
+      "source": "yes",
+      "target": "join"
+     },
+     {
+      "id": "no-join-",
+      "source": "no",
+      "target": "join"
+     },
+     {
+      "id": "join-out-",
+      "source": "join",
+      "target": "out"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "check": [
+     "input.message"
+    ],
+    "no": [
+     "input.message",
+     "check.branch"
+    ],
+    "yes": [
+     "input.message",
+     "check.branch"
+    ],
+    "join": [
+     "input.message",
+     "check.branch"
+    ],
+    "out": [
+     "input.message",
+     "check.branch",
+     "join.text"
+    ]
+   }
+  },
+  "error_route": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "inputs": {}
+     },
+     {
+      "id": "fetch",
+      "type": "prompt",
+      "inputs": {
+       "message": "input.message"
+      },
+      "on_error": "route"
+     },
+     {
+      "id": "ok",
+      "type": "response",
+      "inputs": {
+       "text": "fetch.text"
+      }
+     },
+     {
+      "id": "fallback",
+      "type": "response",
+      "inputs": {
+       "text": "input.message"
+      }
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-fetch-",
+      "source": "input",
+      "target": "fetch"
+     },
+     {
+      "id": "fetch-ok-",
+      "source": "fetch",
+      "target": "ok"
+     },
+     {
+      "id": "fetch-fallback-error",
+      "source": "fetch",
+      "target": "fallback",
+      "sourceHandle": "error"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "fetch": [
+     "input.message"
+    ],
+    "fallback": [
+     "input.message"
+    ],
+    "ok": [
+     "input.message",
+     "fetch.text"
+    ]
+   }
+  },
+  "continue_on_error": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "inputs": {}
+     },
+     {
+      "id": "step",
+      "type": "prompt",
+      "inputs": {
+       "message": "input.message"
+      },
+      "on_error": "continue"
+     },
+     {
+      "id": "out",
+      "type": "response",
+      "inputs": {
+       "text": "input.message"
+      }
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-step-",
+      "source": "input",
+      "target": "step"
+     },
+     {
+      "id": "step-out-",
+      "source": "step",
+      "target": "out"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "step": [
+     "input.message"
+    ],
+    "out": [
+     "input.message"
+    ]
+   }
+  },
+  "attached_tool": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "inputs": {}
+     },
+     {
+      "id": "agent",
+      "type": "agent",
+      "inputs": {
+       "input": "input.message"
+      }
+     },
+     {
+      "id": "calc",
+      "type": "tool_python",
+      "inputs": {},
+      "config": {
+       "code": "print(1)"
+      }
+     },
+     {
+      "id": "out",
+      "type": "response",
+      "inputs": {
+       "text": "agent.text"
+      }
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-agent-",
+      "source": "input",
+      "target": "agent"
+     },
+     {
+      "id": "agent-out-",
+      "source": "agent",
+      "target": "out"
+     },
+     {
+      "id": "tool",
+      "source": "calc",
+      "target": "agent",
+      "kind": "tool",
+      "targetHandle": "tools"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "agent": [
+     "input.message"
+    ],
+    "out": [
+     "input.message",
+     "agent.text",
+     "agent.provider",
+     "agent.sources",
+     "agent.grounding"
+    ]
+   }
+  }
+ }
+}

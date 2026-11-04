@@ -1,0 +1,133 @@
+{
+  "recorded_at": "2026-10-11T17:20:57.381119+00:00",
+  "task": "Step 4: restricted LLM request router",
+  "base_commit": "953d4d20b8b8918ea3cb8e085b2472956b01e5cf",
+  "branch": "codex/retrieval-answerability-safety",
+  "commit_state": "working tree; user commit/push pending; no agent commit or push",
+  "prior_step_ci": {
+    "commit": "953d4d2",
+    "run": 38155405292,
+    "all_five_jobs": "success"
+  },
+  "current_step_hosted_ci": "pending user commit/push",
+  "source_sha256": {
+    "backend/app/request_router.py": "af3292406f3b1271d650a86b4affef1fa242bc2b142429a2e80f217b24be0253",
+    "backend/app/compiler.py": "dbd5da21a772a281e3a1f4020d1b6da60b527c6d508bd43f81c61a6270304099",
+    "backend/app/provenance.py": "fe509ca9b67d8c12ed6b00d6186030e84683ef28f761eed9f656fafdfd6fa932",
+    "backend/app/registry.py": "ddfd4a5f05cdf2274d632a9051f7507f40bc10b818c0ff4a8af4f1158a385269",
+    "backend/app/storage.py": "109ddabbff68c74da51beef78d0270d9d9f2969ec64fa43b076c8545afdff002",
+    "backend/tests/test_request_router.py": "49540f1993004d9d2fbf315d3a2c4f8b536e0042bc26dc3f940f8d2c8ba55309",
+    "backend/tests/test_request_contracts.py": "df5c24d1004ebfb227a0b84a4a4e718d1a94ca2a7cc12778513f3e1c6790b27d",
+    "backend/tests/test_common_replies.py": "68e78ee663b270508fafe8df74df01d858514a7e3a880826ec7846bb7014dd3a",
+    "frontend/components/workflow-editor.tsx": "0cc14295f3bf2e3f8e2a44101f1f8181aea90de2e12ca741d789e88f005b1c65",
+    "frontend/tests/browser/request-router.spec.ts": "b1a1b0b64a96e9fedd5a8ec7e1a9ca701654226e35b00d7ca58b0d41dfd123d3",
+    "frontend/tests/browser/request-router-node.json": "d51d172f9a1eb227d4d7e4117333363cc3c813f7fc26074b83716c952b1535d0",
+    "scripts/scenarios/request_routing.py": "2196899f68cc37d19a67ce0d0b0a305bc2602b7059b38c1e1284b69f8e1dd5ad",
+    "docs/operations.md": "35d4abcfb0fee2deec92a2d959fb87a134fed1d0977f8ed88adb0f675467290c",
+    "docs/superpowers/plans/2026-10-10-request-routing-and-extraction-checks.md": "1d208d18667403ea33c52d18247d1f757d0359eb13ca6b8bad509535afb2c60d"
+  },
+  "scope": [
+    "proceed/clarify/out_of_scope, exact four-field decision and at most one paid repair",
+    "existing provider auth, usage, token ceiling, lease/cancellation behavior",
+    "original trigger input preserved, router outputs remain guessed",
+    "validated decision/input/settings-bound checkpoint replay without a new call",
+    "imported router authorized model and credential picker"
+  ],
+  "tests": {
+    "router_and_contracts": {
+      "passed": 145,
+      "exit_code": 0
+    },
+    "backend": [
+      {
+        "seed": 0,
+        "passed": 1445,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "seconds": 67.986,
+        "junit": "backend-seed0.xml"
+      },
+      {
+        "seed": 1,
+        "passed": 1445,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "seconds": 70.381,
+        "junit": "backend-seed1.xml"
+      },
+      {
+        "seed": 2,
+        "passed": 1445,
+        "failed": 0,
+        "skipped": 0,
+        "exit_code": 0,
+        "seconds": 67.856,
+        "junit": "backend-seed2.xml"
+      }
+    ],
+    "clean_export": {
+      "passed": 1445,
+      "exit_code": 0,
+      "source_overlay_matches": true,
+      "manifest": "isolation-manifest.json"
+    },
+    "frontend": {
+      "unit_passed": 79,
+      "browser_passed": 13,
+      "typecheck": "passed",
+      "lint": "passed",
+      "build": "passed",
+      "exit_code": 0
+    },
+    "deployed_regression": {
+      "passed": 20,
+      "total": 20,
+      "source_changes": [],
+      "artifact": "production/report.json"
+    },
+    "router_receiver": {
+      "passed": 6,
+      "total": 6,
+      "source_changes": [],
+      "artifact": "receiver/report.json",
+      "faults": "SIGKILL after router checkpoint, bounded repair, invalid decision and structural no-verifier refusal"
+    },
+    "mutations": {
+      "caught": 9,
+      "total": 9,
+      "artifact": "mutations.json"
+    },
+    "independent_review": "review.json",
+    "dependency_gate": {
+      "status": "passed with accepted residual vulnerability, not a clean audit",
+      "high": 6,
+      "total": 6,
+      "accepted_advisory": "GHSA-vfj7-8cjw-p6xm",
+      "expires": "2026-12-04"
+    }
+  },
+  "live_model": {
+    "matched": 4,
+    "count": 7,
+    "artifact": "live-smoke.json",
+    "probe": "live-probe.py",
+    "probe_sha256": "765bcf6d71a39ce528c657aa696292bb746842798b7ab16af15aa9fb33cb8486",
+    "model_digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e",
+    "assessment": "Exploratory sample did not match all expected routes: one complete request clarified and two invalid-output refusals. A separate repeated question succeeded. This does not certify semantic accuracy and no thresholds, prompts or model were tuned to pass the sample.",
+    "initial_before_review_fix": "live-smoke-before-review-fix.json",
+    "separate_repeat": "live-diagnostic.json"
+  },
+  "limitations": [
+    "Deterministic extraction checking and runtime business authorization remain Tasks 5\u20136.",
+    "Wrong-proceed receiver test proves structural missing-verifier refusal only, not future runtime validation.",
+    "Router alone is not a semantic correctness or write-authorization boundary.",
+    "Complete admission palette/starter remains Task 7; imported router works now.",
+    "Frozen multi-workflow semantic measurement remains Task 8.",
+    "Hosted runner-specific behavior is unverified until user pushes."
+  ],
+  "review": "review.json",
+  "python": "3.14.6",
+  "diff_check": "passed"
+}

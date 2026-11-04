@@ -40,16 +40,45 @@ async def test_tool_error_is_an_observation_not_a_run_failure(monkeypatch):
     assert 'tool_error' in seen[1] and 'SyntaxError' in seen[1]
     assert 'Evaluates one Python arithmetic expression' in seen[0] and '"input": "text the configured code receives as input_text"' in seen[0]
 
+
 @pytest.mark.asyncio
-async def test_exhausted_budget_after_repeated_tool_errors_fails_clearly(monkeypatch):
+async def test_attached_tool_uses_shared_retry_policy_and_one_typed_identity(monkeypatch):
+    from backend.app import execution_policy
+    from backend.app.execution_policy import ExecutionIdentity
+    from backend.app.models import RetryPolicy
+    workflow=calc_flow();workflow.nodes[2].retry=RetryPolicy(attempts=1,base_delay=0)
+    scripted(monkeypatch,['{"action":"call","target":"calc","input":"6*7"}',
+                          '{"action":"final","text":"42"}'])
+    attempts=[];events=[]
+    async def platform(action,*args):
+        assert action=='tool'
+        attempts.append(args[3])
+        if len(attempts)==1:raise __import__('backend.app.tool_service',fromlist=['TransientToolError']).TransientToolError('busy')
+        return '42'
+    async def emit(event):events.append(event)
+    async def no_sleep(_):pass
+    monkeypatch.setattr(execution_policy.asyncio,'sleep',no_sleep)
+    result=await compile_workflow(workflow,platform_resolver=platform,emit=emit,message='Compute').graph.ainvoke({'values':{}})
+    assert result['values']['out']['text']=='42'
+    assert len(attempts)==2 and all(isinstance(value,ExecutionIdentity) for value in attempts)
+    assert attempts[0] is attempts[1], 'approval, retry and settlement receive one constructed identity'
+    retry=next(event for event in events if event.get('status')=='retrying')
+    assert retry['invocation_id']==attempts[0].invocation_id
+    outcomes=[event for event in events if event.get('invocation_id')==attempts[0].invocation_id
+              and event.get('status') in ('success','failed','paused')]
+    assert len(outcomes)==1
+
+@pytest.mark.asyncio
+async def test_exhausted_budget_after_repeated_tool_errors_abstains(monkeypatch):
     scripted(monkeypatch,['{"action":"call","target":"calc","input":"x"}']*8)
     async def platform(action,*args):raise ValueError('always broken')
-    with pytest.raises(ValueError,match='limit'):
-        await compile_workflow(calc_flow(),platform_resolver=platform,message='Compute').graph.ainvoke({'values':{}})
+    result=await compile_workflow(calc_flow(),platform_resolver=platform,message='Compute').graph.ainvoke({'values':{}})
+    assert json.loads(result['values']['agent']['grounding'])['truncated']
+    assert json.loads(result['values']['agent']['grounding'])['abstain']
 
 @pytest.mark.asyncio
 async def test_retrieve_as_tool_is_rendered_and_citations_validated(monkeypatch):
-    seen=[];scripted(monkeypatch,['{"action":"call","target":"search","input":"codename"}','{"action":"final","text":"Bluebird [S1]. Also [S9]."}'],seen)
+    seen=[];scripted(monkeypatch,['{"action":"call","target":"search","input":"codename"}',json.dumps({'answer':'Bluebird [S1]. Also [S9].','citations':['S1'],'abstain':False,'reason':''})],seen)
     workflow=Workflow.model_validate({'version':1,'name':'Search','nodes':[
         {'id':'input','type':'chat_input'},
         {'id':'agent','type':'agent','inputs':{'input':'input.message'},'config':{'provider':'demo'}},
@@ -66,9 +95,25 @@ async def test_retrieve_as_tool_is_rendered_and_citations_validated(monkeypatch)
     assert result['values']['out']['text']==agent['text']
 
 @pytest.mark.asyncio
+async def test_retrieval_tool_returns_empty_mid_loop_and_forces_abstention(monkeypatch):
+    workflow=calc_flow()
+    workflow.nodes[2].type='retrieve'
+    workflow.nodes[2].config={'knowledge_base_id':'kb1','mode':'keyword'}
+    replies=[
+        '{"action":"call","target":"calc","input":"parental leave"}',
+        json.dumps({'answer':'12 weeks [S1]','citations':['S1'],'abstain':False,'reason':''}),
+        json.dumps({'answer':'','citations':[],'abstain':True,'reason':'No passages were returned.'}),
+    ]
+    seen=[];scripted(monkeypatch,replies,seen)
+    result=await compile_workflow(workflow,message='Leave?',platform_resolver=platform_with([],[])).graph.ainvoke({'values':{}})
+    assert len(seen)==3 and '12 weeks' not in result['values']['out']['text']
+    assert json.loads(result['values']['agent']['grounding'])['abstain'] is True
+    assert result['values']['out']['sources']=='[]'
+
+@pytest.mark.asyncio
 async def test_citation_labels_are_unique_across_the_run_and_validated_at_response(monkeypatch):
     # Retrieve twice, then a plain-text critic cites one real and one invented label.
-    scripted(monkeypatch,['Summary uses [S1].','Critique: fine [S1], but [S3] is weak and [S7] is missing.'])
+    scripted(monkeypatch,[json.dumps({'answer':'Summary uses [S3].','citations':['S3'],'abstain':False,'reason':''}),'Critique: fine [S1], but [S3] is weak and [S7] is missing.'])
     workflow=Workflow.model_validate({'version':1,'name':'Chain','nodes':[
         {'id':'input','type':'chat_input'},
         {'id':'r1','type':'retrieve','config':{'knowledge_base_id':'kb1','mode':'keyword'},'inputs':{'query':'input.message'}},

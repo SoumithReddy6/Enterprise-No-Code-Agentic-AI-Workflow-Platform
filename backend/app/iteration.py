@@ -1,0 +1,370 @@
+"""Run one attached callable once per element of an array.
+
+The body executes inside this handler rather than as LangGraph nodes: the platform owns
+its own leasing, fencing and checkpointing, so per-item state must travel through that
+path. Progress is recorded as it happens, so a resumed run skips completed indices
+instead of repeating paid work or external writes.
+"""
+import json
+
+from .execution_policy import ExecutionIdentity,execute_with_policy,invoke_attached,charges_action,accounting_snapshot
+
+MAX_ITEMS_CEILING=1000
+# The results contract, in serialized UTF-8 bytes of the results list:
+# * RETAINED_VALUE_BYTES bounds item values: the earliest are kept while the whole list fits.
+# * Outcome text (error, truncation_reason) is capped per entry at MAX_ENTRY_TEXT characters.
+# * HARD_RESULT_BYTES bounds the complete list, metadata included, and is never exceeded.
+RETAINED_VALUE_BYTES=1_000_000
+MAX_ENTRY_TEXT=500
+HARD_RESULT_BYTES=2_000_000
+DETAILS_OMITTED='[omitted: results reached their size ceiling]'
+# Observability events carry previews; the durable item result holds the full value.
+PREVIEW_CHARS=2000
+
+
+def item_owner(ctx,index):
+    """Per-item checkpoint owner: '<loop node>:<index>'."""
+    return f'{ctx.node_id}:{index}'
+
+
+def progress_key(node_id):
+    return node_id
+
+
+def completed_indices(run,node_id):
+    """Indices already finished in an earlier attempt of this run."""
+    stored=(run or {}).get('loop_progress',{}).get(progress_key(node_id),{})
+    return {int(index):result for index,result in stored.items()} if isinstance(stored,dict) else {}
+
+
+def remember(run,node_id,index,result):
+    if run is None:return
+    run.setdefault('loop_progress',{}).setdefault(progress_key(node_id),{})[str(index)]=result
+
+
+def item_input(value):
+    """Body callables take text. Objects are rendered as compact JSON, never str()."""
+    if isinstance(value,str):return value
+    from . import exact_json
+    return exact_json.dumps(value,compact=True)
+
+
+def serialized_bytes(value):
+    """UTF-8 bytes of the JSON the results output is stored and returned as."""
+    return len(json.dumps(value,ensure_ascii=False,default=str).encode('utf-8'))
+
+
+def capped_text(text):
+    """Outcome text bounded to MAX_ENTRY_TEXT characters, marked when shortened."""
+    if not isinstance(text,str):text=str(text)
+    return text if len(text)<=MAX_ENTRY_TEXT else text[:MAX_ENTRY_TEXT-1]+'…'
+
+
+def compact(entry):
+    """An entry reduced to what must survive: its index, status and the fact that details
+    or a value existed. Its size is bounded by COMPACT_BYTES whatever the original held."""
+    short={'index':entry.get('index'),'status':'failed' if entry.get('status')=='failed' else 'success',
+           'value':'','error':DETAILS_OMITTED if entry.get('error') else '','details_omitted':True}
+    if entry.get('value') or entry.get('value_dropped'):short['value_dropped']=True
+    if entry.get('truncation_reason'):short['truncation_reason']=DETAILS_OMITTED
+    if entry.get('budget_halt') in HALT_REASONS:short['budget_halt']=entry['budget_halt']
+    return short
+
+
+# An item that did work and was then refused by a run-wide budget carries budget_halt,
+# saved with its result, so a replay stops where the fresh run stopped. The loop's reason
+# comes from the kind alone: the item's error text can be shortened by compaction.
+HALT_REASONS={'tokens':'Run token budget exhausted; raise RELAY_RUN_TOKEN_LIMIT.',
+              'action':'Run-wide agent action budget exhausted; raise AGENT_RUN_BUDGET.'}
+
+
+def budget_halt(entry,index):
+    """The halt an admitted entry records, fresh or restored, or None."""
+    kind=entry.get('budget_halt')
+    return ('budget',index+1,HALT_REASONS[kind]) if kind in HALT_REASONS else None
+
+
+# The largest compact entry, plus its list separator: the reserve every unadmitted item needs.
+COMPACT_BYTES=serialized_bytes(compact({'index':MAX_ITEMS_CEILING-1,'status':'success','value':'x','error':'x','truncation_reason':'x','budget_halt':'tokens'}))+2
+
+
+class ResultBudget:
+    """Admit item entries in order under the results contract (see RETAINED_VALUE_BYTES).
+
+    Values: the earliest are kept while the serialized list fits RETAINED_VALUE_BYTES. The
+    first value that does not fit, and every value after it, is replaced by '' and marked
+    value_dropped: a value is never cut part way, and the retained values form a prefix.
+
+    Outcome text is capped per entry. The complete list never exceeds HARD_RESULT_BYTES:
+    the budget knows how many items were accepted and always keeps room for each of the
+    rest in compact form. An entry that would take that room is stored compact - index and
+    status kept, details marked omitted - so the hard maximum holds whatever the metadata.
+    Unlike values, details are kept whenever room remains, so a later entry may keep its
+    error text after an earlier one lost it.
+
+    Sizes count the whole list as serialized UTF-8 - brackets, separators and structure.
+    Restored entries pass through the same admission and every decision is stored on the
+    entry, so a replay reaches the same results; fresh entries are admitted before they
+    are persisted.
+    """
+    def __init__(self,expected=MAX_ITEMS_CEILING):
+        self.size=2  # '[]'
+        self.count=0
+        self.dropping=False
+        self.expected=max(int(expected),0)
+
+    def reserve(self,after):
+        """Room kept for the items not yet admitted once `after` entries are in."""
+        return max(self.expected-after,0)*COMPACT_BYTES
+
+    def admit(self,entry):
+        separator=2 if self.count else 0  # json.dumps separates list items with ', '
+        if not entry.get('details_omitted'):
+            entry={**entry,**{key:capped_text(entry[key]) for key in ('error','truncation_reason') if entry.get(key)}}
+        if entry.get('value_dropped'):self.dropping=True
+        elif entry.get('value'):
+            if self.dropping or self.size+separator+serialized_bytes(entry)>RETAINED_VALUE_BYTES:
+                entry={**entry,'value':'','value_dropped':True};self.dropping=True
+        if self.size+separator+serialized_bytes(entry)+self.reserve(self.count+1)>HARD_RESULT_BYTES:
+            entry=compact(entry)
+            if entry.get('value_dropped'):self.dropping=True
+        self.size+=separator+serialized_bytes(entry);self.count+=1
+        return entry
+
+
+def body_truncation(output):
+    """Why a body's result is incomplete, or ''.
+
+    An agent says so in its grounding metadata; a tool that capped its result, such as a
+    Jira search, says so under the reserved truncation key.
+    """
+    from .execution_policy import TRUNCATION_KEY
+    tool=output.get(TRUNCATION_KEY)
+    if isinstance(tool,dict) and tool.get('truncated'):
+        return str(tool.get('truncation_reason') or 'A tool returned incomplete results.')
+    try:metadata=json.loads(output.get('grounding') or '{}')
+    except (TypeError,ValueError):return ''
+    if not isinstance(metadata,dict) or not metadata.get('truncated'):return ''
+    return str(metadata.get('truncation_reason') or 'Agent work was incomplete.')
+
+
+def completeness(node_id,total,accepted,results,failed,halt=None):
+    """Whether the loop delivered every item it was given, and if not, why.
+
+    This is part of the node's output rather than only an event, so it is checkpointed
+    with the results and a resumed run reports the same incompleteness at run level.
+    halt names why iteration ended early: ('stop', index) after a failed item under
+    on_item_error stop, or ('budget', index, reason) when a run-wide budget refused an
+    item, before it made any call or after it did some work.
+    """
+    reasons=[];unrun=accepted-len(results)
+    if total>accepted:
+        reasons.append(f'{node_id} accepted {accepted} of {total} items (max_items {accepted}); {total-accepted} did not run.')
+    stopped=bool(halt and halt[0]=='stop' and unrun>0)
+    budget=bool(halt and halt[0]=='budget')
+    if stopped:
+        reasons.append(f'{node_id} stopped after item {halt[1]} failed; {unrun} accepted items did not run.')
+    if budget:
+        reasons.append(f'{node_id} stopped at item {halt[1]}: {halt[2]} {unrun} accepted items did not run.')
+    partial=[r for r in results if r.get('truncation_reason')]
+    if partial:
+        reasons.append(f'{node_id}: {len(partial)} item(s) returned incomplete results ({partial[0]["truncation_reason"]}).')
+    dropped=sum(bool(r.get('value_dropped')) for r in results)
+    if dropped:
+        reasons.append(f'{node_id} kept item values up to {RETAINED_VALUE_BYTES} bytes; {dropped} later value(s) were dropped and only their outcomes kept.')
+    omitted=sum(bool(r.get('details_omitted')) for r in results)
+    if omitted:
+        reasons.append(f'{node_id}: outcome details of {omitted} item(s) were omitted to keep results within {HARD_RESULT_BYTES} bytes.')
+    return {'total':total,'accepted':accepted,'processed':len(results),'failed':failed,
+            'limited':total>accepted,'stopped':stopped,'budget_exhausted':budget,'incomplete_items':len(partial),
+            'values_dropped':bool(dropped),'dropped_value_count':dropped,'details_omitted':omitted,
+            'truncated':bool(reasons),'truncation_reason':' '.join(reasons),
+            'truncation_source':'confirmed' if reasons else ''}
+
+
+LEGACY_UNVERIFIED='Loop completeness could not be fully verified because this run was checkpointed by an older Relay version'
+
+
+def reconstructed_summary(node_id,items,config,outputs,body_type):
+    """Rebuild the summary of a loop checkpointed before the summary output existed.
+
+    Missing metadata is not evidence of completeness. What is provable is reconstructed;
+    anything that is not makes the loop count as incomplete, with truncation_source
+    'legacy_checkpoint_unverified' so operators can separate it from confirmed cases.
+
+    * limit and stop: provable from the restored input list, configuration and results.
+    * dropped values: a size drop blanks every value present at that moment, including
+      the first success, and nothing refills it, so a non-empty first success proves no
+      drop happened. With no successes there were no payloads to lose.
+    * agent item truncation: never recorded, but only bodies that report grounding can
+      produce it.
+    """
+    from .registry import REGISTRY
+    results=outputs.get('results') or []
+    failed=sum(r.get('status')=='failed' for r in results)
+    unverified=[]
+    # A legacy stop is visible as a final failed item with accepted items left over.
+    halt=('stop',results[-1].get('index')) if config.on_item_error=='stop' and results and results[-1].get('status')=='failed' else None
+    if isinstance(items,list):
+        accepted=len(items[:min(config.max_items,MAX_ITEMS_CEILING)])
+        summary=completeness(node_id,len(items),accepted,results,failed,halt)
+    else:
+        summary=completeness(node_id,len(results),len(results),results,failed,halt)
+        unverified+=['limited','stopped']
+    first=next((r for r in results if r.get('status')=='success'),None)
+    if first is not None and first.get('value')=='':unverified.append('values_dropped')
+    definition=REGISTRY.get(body_type)
+    if definition is None or 'grounding' in definition.outputs:unverified.append('agent_item_truncation')
+    summary={**summary,'reconstructed':True,'unverified':unverified}
+    if unverified:
+        note=f"{LEGACY_UNVERIFIED} ({node_id}; unverified: {', '.join(unverified)})."
+        summary.update(truncated=True,truncation_reason=' '.join(filter(None,[summary['truncation_reason'],note])),
+                       truncation_source=summary['truncation_source'] or 'legacy_checkpoint_unverified')
+    return summary
+
+
+def record_progress(ctx,index,entry):
+    """Persist this item's result and publish run-wide spend to the caller's sink.
+
+    Both happen per item rather than per loop, so an interruption mid-collection resumes
+    with its completed items skipped and its budget already consumed.
+    """
+    remember(ctx.run,ctx.node_id,index,entry)
+    sink=(ctx.run or {}).get('accounting_sink')
+    if sink is not None:sink.update(accounting_snapshot(ctx.run))
+
+
+async def for_each_node(inputs,config,ctx):
+    items=inputs['items']
+    if isinstance(items,str) and (ctx.run or {}).get('contract')==2 and 'items' in (ctx.input_proofs or {}):
+        from . import exact_json
+        items=exact_json.loads(items,reject_duplicates=True)
+    if not isinstance(items,list):raise ValueError('for_each expects a list; connect an array output to items.')
+    body=next((n for n in (ctx.workflow.nodes if ctx.workflow else []) if n.id==config.body), None)
+    if body is None:raise ValueError('for_each has no attached body to run.')
+    emit=ctx.emit or (lambda event: None)
+
+    limit=min(config.max_items,MAX_ITEMS_CEILING)
+    selected=items[:limit]
+    done=completed_indices(ctx.run,ctx.node_id)
+    results=[];failed=0;halt=None;budget=ResultBudget(len(selected))
+
+    for index,value in enumerate(selected):
+        if index in done:
+            from .provenance import PROVENANCE_KEY, restored_record
+            # Its text is reused without its passages; the Response checks its saved sources.
+            if ctx.run is not None:ctx.run.setdefault('reused_owners',set()).add(item_owner(ctx,index))
+            saved=done[index]
+            if PROVENANCE_KEY in saved:
+                saved={**saved,PROVENANCE_KEY:restored_record(body,saved[PROVENANCE_KEY])}
+            # Restored from an earlier attempt: it passes through the same admission and
+            # policy checks as a fresh item, so replay reaches the same decisions.
+            entry=budget.admit(saved)
+            halt=budget_halt(entry,index)
+        else:
+            entry,exhausted=await _run_item(ctx,body,emit,index,value)
+            if entry is None:
+                # A budget refused the item before any call: nothing ran, so there is no
+                # item result to record, and every later item would be refused the same way.
+                halt=('budget',index,exhausted);break
+            # Admit before persisting, so progress never holds a value the output drops.
+            # The halt marker is in the entry already, so it is saved with the result.
+            entry=budget.admit(entry)
+            record_progress(ctx,index,entry)
+            await emit({'kind':'loop_item','status':'info','node_id':ctx.node_id,'item_index':index,'item_result':entry,'transient':True})
+            halt=budget_halt(entry,index)
+        if halt:
+            # The item did work, then a budget refused the rest of it.
+            results.append(entry);failed+=1;break
+        results.append(entry)
+        if entry.get('status')=='failed':failed+=1
+        if entry.get('status')=='failed' and config.on_item_error=='stop':
+            halt=('stop',index);break
+
+    summary=completeness(ctx.node_id,len(items),len(selected),results,failed,halt)
+    await emit({'kind':'loop_summary','node_id':ctx.node_id,'status':'warning' if summary['truncated'] else 'info',
+                'transient':True,**summary})
+    return {'results':results,'failed':str(failed),'summary':json.dumps(summary)}
+
+
+async def _run_item(ctx,body,emit,index,value):
+    """Execute one fresh item. Returns (entry, exhaustion reason or '').
+
+    entry is None when a run-wide budget refused the item before it made any call. An
+    item refused after it did work is a failed entry marked budget_halt. The caller
+    admits, persists and publishes the entry.
+    """
+    from dataclasses import replace
+    from .tool_service import UncertainWriteError
+    from .approvals import ApprovalPause
+    from .observability import journal
+    invocation=f'{ctx.node_id}:{index}:{body.id}'
+    identity=ExecutionIdentity(body.id,item_owner(ctx,index),invocation,ctx.node_id,index)
+    text=item_input(value)
+    # Everything this item emits carries the loop's identity: the body's own events, and
+    # every agent step, tool call, specialist, retry and failure nested beneath it. The
+    # context is replaced too, because nested nodes may emit through ctx.emit rather than
+    # the emit they were handed, and every nested context is derived from this one.
+    # The wrapper owns this identity: it is applied last, so a nested event can neither
+    # spoof another item nor blank it to escape the storage preview.
+    loop_fields={'loop_node_id':ctx.node_id,'item_index':index}
+    async def item_emit(event):await emit({**event,**loop_fields})
+    from . import provenance
+    origins=ctx.input_origins
+    # Narrow eligible evidence to this element. A sibling's values cannot quote this
+    # item's extraction, and guessed collection members cannot become sources.
+    item_origins=provenance.EvidenceContext(complete=False)
+    if isinstance(origins,provenance.EvidenceContext) and origins.complete and ctx.input_label in provenance.TRUSTED and origins.eligible_texts:
+        source=origins.structured_sources[0] if origins.structured_sources else {}
+        item_origins=provenance.source_context(source.get('node_id',ctx.node_id),source.get('port','items'),text)
+    from .request_safety import guard,item_proofs
+    item_ctx=replace(ctx,emit=item_emit,input_origins=item_origins,input_label=ctx.input_label,
+        input_proofs=item_proofs(ctx,index,text),execution_identity=identity,node_id=body.id,node_type=body.type)
+    common={**identity.event_fields(),'transient':True}
+    await item_emit({**common,'status':'running','inputs':{'input':text[:PREVIEW_CHARS]}})
+    try:
+        async def invoke():
+            return await invoke_attached(body,text,item_ctx,identity,item_emit,
+                                         action_budget=(ctx.run or {}).get('action_budget'))
+        outcome=await execute_with_policy(
+            invoke,identity,body.retry,ctx.run,item_emit,generic_error='Item execution failed.',
+            eligibility=lambda:guard(item_ctx,body,{'input':text},identity),
+            action_budget=(ctx.run or {}).get('action_budget'),charge_first_attempt=charges_action(body.type))
+        if outcome.budget_exhausted and not outcome.attempts:
+            await item_emit({**common,'status':'not_run','reason':outcome.error})
+            journal(event='loop.budget_exhausted',node_id=ctx.node_id,
+                    reason_code='token_budget' if outcome.budget_kind=='tokens' else 'action_budget')
+            return None,outcome.error
+        if outcome.status=='failed':
+            entry={'index':index,'status':'failed','value':'','error':outcome.error}
+            if outcome.budget_exhausted:entry['budget_halt']=outcome.budget_kind
+            event={**common,'status':'failed','error':outcome.error}
+            if outcome.usage:event['usage']=outcome.usage
+            if body.retry.attempts:event['attempt']=outcome.attempts
+            await item_emit(event)
+            journal(event='loop.item_failed',node_id=ctx.node_id,reason_code='item_error')
+        else:
+            output=outcome.outputs
+            entry={'index':index,'status':'success','value':output.get('text',''),'error':''}
+            record=output.get(provenance.PROVENANCE_KEY)
+            if record:
+                # The body's whole model-text port is guessed; the item's aggregate
+                # label is the weakest actually inspected field, including omissions.
+                entry[provenance.PROVENANCE_KEY]={**record,'ports':{**record['ports'],'text':provenance.output_label(output)}}
+            reason=body_truncation(output)
+            if reason:entry['truncation_reason']=reason
+            event={**common,'status':'success','outputs':output}
+            if outcome.usage:event['usage']=outcome.usage
+            await item_emit(event)
+    except ApprovalPause:
+        # A pause is not an item failure: swallowing it would disable the approval
+        # gate for every write inside a loop. Usage already spent is still reported.
+        from .execution_policy import usage_for
+        paused={**common,'status':'paused'};usage=usage_for(ctx.run,identity)
+        if usage:paused['usage']=usage
+        await item_emit(paused)
+        raise
+    except UncertainWriteError:
+        # The external outcome is unknown; iterating past it could duplicate a write.
+        raise
+    return entry,(outcome.error if outcome.budget_exhausted else '')

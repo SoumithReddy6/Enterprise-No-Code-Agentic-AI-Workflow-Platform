@@ -1,0 +1,74 @@
+[
+  {
+    "name": "frontend-units",
+    "command": [
+      "npm",
+      "--prefix",
+      "frontend",
+      "test"
+    ],
+    "exit_code": 0,
+    "seconds": 4.580291499965824
+  },
+  {
+    "name": "frontend-typecheck",
+    "command": [
+      "npm",
+      "--prefix",
+      "frontend",
+      "run",
+      "typecheck"
+    ],
+    "exit_code": 0,
+    "seconds": 5.348334916983731
+  },
+  {
+    "name": "frontend-lint",
+    "command": [
+      "npm",
+      "--prefix",
+      "frontend",
+      "run",
+      "lint"
+    ],
+    "exit_code": 0,
+    "seconds": 1.4602639579679817
+  },
+  {
+    "name": "frontend-build",
+    "command": [
+      "npm",
+      "--prefix",
+      "frontend",
+      "run",
+      "build"
+    ],
+    "exit_code": 0,
+    "seconds": 5.168251332943328
+  },
+  {
+    "name": "browser",
+    "command": [
+      "npm",
+      "--prefix",
+      "frontend",
+      "run",
+      "test:browser"
+    ],
+    "exit_code": 0,
+    "seconds": 91.44117350003216,
+    "evidence": "browser-verified.log"
+  },
+  {
+    "name": "dependency-audit",
+    "command": [
+      "node",
+      "scripts/audit-gate.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 0.8989740000106394,
+    "working_directory": "frontend",
+    "evidence": "dependency-audit-final.log",
+    "result": "accepted residual, six high; not clean"
+  }
+]

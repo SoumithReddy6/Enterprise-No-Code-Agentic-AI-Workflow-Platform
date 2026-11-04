@@ -1,0 +1,33 @@
+{"timestamp":"2026-10-30T18:12:10.687209+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":1,"completion_tokens":0}
+{"timestamp":"2026-10-30T18:12:10.687466+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"spec0","provider":"ollama","model":"fixture","prompt_tokens":1,"completion_tokens":0}
+{"timestamp":"2026-10-30T18:12:10.688001+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"spec0","provider":"ollama","model":"fixture","prompt_tokens":8,"completion_tokens":0}
+{
+  "removed_source_response": {
+    "provider_calls": 3,
+    "verification": [
+      {
+        "action": "record_vector_sources",
+        "available": true
+      }
+    ],
+    "specialist_failure": [
+      "Invalid grounded answer contract after one repair: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost."
+    ],
+    "agent_sources": [],
+    "response_sources": [
+      {
+        "id": "chunk1",
+        "knowledge_base_id": "kb1",
+        "version": 1,
+        "document_id": "doc",
+        "filename": "facts.txt",
+        "page": 1,
+        "text": "Fact 1",
+        "score": 0.5,
+        "url": "/api/knowledge-bases/kb1/documents/doc/file",
+        "citation": "S1",
+        "cited": false
+      }
+    ]
+  }
+}

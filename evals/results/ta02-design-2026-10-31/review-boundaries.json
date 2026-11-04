@@ -1,0 +1,15 @@
+{
+  "baseline": "90d9839",
+  "pause_contract_probe": {
+    "status": "awaiting_approval",
+    "in_memory_tokens_not_accepted_by_current_API": 15,
+    "database_tokens_used_by_pause": 0,
+    "frames_saved": true,
+    "approvals_saved": 1
+  },
+  "stale_snapshot_probe": {
+    "newer_tokens": 30,
+    "final_tokens": 10,
+    "scope": "latent parallel/out-of-order persistence risk; parallel graph branches are not implemented"
+  }
+}

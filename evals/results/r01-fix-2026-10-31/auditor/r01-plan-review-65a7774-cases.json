@@ -1,0 +1,38 @@
+{
+  "application_root": "<scratchpad>/r01-iso.ER1H",
+  "cases": [
+    {
+      "case": "shapes",
+      "raised": "UnsafeExecutionError",
+      "message": "out: knowledge source verification is unavailable. No answer was published."
+    },
+    {
+      "case": "fresh_fail",
+      "probe_asserts": "all hold",
+      "status": "failed",
+      "error": "out: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence."
+    },
+    {
+      "case": "fresh_continue",
+      "probe_asserts": "failed at line 141",
+      "source": "assert final['status'] == 'failed' and final['error'] == 'Run failed unexpectedly.'",
+      "status": "failed",
+      "error": "out: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence.",
+      "provider_calls": 1
+    },
+    {
+      "case": "cached_response",
+      "probe_asserts": "all hold",
+      "status": "failed",
+      "error": "out: saved knowledge sources are unavailable or removed. Start a new run with current evidence.; each:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence."
+    },
+    {
+      "case": "cached_loop",
+      "probe_asserts": "failed at line 136",
+      "source": "assert final['status'] == 'success' and result['output_has_removed_answer']",
+      "status": "failed",
+      "error": "each:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence.",
+      "provider_calls": 1
+    }
+  ]
+}

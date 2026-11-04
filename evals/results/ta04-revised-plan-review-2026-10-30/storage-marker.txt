@@ -1,0 +1,12 @@
+{"timestamp":"2026-10-30T16:27:18.969205+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-10-30T16:27:19.050065+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-10-30T16:27:19.051747+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.083}
+{"timestamp":"2026-10-30T16:27:19.057840+00:00","request_id":null,"run_id":"c0e5d402115245d698b0de98d57e4c1f","tenant":"local","event":"job.lease_acquired","worker_id":"owner"}
+{"timestamp":"2026-10-30T16:27:19.063343+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-10-30T16:27:19.067403+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"current","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-10-30T16:27:19.068612+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.005}
+{
+  "stale_owner_refused": true,
+  "failed_commit_saved_neither_row_nor_event": true,
+  "marker_and_entry_survive_database_reopen": true
+}

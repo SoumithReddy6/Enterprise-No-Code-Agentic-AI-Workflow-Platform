@@ -1,0 +1,57 @@
+{
+  "worker_approval": {
+    "status": "success",
+    "approvals": 0,
+    "results": {
+      "results": [
+        {
+          "index": 0,
+          "status": "failed",
+          "value": "",
+          "error": "Item execution failed."
+        },
+        {
+          "index": 1,
+          "status": "failed",
+          "value": "",
+          "error": "Item execution failed."
+        }
+      ],
+      "failed": "2"
+    }
+  },
+  "worker_uncertain_write": {
+    "status": "success",
+    "write_nodes": [
+      "work"
+    ],
+    "output": "go"
+  },
+  "worker_truncation": {
+    "status": "success",
+    "run_truncated": false,
+    "summary": {
+      "kind": "loop_summary",
+      "node_id": "each",
+      "status": "warning",
+      "transient": true,
+      "total": 2,
+      "processed": 1,
+      "failed": 0,
+      "truncated": true,
+      "values_dropped": false,
+      "seq": 9,
+      "timestamp": "2026-09-26T17:28:31.710225+00:00"
+    }
+  },
+  "write_loop_resume": {
+    "completed_network_calls": 1,
+    "progress": 1,
+    "resume": "This run may have performed an external write before its step completed. Check the external result, then start a new run instead of resuming."
+  },
+  "token_budget_resume": {
+    "limit": 8,
+    "actual_provider_tokens": 16,
+    "model_calls": 2
+  }
+}

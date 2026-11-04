@@ -1,0 +1,193 @@
+{
+  "application_root": "<scratchpad>/r01-i01-iso.7n2m/backend/app",
+  "status": "failed",
+  "error": "each:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence.",
+  "output": "",
+  "provider_calls": 1,
+  "cached_response_sources": [],
+  "checks_after_removal": 1,
+  "cached_response_republished": false,
+  "timeline": [
+    {
+      "event": "success",
+      "attempt": 1,
+      "node": "input",
+      "cached": false
+    },
+    {
+      "event": "success",
+      "attempt": 1,
+      "node": "tickets",
+      "cached": false
+    },
+    {
+      "event": "verify",
+      "attempt": 1,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "verify",
+      "attempt": 1,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "verify",
+      "attempt": 1,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "verify",
+      "attempt": 1,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 1,
+      "node": "each",
+      "cached": false
+    },
+    {
+      "event": "verify",
+      "attempt": 2,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "verify",
+      "attempt": 2,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 2,
+      "node": "input",
+      "cached": true
+    },
+    {
+      "event": "verify",
+      "attempt": 2,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 2,
+      "node": "tickets",
+      "cached": true
+    },
+    {
+      "event": "verify",
+      "attempt": 2,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 2,
+      "node": "each",
+      "cached": true
+    },
+    {
+      "event": "success",
+      "attempt": 2,
+      "node": "render",
+      "cached": false
+    },
+    {
+      "event": "verify",
+      "attempt": 2,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 2,
+      "node": "out",
+      "cached": false
+    },
+    {
+      "event": "verify",
+      "attempt": 3,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "verify",
+      "attempt": 3,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 3,
+      "node": "input",
+      "cached": true
+    },
+    {
+      "event": "verify",
+      "attempt": 3,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 3,
+      "node": "tickets",
+      "cached": true
+    },
+    {
+      "event": "verify",
+      "attempt": 3,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 3,
+      "node": "each",
+      "cached": true
+    },
+    {
+      "event": "verify",
+      "attempt": 3,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    },
+    {
+      "event": "success",
+      "attempt": 3,
+      "node": "render",
+      "cached": true
+    },
+    {
+      "event": "removed",
+      "attempt": 3
+    },
+    {
+      "event": "verify",
+      "attempt": 3,
+      "documents": [
+        "218d49fa16ad48b5b7e687ab53dc41af"
+      ]
+    }
+  ]
+}

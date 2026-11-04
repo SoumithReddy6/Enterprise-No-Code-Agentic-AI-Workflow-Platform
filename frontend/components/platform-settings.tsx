@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { api, type ConfigProperty } from '@/lib/workflow';
+import { api, parseJsonSetting, type ConfigProperty } from '@/lib/workflow';
 const scalar = (value: unknown): string =>
   ['string', 'number', 'boolean'].includes(typeof value) ? String(value) : '';
 export type ToolConnection = {
@@ -30,13 +30,26 @@ export function ConfigField({
   const schema = property.anyOf?.find((p) => p.type !== 'null') || property;
   const type = schema.type;
   const json = type === 'object' || type === 'array';
-  const [draft, setDraft] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  const [draft, setDraft] = useState<{ text: string; value: unknown } | null>(null);
+  // Keep formatting only while it represents this exact prop value. Undo, reload
+  // and another document must never display a draft for a different saved value.
+  const shownDraft = draft && Object.is(draft.value, value) ? draft.text : null;
+  // Text that does not parse is stored as the setting itself, so the workflow never keeps
+  // an older value the screen no longer shows; the editor refuses to validate or run it.
+  const unparsed = json && typeof value === 'string';
+  const error = unparsed ? 'Enter the required JSON shape with finite numbers before validating or running.' : '';
   const options = schema.enum || property.enum;
   return (
     <label>
       {property.title || name.replaceAll('_', ' ')}
-      {options ? (
+      {name === 'approval' ? (
+        <select disabled={disabled} value={value == null ? 'default' : value === true ? 'true' : 'false'}
+          onChange={(e) => onChange(e.target.value === 'default' ? null : e.target.value === 'true')}>
+          <option value="default">Default: require approval when signed in</option>
+          <option value="true">Require approval</option>
+          <option value="false">Skip approval</option>
+        </select>
+      ) : options ? (
         <select
           disabled={disabled}
           value={scalar(value ?? property.default ?? '')}
@@ -60,7 +73,8 @@ export function ConfigField({
           disabled={disabled}
           rows={5}
           value={
-            draft ??
+            shownDraft ??
+            (unparsed ? (value as string) : null) ??
             JSON.stringify(
               value ?? property.default ?? (type === 'array' ? [] : {}),
               null,
@@ -68,22 +82,13 @@ export function ConfigField({
             )
           }
           onChange={(e) => {
-            setDraft(e.target.value);
             try {
-              const parsed: unknown = JSON.parse(e.target.value);
-              if (
-                type === 'object' &&
-                (parsed === null ||
-                  Array.isArray(parsed) ||
-                  typeof parsed !== 'object')
-              )
-                throw Error('Enter a JSON object');
-              if (type === 'array' && !Array.isArray(parsed))
-                throw Error('Enter a JSON array');
+              const parsed = parseJsonSetting(e.target.value, type);
+              setDraft({ text: e.target.value, value: parsed });
               onChange(parsed);
-              setError('');
             } catch {
-              setError('Enter valid JSON before leaving this field.');
+              setDraft({ text: e.target.value, value: e.target.value });
+              onChange(e.target.value);
             }
           }}
         />
@@ -107,6 +112,7 @@ export function ConfigField({
           'code',
           'body',
           'content',
+          'purpose',
         ].includes(name) ? (
         <textarea
           disabled={disabled}

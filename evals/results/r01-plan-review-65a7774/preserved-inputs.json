@@ -1,0 +1,9 @@
+{
+  "backend/app/compiler.py": "bad170b8836be8ec9a37278f7ee5c88a715a686e5b97003dddf546b033c6d06b",
+  "backend/app/platform_nodes.py": "03ca499d16a0c22ebeff65a8463e13095962ec4115ddfb7cc81ce978777df7d5",
+  "backend/app/platform_validation.py": "5427a13803321f5b1ab3b74dffec5728539cba6a4ccbd55a99817d76a7658d93",
+  "backend/app/registry.py": "4f1f4b7b3502c4132bf6c75cf337b3c254058b1f680ccb6c88b40549647e7142",
+  "backend/app/worker.py": "e595fc6afc768bc67957c5e589eef884372a591708a70f24ac9447bcdbd912b4",
+  "docs/superpowers/plans/2026-10-30-response-source-boundary.md": "4351bc3cfa109c7607b0867e78eea0638d1730a8abc0e7baf524585db3f1f03b",
+  "evals/results/r01-plan-2026-10-30/prototype-run.txt": "05084404831e6ffe4b5b53632172089d163068afd8f397f9f67d8b728effbcac"
+}

@@ -1,0 +1,8 @@
+{"timestamp":"2026-10-31T22:42:56.356672+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-10-31T22:42:56.405777+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"current","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-10-31T22:42:56.406954+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.05}
+{"name": "sqlite-accounting-before-commit", "passed": true, "details": {"database": "sqlite", "moment": "before_commit", "sigkill": true, "fast_saves": "failing", "prior_checkpoint": false, "prior_tokens_spent": 0, "model_calls": 2, "final_tokens_spent": 15, "resumed_status": "failed (token limit before m1)"}, "seconds": 32.585}
+{"timestamp":"2026-10-31T22:43:28.927892+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-10-31T22:43:28.930934+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"current","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-10-31T22:43:28.931723+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.004}
+{"name": "sqlite-accounting-after-commit", "passed": true, "details": {"database": "sqlite", "moment": "after_commit", "sigkill": true, "fast_saves": "failing", "prior_checkpoint": true, "prior_tokens_spent": 15, "model_calls": 1, "final_tokens_spent": 15, "resumed_status": "failed (token limit before m1)"}, "seconds": 32.479}

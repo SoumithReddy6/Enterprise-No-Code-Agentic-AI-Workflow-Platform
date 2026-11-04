@@ -1,0 +1,733 @@
+{
+  "application_root": "<scratchpad>/r01-i01-iso.7n2m/backend/app",
+  "shapes": {
+    "missing_authority_refused": "out: knowledge source verification is unavailable. No answer was published.",
+    "malformed_empty_object_refused": [
+      "out: saved knowledge sources are unavailable or removed. Start a new run with current evidence."
+    ]
+  },
+  "real_cases": [
+    {
+      "case": "fresh_fail",
+      "status": "failed",
+      "error": "out: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 0,
+      "verification_calls_after_resume": null,
+      "verification_calls_after_removal": 1,
+      "response_checkpointed": false,
+      "model_call_documents": [
+        []
+      ],
+      "response_verification_documents": [
+        "6457229fe964441b9d6c641791f54000"
+      ],
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "6457229fe964441b9d6c641791f54000"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "6457229fe964441b9d6c641791f54000"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "6457229fe964441b9d6c641791f54000"
+          ]
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "6457229fe964441b9d6c641791f54000"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "fresh_continue",
+      "status": "failed",
+      "error": "out: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 0,
+      "verification_calls_after_resume": null,
+      "verification_calls_after_removal": 1,
+      "response_checkpointed": false,
+      "model_call_documents": [
+        []
+      ],
+      "response_verification_documents": [
+        "14b23142f1f746099ad378d4682566cf"
+      ],
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "14b23142f1f746099ad378d4682566cf"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "14b23142f1f746099ad378d4682566cf"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "14b23142f1f746099ad378d4682566cf"
+          ]
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "14b23142f1f746099ad378d4682566cf"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "fresh_route",
+      "status": "failed",
+      "error": "out: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 0,
+      "verification_calls_after_resume": null,
+      "verification_calls_after_removal": 1,
+      "response_checkpointed": false,
+      "model_call_documents": [
+        []
+      ],
+      "response_verification_documents": [
+        "209eb758c0b443cfa48d1e07113674ee"
+      ],
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "209eb758c0b443cfa48d1e07113674ee"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "209eb758c0b443cfa48d1e07113674ee"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "209eb758c0b443cfa48d1e07113674ee"
+          ]
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "209eb758c0b443cfa48d1e07113674ee"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_response",
+      "status": "failed",
+      "error": "out: saved knowledge sources are unavailable or removed. Start a new run with current evidence.; each:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 1,
+      "verification_calls_after_resume": 2,
+      "verification_calls_after_removal": 2,
+      "response_checkpointed": true,
+      "model_call_documents": [
+        [
+          "6bb8ad496e084634bec3be8f7abc6d80"
+        ]
+      ],
+      "response_verification_documents": [
+        "6bb8ad496e084634bec3be8f7abc6d80",
+        "6bb8ad496e084634bec3be8f7abc6d80",
+        "6bb8ad496e084634bec3be8f7abc6d80"
+      ],
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "6bb8ad496e084634bec3be8f7abc6d80"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "6bb8ad496e084634bec3be8f7abc6d80"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "6bb8ad496e084634bec3be8f7abc6d80"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "6bb8ad496e084634bec3be8f7abc6d80"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "6bb8ad496e084634bec3be8f7abc6d80"
+          ]
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "6bb8ad496e084634bec3be8f7abc6d80"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "6bb8ad496e084634bec3be8f7abc6d80"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_loop",
+      "status": "failed",
+      "error": "each:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 0,
+      "verification_calls_after_resume": 1,
+      "verification_calls_after_removal": 1,
+      "response_checkpointed": false,
+      "model_call_documents": [
+        [
+          "f45edda4a7634268845737af35e0bcba"
+        ]
+      ],
+      "response_verification_documents": [],
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "f45edda4a7634268845737af35e0bcba"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "f45edda4a7634268845737af35e0bcba"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "f45edda4a7634268845737af35e0bcba"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "f45edda4a7634268845737af35e0bcba"
+          ]
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "f45edda4a7634268845737af35e0bcba"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_partial_loop",
+      "status": "failed",
+      "error": "each:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 0,
+      "verification_calls_after_resume": 1,
+      "verification_calls_after_removal": 1,
+      "response_checkpointed": false,
+      "model_call_documents": [
+        [
+          "08098f20b0364604b6b5519c4ce0de60"
+        ]
+      ],
+      "response_verification_documents": [],
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "08098f20b0364604b6b5519c4ce0de60"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "08098f20b0364604b6b5519c4ce0de60"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "08098f20b0364604b6b5519c4ce0de60"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "08098f20b0364604b6b5519c4ce0de60"
+          ]
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "08098f20b0364604b6b5519c4ce0de60"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "loop_fresh",
+      "status": "success",
+      "error": "",
+      "provider_calls": 1,
+      "output": "[{'index': 0, 'status': 'success', 'value': 'Bluebird is the project codename. [S1]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}]",
+      "response_source_count": 1,
+      "verification_calls_after_resume": null,
+      "verification_calls_after_removal": null,
+      "response_checkpointed": true,
+      "model_call_documents": [
+        [
+          "cc0043a041d441e5aa695c3d8ee0946c"
+        ]
+      ],
+      "response_verification_documents": [
+        "cc0043a041d441e5aa695c3d8ee0946c"
+      ],
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "cc0043a041d441e5aa695c3d8ee0946c"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "cc0043a041d441e5aa695c3d8ee0946c"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "cc0043a041d441e5aa695c3d8ee0946c"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "cc0043a041d441e5aa695c3d8ee0946c"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "cc0043a041d441e5aa695c3d8ee0946c"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_loop_unchanged",
+      "status": "success",
+      "error": "",
+      "provider_calls": 1,
+      "output": "[{'index': 0, 'status': 'success', 'value': 'Bluebird is the project codename. [unsupported reference]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}]",
+      "response_source_count": 0,
+      "verification_calls_after_resume": 5,
+      "verification_calls_after_removal": null,
+      "response_checkpointed": true,
+      "model_call_documents": [
+        [
+          "1fb2620e8d624ba393da43cfcc41456a"
+        ]
+      ],
+      "response_verification_documents": [
+        "1fb2620e8d624ba393da43cfcc41456a"
+      ],
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "1fb2620e8d624ba393da43cfcc41456a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "1fb2620e8d624ba393da43cfcc41456a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "1fb2620e8d624ba393da43cfcc41456a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "1fb2620e8d624ba393da43cfcc41456a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "1fb2620e8d624ba393da43cfcc41456a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "1fb2620e8d624ba393da43cfcc41456a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "1fb2620e8d624ba393da43cfcc41456a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "1fb2620e8d624ba393da43cfcc41456a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "1fb2620e8d624ba393da43cfcc41456a"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_loop_after_reuse",
+      "status": "failed",
+      "error": "out: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence.",
+      "provider_calls": 1,
+      "output": "",
+      "response_source_count": 0,
+      "verification_calls_after_resume": 5,
+      "verification_calls_after_removal": 1,
+      "response_checkpointed": false,
+      "model_call_documents": [
+        [
+          "d19c6dc6750a4c7da3d56fd95c885487"
+        ]
+      ],
+      "response_verification_documents": [
+        "d19c6dc6750a4c7da3d56fd95c885487"
+      ],
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "d19c6dc6750a4c7da3d56fd95c885487"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "d19c6dc6750a4c7da3d56fd95c885487"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "d19c6dc6750a4c7da3d56fd95c885487"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "d19c6dc6750a4c7da3d56fd95c885487"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "d19c6dc6750a4c7da3d56fd95c885487"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "d19c6dc6750a4c7da3d56fd95c885487"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "d19c6dc6750a4c7da3d56fd95c885487"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "d19c6dc6750a4c7da3d56fd95c885487"
+          ]
+        },
+        {
+          "event": "loop_reuse_committed"
+        },
+        {
+          "event": "downstream_prompt_committed"
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "d19c6dc6750a4c7da3d56fd95c885487"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_partial_after_reuse",
+      "status": "failed",
+      "error": "out: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence.",
+      "provider_calls": 2,
+      "output": "",
+      "response_source_count": 0,
+      "verification_calls_after_resume": 8,
+      "verification_calls_after_removal": 1,
+      "response_checkpointed": false,
+      "model_call_documents": [
+        [
+          "93b4cbff36164c3fba56a1c1c56fb92f"
+        ],
+        [
+          "93fa8eaf6bc54d5abb5d225e9defa174"
+        ]
+      ],
+      "response_verification_documents": [
+        "93fa8eaf6bc54d5abb5d225e9defa174",
+        "93b4cbff36164c3fba56a1c1c56fb92f"
+      ],
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "93b4cbff36164c3fba56a1c1c56fb92f"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93b4cbff36164c3fba56a1c1c56fb92f"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93b4cbff36164c3fba56a1c1c56fb92f"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93b4cbff36164c3fba56a1c1c56fb92f"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93b4cbff36164c3fba56a1c1c56fb92f"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93b4cbff36164c3fba56a1c1c56fb92f"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93b4cbff36164c3fba56a1c1c56fb92f"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93fa8eaf6bc54d5abb5d225e9defa174"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93fa8eaf6bc54d5abb5d225e9defa174"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93fa8eaf6bc54d5abb5d225e9defa174"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93fa8eaf6bc54d5abb5d225e9defa174"
+          ]
+        },
+        {
+          "event": "downstream_prompt_committed"
+        },
+        {
+          "event": "document_removed"
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "93fa8eaf6bc54d5abb5d225e9defa174",
+            "93b4cbff36164c3fba56a1c1c56fb92f"
+          ]
+        }
+      ]
+    },
+    {
+      "case": "cached_partial_unchanged",
+      "status": "success",
+      "error": "",
+      "provider_calls": 2,
+      "output": "[{'index': 0, 'status': 'success', 'value': 'Bluebird is the project codename. [unsupported reference]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}, {'index': 1, 'status': 'success', 'value': 'Unrelated handbook material. [S2]', 'error': '', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'provider': 'source', 'sources': 'source', 'grounding': 'guessed'}}}]",
+      "response_source_count": 1,
+      "verification_calls_after_resume": 8,
+      "verification_calls_after_removal": null,
+      "response_checkpointed": true,
+      "model_call_documents": [
+        [
+          "849518027de244e385e3ad46e04c736a"
+        ],
+        [
+          "52c47cfe6cf94bb490578332cd58015e"
+        ]
+      ],
+      "response_verification_documents": [
+        "52c47cfe6cf94bb490578332cd58015e",
+        "849518027de244e385e3ad46e04c736a"
+      ],
+      "timeline": [
+        {
+          "event": "verify",
+          "documents": [
+            "849518027de244e385e3ad46e04c736a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "849518027de244e385e3ad46e04c736a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "849518027de244e385e3ad46e04c736a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "849518027de244e385e3ad46e04c736a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "849518027de244e385e3ad46e04c736a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "849518027de244e385e3ad46e04c736a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "849518027de244e385e3ad46e04c736a"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "52c47cfe6cf94bb490578332cd58015e"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "52c47cfe6cf94bb490578332cd58015e"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "52c47cfe6cf94bb490578332cd58015e"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "52c47cfe6cf94bb490578332cd58015e"
+          ]
+        },
+        {
+          "event": "verify",
+          "documents": [
+            "52c47cfe6cf94bb490578332cd58015e",
+            "849518027de244e385e3ad46e04c736a"
+          ]
+        }
+      ]
+    }
+  ]
+}

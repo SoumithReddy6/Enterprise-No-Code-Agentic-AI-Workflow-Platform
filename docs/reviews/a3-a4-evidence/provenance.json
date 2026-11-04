@@ -1,0 +1,21 @@
+{
+  "recorded_at": "2026-09-26T17:31:31.606508+00:00",
+  "head": "5b9db15a3fc97abcb350c3f2ab3c619d8b135f7a",
+  "source_sha256": {
+    "backend/app/compiler.py": "6ce4d82e37622082b494f189a071338acd2393adbda63b82a5b3db7a13217fad",
+    "backend/app/iteration.py": "1250ec654a488a8c33b8e3fa2466505952b88497a9fc37ef81e62108880e4f32",
+    "backend/app/agent_runtime.py": "270b359edf04e0fbb63e857ad5bf1921280cf1f265683cc7c9009fc0e1ba2924",
+    "backend/app/worker.py": "2f174b87f1335f8ad157e1d1b25f8e10debd4bd5eeb2a2497b808f9e81bdfdfb",
+    "backend/app/storage.py": "365fac44236671fca138aad6102d02b92475063d0c15432810cca35653e8f225",
+    "backend/app/token_budget.py": "1ac44a2a7838334b9082908b3c42fbd53cac8a0a9c49719499c14e80aa6e86ec",
+    "backend/app/platform_graph.py": "c2d3f0231d3f5d12ef7a76b4ec86114fbd9a37feedc5df5217e05965bf27c24c",
+    "backend/app/tool_service.py": "8474268a5225db9f128ad64e178e2ed73762e3d46563c2501e3070af324a1ec8",
+    "frontend/lib/workflow.ts": "943a37bed8c9dced7fe4503eb6cfb38ff7b25dbcd275b662f116811fc5af6d23"
+  },
+  "suite": {
+    "command": ".venv/bin/python -m pytest backend/tests -q",
+    "result": "540 passed, 4 warnings in 24.05s"
+  },
+  "network": "Mocked transports only; temporary SQLite databases",
+  "scope": "working tree, not a clean checkout"
+}

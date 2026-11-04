@@ -1,0 +1,9 @@
+............................................................... [ 57%]
+......................................................                   [100%]
+=============================== warnings summary ===============================
+backend/tests/test_token_budget_recovery.py::test_t11b_a_request_router_repair_refusal_keeps_its_type
+  /Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+126 passed, 1 warning in 12.88s

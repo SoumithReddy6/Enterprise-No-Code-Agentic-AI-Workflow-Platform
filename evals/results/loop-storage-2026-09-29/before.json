@@ -1,0 +1,58 @@
+[
+ {
+  "items": 25,
+  "processed": 25,
+  "values_dropped": true,
+  "final_bytes": {
+   "runs_row": 1995204,
+   "run_loop_items": 0,
+   "run_events": 3512425
+  },
+  "written_bytes": {
+   "runs": 44106666,
+   "run_events": 3518834,
+   "run_loop_items": 0,
+   "total": 47625500
+  }
+ },
+ {
+  "items": 50,
+  "processed": 50,
+  "values_dropped": true,
+  "final_bytes": {
+   "runs_row": 3987529,
+   "run_loop_items": 0,
+   "run_events": 7023475
+  },
+  "written_bytes": {
+   "runs": 164161766,
+   "run_events": 7035484,
+   "run_loop_items": 0,
+   "total": 171197250
+  },
+  "growth_vs_previous": {
+   "items": 2.0,
+   "total_written": 3.59
+  }
+ },
+ {
+  "items": 100,
+  "processed": 100,
+  "values_dropped": true,
+  "final_bytes": {
+   "runs_row": 6952182,
+   "run_loop_items": 0,
+   "run_events": 13025582
+  },
+  "written_bytes": {
+   "runs": 629121977,
+   "run_events": 13048791,
+   "run_loop_items": 0,
+   "total": 642170768
+  },
+  "growth_vs_previous": {
+   "items": 2.0,
+   "total_written": 3.75
+  }
+ }
+]

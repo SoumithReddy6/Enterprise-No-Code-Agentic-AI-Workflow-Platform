@@ -1,0 +1,524 @@
+{
+  "started_at": "2026-10-10T15:21:41.640524+00:00",
+  "completed_at": "2026-10-10T15:22:57.833617+00:00",
+  "suite_sha256": "d4d8f48b1902a839c1be95814df6df4e42af081ac2b41f5e810323cce1974100",
+  "workflow_sha256": "b52d39c1844a74c35708e25ff24c571c865e3e7f7dbde1cf82ddcd343ac6c76b",
+  "model": {
+    "name": "llama3.1:latest",
+    "digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e"
+  },
+  "source_hashes": {
+    "backend/app/iteration.py": "0daf76370d7f5ddb3f88d7cf2673b03b401ca60308875c4f663471c17d8e1d3c",
+    "backend/app/worker.py": "a1359960b6d58e40f1db1adb1b1fd203aac8d9cf9ba23831296433a50f5dd575",
+    "backend/app/auth.py": "085a9b13fa0074d0873b8624a1f11fce1443de5d397e50e1550f0c460f7e2bf3",
+    "backend/app/evidence_registry.py": "462bbafa5bc108e0bfe63fd45beb8fc26d77838be109f08be38bd6b12f488b0b",
+    "backend/app/compiler.py": "1fdf0c3c35a9ef03cf333bd5ce738dd6a552f29df1814a954faa23d0085e0ca9",
+    "backend/app/token_budget.py": "3d1d4397ea767c8583d98a5cc9dcf895119e90af2c4bfd782f3c2f00e841af45",
+    "backend/app/models.py": "dce6b21386e15cadd125a3a8778ebf9de420f8d2b39945bedd3c1b04e096b552",
+    "backend/app/approvals.py": "d3f8ba23cb56d3260863f9a596a989628dad29ab760b87502267f3c08576dcf5",
+    "backend/app/agent_runtime.py": "aa3fc4a16d901f2539a27b881234efb0e7dcaa3374ff1eed040f3baec0017002",
+    "backend/app/answerability_guard.py": "e7917d0020ea2e3a7a43e9ebc8e6d1294166e9f6657a529ce8ecdcde2a4b4c9d",
+    "backend/app/calculate.py": "15316cdd665a04090259dc33039c481d01e59ed07b48435b4c66a174777ba34a",
+    "backend/app/registry.py": "bb49535c36119a5c7c6a10cb42af7b3c0a962fc5a91e985c294705c43cbd217c",
+    "backend/app/platform_validation.py": "5427a13803321f5b1ab3b74dffec5728539cba6a4ccbd55a99817d76a7658d93",
+    "backend/app/auth_security.py": "9c5c399d2f2f2f9504e9f7dfe2c4996594644703eb9d6fc5ca1c2bd95ccdf3a5",
+    "backend/app/port_types.py": "df4e339dcbeda6eb6ffc5dd7a0123d435e717808dd531b9789da269c6bd6f073",
+    "backend/app/platform_graph.py": "f890b04067ad7bb7da8661d80ea43f053c36e5ba1e1f6e29b009e7c4fc63e87b",
+    "backend/app/__init__.py": "59489687fe4e7c80a64c9ec50e182e03a117e49ccbf8c555f0b7078a17b86463",
+    "backend/app/observability.py": "1ab89943a3c58247622213f809515fdbb0ef2fe5814bfca442400492040e10db",
+    "backend/app/vector_adapters.py": "ed0d207c65b917343c32406deabd8adb6452bc8ac35e2fe1db99110afc328df2",
+    "backend/app/agent_memory.py": "59421c58d5ef1babce0401e902d37283ffa4a14cede85cc3de5d0bab2f4d3368",
+    "backend/app/conditions.py": "68305e7326bce7c4840e1be6ee6fdda380b7d63b6c5577b5d5421a050bb06031",
+    "backend/app/sandbox.py": "463c58aa45a4e12aef4a27f332369751a8eba9cebe590bce30365bd0d8997e68",
+    "backend/app/providers.py": "ae921d5ee05b15c65f5b1e001c6f5f7578830049db94a47faeca982a6c87c84c",
+    "backend/app/kb_gateway.py": "efe542364c28f0f48a5605a992e37336ac8d841e471c4fec51596adcaaf0f91a",
+    "backend/app/operator_metrics.py": "8b675ed224933e6342c9c589c1fbcd022e60fd5d8e7fa962c6dc15e24d5d81ad",
+    "backend/app/storage.py": "685d3347ae7eeb9a6ecf40ae44f5f8693d1effcec189c4d414b7e4dd383d3947",
+    "backend/app/pdf_extract.py": "9d1aeedd5688b52b0eeb61cd435adda695a1e443dc2fd79bb18585e1216c32b1",
+    "backend/app/tool_api.py": "ef5542b16f8c2ef47ca8e15f75bb6571bfd63b976fc5470cf967f72f81db379d",
+    "backend/app/execution_policy.py": "f29bb706cd5d926ccc8618d6191a4f5282c9de60c054181d3fa49166657e158f",
+    "backend/app/provenance.py": "34c6b51830bb5c6ec5696e1ac63eb0e742ee005be2543626ab8662c2faaf2602",
+    "backend/app/readiness.py": "3899bb1df17e843eaec83ccd500c607180be6befd5853bf36b05c664a7c20b5d",
+    "backend/app/main.py": "f5ab83dacc12e18049b4660989031e2072ab482a5e245e1c63dfe0b6aedb618c",
+    "backend/app/platform_nodes.py": "03ca499d16a0c22ebeff65a8463e13095962ec4115ddfb7cc81ce978777df7d5",
+    "backend/app/tool_service.py": "92869b8f7d083dce1f418fbde49a29a6a0ad0f7d50c8b81ecb7e15bf699e6fbe",
+    "backend/app/exact_json.py": "439487fa40c44474dfc562b5c5afef9fb163829cb6dac7dd42ab416e7b200cbe",
+    "backend/app/schema.py": "cbbd9eb6a2e5c65069448e48c15d2640e98d75abc0012273bec650763189d882",
+    "backend/app/vector_extract.py": "f1e805901e22a8c76ad50604f2a0673a077dea9b7130a605b09fc0f56d174815",
+    "backend/app/kb/options.py": "064ef8e0087d8169334dbe15827f9fcf7693c278f9ffe37f5e1956c764637589",
+    "backend/app/kb/ingestion.py": "c6f9587b14d7b353e1b33089cec27dae9394b480868e20c9e80885bc2dd478e8",
+    "backend/app/kb/embedding.py": "6c6bb4b63216ccbf5b0bf7dd1bb0ac1076e7e6120e7086f53ea6a1021504a3cc",
+    "backend/app/kb/section_chunking.py": "82527dc829fa88fe1ff258f02eb243e2c0469950e00e310eb2fa1345ad77ada7",
+    "backend/app/kb/answerability.py": "224c4cdd6952446a56792c0c224f27ca54f7bf09e186d3bf64db28603762b5c3",
+    "backend/app/kb/__init__.py": "b466075df148b1ec103d94036e1d215ae9bd891aa096c0aff9364ee155f9bad8",
+    "backend/app/kb/rpc.py": "bf5bf4d535cf3207845be4a4904538fdfb52d29ed85f82556c711c96fe148bcd",
+    "backend/app/kb/reranking.py": "31063b5307857444bdc416f0286df84b74255fdbdffb47af0ee4fde28cf32b91",
+    "backend/app/kb/management_models.py": "2b2e65b53c4395998ef067083b81136964e3efa584eda0c62bc6d6790263d118",
+    "backend/app/kb/management_app.py": "dbb7b6f17eef7e9a138f37a7171392573c374bb453208ef41a013d3c41886d3f",
+    "backend/app/kb/management.py": "5b3985a2bab41adde0a70f1e7fa742fbb368dd9c78938a259dff1c54444a848d",
+    "backend/app/kb/search.py": "8e3354d9782c0e0b07b023d335f84c1f94f1106e6f3b680bf3dd44357bd6730f",
+    "backend/app/kb/search_app.py": "78945d1f66ced1125bf954765f92b1d3d561039e6f431918718f7708cd682aaa",
+    "backend/app/kb/search_models.py": "af8453c5453d515b07ff18db484b6b4c2f4a171c449dae6c75d4b64e77ac46a7"
+  },
+  "notes": [
+    "Same existing purchase example, 30 applicable cases; other domains have no current configured workflow.",
+    "Shadow labels only; no admission gate is implemented.",
+    "This run uses real local Ollama through the product compiler, without external writes."
+  ],
+  "rows": [
+    {
+      "id": "purchase-proceed-1",
+      "expected": "proceed",
+      "message_sha256": "33b7dcb3cffedea13c8f7f4a9d4cf79d2c2191e31dfbb9db2a3371c15da0dcba",
+      "answer": "{\"item\": \"laptops\", \"quantity\": 3, \"unit_price\": 450, \"total\": null}",
+      "final": "review",
+      "decisions": {
+        "gate": {
+          "label": "calculated",
+          "would_review": false
+        },
+        "check": {
+          "label": "calculated",
+          "would_review": false
+        }
+      },
+      "seconds": 6.785,
+      "error": null
+    },
+    {
+      "id": "purchase-proceed-2",
+      "expected": "proceed",
+      "message_sha256": "8fe6925baf47a11311d142f7a7eaa5900c1bde0414f3874e0b07879ab7f9fe60",
+      "answer": "{\"item\": \"laptops\", \"quantity\": 3, \"unit_price\": 450, \"total\": 1350}",
+      "final": "review",
+      "decisions": {
+        "gate": {
+          "label": "calculated",
+          "would_review": false
+        },
+        "check": {
+          "label": "calculated",
+          "would_review": false
+        }
+      },
+      "seconds": 1.552,
+      "error": null
+    },
+    {
+      "id": "purchase-proceed-3",
+      "expected": "proceed",
+      "message_sha256": "e28b4206b4aff0fe7b8f7cf19cca2fcd5e00be67516bb3e80fe6be29d9693832",
+      "answer": "{\"item\": \"monitor\", \"quantity\": null, \"unit_price\": null, \"total\": 1200}",
+      "final": "review",
+      "decisions": {
+        "gate": {
+          "label": "calculated",
+          "would_review": false
+        },
+        "check": {
+          "label": "calculated",
+          "would_review": false
+        }
+      },
+      "seconds": 1.511,
+      "error": null
+    },
+    {
+      "id": "purchase-proceed-4",
+      "expected": "proceed",
+      "message_sha256": "be252796d3455f2def8f49340433147315e5774fc0b3b295082ca0ed31baba1b",
+      "answer": "{\"item\": \"chairs\", \"quantity\": 4, \"unit_price\": 300, \"total\": null}",
+      "final": "review",
+      "decisions": {
+        "gate": {
+          "label": "calculated",
+          "would_review": false
+        },
+        "check": {
+          "label": "calculated",
+          "would_review": false
+        }
+      },
+      "seconds": 1.63,
+      "error": null
+    },
+    {
+      "id": "purchase-proceed-5",
+      "expected": "proceed",
+      "message_sha256": "de1dd0264fdaf0d348473b8de48208280e1e06f893b9e62b342037f973b5a0a4",
+      "answer": "{\"item\": \"licences\", \"quantity\": 7, \"unit_price\": 142.86, \"total\": null}",
+      "final": "review",
+      "decisions": {
+        "gate": {
+          "label": "calculated",
+          "would_review": false
+        },
+        "check": {
+          "label": "calculated",
+          "would_review": false
+        }
+      },
+      "seconds": 1.517,
+      "error": null
+    },
+    {
+      "id": "purchase-clarify-1",
+      "expected": "clarify",
+      "message_sha256": "35ea11da30fe1a29f3d84e89917d981b4cb250d8dc629984384c32219ad317a4",
+      "answer": "{\"item\": \"order\", \"quantity\": null, \"unit_price\": null, \"total\": 450}",
+      "final": "auto",
+      "decisions": {
+        "gate": {
+          "label": "calculated",
+          "would_review": false
+        },
+        "check": {
+          "label": "calculated",
+          "would_review": false
+        }
+      },
+      "seconds": 1.532,
+      "error": null
+    },
+    {
+      "id": "purchase-clarify-2",
+      "expected": "clarify",
+      "message_sha256": "b2ddf2f063068d141f62ee461fcd8a4923408b426e39e6c6f7b36da0cf7e9ebb",
+      "answer": "{\"item\": \"laptops\", \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.343,
+      "error": null
+    },
+    {
+      "id": "purchase-clarify-3",
+      "expected": "clarify",
+      "message_sha256": "a8d9a119dfa4fa7e57aa8c721ca6d84303c84e314adc358046c97b164d5bcab7",
+      "answer": "{\"item\": \"laptops\", \"quantity\": 3, \"unit_price\": 450, \"total\": 1000}",
+      "final": "auto",
+      "decisions": {
+        "gate": {
+          "label": "calculated",
+          "would_review": false
+        },
+        "check": {
+          "label": "calculated",
+          "would_review": false
+        }
+      },
+      "seconds": 1.425,
+      "error": null
+    },
+    {
+      "id": "purchase-clarify-4",
+      "expected": "clarify",
+      "message_sha256": "b1ccdde6948e12c8aa1c84f3683a62ccdecb935434fe91bad14b354c17b19787",
+      "answer": "{\"item\": \"laptops\", \"quantity\": 0, \"unit_price\": 450, \"total\": null}",
+      "final": "auto",
+      "decisions": {
+        "gate": {
+          "label": "guessed",
+          "would_review": true,
+          "reason": "guessed"
+        },
+        "check": {
+          "label": "guessed",
+          "would_review": true,
+          "reason": "guessed"
+        }
+      },
+      "seconds": 2.925,
+      "error": null
+    },
+    {
+      "id": "purchase-clarify-5",
+      "expected": "clarify",
+      "message_sha256": "ca4cbe77bc8684d5b7ed6bbc4914eaaa2feb5bf0b5007491d25c1cd2ecb422db",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.143,
+      "error": null
+    },
+    {
+      "id": "out-of-scope-1",
+      "expected": "out_of_scope",
+      "message_sha256": "2ef4b0352f0a511510e2386115df5113f5693fe1487d8fda484c9506345269af",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.143,
+      "error": null
+    },
+    {
+      "id": "out-of-scope-2",
+      "expected": "out_of_scope",
+      "message_sha256": "ca2c2cb1a7e1822a0249ad71827fe4b545490d14733d34a5e5ddb853df5399ad",
+      "answer": null,
+      "final": null,
+      "decisions": {},
+      "seconds": 11.824,
+      "error": "Agent output did not match the required structure: not valid JSON (Expecting value: line 1 column 1 (char 0))"
+    },
+    {
+      "id": "out-of-scope-3",
+      "expected": "out_of_scope",
+      "message_sha256": "f4853e9080cf75b46bf449d640fea9fc4f1c397b1c75b9b59c4dc8157d7cd8d3",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.238,
+      "error": null
+    },
+    {
+      "id": "out-of-scope-4",
+      "expected": "out_of_scope",
+      "message_sha256": "90eaeeb4312de67b46fda2c43a80f3bfeb0ac20d0dc222a65f390c9407607c36",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.265,
+      "error": null
+    },
+    {
+      "id": "out-of-scope-5",
+      "expected": "out_of_scope",
+      "message_sha256": "2f0024e5aeb23c0b3c9a5e894724cdee3f0a90b22332ceab0fb48ca13523dc4c",
+      "answer": null,
+      "final": null,
+      "decisions": {},
+      "seconds": 0.991,
+      "error": "Agent output did not match the required structure: does not match the output schema: 'item' is a required property"
+    },
+    {
+      "id": "out-of-scope-6",
+      "expected": "out_of_scope",
+      "message_sha256": "6d8cbe245ee867b97474163c32b47f8e30191c68def87cdef594352d54bfd05e",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.481,
+      "error": null
+    },
+    {
+      "id": "out-of-scope-7",
+      "expected": "out_of_scope",
+      "message_sha256": "7c633fd70bc41271e99adbbd725d1b6152f6c8f06fc40ecdbf05bdfbcbfc5f8e",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.108,
+      "error": null
+    },
+    {
+      "id": "out-of-scope-8",
+      "expected": "out_of_scope",
+      "message_sha256": "a8123fb84f383b6351d7172de4f4c5290f79b47126c7c51e2925a1e4c841528a",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.934,
+      "error": null
+    },
+    {
+      "id": "out-of-scope-9",
+      "expected": "out_of_scope",
+      "message_sha256": "263336f515a4dbb0f53afb96437bfbc1fa25432ca444c74a39cb36689742ba7f",
+      "answer": null,
+      "final": null,
+      "decisions": {},
+      "seconds": 2.989,
+      "error": "Agent output did not match the required structure: not valid JSON (Expecting value: line 1 column 1 (char 0))"
+    },
+    {
+      "id": "out-of-scope-10",
+      "expected": "out_of_scope",
+      "message_sha256": "8cf11eddf363388bf84089e0a81b7e125e22c3f6b7d75d09dbe34d94ac68f19d",
+      "answer": null,
+      "final": null,
+      "decisions": {},
+      "seconds": 18.96,
+      "error": "Agent output did not match the required structure: not valid JSON (Unterminated string starting at: line 1 column 10 (char 9))"
+    },
+    {
+      "id": "prepared-reply-1",
+      "expected": "prepared_reply",
+      "message_sha256": "185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.309,
+      "error": null
+    },
+    {
+      "id": "prepared-reply-2",
+      "expected": "prepared_reply",
+      "message_sha256": "ce06092fb948d9ffac7d1a376e404b26b7575bcc11ee05a4615fef4fec3a308b",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.141,
+      "error": null
+    },
+    {
+      "id": "prepared-reply-3",
+      "expected": "prepared_reply",
+      "message_sha256": "3733cd977ff8eb18b987357e22ced99f46097f31ecb239e878ae63760e83e4d5",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.166,
+      "error": null
+    },
+    {
+      "id": "prepared-reply-4",
+      "expected": "prepared_reply",
+      "message_sha256": "3639efcd08abb273b1619e82e78c29a7df02c1051b1820e99fc395dcaa3326b8",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.226,
+      "error": null
+    },
+    {
+      "id": "prepared-reply-5",
+      "expected": "prepared_reply",
+      "message_sha256": "c0ddd62c7717180e7ffb8a15bb9674d3ec92592e0b7ac7d1d5289836b4553be2",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.225,
+      "error": null
+    },
+    {
+      "id": "prepared-reply-6",
+      "expected": "prepared_reply",
+      "message_sha256": "90a90a48e23dcc51ad4a821a301e3440ffeb5e986bd69d7bf347a2ba2da23bd3",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.177,
+      "error": null
+    },
+    {
+      "id": "prepared-reply-7",
+      "expected": "prepared_reply",
+      "message_sha256": "d325e1bbfd1c5681d165e3b8d709469492c1b4ee8a5086da24ca56d79b72d379",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.122,
+      "error": null
+    },
+    {
+      "id": "prepared-reply-8",
+      "expected": "prepared_reply",
+      "message_sha256": "15a421e4cf7651fe408f10eb19d401b65dd0e9ae7a60c50d126500c5902d37d7",
+      "answer": "{\"item\": null, \"quantity\": null, \"unit_price\": null, \"total\": null}",
+      "final": "none",
+      "decisions": {
+        "gate": {
+          "label": "absent",
+          "would_review": false
+        }
+      },
+      "seconds": 1.13,
+      "error": null
+    },
+    {
+      "id": "prepared-reply-9",
+      "expected": "prepared_reply",
+      "message_sha256": "bb47b8ff5f623996f8f46b80933095a90e29a5bb4442ac09498c9e9e8fc1cbf4",
+      "answer": null,
+      "final": null,
+      "decisions": {},
+      "seconds": 1.342,
+      "error": "Agent output did not match the required structure: does not match the output schema: 'item' is a required property"
+    },
+    {
+      "id": "prepared-reply-10",
+      "expected": "prepared_reply",
+      "message_sha256": "268bc1833e83306f48ae6203eefb86e7a39dedb1d3d6df99c18ef70aa61ef84d",
+      "answer": null,
+      "final": null,
+      "decisions": {},
+      "seconds": 1.003,
+      "error": "Agent output did not match the required structure: does not match the output schema: 'item' is a required property"
+    }
+  ]
+}

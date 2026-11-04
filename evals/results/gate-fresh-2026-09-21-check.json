@@ -1,0 +1,14 @@
+{
+  "accepted": true,
+  "checks": {
+    "complete_real_corpus": true,
+    "first_attempt_compliance": true,
+    "answer_substring_match_rate": true,
+    "false_abstention": true,
+    "abstention_on_unanswerable": true,
+    "citation_rate": true,
+    "uncited_answerable_rows": true,
+    "no_generation_errors": true,
+    "compliance_measured": true
+  }
+}

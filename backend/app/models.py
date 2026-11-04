@@ -1,6 +1,6 @@
 """Portable, versioned workflow representation, independent of the editor/runtime."""
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -8,6 +8,11 @@ class StrictModel(BaseModel):
 class Position(StrictModel):
     x: float = 0
     y: float = 0
+
+class RetryPolicy(StrictModel):
+    """Transient-failure retries. Writes are refused at validation, never retried."""
+    attempts: int = Field(default=0, ge=0, le=5)
+    base_delay: float = Field(default=0.5, ge=0, le=30)
 
 class Node(StrictModel):
     id: str = Field(pattern=r'^[a-zA-Z][a-zA-Z0-9_-]{0,63}$')
@@ -17,6 +22,10 @@ class Node(StrictModel):
     position: Position = Field(default_factory=Position)
     inputs: dict[str, str] = Field(default_factory=dict)
     config: dict = Field(default_factory=dict)
+    # Execution policy is orthogonal to node configuration, so it lives here rather
+    # than in fifteen config models the compiler already checks for unknown keys.
+    on_error: Literal['fail','continue','route'] = 'fail'
+    retry: RetryPolicy = Field(default_factory=RetryPolicy)
 
 class Edge(StrictModel):
     id: str = Field(min_length=1, max_length=128)
@@ -24,11 +33,18 @@ class Edge(StrictModel):
     target: str
     sourceHandle: str | None = None
     targetHandle: str | None = None
-    kind: Literal['flow','tool','agent'] = 'flow'
+    kind: Literal['flow','tool','agent','loop','store'] = 'flow'
 
 class Workflow(StrictModel):
     version: Literal[1] = 1
+    contract: Literal[1, 2] = 1
     name: str = Field(min_length=1, max_length=120)
     description: str = Field(default='', max_length=2000)
     nodes: list[Node] = Field(min_length=1, max_length=100)
     edges: list[Edge] = Field(default_factory=list, max_length=200)
+
+    @field_validator('contract', mode='before')
+    @classmethod
+    def exact_contract(cls, value):
+        if type(value) is not int:raise ValueError('Workflow contract must be the integer 1 or 2.')
+        return value

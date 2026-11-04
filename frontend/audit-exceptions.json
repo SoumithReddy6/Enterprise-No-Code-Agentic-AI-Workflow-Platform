@@ -1,0 +1,23 @@
+{
+  "policy": "Every high or critical npm advisory fails the build unless it is listed here, matches the reviewed advisory, package, range, versions and dependency paths exactly, has no compatible patched release, and has not expired. Exceptions are never extended automatically: a renewal is a new review.",
+  "exceptions": [
+    {
+      "advisory": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "vulnerable_range": "<=3.0.3",
+      "paths": [
+        [
+          "vinext@1.0.0-beta.9",
+          "vite-plugin-commonjs@0.10.4",
+          "vite-plugin-dynamic-import@1.6.0",
+          "fast-glob@3.3.3",
+          "micromatch@4.0.8",
+          "braces@3.0.3"
+        ]
+      ],
+      "reviewed": "2026-10-05",
+      "expires": "2026-12-04",
+      "reason": "Stack-exhaustion denial of service when braces expands deeply nested patterns. No patched braces release exists (3.0.3 is the latest and is in range), and npm's only proposed fix downgrades vinext from 1.0.0-beta.9 to 0.0.15. The chain enters through vite-plugin-commonjs, which vinext's CLI imports with its config loader, so the code is loaded in development, build and the production process. It is used only by development, build and configuration transformation of glob patterns written in this repository's source; no request data or user input reaches it."
+    }
+  ]
+}

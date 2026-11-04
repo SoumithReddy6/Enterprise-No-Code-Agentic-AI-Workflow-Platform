@@ -1,0 +1,57 @@
+[
+  {
+    "name": "substring-match",
+    "caught": true,
+    "exit_code": 1,
+    "test": "backend/tests/test_common_replies.py::test_requests_and_unconfigured_commands_never_touch_cache"
+  },
+  {
+    "name": "cache-poison-accepted",
+    "caught": true,
+    "exit_code": 1,
+    "test": "backend/tests/test_common_replies.py::test_cache_content_cannot_replace_the_authoritative_reply"
+  },
+  {
+    "name": "tenant-dropped",
+    "caught": true,
+    "exit_code": 1,
+    "test": "backend/tests/test_common_replies.py::test_tenant_workflow_and_reply_versions_have_disjoint_private_keys"
+  },
+  {
+    "name": "workflow-dropped",
+    "caught": true,
+    "exit_code": 1,
+    "test": "backend/tests/test_common_replies.py::test_tenant_workflow_and_reply_versions_have_disjoint_private_keys"
+  },
+  {
+    "name": "punctuation-stripped",
+    "caught": true,
+    "exit_code": 1,
+    "test": "backend/tests/test_common_replies.py::test_lookup_normalisation_preserves_punctuation_and_words"
+  },
+  {
+    "name": "cache-byte-cap-removed",
+    "caught": true,
+    "exit_code": 1,
+    "test": "backend/tests/test_common_replies.py::test_multibyte_reply_over_cache_byte_limit_is_kept_exact_locally"
+  },
+  {
+    "name": "timeout-removed",
+    "caught": true,
+    "exit_code": 1,
+    "test": "backend/tests/test_common_replies.py::test_hung_cache_operation_is_cancelled_and_returns_prepared_reply"
+  },
+  {
+    "name": "retry-enabled",
+    "caught": true,
+    "exit_code": 1,
+    "test": "backend/tests/test_common_replies_redis.py::test_immediate_read_failure_is_not_retried",
+    "initial_probe_caught": false
+  },
+  {
+    "name": "shutdown-removed",
+    "caught": true,
+    "exit_code": 1,
+    "test": "backend/tests/test_common_replies_redis.py::test_real_redis_expiry_poison_and_tenant_policy_namespaces"
+  }
+]

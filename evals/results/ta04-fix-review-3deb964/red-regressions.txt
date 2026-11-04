@@ -1,0 +1,26 @@
+Command: .venv/bin/python -m pytest -q evals/results/ta04-fix-review-3deb964/test_real_source_boundary.py evals/results/ta04-fix-review-3deb964/test_replayed_attempt.py --tb=short --show-capture=no
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+____________ test_removed_document_survives_into_the_final_response ____________
+evals/results/ta04-fix-review-3deb964/test_real_source_boundary.py:58: in test_removed_document_survives_into_the_final_response
+    assert not any(s['document_id'] == doc['id'] for s in returned), \
+E   AssertionError: R01: the final Response returns the document removed during generation
+E   assert not True
+E    +  where True = any(<generator object test_removed_document_survives_into_the_final_response.<locals>.<genexpr> at 0x10c689460>)
+_________ test_an_approved_send_counts_as_work_without_a_second_debit __________
+evals/results/ta04-fix-review-3deb964/test_replayed_attempt.py:10: in test_an_approved_send_counts_as_work_without_a_second_debit
+    assert row['truncation_reason'].startswith('agent stopped after 1 attempt(s):'), \
+E   AssertionError: R02: the approved POST was sent, so this Agent did run
+E   assert False
+E    +  where False = <built-in method startswith of str object at 0x10cbbabb0>('agent stopped after 1 attempt(s):')
+E    +    where <built-in method startswith of str object at 0x10cbbabb0> = 'agent did not run: Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.'.startswith
+__________ test_a_loop_records_the_item_whose_approved_write_was_sent __________
+evals/results/ta04-fix-review-3deb964/test_replayed_attempt.py:18: in test_a_loop_records_the_item_whose_approved_write_was_sent
+    assert row['loop_summary']['processed'] == 1, \
+E   AssertionError: R02: an item sent its approved write but the loop reports zero processed items
+E   assert 0 == 1
+=========================== short test summary info ============================
+FAILED evals/results/ta04-fix-review-3deb964/test_real_source_boundary.py::test_removed_document_survives_into_the_final_response
+FAILED evals/results/ta04-fix-review-3deb964/test_replayed_attempt.py::test_an_approved_send_counts_as_work_without_a_second_debit
+FAILED evals/results/ta04-fix-review-3deb964/test_replayed_attempt.py::test_a_loop_records_the_item_whose_approved_write_was_sent
+3 failed in 0.94s

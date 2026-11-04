@@ -40,7 +40,7 @@ def test_failed_build_retains_blob_and_cleanup_and_retry(manager):
 
 def test_rebuild_keeps_active_and_cancel_fences_publish(manager):
     kb=create(manager); upload(manager,kb); old=claim(manager); publish(manager,old)
-    manager.call('rebuild','a',{'kb_id':kb,'config':{'backend':'chroma'}}); new=claim(manager)
+    manager.call('rebuild','a',{'kb_id':kb,'config':{'backend':'faiss','chunking':'paragraph'}}); new=claim(manager)
     assert manager.call('resolve','a',{'kb_id':kb})['config']['backend']=='faiss'
     manager.call('cancel','a',{'kb_id':kb})
     with pytest.raises(ValueError): publish(manager,new)
@@ -68,17 +68,17 @@ def test_connection_encrypted_and_not_public(manager):
 
 def test_retry_preserves_failed_rebuild_configuration(manager):
     kb=create(manager); doc=upload(manager,kb); publish(manager,claim(manager))
-    manager.call('rebuild','a',{'kb_id':kb,'config':{'backend':'chroma'}})
+    manager.call('rebuild','a',{'kb_id':kb,'config':{'backend':'faiss','chunking':'paragraph'}})
     j=claim(manager)
     manager.call('fail','a',{'job_id':j['id'],'attempt_id':j['attempt_id'],'error':'offline'})
     manager.call('retry','a',{'kb_id':kb,'document_id':doc['id']})
-    assert claim(manager)['config']['backend']=='chroma'
+    assert claim(manager)['config']['chunking']=='paragraph'
 
 def test_superseding_upload_preserves_pending_config(manager):
     kb=create(manager); upload(manager,kb); publish(manager,claim(manager))
-    manager.call('rebuild','a',{'kb_id':kb,'config':{'backend':'chroma'}})
+    manager.call('rebuild','a',{'kb_id':kb,'config':{'backend':'faiss','chunking':'paragraph'}})
     upload(manager,kb,key='two')
-    assert claim(manager)['config']['backend']=='chroma'
+    assert claim(manager)['config']['chunking']=='paragraph'
 
 def test_expired_lease_retries_with_new_attempt_and_fences_original(manager,monkeypatch):
     kb=create(manager); upload(manager,kb); old=claim(manager)
@@ -210,7 +210,7 @@ def test_failed_addition_and_rebuild_keep_published_documents_ready(manager):
     detail=manager.call('get','a',{'kb_id':kb}); docs={d['id']:d for d in detail['documents']}
     assert detail['status']=='degraded' and docs[old['id']]['status']=='ready' and docs[new['id']]['status']=='failed'
     manager.call('remove_document','a',{'kb_id':kb,'document_id':new['id']}); publish(manager,claim(manager))
-    manager.call('rebuild','a',{'kb_id':kb,'config':{'backend':'chroma'}}); j=claim(manager)
+    manager.call('rebuild','a',{'kb_id':kb,'config':{'backend':'faiss','chunking':'paragraph'}}); j=claim(manager)
     manager.call('fail','a',{'job_id':j['id'],'attempt_id':j['attempt_id'],'error':'offline'})
     assert manager.call('get','a',{'kb_id':kb})['documents'][0]['status']=='ready'
 
@@ -250,3 +250,8 @@ def test_cleanup_backoff_persists_and_delete_resets_schedule(manager,monkeypatch
     manager.call('delete','a',{'kb_id':kb})
     due=manager.call('cleanup_list','',{})
     assert len(due)==2 and all(not x['retain_provenance'] for x in due)
+
+
+def test_retired_chroma_rejected_with_recovery_message(manager):
+    with pytest.raises(ValueError, match='Chroma.*FAISS'):
+        manager.call('create','a',{'name':'Retired','config':{'backend':'chroma'}})

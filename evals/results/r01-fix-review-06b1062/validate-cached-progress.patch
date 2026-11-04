@@ -1,0 +1,9 @@
+diff --git a/backend/app/worker.py b/backend/app/worker.py
+--- a/backend/app/worker.py
++++ b/backend/app/worker.py
+@@ -198,4 +198,4 @@
+                 results=outputs.get('results')
+                 if isinstance(results,dict) and results.get('unavailable'):raise ValueError(results['unavailable'])
+-                issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'))
++                issues=await kb_errors(self.kbs,workflow,self.store.run_tenant(id,owner),{node.id:outputs},run.get('vector_dependencies'),run.get('loop_progress'))
+                 if issues:raise ValueError('; '.join(issues))

@@ -1,0 +1,43 @@
+{
+  "audited_commit": "de3296368cc88e4efcbded03bdf6c0e05c781a31",
+  "python": "3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "node": "v24.14.0",
+  "platform": "macOS-26.3.1-arm64-arm-64bit-Mach-O",
+  "playwright": "1.63.0",
+  "corpus_sha256": {
+    "api-integration-guide.md": "9dfa4a2299de7b34fa680e331ba6640c9767da0990869799983b4761e393060e",
+    "cold-chain-handling.md": "4c6e02b1579f50eeeedc73164bce207cf5fc5944a7f72eaa3ec83f8c6f841e49",
+    "customer-sla.md": "6023a3712ba4163d0e5681992b2a9b2f8cec36db8d9231750bd2bed5649fceb0",
+    "data-retention.md": "ebca3e0de0642b7f3ad7217ffcac07c7bf263bf49c5ac984e4deac84ef257450",
+    "dispatch-scheduling.md": "7e9868d6ac1649316afff66d811d4e233bf534ba7bbb0f3e11c1f5db322298fc",
+    "expense-reimbursement.md": "289bf504a9a4390b5ba7f98443bc4ddb036a74854b5138f73147996397c6cebe",
+    "fleet-maintenance.md": "f143daa0ac2a4af4e002e66d9465b6cfc60f6378fbf6ac759cb2ebe7a8b14e56",
+    "hazmat-shipping.md": "e00d2e79486fafdab9b3e1149ba636d1ee49a643592bedebb758e87c3799a562",
+    "holiday-schedule.md": "15790a98a09697f0aef5b2d9de1007d6c116b20931e61ffdf3d3f4422f6dfcef",
+    "incident-severity.md": "b6ede0daecf2d63e5025535cad74159cf43306dd46be6d887de1a67e35c0964f",
+    "on-call-runbook.md": "2bd2fc963d35fac97046d470ccd966db0d2417b7196968250c3d83c5b41baa88",
+    "onboarding-checklist.md": "36a8f0663dab0bbd4fb225eaf907a3f55af989f0ec8c28d62b5ca6fd636af8b9",
+    "performance-reviews.md": "afe07eec07d267e75e29d1f457b56d81f49acc4ec2ba9bdd4efbb9da6c3b15d3",
+    "procurement-approvals.md": "cc2e58ffddaa1beeaa7914362c128dae12a384a78abc22569084e66d987f07fc",
+    "release-process.md": "3ba6cd8eb865c6419d3bff441de6d9b29c3f50989f63af20c5ab143b397f8240",
+    "remote-work-policy.md": "39f172a83ef85e1dfcdb16a4ab450eae3f7b2b9584eca6cf9e299957840cbf4b",
+    "security-passwords.md": "4375c2d136c028bcc9d4155ecd546e8a4dfc425715e2dcddeed8c4d407582aa7",
+    "travel-policy.md": "b95dbf5cc6f71bf8c5499ba63ba52f08ea922ed503f7e5f0a669ea60d4fd9c8b",
+    "vacation-leave.md": "bbf2ef9c281c05c16b425066fd0531d1f3478560e41329738a7e3c61302f3d88",
+    "warehouse-safety.md": "4724825079e4754f9fc8405dc3fee813e7cb7b11d60b0079dd3bcf76d97b213f"
+  },
+  "ollama_models": [
+    {
+      "name": "embeddinggemma:latest",
+      "digest": "85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1",
+      "size": 621875917
+    },
+    {
+      "name": "llama3.1:latest",
+      "digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e",
+      "size": 4920753328
+    }
+  ],
+  "postgres_version": "PostgreSQL 17.11 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+  "remaining_milestone_schemas": 0
+}

@@ -1,0 +1,2 @@
+{"name": "sqlite-accounting-before-commit", "passed": false, "error": "PermissionError: [Errno 1] Operation not permitted", "seconds": 0.001}
+{"name": "sqlite-accounting-after-commit", "passed": false, "error": "PermissionError: [Errno 1] Operation not permitted", "seconds": 0.0}

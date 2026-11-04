@@ -3,6 +3,7 @@ import asyncio
 import base64
 import json
 import logging
+from ..observability import journal,request_id,tenant_id
 import os
 from pathlib import Path
 import re
@@ -12,12 +13,19 @@ import tempfile
 import uuid
 from .rpc import Client
 from .embedding import Embeddings
+from .section_chunking import section_chunks,contextual_text
 
 log=logging.getLogger('relay.knowledge.ingestion')
 
 def chunk_pages(pages,config):
     """Fixed or paragraph passages with overlap; the caller assigns document-level ordinals."""
     if not isinstance(pages,list) or not 1<=len(pages)<=200:raise ValueError('Document must have 1–200 pages')
+    if any(not isinstance(value,str) for value in pages):raise ValueError('Invalid extracted text')
+    if config['chunking']=='section':
+        chunks=section_chunks(pages,config['chunk_size'],config['chunk_overlap'])
+        if not chunks:raise ValueError('Document has no readable text')
+        if len(chunks)>50000:raise ValueError('Document exceeds 50,000 chunks')
+        return [dict(c,id=uuid.uuid4().hex,ordinal=i) for i,c in enumerate(chunks)]
     size,step=config['chunk_size'],config['chunk_size']-config['chunk_overlap'];chunks=[]
     for page,value in enumerate(pages,1):
         if not isinstance(value,str):raise ValueError('Invalid extracted text')
@@ -49,6 +57,11 @@ class Ingestion:
             if result.get('error'):raise ValueError(result['error'])
             return result['pages']
     async def execute(self,job):
+        request_token=request_id.set(job.get('request_id'));tenant_token=tenant_id.set(job.get('tenant_id'))
+        try:return await self._execute(job)
+        finally:request_id.reset(request_token);tenant_id.reset(tenant_token)
+
+    async def _execute(self,job):
         tenant=job['tenant_id'];fence={'job_id':job['id'],'attempt_id':job['attempt_id']}
         async def progress(stage,**extra):
             await self.management.call('progress',tenant,{**fence,'stage':stage,**extra})
@@ -70,7 +83,7 @@ class Ingestion:
             if config.get('embedding_model'):
                 for offset in range(0,len(chunks),32):
                     await progress('embedding',completed=offset,total=len(chunks))
-                    batch=await self.embeddings.embed(config['embedding_model'],[c['text'] for c in chunks[offset:offset+32]],digest)
+                    batch=await self.embeddings.embed(config['embedding_model'],[contextual_text(c) for c in chunks[offset:offset+32]],digest)
                     if len(chunks)*len(batch[0])>8_000_000:raise ValueError('Knowledge base exceeds vector memory budget; use larger chunks or smaller embeddings')
                     vectors.extend(batch)
             await progress('indexing',completed=0,total=len(chunks))
@@ -92,9 +105,10 @@ class Ingestion:
             task.cancel();raise
         except Exception as exc:
             task.cancel()
+            journal(event='kb.build.failure',tenant=tenant,error_type=type(exc).__name__)
             error=str(exc) if isinstance(exc,ValueError) else 'Document processing failed unexpectedly'
             try:await self.management.call('fail',tenant,{**fence,'error':error})
-            except Exception:log.warning('Could not record indexing failure; lease recovery will retry job %s',job['id'])
+            except Exception as exc:journal(event='kb.build.failure_record_failed',tenant=tenant,error_type=type(exc).__name__)
         finally:
             task.cancel();await asyncio.gather(task,return_exceptions=True)
     async def cleanup(self):
@@ -113,7 +127,7 @@ class Ingestion:
                 if job:await self.execute(job)
                 else:await asyncio.sleep(1)
             except asyncio.CancelledError:raise
-            except Exception:log.warning('Knowledge services unavailable; retrying in two seconds');await asyncio.sleep(2)
+            except Exception as exc:journal(event='kb.ingestion.retry',error_type=type(exc).__name__,delay_seconds=2);await asyncio.sleep(2)
 
 async def main():
     from dotenv import load_dotenv

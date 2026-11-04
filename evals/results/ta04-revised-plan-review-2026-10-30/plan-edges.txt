@@ -1,0 +1,27 @@
+{"timestamp":"2026-10-30T16:26:35.924498+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{"timestamp":"2026-10-30T16:26:35.948386+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"agent","provider":"ollama","model":"fixture","prompt_tokens":100,"completion_tokens":0}
+{
+  "compaction": {
+    "kind": "model-of-section-4h-not-an-implemented-fix",
+    "fresh_reason": "each stopped at item 2: Run token budget exhausted (100 of 100 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost. 1 accepted items did not run. each: outcome details of 1 item(s) were omitted to keep results within 2000000 bytes.",
+    "replayed_reason": "each stopped at item 2: A run budget was exhausted. 1 accepted items did not run. each: outcome details of 1 item(s) were omitted to keep results within 2000000 bytes.",
+    "same_summary": false,
+    "marker_survives": true
+  },
+  "structured_with_evidence": {
+    "kind": "current-code-branch-observation",
+    "with_evidence": true,
+    "provider_calls": 1,
+    "grounded_finalizer_calls": 1,
+    "structured_only_path_exercised": false,
+    "error": "Invalid grounded answer contract after one repair: Run token budget exhausted (100 of 100 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost."
+  },
+  "structured_without_evidence": {
+    "kind": "current-code-branch-observation",
+    "with_evidence": false,
+    "provider_calls": 1,
+    "grounded_finalizer_calls": 0,
+    "structured_only_path_exercised": true,
+    "error": "Agent output did not match the required structure: Run token budget exhausted (100 of 100 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost."
+  }
+}

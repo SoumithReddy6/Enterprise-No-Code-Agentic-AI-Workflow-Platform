@@ -1,0 +1,112 @@
+[
+  {
+    "method": "GET",
+    "path": "/rest/api/3/search/jql",
+    "body": ""
+  },
+  {
+    "method": "POST",
+    "path": "/deliver/batch",
+    "body": "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:58655/browse/LAB-0\"}"
+  },
+  {
+    "method": "POST",
+    "path": "/deliver/batch",
+    "body": "{\"key\":\"LAB-1\",\"summary\":\"Ticket 1\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:58655/browse/LAB-1\"}"
+  },
+  {
+    "method": "POST",
+    "path": "/deliver/batch",
+    "body": "{\"key\":\"LAB-2\",\"summary\":\"Ticket 2\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:58655/browse/LAB-2\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/rest/api/3/search/jql",
+    "body": ""
+  },
+  {
+    "method": "POST",
+    "path": "/uncertain/continue",
+    "body": "{\"input\":\"Customer case\"}"
+  },
+  {
+    "method": "POST",
+    "path": "/uncertain/route",
+    "body": "{\"input\":\"Customer case\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/rest/api/3/search/jql",
+    "body": ""
+  },
+  {
+    "method": "POST",
+    "path": "/deliver/restart",
+    "body": "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:58655/browse/LAB-0\"}"
+  },
+  {
+    "method": "POST",
+    "path": "/deliver/restart",
+    "body": "{\"key\":\"LAB-1\",\"summary\":\"Ticket 1\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:58655/browse/LAB-1\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/rest/api/3/search/jql",
+    "body": ""
+  },
+  {
+    "method": "POST",
+    "path": "/deliver/crash-settled",
+    "body": "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:58655/browse/LAB-0\"}"
+  },
+  {
+    "method": "POST",
+    "path": "/deliver/crash-settled",
+    "body": "{\"key\":\"LAB-1\",\"summary\":\"Ticket 1\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:58655/browse/LAB-1\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/rest/api/3/search/jql",
+    "body": ""
+  },
+  {
+    "method": "POST",
+    "path": "/hold/crash-uncertain",
+    "body": "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:58655/browse/LAB-0\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/flaky/read",
+    "body": "{\"input\":\"Customer case\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/flaky/read",
+    "body": "{\"input\":\"Customer case\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/rest/api/3/search/jql",
+    "body": ""
+  },
+  {
+    "method": "GET",
+    "path": "/flaky/body",
+    "body": "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:58655/browse/LAB-0\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/flaky/body",
+    "body": "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:58655/browse/LAB-0\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/rest/api/3/search/jql",
+    "body": ""
+  },
+  {
+    "method": "GET",
+    "path": "/read",
+    "body": "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:58655/browse/LAB-0\"}"
+  }
+]
