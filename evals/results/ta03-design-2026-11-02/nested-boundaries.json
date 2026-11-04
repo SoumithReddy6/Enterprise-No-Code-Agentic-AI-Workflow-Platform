@@ -1,0 +1,192 @@
+{
+  "rows": [
+    {
+      "case": "cancel_after_child_success",
+      "counterfactual": false,
+      "status": "cancelled",
+      "known_tokens": 30,
+      "accounting_tokens": 30,
+      "metrics": {
+        "tokens": 45,
+        "calls": 3
+      },
+      "usage_events": [
+        {
+          "node": "helper",
+          "status": "success",
+          "calls": 1,
+          "tokens": 15
+        },
+        {
+          "node": "agent",
+          "status": "cancelled",
+          "calls": 2,
+          "tokens": 30
+        }
+      ]
+    },
+    {
+      "case": "cancel_after_child_success",
+      "counterfactual": true,
+      "status": "cancelled",
+      "known_tokens": 30,
+      "accounting_tokens": 30,
+      "metrics": {
+        "tokens": 30,
+        "calls": 2
+      },
+      "usage_events": [
+        {
+          "node": "helper",
+          "status": "success",
+          "calls": 1,
+          "tokens": 15
+        },
+        {
+          "node": "agent",
+          "status": "cancelled",
+          "calls": 1,
+          "tokens": 15
+        }
+      ]
+    },
+    {
+      "case": "cancel_inside_nested_agent",
+      "counterfactual": false,
+      "status": "cancelled",
+      "known_tokens": 30,
+      "accounting_tokens": 30,
+      "metrics": {
+        "tokens": 30,
+        "calls": 2
+      },
+      "usage_events": [
+        {
+          "node": "agent",
+          "status": "cancelled",
+          "calls": 2,
+          "tokens": 30
+        }
+      ]
+    },
+    {
+      "case": "cancel_inside_nested_agent",
+      "counterfactual": true,
+      "status": "cancelled",
+      "known_tokens": 30,
+      "accounting_tokens": 30,
+      "metrics": {
+        "tokens": 15,
+        "calls": 1
+      },
+      "usage_events": [
+        {
+          "node": "agent",
+          "status": "cancelled",
+          "calls": 1,
+          "tokens": 15
+        }
+      ]
+    },
+    {
+      "case": "cancel_during_child_commit",
+      "counterfactual": false,
+      "status": "cancelled",
+      "known_tokens": 30,
+      "accounting_tokens": 30,
+      "metrics": {
+        "tokens": 45,
+        "calls": 3
+      },
+      "usage_events": [
+        {
+          "node": "helper",
+          "status": "success",
+          "calls": 1,
+          "tokens": 15
+        },
+        {
+          "node": "agent",
+          "status": "cancelled",
+          "calls": 2,
+          "tokens": 30
+        }
+      ]
+    },
+    {
+      "case": "cancel_during_child_commit",
+      "counterfactual": true,
+      "status": "cancelled",
+      "known_tokens": 30,
+      "accounting_tokens": 30,
+      "metrics": {
+        "tokens": 30,
+        "calls": 2
+      },
+      "usage_events": [
+        {
+          "node": "helper",
+          "status": "success",
+          "calls": 1,
+          "tokens": 15
+        },
+        {
+          "node": "agent",
+          "status": "cancelled",
+          "calls": 1,
+          "tokens": 15
+        }
+      ]
+    },
+    {
+      "case": "unsafe_finalization",
+      "counterfactual": false,
+      "status": "failed",
+      "known_tokens": 45,
+      "accounting_tokens": 45,
+      "metrics": {
+        "tokens": 60,
+        "calls": 4
+      },
+      "usage_events": [
+        {
+          "node": "helper",
+          "status": "success",
+          "calls": 1,
+          "tokens": 15
+        },
+        {
+          "node": "agent",
+          "status": "failed",
+          "calls": 3,
+          "tokens": 45
+        }
+      ]
+    },
+    {
+      "case": "uncertain_finalization",
+      "counterfactual": false,
+      "status": "failed",
+      "known_tokens": 45,
+      "accounting_tokens": 45,
+      "metrics": {
+        "tokens": 60,
+        "calls": 4
+      },
+      "usage_events": [
+        {
+          "node": "helper",
+          "status": "success",
+          "calls": 1,
+          "tokens": 15
+        },
+        {
+          "node": "agent",
+          "status": "failed",
+          "calls": 3,
+          "tokens": 45
+        }
+      ]
+    }
+  ]
+}
