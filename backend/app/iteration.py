@@ -5,9 +5,11 @@ its own leasing, fencing and checkpointing, so per-item state must travel throug
 path. Progress is recorded as it happens, so a resumed run skips completed indices
 instead of repeating paid work or external writes.
 """
+import asyncio
 import json
 
-from .execution_policy import ExecutionIdentity,execute_with_policy,invoke_attached,charges_action,accounting_snapshot
+from .execution_policy import (ExecutionIdentity,execute_with_policy,invoke_attached,charges_action,accounting_snapshot,
+                               with_own_usage,outcome_saved)
 
 MAX_ITEMS_CEILING=1000
 # The results contract, in serialized UTF-8 bytes of the results list:
@@ -297,6 +299,8 @@ async def _run_item(ctx,body,emit,index,value):
     from dataclasses import replace
     from .tool_service import UncertainWriteError
     from .approvals import ApprovalPause
+    from .request_safety import UnsafeExecutionError
+    from .accounting_state import AccountingUnavailable
     from .observability import journal
     invocation=f'{ctx.node_id}:{index}:{body.id}'
     identity=ExecutionIdentity(body.id,item_owner(ctx,index),invocation,ctx.node_id,index)
@@ -364,7 +368,16 @@ async def _run_item(ctx,body,emit,index,value):
         if usage:paused['usage']=usage
         await item_emit(paused)
         raise
-    except UncertainWriteError:
-        # The external outcome is unknown; iterating past it could duplicate a write.
+    except asyncio.CancelledError as exc:
+        # Not an item failure: nothing is appended, retried or made reusable. The item
+        # reports what it spent, unless its outcome is already saved.
+        if not outcome_saved(exc,identity):
+            await item_emit(with_own_usage({**common,'status':'cancelled'},ctx.run,identity))
+        raise
+    except (UncertainWriteError,UnsafeExecutionError,AccountingUnavailable) as exc:
+        # The external outcome is unknown, or the run must stop; iterating past it could
+        # duplicate a write. Paid work is reported once, here.
+        failure=with_own_usage({**common,'status':'failed','error':str(exc)},ctx.run,identity)
+        if 'usage' in failure:await item_emit(failure)
         raise
     return entry,(outcome.error if outcome.budget_exhausted else '')

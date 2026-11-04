@@ -1,4 +1,5 @@
 """Bounded, explicit tool selection and specialist delegation over text providers."""
+import asyncio
 import json
 import os
 import re
@@ -334,7 +335,10 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
         if target not in targets:raise ValueError('Agent requested an unattached target.')
         if not isinstance(task,str) or not task.strip() or len(task)>20000:
             transcript.extend([{'agent_action':action},{'tool_error':'Provide a non-empty text input of at most 20,000 characters for this target.'}]);continue
-        from .execution_policy import ExecutionIdentity,execute_with_policy,invoke_attached,CONTROL_FLOW
+        from .execution_policy import (ExecutionIdentity,execute_with_policy,invoke_attached,CONTROL_FLOW,
+                                       with_own_usage,outcome_saved)
+        from .request_safety import UnsafeExecutionError
+        from .accounting_state import AccountingUnavailable
         from .storage import LeaseLost
         invocation=frame['invocation'] if replay else f'{identity_base}{identity_join}{step+1}:{target}'
         identity=ExecutionIdentity(target,checkpoint_owner,invocation,node_id)
@@ -398,6 +402,17 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
             paused={**common,'status':'paused'};usage=usage_for(ctx.run,identity)
             if usage:paused['usage']=usage
             await emit(paused)
+            raise
+        except asyncio.CancelledError as exc:
+            # The child reports what it spent before cancellation unwinds past it, unless
+            # that outcome is already saved; the parent then reports only its own spend.
+            if not outcome_saved(exc,identity):
+                await emit(with_own_usage({**common,'status':'cancelled'},ctx.run,identity))
+            raise
+        except (UnsafeExecutionError,AccountingUnavailable) as exc:
+            # Still control flow, never an observation. Paid work is reported once, here.
+            failure=with_own_usage({**common,'status':'failed','error':str(exc)},ctx.run,identity)
+            if 'usage' in failure:await emit(failure)
             raise
         except UncertainWriteError as exc:
             message=str(exc) if isinstance(exc,ValueError) else 'Attached node execution failed.'

@@ -1,0 +1,12 @@
+# PYTHONHASHSEED 0-4, full backend suite in the isolation copy, 2026-11-04T03:56:58Z
+imports from <scratchpad>/ta03-iso.ZcsN/backend/app
+seed 0: 1987 passed, 4 warnings in 99.55s (0:01:39)
+seed 1: 1987 passed, 4 warnings in 97.43s (0:01:37)
+seed 2: 1987 passed, 4 warnings in 97.49s (0:01:37)
+seed 3: 1987 passed, 4 warnings in 97.58s (0:01:37)
+seed 4: 1987 passed, 4 warnings in 97.58s (0:01:37)
+seed 0 junit: tests="1987" failures=0 errors=0 sha256 28bd7cc479fd55ec
+seed 1 junit: tests="1987" failures=0 errors=0 sha256 7774e50932942ac3
+seed 2 junit: tests="1987" failures=0 errors=0 sha256 4de3614761b45cc3
+seed 3 junit: tests="1987" failures=0 errors=0 sha256 1252013499d7f273
+seed 4 junit: tests="1987" failures=0 errors=0 sha256 159f1331e379dbf6

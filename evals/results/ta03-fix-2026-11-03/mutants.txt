@@ -1,0 +1,18 @@
+M1: KILLED by planned tests ['test_u01_', 'test_u02_'] | 3 failed, 10 passed in 1.58s
+  failed: test_u01_completed_children_then_parent_cancelled, test_u02_deep_active_child_cancelled_after_known_spend, test_u05_cancellation_while_an_outcome_commit_is_acknowledged[child]
+M2: KILLED by planned tests ['test_u02_'] | 1 failed, 12 passed in 1.69s
+  failed: test_u02_deep_active_child_cancelled_after_known_spend
+M3: KILLED by planned tests ['test_u04_'] | 1 failed, 12 passed in 1.51s
+  failed: test_u04_cancelled_loop_item_reports_its_usage
+M4: KILLED by planned tests ['test_u08_refusal_after_paid_work[unsafe]', 'test_u08_refusal_after_paid_work[uncertain]'] | 3 failed, 10 passed in 1.40s
+  failed: test_u08_refusal_after_paid_work[accounting], test_u08_refusal_after_paid_work[uncertain], test_u08_refusal_after_paid_work[unsafe]
+M5: KILLED by planned tests ['test_u05_cancellation_while_an_outcome_commit_is_acknowledged[child]'] | 1 failed, 12 passed in 1.40s
+  failed: test_u05_cancellation_while_an_outcome_commit_is_acknowledged[child]
+M6: KILLED by planned tests ['test_u05_cancellation_while_an_outcome_commit_is_acknowledged[child]'] | 1 failed, 12 passed in 1.41s
+  failed: test_u05_cancellation_while_an_outcome_commit_is_acknowledged[child]
+M7: KILLED by planned tests ['test_u03_child_cancelled_before_reporting_usage[agent]', 'test_u03_child_cancelled_before_reporting_usage[tool]'] | 2 failed, 11 passed in 1.38s
+  failed: test_u03_child_cancelled_before_reporting_usage[agent], test_u03_child_cancelled_before_reporting_usage[tool]
+M8: KILLED by planned tests ['test_u07_', 'test_u09_'] | 2 failed, 11 passed in 1.40s
+  failed: test_u07_item_outcome_saved_before_its_progress, test_u09_approval_pause_resume_two_models
+
+ALL PLANNED KILLS: True

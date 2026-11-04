@@ -189,8 +189,10 @@ async def test_cancelled_agent_preserves_reported_token_usage(monkeypatch):
     task=asyncio.create_task(graph.ainvoke({'values':{}}))
     await asyncio.wait_for(waiting.wait(),1);task.cancel()
     with pytest.raises(asyncio.CancelledError):await task
-    cancelled=next(e for e in events if e['status']=='cancelled')
+    # The cancelled tool reports its own outcome first, without usage; the agent keeps its own.
+    cancelled=next(e for e in events if e['status']=='cancelled' and e['node_id']=='agent')
     assert cancelled['usage']['prompt_tokens']==13 and cancelled['usage']['completion_tokens']==7
+    assert not [e for e in events if e['node_id']=='calc' and e.get('usage')]
 
 @pytest.mark.asyncio
 async def test_health_client_forwards_correlation_id(monkeypatch):

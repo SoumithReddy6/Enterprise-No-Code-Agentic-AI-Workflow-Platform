@@ -1,0 +1,12 @@
+# Isolation: git archive 6317dad + 8 TA03 files, git init + commit 3245007
+uncommitted files in copy: 0
+copied: backend/app/agent_runtime.py sha256 371ee803881955a3 identical
+copied: backend/app/compiler.py sha256 7340a5a7b901f3e5 identical
+copied: backend/app/execution_policy.py sha256 797b67c23a9f8fd2 identical
+copied: backend/app/iteration.py sha256 d43b78f7747c0871 identical
+copied: backend/app/worker.py sha256 b51b42a0249626b5 identical
+copied: backend/tests/test_operations.py sha256 9fc241c4fb8e2678 identical
+copied: backend/tests/test_usage_attribution.py sha256 bd47ce11938debc7 identical
+copied: docs/operations.md sha256 6429a7683c3de031 identical
+files changed vs HEAD in copy: 0 (copy has one commit; TA03 files differ from 6317dad: 7 of 8, the new test file is untracked in the repo)
+other working-tree changes under backend/, scripts/, .github/: 0

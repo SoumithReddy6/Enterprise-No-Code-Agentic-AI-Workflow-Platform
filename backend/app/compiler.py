@@ -14,12 +14,9 @@ from .registry import REGISTRY, RESERVED_PORT_PREFIX, Context, validate_template
 from . import exact_json
 from .approvals import ApprovalPause
 from .execution_policy import (ExecutionIdentity, execute_with_policy, charges_action,
-                               accounting_snapshot,
+                               accounting_snapshot, with_own_usage, outcome_saved,
                                retry_delay, MAX_NODE_RETRY_DELAY)
-
-
-class PersistedNodeCancellation(asyncio.CancelledError):
-    """Cancellation observed after a terminal node event committed successfully."""
+from .execution_policy import PersistedNodeCancellation  # noqa: F401 - re-exported at its historical path
 
 
 def is_write_node(node, definition):
@@ -654,21 +651,27 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                       await emit(paused)
                       raise
                 except asyncio.CancelledError as exc:
+                      # Only this node's own spend: a child reported its usage on its own
+                      # outcome, including a child that was itself cancelled.
+                      if not outcome_saved(exc,identity):
+                          await emit(with_own_usage({'node_id': node.id, 'status': 'cancelled'},run_state,identity))
                       if isinstance(exc,PersistedNodeCancellation):
                           # Python 3.12 asyncio.timeout recognizes the exact base type.
                           raise asyncio.CancelledError() from None
-                      await emit({'node_id': node.id, 'status': 'cancelled',**({'usage':run_state['usage'][node.id]} if run_state.get('usage',{}).get(node.id) else {})})
                       raise
                 except Exception as exc:
                       from .tool_service import UncertainWriteError
+                      from .accounting_state import AccountingUnavailable
                       error = str(exc) if isinstance(exc, ValueError) else 'Node execution failed.'
-                      usage_fields={'usage':run_state['usage'][node.id]} if run_state.get('usage',{}).get(node.id) else {}
+                      failure=with_own_usage({'node_id':node.id,'status':'failed','error':error},run_state,identity)
                       if isinstance(exc,UncertainWriteError):
-                          failure={'node_id':node.id,'status':'failed','error':error,**usage_fields}
                           await emit(failure)
                           raise ValueError(error) from None
                       if isinstance(exc,request_safety.UnsafeExecutionError):
-                          await emit({'node_id':node.id,'status':'failed','error':error,**usage_fields})
+                          await emit(failure)
+                      elif isinstance(exc,AccountingUnavailable) and 'usage' in failure:
+                          # Work paid for before the refusal is still reported, once, here.
+                          await emit(failure)
                       raise
             return handler
         graph.add_node(node.id, handler_factory(node, definition, config))
