@@ -1,0 +1,256 @@
+{
+  "reviewed_commit": "347c82ffe08ad7b37fa5dfcfefa7565210420fef",
+  "source_sha256": {
+    "token_budget.py": "3d1d4397ea767c8583d98a5cc9dcf895119e90af2c4bfd782f3c2f00e841af45",
+    "providers.py": "ae921d5ee05b15c65f5b1e001c6f5f7578830049db94a47faeca982a6c87c84c",
+    "registry.py": "8d20ed37c297f54fa522d39298f6cb7a85f9d4a79d82eb1dabf9a27a82045b6b",
+    "execution_policy.py": "debfee241869dc25598214e0ec0cb09c7011fc57cb95cdfec767ae67aa19ece1",
+    "compiler.py": "829b97b44b2e83f9107c028611df21990204f338462c3ccde04d1a5deb7f01c9",
+    "worker.py": "ecbd1a73706efc1c826c29eb458a893890619ffaf970ed9533c3633a7773986d",
+    "storage.py": "34ec1bc23d104c841185445d99bbd35dee0940cda4da309bbef42705f4c5bc6d",
+    "agent_runtime.py": "8c0568b475afdafc4fe2465ad118bdb8ec7ed67f373711a8b2a8c71f02bc04ba",
+    "operator_metrics.py": "9c5d80078b131c1a6432456e91dbdf17c7fd367eb89a95b20f2d963899f1754d"
+  },
+  "source_unchanged": true,
+  "rows": {
+    "sequential_limit": {
+      "probe": "observed",
+      "details": {
+        "limit": 100,
+        "provider_calls": 2,
+        "accounted_tokens": 110,
+        "status": "success",
+        "truncated": false
+      }
+    },
+    "missing_usage": {
+      "probe": "observed",
+      "details": {
+        "limit": 1,
+        "provider_calls": 3,
+        "reported": {
+          "tokens": 0,
+          "calls": 0
+        },
+        "status": "success",
+        "truncated": false,
+        "accounting": {
+          "action_budget": {
+            "remaining": 40,
+            "counter": 0,
+            "ceiling": 40
+          },
+          "tokens_spent": 0,
+          "usage": {},
+          "usage_by_invocation": {}
+        }
+      }
+    },
+    "paid_response_rejected": {
+      "probe": "observed",
+      "details": {
+        "response_reported_tokens": 150,
+        "accounted_tokens": 0,
+        "error": "OpenAI returned no text.",
+        "run": {}
+      }
+    },
+    "provider_usage_shapes": {
+      "probe": "observed",
+      "details": {
+        "claude_cache_response": {
+          "provider_total_including_cache": 1015,
+          "recorded_tokens": 15
+        },
+        "openai_inclusive_control": {
+          "reported_tokens": 150,
+          "recorded_tokens": 150,
+          "stored_usage": {
+            "openai": {
+              "calls": 1,
+              "prompt_tokens": 100,
+              "completion_tokens": 50,
+              "by_model": [
+                {
+                  "provider": "openai",
+                  "model": "token-review-fixture",
+                  "calls": 1,
+                  "prompt_tokens": 100,
+                  "completion_tokens": 50
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "recovered_token_refusal": {
+      "probe": "observed",
+      "details": {
+        "fail": {
+          "status": "failed",
+          "provider_calls": 1,
+          "truncated": false,
+          "failure": {
+            "node_id": "m1",
+            "status": "failed",
+            "error": "Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.",
+            "seq": 6,
+            "timestamp": "2026-10-26T03:25:52.630586+00:00"
+          }
+        },
+        "continue": {
+          "status": "success",
+          "provider_calls": 1,
+          "truncated": false,
+          "failure": {
+            "node_id": "m1",
+            "status": "failed",
+            "error": "Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.",
+            "recovered": true,
+            "seq": 6,
+            "timestamp": "2026-10-26T03:25:52.708162+00:00"
+          }
+        },
+        "route": {
+          "status": "success",
+          "provider_calls": 1,
+          "truncated": false,
+          "failure": {
+            "node_id": "m1",
+            "status": "failed",
+            "error": "Run token budget exhausted (10 of 10 provider-reported tokens; raise RELAY_RUN_TOKEN_LIMIT). Token counts are not a monetary cost.",
+            "recovered": true,
+            "seq": 6,
+            "timestamp": "2026-10-26T03:25:52.789121+00:00"
+          }
+        }
+      }
+    },
+    "nested_success_control": {
+      "probe": "observed",
+      "details": {
+        "status": "success",
+        "known_provider_response_tokens": 45,
+        "persisted_accounting_tokens": 45,
+        "operator_metrics": {
+          "tokens": 45,
+          "calls": 3
+        },
+        "usage_events": [
+          {
+            "node_id": "helper",
+            "status": "success",
+            "usage": {
+              "calls": 1,
+              "prompt_tokens": 10,
+              "completion_tokens": 5,
+              "by_model": [
+                {
+                  "provider": "ollama",
+                  "model": "token-review-fixture",
+                  "calls": 1,
+                  "prompt_tokens": 10,
+                  "completion_tokens": 5
+                }
+              ]
+            }
+          },
+          {
+            "node_id": "agent",
+            "status": "success",
+            "usage": {
+              "calls": 2,
+              "prompt_tokens": 20,
+              "completion_tokens": 10,
+              "by_model": [
+                {
+                  "provider": "ollama",
+                  "model": "token-review-fixture",
+                  "calls": 2,
+                  "prompt_tokens": 20,
+                  "completion_tokens": 10
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "nested_cancel": {
+      "probe": "observed",
+      "details": {
+        "status": "cancelled",
+        "known_provider_response_tokens": 30,
+        "persisted_accounting_tokens": 30,
+        "operator_metrics": {
+          "tokens": 45,
+          "calls": 3
+        },
+        "usage_events": [
+          {
+            "node_id": "helper",
+            "status": "success",
+            "usage": {
+              "calls": 1,
+              "prompt_tokens": 10,
+              "completion_tokens": 5,
+              "by_model": [
+                {
+                  "provider": "ollama",
+                  "model": "token-review-fixture",
+                  "calls": 1,
+                  "prompt_tokens": 10,
+                  "completion_tokens": 5
+                }
+              ]
+            }
+          },
+          {
+            "node_id": "agent",
+            "status": "cancelled",
+            "usage": {
+              "calls": 2,
+              "prompt_tokens": 20,
+              "completion_tokens": 10,
+              "by_model": [
+                {
+                  "provider": "ollama",
+                  "model": "token-review-fixture",
+                  "calls": 2,
+                  "prompt_tokens": 20,
+                  "completion_tokens": 10
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "accounting_outage_and_resume": {
+      "probe": "observed",
+      "details": {
+        "limit": 15,
+        "responses": 2,
+        "known_provider_response_tokens": 30,
+        "interrupted_had_checkpoint": true,
+        "interrupted_accounting": null,
+        "resumed_status": "success",
+        "final_accounting_tokens": 15,
+        "operator_metrics": {
+          "tokens": 30,
+          "calls": 2
+        }
+      }
+    },
+    "stale_snapshot": {
+      "probe": "observed",
+      "details": {
+        "newer_tokens": 30,
+        "final_tokens": 10,
+        "scope": "latent parallel/out-of-order persistence risk; parallel graph branches are not implemented"
+      }
+    }
+  },
+  "all_observations_reproduced": true
+}
