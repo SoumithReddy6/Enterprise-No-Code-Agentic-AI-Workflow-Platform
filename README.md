@@ -415,7 +415,7 @@ These are substring and abstention heuristics, not proof of semantic correctness
 
 | Layer | What runs | Where |
 | --- | --- | --- |
-| Unit and integration | 1,974 backend tests; 114 frontend tests | CI (one hash seed) + local (`PYTHONHASHSEED` 0–4 for each change, to catch hidden ordering assumptions) |
+| Unit and integration | 1,974 backend tests; 114 frontend tests | CI (a random hash seed, then seed 1) + local (`PYTHONHASHSEED` 0–4 for each change, to catch hidden ordering assumptions) |
 | Deployed processes | 23 scenarios against a real API process, real worker processes and an HTTP receiver: kill -9 mid-write, restarts between approvals, stale leases, SSRF, tenant isolation | `scripts/check_production_scenarios.py` |
 | Live models | 17 workflow shapes on real Ollama models and real Docker (last full run 2026-10-06) | same runner, `--live-models` |
 | PostgreSQL | migrations up/down/up with populated history, four concurrent workers, a stale lease, `SIGKILL` inside a loop and at the accounting commit | CI `postgres-conformance` |
