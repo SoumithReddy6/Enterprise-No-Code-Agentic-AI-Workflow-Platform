@@ -1,0 +1,18 @@
+M1: KILLED by planned tests ['test_v01_', 'test_v02_missing_counts_are_marked_not_zeroed[openai-null]', 'test_v06_'] | 8 failed, 7 passed in 1.36s
+  failed: test_v01_three_responses_without_usage_are_counted, test_v02_missing_counts_are_marked_not_zeroed[openai-null], test_v03_read_timeouts[exhausted], test_v04_cancellation_after_dispatch_is_unanswered_on_its_invocation, test_v06_received_response_without_usable_counts_is_unreported[claude-usage-list], test_v06_received_response_without_usable_counts_is_unreported[ollama-invalid-json], test_v06_received_response_without_usable_counts_is_unreported[openai-http-401], test_v06_received_response_without_usable_counts_is_unreported[openai-usage-list]
+M2: KILLED by planned tests ['test_v02_missing_counts_are_marked_not_zeroed[ollama-partial]', 'test_v02_missing_counts_are_marked_not_zeroed[claude-partial]'] | 2 failed, 13 passed in 1.25s
+  failed: test_v02_missing_counts_are_marked_not_zeroed[claude-partial], test_v02_missing_counts_are_marked_not_zeroed[ollama-partial]
+M3: KILLED by planned tests ['test_v03_read_timeouts[then-zero]'] | 1 failed, 14 passed in 1.25s
+  failed: test_v03_read_timeouts[then-zero]
+M4: KILLED by planned tests ['test_v03_read_timeouts[exhausted]', 'test_v04_'] | 2 failed, 13 passed in 1.23s
+  failed: test_v03_read_timeouts[exhausted], test_v04_cancellation_after_dispatch_is_unanswered_on_its_invocation
+M5: KILLED by planned tests ['test_v03_read_timeouts[then-zero]'] | 1 failed, 14 passed in 1.29s
+  failed: test_v03_read_timeouts[then-zero]
+M6: KILLED by planned tests ['test_v05_nothing_reached_a_provider[invalid-url]'] | 3 failed, 12 passed in 1.25s
+  failed: test_v05_nothing_reached_a_provider[connect-error], test_v05_nothing_reached_a_provider[connect-timeout], test_v05_nothing_reached_a_provider[invalid-url]
+M7: KILLED by planned tests ['test_v06_'] | 4 failed, 11 passed in 1.25s
+  failed: test_v06_received_response_without_usable_counts_is_unreported[claude-usage-list], test_v06_received_response_without_usable_counts_is_unreported[ollama-invalid-json], test_v06_received_response_without_usable_counts_is_unreported[openai-http-401], test_v06_received_response_without_usable_counts_is_unreported[openai-usage-list]
+M8: KILLED by planned tests ['test_v01_', 'test_v02_', 'test_v06_'] | 10 failed, 5 passed in 1.26s
+  failed: test_v01_three_responses_without_usage_are_counted, test_v02_missing_counts_are_marked_not_zeroed[claude-partial], test_v02_missing_counts_are_marked_not_zeroed[ollama-partial], test_v02_missing_counts_are_marked_not_zeroed[openai-null], test_v03_read_timeouts[exhausted], test_v04_cancellation_after_dispatch_is_unanswered_on_its_invocation, test_v06_received_response_without_usable_counts_is_unreported[claude-usage-list], test_v06_received_response_without_usable_counts_is_unreported[ollama-invalid-json], test_v06_received_response_without_usable_counts_is_unreported[openai-http-401], test_v06_received_response_without_usable_counts_is_unreported[openai-usage-list]
+
+ALL PLANNED KILLS: True

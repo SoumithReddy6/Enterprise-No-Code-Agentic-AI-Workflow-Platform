@@ -1,0 +1,22 @@
+TA06-I01/I02 red run: clean git archive of 0b7e8c7 + the corrected test module (application unchanged).
+test module sha256 62ae9ec212691208
+
+E   AssertionError: assert [None, None, None] == ['unreported'... 'unreported']
+E   AssertionError: localhost:11434
+E   assert {'calls': 0, ...alls': 1, ...} == {'calls': 0, ...alls': 0, ...}
+FAILED backend/tests/test_usage_status.py::test_v01_three_responses_without_usage_are_counted
+FAILED backend/tests/test_usage_status.py::test_v05_nothing_reached_a_provider[invalid-url]
+PASSED backend/tests/test_usage_status.py::test_v02_missing_counts_are_marked_not_zeroed[ollama-partial]
+PASSED backend/tests/test_usage_status.py::test_v02_missing_counts_are_marked_not_zeroed[claude-partial]
+PASSED backend/tests/test_usage_status.py::test_v02_missing_counts_are_marked_not_zeroed[openai-null]
+PASSED backend/tests/test_usage_status.py::test_v03_read_timeouts[exhausted]
+PASSED backend/tests/test_usage_status.py::test_v03_read_timeouts[then-zero]
+PASSED backend/tests/test_usage_status.py::test_v04_cancellation_after_dispatch_is_unanswered_on_its_invocation
+PASSED backend/tests/test_usage_status.py::test_v05_nothing_reached_a_provider[connect-error]
+PASSED backend/tests/test_usage_status.py::test_v05_nothing_reached_a_provider[connect-timeout]
+PASSED backend/tests/test_usage_status.py::test_v06_received_response_without_usable_counts_is_unreported[claude-usage-list]
+PASSED backend/tests/test_usage_status.py::test_v06_received_response_without_usable_counts_is_unreported[openai-usage-list]
+PASSED backend/tests/test_usage_status.py::test_v06_received_response_without_usable_counts_is_unreported[openai-http-401]
+PASSED backend/tests/test_usage_status.py::test_v06_received_response_without_usable_counts_is_unreported[ollama-invalid-json]
+PASSED backend/tests/test_usage_status.py::test_v07_migration_adds_zero_counters_and_metrics_sum_them
+2 failed, 13 passed in 1.49s

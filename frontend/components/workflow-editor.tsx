@@ -111,7 +111,7 @@ import PlatformSettings, {
   type ToolConnection,
 } from './platform-settings';
 import { sourcesForRun } from '@/lib/knowledge';
-import { eventNotes, incompleteRun } from '@/lib/run-status';
+import { eventNotes, incompleteRun, usageLabel } from '@/lib/run-status';
 import {
   type AllowedModel,
   selectedModelId,
@@ -1511,9 +1511,7 @@ function Editor() {
                             {e.duration_ms !== undefined
                               ? `${e.duration_ms} ms`
                               : ''}
-                            {e.usage
-                              ? ` · ${e.usage.prompt_tokens}+${e.usage.completion_tokens} tok`
-                              : ''}
+                            {e.usage ? ` · ${usageLabel(e.usage)}` : ''}
                           </span>
                           <ChevronDown size={13} />
                         </summary>

@@ -1,0 +1,130 @@
+{"timestamp":"2026-11-05T20:05:46.910886+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-05T20:05:47.002195+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-11-05T20:05:47.003243+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.092}
+{"timestamp":"2026-11-05T20:05:47.010037+00:00","request_id":null,"run_id":"c09e0f2e4ce44daf82e695eca9858e89","tenant":"local","event":"job.lease_acquired","worker_id":"190ce0091a7149ba967fdea276f786e3"}
+{"timestamp":"2026-11-05T20:05:47.010438+00:00","request_id":null,"run_id":"c09e0f2e4ce44daf82e695eca9858e89","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+{"timestamp":"2026-11-05T20:05:47.061878+00:00","request_id":null,"run_id":"c09e0f2e4ce44daf82e695eca9858e89","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":5}
+{"timestamp":"2026-11-05T20:05:47.067333+00:00","request_id":null,"run_id":"c09e0f2e4ce44daf82e695eca9858e89","tenant":"local","event":"node.success","node_id":"m0","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-05T20:05:47.071680+00:00","request_id":null,"run_id":"c09e0f2e4ce44daf82e695eca9858e89","tenant":"local","event":"node.success","node_id":"m1","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-05T20:05:47.075376+00:00","request_id":null,"run_id":"c09e0f2e4ce44daf82e695eca9858e89","tenant":"local","event":"node.success","node_id":"m2","transient":false,"cached":false,"duration_ms":2}
+{"timestamp":"2026-11-05T20:05:47.078027+00:00","request_id":null,"run_id":"c09e0f2e4ce44daf82e695eca9858e89","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-05T20:05:47.079649+00:00","request_id":null,"run_id":"c09e0f2e4ce44daf82e695eca9858e89","tenant":"local","event":"run.finish","status":"success","seconds":0.069}
+{
+  "baseline": {
+    "limit": 1,
+    "provider_calls": 3,
+    "reported": {
+      "tokens": 0,
+      "calls": 0
+    },
+    "status": "success",
+    "truncated": false,
+    "accounting": {
+      "action_budget": {
+        "remaining": 40,
+        "counter": 0,
+        "ceiling": 40
+      },
+      "tokens_spent": 0,
+      "usage": {},
+      "usage_by_invocation": {}
+    }
+  },
+  "rows": [
+    {
+      "provider": "ollama",
+      "case": "invalid_url",
+      "transport_calls": 0,
+      "complete_body_received": false,
+      "object_parsed": false,
+      "record_usage_called": false,
+      "error_type": "InvalidURL",
+      "status_from_literal_draft_markers": "unanswered",
+      "adapter_usage_dict": {
+        "_request_sent": true
+      }
+    },
+    {
+      "provider": "openai",
+      "case": "bad_usage_shape",
+      "transport_calls": 1,
+      "complete_body_received": true,
+      "object_parsed": true,
+      "record_usage_called": false,
+      "error_type": "ProviderResponseError",
+      "status_from_literal_draft_markers": "unanswered",
+      "adapter_usage_dict": {
+        "_request_sent": true
+      }
+    },
+    {
+      "provider": "claude",
+      "case": "bad_usage_shape",
+      "transport_calls": 1,
+      "complete_body_received": true,
+      "object_parsed": true,
+      "record_usage_called": false,
+      "error_type": "ProviderResponseError",
+      "status_from_literal_draft_markers": "unanswered",
+      "adapter_usage_dict": {
+        "_request_sent": true
+      }
+    },
+    {
+      "provider": "ollama",
+      "case": "invalid_json",
+      "transport_calls": 1,
+      "complete_body_received": true,
+      "object_parsed": false,
+      "record_usage_called": false,
+      "error_type": "ProviderResponseError",
+      "status_from_literal_draft_markers": "unanswered",
+      "adapter_usage_dict": {
+        "_request_sent": true
+      }
+    },
+    {
+      "provider": "ollama",
+      "case": "http_error",
+      "transport_calls": 1,
+      "complete_body_received": true,
+      "object_parsed": false,
+      "record_usage_called": false,
+      "error_type": "ValueError",
+      "status_from_literal_draft_markers": "unanswered",
+      "adapter_usage_dict": {
+        "_request_sent": true
+      }
+    },
+    {
+      "provider": "openai",
+      "case": "unreported",
+      "transport_calls": 1,
+      "complete_body_received": true,
+      "object_parsed": true,
+      "record_usage_called": true,
+      "error_type": null,
+      "status_from_literal_draft_markers": "unreported",
+      "adapter_usage_dict": {
+        "_request_sent": true,
+        "_response_read": true
+      }
+    },
+    {
+      "provider": "openai",
+      "case": "reported",
+      "transport_calls": 1,
+      "complete_body_received": true,
+      "object_parsed": true,
+      "record_usage_called": true,
+      "error_type": null,
+      "status_from_literal_draft_markers": "reported",
+      "adapter_usage_dict": {
+        "_request_sent": true,
+        "_response_read": true,
+        "prompt_tokens": 10,
+        "completion_tokens": 5
+      }
+    }
+  ]
+}

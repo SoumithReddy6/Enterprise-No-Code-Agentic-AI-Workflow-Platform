@@ -1,0 +1,34 @@
+............FF..F.                                                       [100%]
+=================================== FAILURES ===================================
+_ test_unsupported_protocol_cannot_reach_a_provider[current-ftp://127.0.0.1:9] _
+evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py:154: in test_unsupported_protocol_cannot_reach_a_provider
+    assert counted(store, result['id']) == expect(), counted(store, result['id'])
+E   AssertionError: {'calls': 0, 'partial_calls': 0, 'unreported_calls': 0, 'unanswered_calls': 1, ...}
+E   assert {'calls': 0, ...alls': 1, ...} == {'calls': 0, ...alls': 0, ...}
+E     
+E     Omitting 4 identical items, use -vv to show
+E     Differing items:
+E     {'unanswered_calls': 1} != {'unanswered_calls': 0}
+E     Use -v to get more diff
+__ test_unsupported_protocol_cannot_reach_a_provider[current-localhost:11434] __
+evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py:154: in test_unsupported_protocol_cannot_reach_a_provider
+    assert counted(store, result['id']) == expect(), counted(store, result['id'])
+E   AssertionError: {'calls': 0, 'partial_calls': 0, 'unreported_calls': 0, 'unanswered_calls': 1, ...}
+E   assert {'calls': 0, ...alls': 1, ...} == {'calls': 0, ...alls': 0, ...}
+E     
+E     Omitting 4 identical items, use -vv to show
+E     Differing items:
+E     {'unanswered_calls': 1} != {'unanswered_calls': 0}
+E     Use -v to get more diff
+______________ test_real_journal_retains_managed_status[current] _______________
+evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py:173: in test_real_journal_retains_managed_status
+    assert model[0].get('usage_status') == 'unreported', model[0]
+E   AssertionError: {'timestamp': '2026-11-05T21:21:31.747091+00:00', 'request_id': None, 'run_id': '30e577c21c264cd5b2c1d0d64a735f67', 'tenant': 'local', ...}
+E   assert None == 'unreported'
+E    +  where None = <built-in method get of dict object at 0x10d78eac0>('usage_status')
+E    +    where <built-in method get of dict object at 0x10d78eac0> = {'timestamp': '2026-11-05T21:21:31.747091+00:00', 'request_id': None, 'run_id': '30e577c21c264cd5b2c1d0d64a735f67', 'tenant': 'local', ...}.get
+=========================== short test summary info ============================
+FAILED evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_unsupported_protocol_cannot_reach_a_provider[current-ftp://127.0.0.1:9]
+FAILED evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_unsupported_protocol_cannot_reach_a_provider[current-localhost:11434]
+FAILED evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_real_journal_retains_managed_status[current]
+3 failed, 15 passed in 1.85s

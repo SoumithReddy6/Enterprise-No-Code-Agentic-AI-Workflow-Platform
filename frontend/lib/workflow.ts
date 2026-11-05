@@ -1,4 +1,5 @@
 import { createRequestWorkflow } from './request-routing.ts';
+import type { EventUsage } from './run-status.ts';
 
 export type WorkflowNode = {
   id: string;
@@ -67,7 +68,7 @@ export type RunEvent = {
   decision?: TrustDecision;
   duration_ms?: number;
   cached?: boolean;
-  usage?: { calls: number; prompt_tokens: number; completion_tokens: number };
+  usage?: EventUsage;
   error?: string;
   timestamp: string;
   reason?: string;

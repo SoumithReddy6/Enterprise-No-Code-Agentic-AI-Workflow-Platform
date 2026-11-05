@@ -1,0 +1,8 @@
+M9: KILLED by planned tests ['test_v01_'] | 1 failed, 14 passed in 1.49s
+  failed: test_v01_three_responses_without_usage_are_counted
+M10: KILLED by planned tests ['test_v01_'] | 1 failed, 14 passed in 1.63s
+  failed: test_v01_three_responses_without_usage_are_counted
+M11: KILLED by planned tests ['test_v05_nothing_reached_a_provider[invalid-url]'] | 1 failed, 14 passed in 1.48s
+  failed: test_v05_nothing_reached_a_provider[invalid-url]
+
+ALL PLANNED KILLS: True

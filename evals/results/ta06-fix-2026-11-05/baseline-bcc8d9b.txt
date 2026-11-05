@@ -1,0 +1,36 @@
+TA06 baseline: clean git archive of bcc8d9b + the final new test files (application sources unchanged).
+test module sha256 5011598ca00c5e18, frontend test sha256 ebfaf65bd7610300
+
+backend/tests/test_usage_status.py:126: AssertionError: assert {'calls': 0, ...alls': 0, ...} == {'calls': 3, ...alls': 0, ...}
+backend/tests/test_usage_status.py:148: AssertionError: assert {'calls': 1, ...alls': 0, ...} == {'calls': 1, ...alls': 0, ...}
+backend/tests/test_usage_status.py:148: AssertionError: assert {'calls': 1, ...alls': 0, ...} == {'calls': 1, ...alls': 0, ...}
+backend/tests/test_usage_status.py:148: AssertionError: assert {'calls': 0, ...alls': 0, ...} == {'calls': 1, ...alls': 0, ...}
+backend/tests/test_usage_status.py:167: AssertionError: assert {'calls': 0, ...alls': 0, ...} == {'calls': 0, ...alls': 1, ...}
+backend/tests/test_usage_status.py:186: AssertionError: assert {'calls': 0, ...red_calls': 0} == {'calls': 0, ...red_calls': 1}
+backend/tests/test_usage_status.py:229: AssertionError: assert {'calls': 0, ...red_calls': 0} == {'calls': 1, ...red_calls': 0}
+backend/tests/test_usage_status.py:229: AssertionError: assert {'calls': 0, ...red_calls': 0} == {'calls': 1, ...red_calls': 0}
+backend/tests/test_usage_status.py:229: AssertionError: assert {'calls': 0, ...red_calls': 0} == {'calls': 1, ...red_calls': 0}
+backend/tests/test_usage_status.py:229: AssertionError: assert {'calls': 0, ...red_calls': 0} == {'calls': 1, ...red_calls': 0}
+backend/tests/test_usage_status.py:250: AssertionError: assert {'partial_cal...ported_calls'} <= {'calls', 'co...'run_id', ...}
+FAILED backend/tests/test_usage_status.py::test_v01_three_responses_without_usage_are_counted
+FAILED backend/tests/test_usage_status.py::test_v02_missing_counts_are_marked_not_zeroed[ollama-partial]
+FAILED backend/tests/test_usage_status.py::test_v02_missing_counts_are_marked_not_zeroed[claude-partial]
+FAILED backend/tests/test_usage_status.py::test_v02_missing_counts_are_marked_not_zeroed[openai-null]
+FAILED backend/tests/test_usage_status.py::test_v03_read_timeouts[exhausted]
+FAILED backend/tests/test_usage_status.py::test_v04_cancellation_after_dispatch_is_unanswered_on_its_invocation
+FAILED backend/tests/test_usage_status.py::test_v06_received_response_without_usable_counts_is_unreported[claude-usage-list]
+FAILED backend/tests/test_usage_status.py::test_v06_received_response_without_usable_counts_is_unreported[openai-usage-list]
+FAILED backend/tests/test_usage_status.py::test_v06_received_response_without_usable_counts_is_unreported[openai-http-401]
+FAILED backend/tests/test_usage_status.py::test_v06_received_response_without_usable_counts_is_unreported[ollama-invalid-json]
+FAILED backend/tests/test_usage_status.py::test_v07_migration_adds_zero_counters_and_metrics_sum_them
+PASSED backend/tests/test_usage_status.py::test_v03_read_timeouts[then-zero]
+PASSED backend/tests/test_usage_status.py::test_v05_nothing_reached_a_provider[invalid-url]
+PASSED backend/tests/test_usage_status.py::test_v05_nothing_reached_a_provider[connect-error]
+PASSED backend/tests/test_usage_status.py::test_v05_nothing_reached_a_provider[connect-timeout]
+11 failed, 4 passed in 1.46s
+
+--- frontend (node --test tests/usage-status.test.ts)
+SyntaxError: The requested module '../lib/run-status.ts' does not provide an export named 'usageLabel'
+ℹ tests 1
+ℹ pass 0
+ℹ fail 1

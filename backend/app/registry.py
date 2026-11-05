@@ -142,20 +142,40 @@ async def record_spend(ctx):
                 reason_code='post_spend',error_type=exc.__class__.__name__)
 
 
+# Call statuses beyond 'reported'. Each counter is omitted while zero, so a run whose
+# calls all reported usage has the same totals as before the counters existed.
+STATUS_COUNTERS={'partial':'partial_calls','unreported':'unreported_calls','unanswered':'unanswered_calls'}
+
+
+def call_status(usage):
+    """The status of one call. A plain dict (no transport evidence) is judged by its counts."""
+    status=getattr(usage,'status',None)
+    if status is not None:return status()
+    if not usage:return None
+    return 'reported' if 'prompt_tokens' in usage and 'completion_tokens' in usage else 'partial'
+
+
 def account_usage(ctx,usage,config,error_type=None):
     """Accumulate per-node model usage on the shared run state; the compiler reports it on the node event.
 
-    error_type marks usage from a response that was rejected or interrupted. The tokens
-    count the same either way; the journal line keeps the two apart.
+    Every call that may have reached a provider counts, with its status: a missing count is
+    unknown, not zero, and a call with no response is not free. Only valid reported counts
+    add tokens. error_type marks a response that was rejected or interrupted; the journal
+    line keeps it apart.
     """
-    if ctx.run is None or not usage:return
+    status=call_status(usage)
+    if ctx.run is None or status is None:return
+    def add(totals):
+        if status!='unanswered':totals['calls']+=1
+        totals['prompt_tokens']+=usage.get('prompt_tokens',0);totals['completion_tokens']+=usage.get('completion_tokens',0)
+        if status in STATUS_COUNTERS:totals[STATUS_COUNTERS[status]]=totals.get(STATUS_COUNTERS[status],0)+1
     def accumulate(totals):
-        totals['calls']+=1;totals['prompt_tokens']+=usage.get('prompt_tokens',0);totals['completion_tokens']+=usage.get('completion_tokens',0)
+        add(totals)
         groups=totals.setdefault('by_model',[])
         row=next((r for r in groups if r['provider']==config.provider and r['model']==config.model),None)
         if row is None:
             row={'provider':config.provider,'model':config.model,'calls':0,'prompt_tokens':0,'completion_tokens':0};groups.append(row)
-        row['calls']+=1;row['prompt_tokens']+=usage.get('prompt_tokens',0);row['completion_tokens']+=usage.get('completion_tokens',0)
+        add(row)
     empty=lambda:{'calls':0,'prompt_tokens':0,'completion_tokens':0}
     totals=ctx.run.setdefault('usage',{}).setdefault(ctx.checkpoint_owner or ctx.node_id or '?',empty())
     accumulate(totals)
@@ -166,20 +186,21 @@ def account_usage(ctx,usage,config,error_type=None):
     durability=ctx.run.get('durability')
     if durability is not None:durability.changed()  # Known spend not yet saved.
     from .observability import journal
-    journal(event='model.usage',node_id=ctx.node_id,provider=config.provider,model=config.model,prompt_tokens=usage.get('prompt_tokens'),completion_tokens=usage.get('completion_tokens'),
+    journal(event='model.usage',node_id=ctx.node_id,provider=config.provider,model=config.model,usage_status=status,
+            **{key:usage[key] for key in ('prompt_tokens','completion_tokens') if key in usage},
             **({'error_type':error_type} if error_type else {}))
 
 
 async def call_model(ctx,config,call):
-    """One provider call through the retry policy. Usage is counted for every response the
-    provider reported, used or rejected: a rejected answer was still paid for. A call that
-    returned no usage (an HTTP error, a timeout) adds nothing; its real consumption is unknown."""
-    from .providers import with_retries
+    """One provider call through the retry policy. The call is counted once, whatever its retries,
+    with the status its HTTP attempts prove (see account_usage). A rejected answer was still
+    paid for. A failure before any request was dispatched adds nothing."""
+    from .providers import CallUsage,with_retries
     from .accounting_state import ensure_accounting_ready
     # Repair, planning and query generation all reach the provider here, so known spend is
     # durable, and the run's past usage verifiable, before any of them sends a request.
     await ensure_accounting_ready(ctx.run)
-    usage={}
+    usage=CallUsage()
     try:
         text=await with_retries(lambda:call(usage),provider=config.provider,model=config.model)
     except asyncio.CancelledError:
@@ -187,8 +208,9 @@ async def call_model(ctx,config,call):
         # here would delay the cancellation.
         account_usage(ctx,usage,config,error_type='cancelled');raise
     except Exception as exc:
-        if usage:account_usage(ctx,usage,config,error_type=type(exc).__name__);await record_spend(ctx)
+        if call_status(usage):account_usage(ctx,usage,config,error_type=type(exc).__name__);await record_spend(ctx)
         raise
+    usage.answered()
     account_usage(ctx,usage,config);await record_spend(ctx);return text
 
 

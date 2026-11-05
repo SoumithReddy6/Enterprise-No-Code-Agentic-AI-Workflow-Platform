@@ -47,6 +47,12 @@ class RunTokenRecord(Base):
     prompt_tokens=Column(Integer,nullable=False)
     completion_tokens=Column(Integer,nullable=False)
     calls=Column(Integer,nullable=False)
+    # Revision 0006: calls whose usage is incomplete. Older rows read 0 (no backfill).
+    partial_calls=Column(Integer,nullable=False,default=0,server_default='0')
+    unreported_calls=Column(Integer,nullable=False,default=0,server_default='0')
+    unanswered_calls=Column(Integer,nullable=False,default=0,server_default='0')
+
+USAGE_FIELDS=('prompt_tokens','completion_tokens','calls','partial_calls','unreported_calls','unanswered_calls')
 
 def usage_rows(event,workflow):
     if event.get('cached'):return []
@@ -59,8 +65,8 @@ def usage_rows(event,workflow):
     grouped={}
     for row in rows:
         provider=str(row.get('provider','unknown'))[:24];model=str(row.get('model','unknown'))[:100]
-        key=(provider,model);total=grouped.setdefault(key,{'provider':provider,'model':model,'prompt_tokens':0,'completion_tokens':0,'calls':0})
-        for field in ('prompt_tokens','completion_tokens','calls'):
+        key=(provider,model);total=grouped.setdefault(key,{'provider':provider,'model':model,**dict.fromkeys(USAGE_FIELDS,0)})
+        for field in USAGE_FIELDS:
             value=row.get(field,0)
             if isinstance(value,int) and 0<=value<=10**12:total[field]+=value
     return list(grouped.values())
@@ -110,9 +116,10 @@ def metrics(store,hours=168):
         percentiles={}
         for name,p in (('p50',.5),('p95',.95)):
             percentiles[name]=session.scalar(select(func.min(ranked.c.duration)).where(ranked.c.rank>=ranked.c.n*p))
-        tokens=[dict(row._mapping) for row in session.execute(select(RunTokenRecord.provider,RunTokenRecord.model,func.sum(RunTokenRecord.prompt_tokens).label('prompt_tokens'),func.sum(RunTokenRecord.completion_tokens).label('completion_tokens'),func.sum(RunTokenRecord.calls).label('calls')).join(RunRecord,RunRecord.id==RunTokenRecord.run_id).where(*window).group_by(RunTokenRecord.provider,RunTokenRecord.model).order_by(RunTokenRecord.provider,RunTokenRecord.model))]
+        # The incomplete-call counters are omitted while zero, as on events, so complete usage reads as before.
+        tokens=[{k:v for k,v in row._mapping.items() if v or k not in USAGE_FIELDS[3:]} for row in session.execute(select(RunTokenRecord.provider,RunTokenRecord.model,func.sum(RunTokenRecord.prompt_tokens).label('prompt_tokens'),func.sum(RunTokenRecord.completion_tokens).label('completion_tokens'),func.sum(RunTokenRecord.calls).label('calls'),*(func.sum(getattr(RunTokenRecord,field)).label(field) for field in USAGE_FIELDS[3:])).join(RunRecord,RunRecord.id==RunTokenRecord.run_id).where(*window).group_by(RunTokenRecord.provider,RunTokenRecord.model).order_by(RunTokenRecord.provider,RunTokenRecord.model))]
     return {'request_admission':{'outcomes':admission,'checkpoint_replays':replays,'basis':'Uncached stage outcomes from revision 0005 onward; no historical backfill. Review pauses and human confirmations are separate.'},'human_reviews':{'by_kind':reviews,'basis':'Durable approval rows by kind and current status for runs created in the window; completed decision/verification rows are human confirmations, not automatic checks'},'answerability_guard':{'decisions':guard_counts,'skipped_by_reason':guard_skips,'basis':'Uncached retrieval/query decisions across runs created in the window; not unique runs or model refusals'},'window':{'start':start.isoformat(),'end':end.isoformat(),'basis':'run_created_at'},'runs_by_status':counts,'duration_seconds':percentiles,'tokens':tokens,
             'abstention_rate':abstained/grounded if grounded else None,'truncation_rate':truncated/total if total else None,
             'truncated_runs_by_source':{'confirmed':(truncated or 0)-unverified,'legacy_checkpoint_unverified':unverified},
             'denominators':{'successful_runs':total,'successful_grounded_runs':grounded or 0},
-            'definitions':{'scope':'deployment-wide','abstention':'Any grounded node abstained in a successful run','duration':'Creation to final completion, including queue and resumed attempts','tokens':'Provider-reported tokens; not monetary cost; missing usage is not estimated','truncation':'Successful runs that did not deliver all intended work; legacy_checkpoint_unverified counts runs whose loop completeness an older checkpoint cannot prove, and is included in truncation_rate'}}
+            'definitions':{'scope':'deployment-wide','abstention':'Any grounded node abstained in a successful run','duration':'Creation to final completion, including queue and resumed attempts','tokens':'Provider-reported tokens; not monetary cost; missing usage is not estimated. calls counts calls that got a response; partial_calls and unreported_calls are those of them with one or no usable count, and unanswered_calls were dispatched with no response, so they are not in calls. When any of the three is non-zero the token totals are a lower bound. Rows from before revision 0006 have zero counters and count only calls with recorded usage','truncation':'Successful runs that did not deliver all intended work; legacy_checkpoint_unverified counts runs whose loop completeness an older checkpoint cannot prove, and is included in truncation_rate'}}

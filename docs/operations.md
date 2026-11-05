@@ -72,7 +72,7 @@ grep '"request_id":"your-request-id"' relay.log
 |---|---|
 | `runs_by_status` | Current statuses of runs created in the half-open `[start, end)` window |
 | `duration_seconds.p50/p95` | SQL nearest-rank percentiles among finished success/failed/cancelled runs; creation through final completion includes queue time and resumed attempts |
-| `tokens` | Reported prompt/completion tokens and measured calls grouped by provider and model, including failed/cancelled nodes when their usage event was durably recorded |
+| `tokens` | Reported prompt/completion tokens and model calls grouped by provider and model, including failed/cancelled nodes when their usage event was durably recorded. `partial_calls`, `unreported_calls` and `unanswered_calls` appear when non-zero; then the token totals are a lower bound (see **Call status**) |
 | `human_reviews.by_kind` | Durable approval counts by `write`, `verification` or `decision` and current status; completed typed reviews are manual confirmations, not automatic model checks |
 | `abstention_rate` | Fraction of successful grounded runs with at least one grounded node that abstained; not necessarily final-response refusal |
 | `truncation_rate` | Fraction of successful runs flagged incomplete because an agent exhausted its budget |
@@ -82,7 +82,9 @@ Empty denominators/percentile populations return `null`. Cached checkpoint repla
 
 **Attribution.** Each outcome event carries only the usage of the invocation it reports: a graph node, a specialist or tool an agent called, or one loop item. A parent never republishes a child's usage, so summing outcome rows does not double-count a delegation. This holds for success, failure, approval pause and cancellation. When cancellation, an unsafe-execution refusal, an uncertain write or an accounting refusal unwinds through nested work, each active invocation reports its own known usage before the stop propagates; a child that had reported nothing inherits nothing. Cancellation waits for an in-flight event transaction and does not record that invocation's usage a second time, while its parents still report their own. A loop item whose outcome committed but whose progress did not runs again on resume, and both executions count, because both made provider calls. The run's accounting snapshot stays the authority for the token ceiling; these rows are reporting. Runs saved before this rule may contain a parent cancellation or failure event that repeats its children's usage; they are not rewritten.
 
-Calls across resumed attempts remain counted. A response whose answer Relay rejects (a refusal, an empty answer, a length stop with no visible text) still counts its reported usage, and the failed node event carries it. A call that returned no usage (an HTTP error, a timeout) adds nothing; its real consumption is unknown, because a provider can keep processing after the client stops waiting. Provider omissions, crashes before event persistence, and loss of a worker lease can leave token usage incomplete; no estimate is invented. Token counts are not dollar costs. Legacy multi-model agent events lack per-model detail and cannot be perfectly attributed; only their stored attribution is available.
+Calls across resumed attempts remain counted. A response whose answer Relay rejects (a refusal, an empty answer, a length stop with no visible text) still counts its reported usage, and the failed node event carries it. A call whose usage is missing is still counted, with a status (below). Crashes before event persistence and loss of a worker lease can still leave token usage incomplete; no estimate is invented. Token counts are not dollar costs. Legacy multi-model agent events lack per-model detail and cannot be perfectly attributed; only their stored attribution is available.
+
+**Call status.** A model call is one managed call, whatever its internal retries. Each call that may have reached a provider is counted once, with one status. *Reported*: a response arrived with both counts (zero is a valid count). *Partial*: a response arrived with one count missing or invalid, for example an Ollama-compatible server that omits `prompt_eval_count` for a cached prompt. *Unreported*: a response arrived with no usable count — OpenAI `usage: null`, a malformed `usage` value, an HTTP error status or an unreadable body. *Unanswered*: the request was dispatched and no response came back (a read timeout, a dropped connection, cancellation); its consumption is unknown, because a provider can keep processing after the client stops waiting. `calls` counts reported, partial and unreported calls; `unanswered_calls` is separate. Nothing is counted when a call fails before dispatch (a missing credential, an invalid URL) or when its connection never opened (`ConnectError`, `ConnectTimeout`, `PoolTimeout`, or `UnsupportedProtocol` for a base URL without `http://` or with another scheme). The `model.usage` journal line carries `usage_status`. Missing counts are never written as zero, so a total with partial, unreported or unanswered calls is a lower bound; the event log shows such a count as incomplete or unknown. "Unanswered" is what Relay observes, not proof that the provider received the request, and providers usually do not charge for an error status, although Relay does not assume either way. Rows from before schema revision 0006 have zero counters, and their `calls` count only calls with recorded usage; a window that spans the upgrade mixes both meanings.
 
 Run creation/status indexes bound window selection; percentile and grouped aggregation work remains proportional to the matching population. SQL reads compact run metric columns and token rows, not workflow JSON, passages or event payloads. Completion updates metric columns atomically; token rows are inserted alongside ordered run events. Startup atomically backfills existing runs/events once using a migration marker. Large histories may extend the first startup.
 
@@ -326,7 +328,7 @@ Changing `AGENT_RUN_BUDGET` requires a worker restart. A paused or interrupted r
 
 `AGENT_RUN_BUDGET` counts *actions*; `RELAY_RUN_TOKEN_LIMIT` counts *tokens*. A run can be well inside its action budget and still be expensive, because one action over a large document costs far more than one over a sentence. The token ceiling is the cost backstop.
 
-It is checked before each model call, using counts the provider itself reported (`prompt_eval_count`/`eval_count` on Ollama, `usage` on OpenAI and Claude). Missing usage counts as zero, so a provider that reports nothing cannot be capped — check that model usage appears in operator metrics before relying on this.
+It is checked before each model call, using counts the provider itself reported (`prompt_eval_count`/`eval_count` on Ollama, `usage` on OpenAI and Claude). Missing counts add nothing to the ceiling, so a provider that reports nothing cannot be capped. Such calls are still counted as partial, unreported or unanswered in operator metrics (see **Call status**); check those counters before relying on the ceiling. A strict rule for unknown consumption is not part of this ceiling.
 
 Once the ceiling is reached, no further model call is made, and the run is flagged `truncated` with
 
@@ -462,8 +464,9 @@ continues spending rather than starting over.
 Remaining limits: a worker that dies after a provider response but before any durable
 save loses that call's tokens, and the resumed run pays for the call again; this is at
 most one reported call between saves. The ceiling stays soft, as described above. Calls
-whose provider reports no usage, and provider-internal retries, are not counted. These
-gaps are tracked separately and are not closed by the commit rules above.
+whose provider reports no usage are counted by status but add no tokens, and
+provider-internal retries are not counted separately. These gaps are tracked separately
+and are not closed by the commit rules above.
 
 Provider-level retries inside a single model call are covered by the token ceiling
 checked before that call, not re-checked per retry; a call already in flight is allowed
