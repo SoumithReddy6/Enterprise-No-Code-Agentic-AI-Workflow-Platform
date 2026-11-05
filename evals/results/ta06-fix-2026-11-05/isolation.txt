@@ -1,0 +1,14 @@
+# Isolation: git archive bcc8d9b + 11 TA06 files, git init + commit efc1be6
+uncommitted files in copy: 0
+copied: backend/app/operator_metrics.py sha256 81b8f0862e1fb68d identical
+copied: backend/app/providers.py sha256 fbd2b20e3991d386 identical
+copied: backend/app/registry.py sha256 320ab1dc3f0aeb0b identical
+copied: backend/migrations/versions/0006_usage_status.py sha256 85eeb36fede02779 identical
+copied: backend/tests/test_usage_status.py sha256 5011598ca00c5e18 identical
+copied: docs/operations.md sha256 0587547bd05cf2cc identical
+copied: docs/superpowers/specs/2026-11-05-unreported-usage-design.md sha256 5bd7c9fcf91aa71e identical
+copied: frontend/components/workflow-editor.tsx sha256 d509be0110565f04 identical
+copied: frontend/lib/run-status.ts sha256 5d16ea08c799c535 identical
+copied: frontend/lib/workflow.ts sha256 d346f12b84a0ebe2 identical
+copied: frontend/tests/usage-status.test.ts sha256 ebfaf65bd7610300 identical
+other working-tree changes under backend/, frontend/lib, frontend/components, scripts/, .github/ vs bcc8d9b: 0

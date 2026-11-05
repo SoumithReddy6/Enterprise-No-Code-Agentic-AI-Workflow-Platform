@@ -1,0 +1,7 @@
+# PYTHONHASHSEED 0-4, full backend suite in the isolation copy, 2026-11-05T20:30:07Z
+imports from <scratchpad>/ta06-iso.mHrW/backend/app
+seed 0: 2002 passed, 4 warnings in 101.42s (0:01:41)
+seed 1: 2002 passed, 4 warnings in 97.87s (0:01:37)
+seed 2: 2002 passed, 4 warnings in 98.66s (0:01:38)
+seed 3: 2002 passed, 4 warnings in 97.88s (0:01:37)
+seed 4: 2002 passed, 4 warnings in 98.83s (0:01:38)

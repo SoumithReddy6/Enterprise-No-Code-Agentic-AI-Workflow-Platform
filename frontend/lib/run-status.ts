@@ -88,3 +88,27 @@ export function eventNotes(event: EventSummary): string[] {
   if (event.omitted_fields?.length) notes.push(`Omitted from this log entry to keep it small: ${event.omitted_fields.join(', ')}.`);
   return notes;
 }
+
+export type EventUsage = {
+  calls: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  partial_calls?: number;
+  unreported_calls?: number;
+  unanswered_calls?: number;
+};
+
+// A call whose usage is missing is not free work: the counts shown are a lower bound,
+// and a call that got no response has an unknown cost.
+export function usageLabel(usage: EventUsage | undefined): string {
+  if (!usage) return '';
+  const unanswered = usage.unanswered_calls ?? 0;
+  const missing = (usage.partial_calls ?? 0) + (usage.unreported_calls ?? 0);
+  if (usage.calls === 0 && unanswered > 0) return 'tokens unknown (no response)';
+  const counts = `${usage.prompt_tokens}+${usage.completion_tokens} tok`;
+  if (missing === 0 && unanswered === 0) return counts;
+  const unreported = (usage.unreported_calls ?? 0) === usage.calls && unanswered === 0;
+  return unreported && usage.prompt_tokens + usage.completion_tokens === 0
+    ? 'tokens not reported'
+    : `${counts} (incomplete)`;
+}

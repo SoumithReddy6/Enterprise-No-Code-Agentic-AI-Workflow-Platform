@@ -102,14 +102,68 @@ async def with_retries(call, attempts=3, base_delay=.5, provider=None, model=Non
             await asyncio.sleep(delay)
 
 
+class CallUsage(dict):
+    """Token counts for one managed model call, plus how far its HTTP attempts got.
+
+    The mapping holds only token counts, like the plain dict a direct caller passes. The
+    evidence lives in attributes, so it never reaches accounting, events or SQL.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.dispatched = 0     # prepared requests handed to the client's send
+        self.undelivered = 0    # of those, attempts whose connection never opened
+        self.received = False   # a complete response came back, whatever its content
+        self.valid = None       # valid counts in the last recorded usage, 0 to 2
+
+    def answered(self):
+        """A returned answer proves that a response arrived."""
+        self.received = True
+
+    def status(self):
+        """reported, partial, unreported, unanswered, or None when nothing reached a provider."""
+        if self.received:
+            return {2: 'reported', 1: 'partial'}.get(self.valid, 'unreported')
+        return 'unanswered' if self.dispatched > self.undelivered else None
+
+
+# Connection-phase failures: no connection carried the request.
+UNDELIVERED = (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout)
+
+
+async def _send(http, usage, request):
+    """Send a prepared request. Preparation errors happen before this, so they are not dispatch."""
+    managed = isinstance(usage, CallUsage)
+    if managed:
+        usage.dispatched += 1
+    try:
+        response = await http.send(request)
+    except UNDELIVERED:
+        if managed:
+            usage.undelivered += 1
+        raise
+    # Non-streaming: the body is read. Status, JSON and usage checks come after receipt.
+    if managed:
+        usage.received = True
+    return response
+
+
 def record_usage(usage, prompt_tokens, completion_tokens):
-    """Accumulate valid provider token counts in the caller-owned usage dictionary."""
+    """Accumulate valid provider token counts in the caller-owned usage dictionary.
+
+    A missing or invalid count is not written as zero: the dictionary omits it.
+    """
     if usage is None:
         return
+    valid = 0
     for key, value in (('prompt_tokens', prompt_tokens),
                        ('completion_tokens', completion_tokens)):
         if type(value) is int and value >= 0:
             usage[key] = usage.get(key, 0) + value
+            valid += 1
+    if isinstance(usage, CallUsage):
+        usage.received = True
+        usage.valid = valid
 
 
 def _json_object(response, provider):
@@ -150,13 +204,13 @@ async def ollama_chat(model, system, prompt, temperature=None, top_p=None,
         options['top_p'] = top_p
     try:
         async with client(110) as http:
-            response = await http.post(
-                ollama_url() + '/api/chat',
+            response = await _send(http, usage, http.build_request(
+                'POST', ollama_url() + '/api/chat',
                 json={'model': model,
                       'messages': [{'role': 'system', 'content': system},
                                    {'role': 'user', 'content': prompt}],
                       'stream': False, 'options': options},
-            )
+            ))
             if response.status_code == 404:
                 raise ValueError(f'Ollama model {model} is not installed. Pull it in Ollama or choose an installed model.')
             _raise_retryable(response, 'Ollama')
@@ -252,13 +306,13 @@ async def claude_chat(model, system, prompt, key, temperature=None, top_p=None,
         params['top_p'] = top_p
     try:
         async with client(60) as http:
-            response = await http.post(
-                'https://api.anthropic.com/v1/messages',
+            response = await _send(http, usage, http.build_request(
+                'POST', 'https://api.anthropic.com/v1/messages',
                 headers={'x-api-key': key, 'anthropic-version': '2023-06-01'},
                 json={'model': model, 'system': system,
                       'messages': [{'role': 'user', 'content': prompt}],
                       'max_tokens': max_tokens, **params},
-            )
+            ))
             _raise_retryable(response, 'Claude')
             response.raise_for_status()
             body = _json_object(response, 'Claude')
@@ -304,14 +358,14 @@ async def openai_chat(model, system, prompt, key, temperature=None, top_p=None,
         params['top_p'] = top_p
     try:
         async with client(60) as http:
-            response = await http.post(
-                'https://api.openai.com/v1/chat/completions',
+            response = await _send(http, usage, http.build_request(
+                'POST', 'https://api.openai.com/v1/chat/completions',
                 headers={'Authorization': f'Bearer {key}'},
                 json={'model': model,
                       'messages': [{'role': 'system', 'content': system},
                                    {'role': 'user', 'content': prompt}],
                       'max_completion_tokens': max_tokens, **params},
-            )
+            ))
             _raise_retryable(response, 'OpenAI')
             response.raise_for_status()
             body = _json_object(response, 'OpenAI')
