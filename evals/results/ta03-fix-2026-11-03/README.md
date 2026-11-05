@@ -81,7 +81,8 @@ same rule.
    usage exists, including the claim-time and legacy refusals TA02 tests check. Cancellation
    always publishes a `cancelled` outcome, as the root already did.
 4. **U03 runs at compile level.** It uses the same `usage_rows` function the Store uses for
-   metrics. The other 12 cases use the real Worker and Store.
+   metrics. U03 has two parameters, so the other 11 cases use the real Worker and Store
+   (count corrected after the implementation review).
 5. **Receipt scope.** `not_run` (an item refused by a budget before any attempt) is not in
    the receipt list. If cancellation lands during that exact save, the item can also publish
    a `cancelled` status. That event carries no usage, so no metric changes.

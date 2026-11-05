@@ -1,0 +1,241 @@
+{
+  "passed": true,
+  "rows": [
+    {
+      "case": "cancel_after_child_success",
+      "counterfactual": false,
+      "status": "cancelled",
+      "known_tokens": 30,
+      "accounting_tokens": 30,
+      "metrics": {
+        "tokens": 30,
+        "calls": 2
+      },
+      "usage_events": [
+        {
+          "node": "helper",
+          "status": "success",
+          "calls": 1,
+          "tokens": 15
+        },
+        {
+          "node": "agent",
+          "status": "cancelled",
+          "calls": 1,
+          "tokens": 15
+        }
+      ]
+    },
+    {
+      "case": "cancel_inside_nested_agent",
+      "counterfactual": false,
+      "status": "cancelled",
+      "known_tokens": 30,
+      "accounting_tokens": 30,
+      "metrics": {
+        "tokens": 30,
+        "calls": 2
+      },
+      "usage_events": [
+        {
+          "node": "helper",
+          "status": "cancelled",
+          "calls": 1,
+          "tokens": 15
+        },
+        {
+          "node": "agent",
+          "status": "cancelled",
+          "calls": 1,
+          "tokens": 15
+        }
+      ]
+    },
+    {
+      "case": "cancel_during_child_commit",
+      "counterfactual": false,
+      "status": "cancelled",
+      "known_tokens": 30,
+      "accounting_tokens": 30,
+      "metrics": {
+        "tokens": 30,
+        "calls": 2
+      },
+      "usage_events": [
+        {
+          "node": "helper",
+          "status": "success",
+          "calls": 1,
+          "tokens": 15
+        },
+        {
+          "node": "agent",
+          "status": "cancelled",
+          "calls": 1,
+          "tokens": 15
+        }
+      ]
+    },
+    {
+      "case": "unsafe_finalization",
+      "counterfactual": false,
+      "status": "failed",
+      "known_tokens": 45,
+      "accounting_tokens": 45,
+      "metrics": {
+        "tokens": 45,
+        "calls": 3
+      },
+      "usage_events": [
+        {
+          "node": "helper",
+          "status": "success",
+          "calls": 1,
+          "tokens": 15
+        },
+        {
+          "node": "agent",
+          "status": "failed",
+          "calls": 2,
+          "tokens": 30
+        }
+      ]
+    },
+    {
+      "case": "uncertain_finalization",
+      "counterfactual": false,
+      "status": "failed",
+      "known_tokens": 45,
+      "accounting_tokens": 45,
+      "metrics": {
+        "tokens": 45,
+        "calls": 3
+      },
+      "usage_events": [
+        {
+          "node": "helper",
+          "status": "success",
+          "calls": 1,
+          "tokens": 15
+        },
+        {
+          "node": "agent",
+          "status": "failed",
+          "calls": 2,
+          "tokens": 30
+        }
+      ]
+    },
+    {
+      "case": "ordinary_success_control",
+      "status": "success",
+      "known_provider_response_tokens": 45,
+      "persisted_accounting_tokens": 45,
+      "operator_metrics": {
+        "tokens": 45,
+        "calls": 3
+      },
+      "usage_events": [
+        {
+          "node_id": "helper",
+          "status": "success",
+          "usage": {
+            "calls": 1,
+            "prompt_tokens": 10,
+            "completion_tokens": 5,
+            "by_model": [
+              {
+                "provider": "ollama",
+                "model": "token-review-fixture",
+                "calls": 1,
+                "prompt_tokens": 10,
+                "completion_tokens": 5
+              }
+            ]
+          }
+        },
+        {
+          "node_id": "agent",
+          "status": "success",
+          "usage": {
+            "calls": 2,
+            "prompt_tokens": 20,
+            "completion_tokens": 10,
+            "by_model": [
+              {
+                "provider": "ollama",
+                "model": "token-review-fixture",
+                "calls": 2,
+                "prompt_tokens": 20,
+                "completion_tokens": 10
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "case": "loop_with_cancelled_specialist",
+      "metrics": {
+        "tokens": 30,
+        "calls": 2,
+        "by_model": {
+          "fixture-b": [
+            15,
+            1
+          ],
+          "fixture": [
+            15,
+            1
+          ]
+        }
+      },
+      "accounting_tokens": 30,
+      "unfinished_item_not_reusable": true
+    },
+    {
+      "case": "cancel_during_helper_pause_commit",
+      "deadline": false,
+      "status": "cancelled",
+      "error": "Run failed unexpectedly.",
+      "metrics": {
+        "tokens": 30,
+        "calls": 2,
+        "by_model": {
+          "fixture-b": [
+            15,
+            1
+          ],
+          "fixture": [
+            15,
+            1
+          ]
+        }
+      },
+      "accounting_tokens": 30,
+      "sent_requests": 0
+    },
+    {
+      "case": "cancel_during_agent_pause_commit",
+      "deadline": false,
+      "status": "cancelled",
+      "error": "Run failed unexpectedly.",
+      "metrics": {
+        "tokens": 30,
+        "calls": 2,
+        "by_model": {
+          "fixture-b": [
+            15,
+            1
+          ],
+          "fixture": [
+            15,
+            1
+          ]
+        }
+      },
+      "accounting_tokens": 30,
+      "sent_requests": 0
+    }
+  ]
+}
