@@ -1,0 +1,41 @@
+{
+  "checked_on": "2026-11-05",
+  "sources": [
+    {
+      "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-caching",
+      "verified": "Total input is input_tokens plus cache_read_input_tokens plus cache_creation_input_tokens."
+    },
+    {
+      "url": "https://github.com/anthropics/anthropic-sdk-python/blob/main/src/anthropic/types/usage.py",
+      "verified": "Base input/output fields are required; cache counts are optional and default to None in the SDK."
+    },
+    {
+      "url": "https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create",
+      "verified": "cached_tokens and cache_write_tokens are optional prompt detail fields with default zero."
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/prompt-caching",
+      "verified": "Cache usage details are components within the inclusive input total; they are not added a second time."
+    },
+    {
+      "url": "https://docs.ollama.com/api/chat",
+      "verified": "prompt_eval_count is tokens in the prompt; prompt_eval_cached_count is prompt tokens read from cache."
+    },
+    {
+      "url": "https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/gen-ai-agent-spans.md",
+      "verified": "Input usage should include cached tokens; detailed usage attributes are subsets of aggregate totals."
+    },
+    {
+      "url": "https://github.com/apache/apisix/pull/14028",
+      "verified": "Published correction of Anthropic input normalization and converted-path cache-write double counting.",
+      "merged": true,
+      "merged_at": "2026-10-15T06:26:29Z",
+      "merge_commit_sha": "64a4afdd1353bd302f03cc8f0f780b8a78176137",
+      "verification": "GitHub issue connector for body; GitHub pull-request API for merge metadata. No deployed-release claim."
+    },
+    {
+      "url": "https://github.com/BerriAI/litellm/issues/45021",
+      "verified": "Issue reports missing Ollama cache annotations; supporting compatibility example, not the authority for field semantics."
+    }
+  ]
+}

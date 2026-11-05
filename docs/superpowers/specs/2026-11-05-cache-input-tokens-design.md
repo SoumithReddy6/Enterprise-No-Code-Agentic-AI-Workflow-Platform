@@ -1,6 +1,7 @@
 # TA07: count Claude cache input in the prompt total, and keep the cache breakdown
 
-**Status:** draft for review.
+**Status:** approved after review (`docs/reviews/ta07-design-review-2026-11-05.md`),
+with TA07-D01, TA07-D02 and the C01 ceiling extension incorporated below.
 **Date:** 2026-11-05.
 **Baseline:** `dce6f66` (TA06 closed; branch content equals `main` at `0f3bb05` plus the
 TA06 re-check report).
@@ -67,17 +68,29 @@ Source check: 2026-11-05.
      `prompt_tokens_details.cache_write_tokens`.
    - Ollama: read = `prompt_eval_cached_count`; no write.
 3. **A valid count** is an `int` that is not a `bool` and is `>= 0` (unchanged rule).
-4. **Claude validity** (cache categories are part of the total):
-   - Absent or `null` cache field: 0, and the call can still be `reported`.
-   - A cache field that is present and invalid: the input count is incomplete. Record the
-     known subtotal of the valid input categories as `prompt_tokens`, and the call status
-     is `partial` (TA06). The invalid category gets no breakdown value.
-   - Invalid or missing `input_tokens`: as TA06. With valid cache fields, their subtotal is
-     the known prompt subtotal, and the status is `partial`.
+4. **Claude validity** (cache categories are part of the total). The known subtotal and
+   the completeness of the input are two different facts (TA07-D01):
+   - Absent or `null` cache field: contributes 0 and does not make the input incomplete.
+     It is not reported evidence by itself.
+   - The input is **complete** only when `input_tokens` is valid and every present,
+     non-null cache field is valid.
+   - `prompt_tokens` is the sum of the valid contributions. It is written only when at
+     least one actual input category (`input_tokens` or a present cache field) is valid.
+     Absent or null defaults never create `prompt_tokens: 0`.
+   - The invalid category gets no breakdown value; the valid ones keep theirs.
+   - Status (TA06 labels): `reported` needs complete input and a valid output (a valid
+     zero counts). `partial` when at least one actual count is known but the receipt is
+     incomplete. `unreported` when no actual count is usable, for example `usage: {}`.
+   - A missing or invalid output never becomes complete because all input categories
+     parsed.
 5. **OpenAI and Ollama validity** (the breakdown is a detail of a total):
    - The total decides the status, as in TA06. The breakdown never changes the status.
-   - Drop the breakdown (both values), not the total, if `prompt_tokens_details` is not an
-     object, a detail is invalid, or read + write is greater than the prompt total.
+   - An absent or `null` details container gives no breakdown (TA07-D02).
+   - A missing or `null` read or write detail is 0 and is omitted; the other detail is
+     kept. Example: `{"cached_tokens": 60}` gives read 60, no write, `reported`.
+   - Drop the breakdown (both values), not the total, if `prompt_tokens_details` is
+     present and not an object, a present detail is invalid, or read + write is greater
+     than the prompt total. The total and the status do not change.
    - A breakdown without a valid prompt total is dropped.
 6. **Accounting:** `account_usage` adds the breakdown to the same totals as the counts:
    the checkpoint owner's `usage`, `usage_by_invocation` and each `by_model` row. TA03
@@ -88,8 +101,10 @@ Source check: 2026-11-05.
 8. **TA06 hardening (recheck note):** the journal keeps `usage_status` only when it is a
    string and one of the four statuses. `None`, a list or a dict is dropped and never
    raises.
-9. **No control-flow change.** No status, refusal, retry or business decision changes,
-   except that the Claude total and the ceiling now see cache input.
+9. **Unchanged run-control flow.** No refusal, retry, error type or business decision
+   changes, except that the Claude total and the ceiling now see cache input. The usage
+   status label does change when newly examined Claude cache metadata is malformed
+   (`partial` instead of `reported`); that is the purpose of rule 4.
 
 ## 5. Proposed implementation behavior
 
@@ -99,7 +114,11 @@ Source check: 2026-11-05.
 keeps its TA06 behavior for the two counts and the `CallUsage` evidence, and adds the
 breakdown keys to the usage dict only when they are valid and non-zero. The Claude
 transport passes its three input categories and lets `record_usage` (or a small helper)
-form the total and the validity under rule 4. The OpenAI and Ollama transports pass their
+form the total and the validity under rule 4. The current evidence (`valid` = number of
+valid counts) cannot express "numeric subtotal but incomplete input": a subtotal of 410
+with a valid output would read as `reported`. A small private completeness flag on
+`CallUsage`, or equivalent explicit status logic, carries it (TA07-D01). No new public
+output. The OpenAI and Ollama transports pass their
 total unchanged and their breakdown under rule 5.
 
 **Usage-dict contract (TA06-D03):** for a direct caller, the dict stays unchanged when the
@@ -125,28 +144,33 @@ compiler, agent and loop runtimes, and the Worker.
 
 ## 6. Verification and stop rule
 
-Budget: at most **10 new collected cases** and **8 mutants**. HTTP is mocked with
+Budget: at most **10 new collected cases** and **9 mutants** (the draft planned 7 of 8;
+the review's two rules add one each). HTTP is mocked with
 `httpx.MockTransport` through `providers.client`, and the real Worker and Store are used
 where a case checks events or metrics, as in TA06.
 
 | ID | Case (rows) | Count | Checks |
 |---|---|---|---|
-| C01 | The finding's Claude response: input 10, creation 400, read 600, output 5 (Worker) | 1 | Event and SQL: 1,010 + 5, 1 call, `reported`; event breakdown read 600, write 400; `tokens_spent` 1,015 (breakdown not added again); the real journal JSON has both breakdown fields. |
+| C01 | The finding's Claude response: input 10, creation 400, read 600, output 5, in a two-model workflow with a 1,000-token ceiling (Worker) | 1 | First event and SQL: 1,010 + 5, 1 call, `reported`; event breakdown read 600, write 400; accounting snapshot `tokens_spent` 1,015 (breakdown not added again); the real journal JSON has both breakdown fields. The second model call is refused with the typed budget error before any second provider request (the first call may finish over the ceiling: soft limit). |
 | C02 | Claude with no cache tokens: `absent`, `null` | 2 | 10 + 5, no breakdown keys, `reported` (controls). |
 | C03 | Claude `cache_read_input_tokens: "600"` (invalid), creation 400 | 1 | Prompt subtotal 410, `partial`, write 400 and no read in the breakdown. |
-| C04 | OpenAI prompt 100 with `cached_tokens` 60 and `cache_write_tokens` 20, completion 50 | 1 | Prompt stays 100 (no double count), breakdown 60 and 20, `tokens_spent` 150. |
+| C04 | OpenAI prompt 100, completion 50: `read-write` (`cached_tokens` 60, `cache_write_tokens` 20), `read-only` (`cached_tokens` 60, no write field) | 2 | Prompt stays 100 (no double count), `reported`, `tokens_spent` 150. `read-write`: breakdown 60 and 20. `read-only`: read 60, no write key (TA07-D02). |
 | C05 | OpenAI `cached_tokens` 150 with prompt 100 | 1 | Breakdown dropped; total 100 + 50, `reported`. |
 | C06 | Ollama `prompt_eval_count` 6,024, `prompt_eval_cached_count` 6,016 | 1 | Prompt 6,024, breakdown read 6,016, `reported`. |
 | C07 | Journal status hardening: `None`, a list, a dict | 1 | No exception; `usage_status` dropped for each. |
+| C08 | Claude `usage: {}` (TA07-D01) | 1 | No `prompt_tokens` or `completion_tokens` key, 1 call, `unreported` (control). |
 
-That is 8 cases, inside the cap. C01 and C03 fail on the baseline by count mismatch. C04
-and C06 fail by the missing breakdown values (read as absent, not as an interface error).
-C07 fails on the baseline because a list raises `TypeError`. C02 and C05 are controls.
+That is 10 cases, the cap. C01 and C03 fail on the baseline by count mismatch (C01 also
+because 15 tokens leave the second call admitted). C04 and C06 fail by the missing
+breakdown values (read as absent, not as an interface error). C07 fails on the baseline
+because a list raises `TypeError`. C02, C05 and C08 are controls.
 
 Mutants must cover: the Claude total is `input_tokens` only; the breakdown is added to an
 OpenAI or Ollama total; an absent Claude cache field is treated as invalid; an invalid
 Claude cache field is treated as 0 and `reported`; the subset check is removed;
-`tokens_spent` sums the breakdown; the journal hardening is reverted.
+`tokens_spent` sums the breakdown; the journal hardening is reverted; absent Claude
+defaults fabricate `prompt_tokens: 0` (C08 becomes `partial`); a missing OpenAI write
+detail drops the read (C04 `read-only`). That is 9 mutants; none is merged or dropped.
 
 **Existing-test churn.** No existing test is expected to change. Stop rule: if more than
 5 existing tests change, or any changes for another reason, stop and report.
