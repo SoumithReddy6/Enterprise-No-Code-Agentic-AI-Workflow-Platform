@@ -1,0 +1,43 @@
+{
+  "scope": "Direct internal-helper probe; arbitrary status values are not reachable from current production model-call paths. Nonblocking.",
+  "rows": [
+    {
+      "input": "reported",
+      "field_present": true,
+      "output": "reported"
+    },
+    {
+      "input": "partial",
+      "field_present": true,
+      "output": "partial"
+    },
+    {
+      "input": "unreported",
+      "field_present": true,
+      "output": "unreported"
+    },
+    {
+      "input": "unanswered",
+      "field_present": true,
+      "output": "unanswered"
+    },
+    {
+      "input": "forged",
+      "field_present": false,
+      "output": null
+    },
+    {
+      "input": null,
+      "field_present": true,
+      "output": null
+    },
+    {
+      "input": [],
+      "error_type": "TypeError"
+    },
+    {
+      "input": {},
+      "error_type": "TypeError"
+    }
+  ]
+}

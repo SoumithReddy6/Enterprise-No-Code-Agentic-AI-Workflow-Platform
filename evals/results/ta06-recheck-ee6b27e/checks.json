@@ -1,0 +1,61 @@
+{
+  "commit": "ee6b27e71247e10b2a3054d25642624d2ce8c933",
+  "origin": "ee6b27e71247e10b2a3054d25642624d2ce8c933",
+  "tracked_status": "",
+  "independent_tests": {
+    "command": ".venv/bin/python -m pytest backend/tests/test_usage_status.py backend/tests/test_observability.py backend/tests/test_providers.py evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py --import-mode=importlib -q --tb=short --show-capture=no",
+    "passed": 68,
+    "exit_code": 0,
+    "original_review_probes": 18,
+    "other_backend_cases": 50
+  },
+  "review_evidence_untouched": {
+    "committed_files_compared": 8,
+    "changed": []
+  },
+  "builder_evidence_inspected": {
+    "production": {
+      "path": "evals/results/ta06-fix-2026-11-05/production-corrections/report.json",
+      "rows": 24,
+      "all_passed": true,
+      "source_files_changed": [],
+      "source_hashes_compared": 69,
+      "source_mismatches": []
+    },
+    "isolation": {
+      "hashes_compared": 3,
+      "mismatches": []
+    },
+    "mutants": {
+      "recorded_caught": 3,
+      "ids": [
+        "M9",
+        "M10",
+        "M11"
+      ],
+      "rerun_by_auditor": false
+    },
+    "local_full_backend": {
+      "recorded_passed_each": 2002,
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "rerun_by_auditor": false
+    }
+  },
+  "findings": {
+    "TA06-I01": "closed",
+    "TA06-I02": "closed",
+    "nonblocking_note": "Log filter accepts null and raises TypeError on list/dict; production callers generate valid strings."
+  },
+  "hosted_ci": {
+    "run_id": 42115549627,
+    "all_five_passed": true,
+    "commit": "ee6b27e71247e10b2a3054d25642624d2ce8c933"
+  },
+  "tracked_status_after_recheck": ""
+}
