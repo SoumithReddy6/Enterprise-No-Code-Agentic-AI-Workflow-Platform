@@ -1,0 +1,56 @@
+{
+  "commit": "c3ee703be9c933442504580d4316ee0ecaaddf17",
+  "tracked_status": "",
+  "preserved_inputs": {
+    "checked": 89,
+    "changed": []
+  },
+  "independent_tests": {
+    "focused_backend": {
+      "passed": 111,
+      "exit_code": 0
+    },
+    "edge_probes": {
+      "passed": 9,
+      "exit_code": 0,
+      "parser_boundary_rows": 24,
+      "worker_cases": 7
+    }
+  },
+  "inspected_builder_evidence": {
+    "production": {
+      "path": "evals/results/ta07-fix-2026-11-05/production/report.json",
+      "rows": 24,
+      "all_passed": true,
+      "source_files_changed": [],
+      "source_hashes_compared": 69,
+      "mismatches": []
+    },
+    "isolation": {
+      "hashes_compared": 6,
+      "mismatches": []
+    },
+    "mutants": {
+      "recorded_caught": 9,
+      "rerun_by_auditor": false
+    },
+    "full_local_backend": {
+      "recorded_passes_each": 2012,
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "rerun_by_auditor": false
+    }
+  },
+  "verdict": "Implementation approved, no blocking finding; all five hosted jobs passed; TA07 closed within approved scope.",
+  "tracked_status_after_review": "",
+  "hosted_ci": {
+    "run_id": 42124859362,
+    "commit": "c3ee703be9c933442504580d4316ee0ecaaddf17",
+    "all_five_passed": true
+  }
+}
