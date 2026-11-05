@@ -1,0 +1,24 @@
+# TA03 baseline: new tests on unchanged application at 6317dad (2026-11-04T03:51:25Z)
+E   AssertionError: assert {'tokens': 90...re': (30, 2)}} == {'tokens': 60...-b': (30, 2)}}
+backend/tests/test_usage_attribution.py:147: AssertionError: assert {'tokens': 90...re': (30, 2)}} == {'tokens': 60...-b': (30, 2)}}
+E   AssertionError: assert {'agent': 45} == {'agent': 15,..., 'grand': 15}
+backend/tests/test_usage_attribution.py:168: AssertionError: assert {'agent': 45} == {'agent': 15,..., 'grand': 15}
+E   assert (15 == 30)
+E   assert (45 == 30)
+E   assert (60 == 45)
+E   assert (60 == 45)
+E   assert (0 == 30)
+FAILED backend/tests/test_usage_attribution.py::test_u01_completed_children_then_parent_cancelled
+FAILED backend/tests/test_usage_attribution.py::test_u02_deep_active_child_cancelled_after_known_spend
+FAILED backend/tests/test_usage_attribution.py::test_u04_cancelled_loop_item_reports_its_usage
+FAILED backend/tests/test_usage_attribution.py::test_u05_cancellation_while_an_outcome_commit_is_acknowledged[child]
+FAILED backend/tests/test_usage_attribution.py::test_u08_refusal_after_paid_work[unsafe]
+FAILED backend/tests/test_usage_attribution.py::test_u08_refusal_after_paid_work[uncertain]
+FAILED backend/tests/test_usage_attribution.py::test_u08_refusal_after_paid_work[accounting]
+7 failed, 6 passed in 1.44s
+PASSED backend/tests/test_usage_attribution.py::test_u03_child_cancelled_before_reporting_usage[agent]
+PASSED backend/tests/test_usage_attribution.py::test_u03_child_cancelled_before_reporting_usage[tool]
+PASSED backend/tests/test_usage_attribution.py::test_u05_cancellation_while_an_outcome_commit_is_acknowledged[root]
+PASSED backend/tests/test_usage_attribution.py::test_u06_fenced_refusal_leaves_saved_usage_unchanged
+PASSED backend/tests/test_usage_attribution.py::test_u07_item_outcome_saved_before_its_progress
+PASSED backend/tests/test_usage_attribution.py::test_u09_approval_pause_resume_two_models

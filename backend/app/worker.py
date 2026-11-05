@@ -102,8 +102,11 @@ class Worker:
             if event.get('node_id') and event['status']!='running':
                 journal(event='node.'+event['status'],run_id=id,node_id=event['node_id'],transient=event.get('transient',False),cached=event.get('cached',False),duration_ms=event.get('duration_ms'),usage=event.get('usage'),error=event.get('error'))
             if cancelled:
-                if event.get('node_id') and event['status'] in ('success','failed','cancelled') and not event.get('transient'):
-                    raise PersistedNodeCancellation()
+                if event.get('node_id') and event['status'] in ('success','failed','cancelled','paused'):
+                    # A confirmed commit of this invocation's outcome: its catcher must not
+                    # report it again, while its parents still report their own usage. A
+                    # root node's invocation is its node id.
+                    raise PersistedNodeCancellation(event.get('invocation_id') or event['node_id'])
                 raise asyncio.CancelledError()
         async def graph_run():
             workflow=Workflow.model_validate(run['workflow'])

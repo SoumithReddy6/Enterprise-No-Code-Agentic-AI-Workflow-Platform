@@ -1,0 +1,282 @@
+{"timestamp":"2026-11-02T22:16:01.596336+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-02T22:16:01.667723+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-11-02T22:16:01.668594+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.072}
+{"timestamp":"2026-11-02T22:16:01.674209+00:00","request_id":null,"run_id":"72cd7805b31e4122b1f5ecb487871e86","tenant":"local","event":"job.lease_acquired","worker_id":"d700a604c76941d997adcaf2235dcf59"}
+{"timestamp":"2026-11-02T22:16:01.674542+00:00","request_id":null,"run_id":"72cd7805b31e4122b1f5ecb487871e86","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-02T22:16:01.702465+00:00","request_id":null,"run_id":"72cd7805b31e4122b1f5ecb487871e86","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-02T22:16:01.705280+00:00","request_id":null,"run_id":"72cd7805b31e4122b1f5ecb487871e86","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:01.708939+00:00","request_id":null,"run_id":"72cd7805b31e4122b1f5ecb487871e86","tenant":"local","event":"model.usage","node_id":"helper","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:01.710652+00:00","request_id":null,"run_id":"72cd7805b31e4122b1f5ecb487871e86","tenant":"local","event":"node.success","node_id":"helper","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":5}}
+{"timestamp":"2026-11-02T22:16:01.902697+00:00","request_id":null,"run_id":"72cd7805b31e4122b1f5ecb487871e86","tenant":"local","event":"node.cancelled","node_id":"agent","transient":false,"cached":false,"duration_ms":null,"usage":{"calls":2,"prompt_tokens":20,"completion_tokens":10}}
+{"timestamp":"2026-11-02T22:16:01.904811+00:00","request_id":null,"run_id":"72cd7805b31e4122b1f5ecb487871e86","tenant":"local","event":"run.finish","status":"cancelled","seconds":0.23}
+{"timestamp":"2026-11-02T22:16:01.907366+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-02T22:16:01.920863+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-11-02T22:16:01.921387+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.014}
+{"timestamp":"2026-11-02T22:16:01.928416+00:00","request_id":null,"run_id":"410519077f3a4005b2576db515c06918","tenant":"local","event":"job.lease_acquired","worker_id":"ffa53cebb42d447faf19e20c90dd37db"}
+{"timestamp":"2026-11-02T22:16:01.928740+00:00","request_id":null,"run_id":"410519077f3a4005b2576db515c06918","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-02T22:16:01.934720+00:00","request_id":null,"run_id":"410519077f3a4005b2576db515c06918","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-02T22:16:01.937039+00:00","request_id":null,"run_id":"410519077f3a4005b2576db515c06918","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:01.940669+00:00","request_id":null,"run_id":"410519077f3a4005b2576db515c06918","tenant":"local","event":"model.usage","node_id":"helper","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:01.942369+00:00","request_id":null,"run_id":"410519077f3a4005b2576db515c06918","tenant":"local","event":"node.success","node_id":"helper","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":5}}
+{"timestamp":"2026-11-02T22:16:02.135147+00:00","request_id":null,"run_id":"410519077f3a4005b2576db515c06918","tenant":"local","event":"node.cancelled","node_id":"agent","transient":false,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":5}}
+{"timestamp":"2026-11-02T22:16:02.146353+00:00","request_id":null,"run_id":"410519077f3a4005b2576db515c06918","tenant":"local","event":"run.finish","status":"cancelled","seconds":0.218}
+{"timestamp":"2026-11-02T22:16:02.148560+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-02T22:16:02.160740+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-11-02T22:16:02.161290+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.013}
+{"timestamp":"2026-11-02T22:16:02.166810+00:00","request_id":null,"run_id":"db1046ca2f194be0b714d084e2f663d4","tenant":"local","event":"job.lease_acquired","worker_id":"ec7b66364be94fed8b3b73f58dbcd7e7"}
+{"timestamp":"2026-11-02T22:16:02.167132+00:00","request_id":null,"run_id":"db1046ca2f194be0b714d084e2f663d4","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+{"timestamp":"2026-11-02T22:16:02.197203+00:00","request_id":null,"run_id":"db1046ca2f194be0b714d084e2f663d4","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-02T22:16:02.199472+00:00","request_id":null,"run_id":"db1046ca2f194be0b714d084e2f663d4","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.203165+00:00","request_id":null,"run_id":"db1046ca2f194be0b714d084e2f663d4","tenant":"local","event":"model.usage","node_id":"helper","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.398982+00:00","request_id":null,"run_id":"db1046ca2f194be0b714d084e2f663d4","tenant":"local","event":"node.cancelled","node_id":"agent","transient":false,"cached":false,"duration_ms":null,"usage":{"calls":2,"prompt_tokens":20,"completion_tokens":10}}
+{"timestamp":"2026-11-02T22:16:02.402570+00:00","request_id":null,"run_id":"db1046ca2f194be0b714d084e2f663d4","tenant":"local","event":"run.finish","status":"cancelled","seconds":0.235}
+{"timestamp":"2026-11-02T22:16:02.406792+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-02T22:16:02.429712+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-11-02T22:16:02.431192+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.024}
+{"timestamp":"2026-11-02T22:16:02.445717+00:00","request_id":null,"run_id":"71b0972b7b4a4a38a1d65867b3ebfa5f","tenant":"local","event":"job.lease_acquired","worker_id":"b0890462fe3b43f3bd8afbb23b9b38d1"}
+{"timestamp":"2026-11-02T22:16:02.446384+00:00","request_id":null,"run_id":"71b0972b7b4a4a38a1d65867b3ebfa5f","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+{"timestamp":"2026-11-02T22:16:02.459417+00:00","request_id":null,"run_id":"71b0972b7b4a4a38a1d65867b3ebfa5f","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":5}
+{"timestamp":"2026-11-02T22:16:02.465229+00:00","request_id":null,"run_id":"71b0972b7b4a4a38a1d65867b3ebfa5f","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.475308+00:00","request_id":null,"run_id":"71b0972b7b4a4a38a1d65867b3ebfa5f","tenant":"local","event":"model.usage","node_id":"helper","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.660069+00:00","request_id":null,"run_id":"71b0972b7b4a4a38a1d65867b3ebfa5f","tenant":"local","event":"node.cancelled","node_id":"agent","transient":false,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":5}}
+{"timestamp":"2026-11-02T22:16:02.663950+00:00","request_id":null,"run_id":"71b0972b7b4a4a38a1d65867b3ebfa5f","tenant":"local","event":"run.finish","status":"cancelled","seconds":0.218}
+{"timestamp":"2026-11-02T22:16:02.668096+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-02T22:16:02.682739+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-11-02T22:16:02.683569+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.015}
+{"timestamp":"2026-11-02T22:16:02.707041+00:00","request_id":null,"run_id":"4d7482527f224e1e9e00260721ce88fa","tenant":"local","event":"job.lease_acquired","worker_id":"ecd15280febc46eca6ab5754f05c8002"}
+{"timestamp":"2026-11-02T22:16:02.708398+00:00","request_id":null,"run_id":"4d7482527f224e1e9e00260721ce88fa","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-02T22:16:02.736722+00:00","request_id":null,"run_id":"4d7482527f224e1e9e00260721ce88fa","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":4}
+{"timestamp":"2026-11-02T22:16:02.739052+00:00","request_id":null,"run_id":"4d7482527f224e1e9e00260721ce88fa","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.743026+00:00","request_id":null,"run_id":"4d7482527f224e1e9e00260721ce88fa","tenant":"local","event":"model.usage","node_id":"helper","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.746064+00:00","request_id":null,"run_id":"4d7482527f224e1e9e00260721ce88fa","tenant":"local","event":"node.success","node_id":"helper","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":5}}
+{"timestamp":"2026-11-02T22:16:02.747052+00:00","request_id":null,"run_id":"4d7482527f224e1e9e00260721ce88fa","tenant":"local","event":"node.cancelled","node_id":"agent","transient":false,"cached":false,"duration_ms":null,"usage":{"calls":2,"prompt_tokens":20,"completion_tokens":10}}
+{"timestamp":"2026-11-02T22:16:02.747328+00:00","request_id":null,"run_id":"4d7482527f224e1e9e00260721ce88fa","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+{"timestamp":"2026-11-02T22:16:02.748440+00:00","request_id":null,"run_id":"4d7482527f224e1e9e00260721ce88fa","tenant":"local","event":"run.finish","status":"failed","seconds":0.04}
+{"timestamp":"2026-11-02T22:16:02.750116+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-02T22:16:02.762418+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-11-02T22:16:02.762939+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.013}
+{"timestamp":"2026-11-02T22:16:02.772221+00:00","request_id":null,"run_id":"d7ed8509aff748178d78ccc5a191cdb6","tenant":"local","event":"job.lease_acquired","worker_id":"5ba76e60038344ccbcf5f9157d4dad05"}
+{"timestamp":"2026-11-02T22:16:02.772690+00:00","request_id":null,"run_id":"d7ed8509aff748178d78ccc5a191cdb6","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-02T22:16:02.781188+00:00","request_id":null,"run_id":"d7ed8509aff748178d78ccc5a191cdb6","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":2}
+{"timestamp":"2026-11-02T22:16:02.783576+00:00","request_id":null,"run_id":"d7ed8509aff748178d78ccc5a191cdb6","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.787608+00:00","request_id":null,"run_id":"d7ed8509aff748178d78ccc5a191cdb6","tenant":"local","event":"model.usage","node_id":"helper","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.790779+00:00","request_id":null,"run_id":"d7ed8509aff748178d78ccc5a191cdb6","tenant":"local","event":"node.success","node_id":"helper","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":5}}
+{"timestamp":"2026-11-02T22:16:02.791829+00:00","request_id":null,"run_id":"d7ed8509aff748178d78ccc5a191cdb6","tenant":"local","event":"node.cancelled","node_id":"agent","transient":false,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":5}}
+{"timestamp":"2026-11-02T22:16:02.792094+00:00","request_id":null,"run_id":"d7ed8509aff748178d78ccc5a191cdb6","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+{"timestamp":"2026-11-02T22:16:02.793144+00:00","request_id":null,"run_id":"d7ed8509aff748178d78ccc5a191cdb6","tenant":"local","event":"run.finish","status":"failed","seconds":0.02}
+{"timestamp":"2026-11-02T22:16:02.794991+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-02T22:16:02.806107+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-11-02T22:16:02.806568+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.012}
+{"timestamp":"2026-11-02T22:16:02.811974+00:00","request_id":null,"run_id":"92db13d911fc41bd9c9e67241c72fe40","tenant":"local","event":"job.lease_acquired","worker_id":"88b19add23504be9a491b8c4ce6b6bcf"}
+{"timestamp":"2026-11-02T22:16:02.812249+00:00","request_id":null,"run_id":"92db13d911fc41bd9c9e67241c72fe40","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-02T22:16:02.838512+00:00","request_id":null,"run_id":"92db13d911fc41bd9c9e67241c72fe40","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-02T22:16:02.841197+00:00","request_id":null,"run_id":"92db13d911fc41bd9c9e67241c72fe40","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.845439+00:00","request_id":null,"run_id":"92db13d911fc41bd9c9e67241c72fe40","tenant":"local","event":"model.usage","node_id":"helper","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.847384+00:00","request_id":null,"run_id":"92db13d911fc41bd9c9e67241c72fe40","tenant":"local","event":"node.success","node_id":"helper","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":5}}
+{"timestamp":"2026-11-02T22:16:02.848029+00:00","request_id":null,"run_id":"92db13d911fc41bd9c9e67241c72fe40","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.849838+00:00","request_id":null,"run_id":"92db13d911fc41bd9c9e67241c72fe40","tenant":"local","event":"node.failed","node_id":"agent","transient":false,"cached":false,"duration_ms":null,"usage":{"calls":3,"prompt_tokens":30,"completion_tokens":15}}
+{"timestamp":"2026-11-02T22:16:02.857916+00:00","request_id":null,"run_id":"92db13d911fc41bd9c9e67241c72fe40","tenant":"local","event":"run.failure","error_type":"UnsafeExecutionError"}
+{"timestamp":"2026-11-02T22:16:02.859144+00:00","request_id":null,"run_id":"92db13d911fc41bd9c9e67241c72fe40","tenant":"local","event":"run.finish","status":"failed","seconds":0.047}
+{"timestamp":"2026-11-02T22:16:02.860866+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-02T22:16:02.872588+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0005_admission_metrics"}
+{"timestamp":"2026-11-02T22:16:02.873127+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.012}
+{"timestamp":"2026-11-02T22:16:02.877561+00:00","request_id":null,"run_id":"ce821e348068493da50e9a415770416f","tenant":"local","event":"job.lease_acquired","worker_id":"32b2a2bb0aa34a0dae8b9f04ef7e54c5"}
+{"timestamp":"2026-11-02T22:16:02.877881+00:00","request_id":null,"run_id":"ce821e348068493da50e9a415770416f","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-02T22:16:02.903146+00:00","request_id":null,"run_id":"ce821e348068493da50e9a415770416f","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-02T22:16:02.905218+00:00","request_id":null,"run_id":"ce821e348068493da50e9a415770416f","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.908792+00:00","request_id":null,"run_id":"ce821e348068493da50e9a415770416f","tenant":"local","event":"model.usage","node_id":"helper","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.910512+00:00","request_id":null,"run_id":"ce821e348068493da50e9a415770416f","tenant":"local","event":"node.success","node_id":"helper","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":5}}
+{"timestamp":"2026-11-02T22:16:02.911055+00:00","request_id":null,"run_id":"ce821e348068493da50e9a415770416f","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"token-review-fixture","prompt_tokens":10,"completion_tokens":5}
+{"timestamp":"2026-11-02T22:16:02.912545+00:00","request_id":null,"run_id":"ce821e348068493da50e9a415770416f","tenant":"local","event":"node.failed","node_id":"agent","transient":false,"cached":false,"duration_ms":null,"usage":{"calls":3,"prompt_tokens":30,"completion_tokens":15}}
+{"timestamp":"2026-11-02T22:16:02.912800+00:00","request_id":null,"run_id":"ce821e348068493da50e9a415770416f","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-02T22:16:02.913857+00:00","request_id":null,"run_id":"ce821e348068493da50e9a415770416f","tenant":"local","event":"run.finish","status":"failed","seconds":0.036}
+[
+  {
+    "case": "cancel_after_child_success",
+    "counterfactual": false,
+    "status": "cancelled",
+    "known_tokens": 30,
+    "accounting_tokens": 30,
+    "metrics": {
+      "tokens": 45,
+      "calls": 3
+    },
+    "usage_events": [
+      {
+        "node": "helper",
+        "status": "success",
+        "calls": 1,
+        "tokens": 15
+      },
+      {
+        "node": "agent",
+        "status": "cancelled",
+        "calls": 2,
+        "tokens": 30
+      }
+    ]
+  },
+  {
+    "case": "cancel_after_child_success",
+    "counterfactual": true,
+    "status": "cancelled",
+    "known_tokens": 30,
+    "accounting_tokens": 30,
+    "metrics": {
+      "tokens": 30,
+      "calls": 2
+    },
+    "usage_events": [
+      {
+        "node": "helper",
+        "status": "success",
+        "calls": 1,
+        "tokens": 15
+      },
+      {
+        "node": "agent",
+        "status": "cancelled",
+        "calls": 1,
+        "tokens": 15
+      }
+    ]
+  },
+  {
+    "case": "cancel_inside_nested_agent",
+    "counterfactual": false,
+    "status": "cancelled",
+    "known_tokens": 30,
+    "accounting_tokens": 30,
+    "metrics": {
+      "tokens": 30,
+      "calls": 2
+    },
+    "usage_events": [
+      {
+        "node": "agent",
+        "status": "cancelled",
+        "calls": 2,
+        "tokens": 30
+      }
+    ]
+  },
+  {
+    "case": "cancel_inside_nested_agent",
+    "counterfactual": true,
+    "status": "cancelled",
+    "known_tokens": 30,
+    "accounting_tokens": 30,
+    "metrics": {
+      "tokens": 15,
+      "calls": 1
+    },
+    "usage_events": [
+      {
+        "node": "agent",
+        "status": "cancelled",
+        "calls": 1,
+        "tokens": 15
+      }
+    ]
+  },
+  {
+    "case": "cancel_during_child_commit",
+    "counterfactual": false,
+    "status": "cancelled",
+    "known_tokens": 30,
+    "accounting_tokens": 30,
+    "metrics": {
+      "tokens": 45,
+      "calls": 3
+    },
+    "usage_events": [
+      {
+        "node": "helper",
+        "status": "success",
+        "calls": 1,
+        "tokens": 15
+      },
+      {
+        "node": "agent",
+        "status": "cancelled",
+        "calls": 2,
+        "tokens": 30
+      }
+    ]
+  },
+  {
+    "case": "cancel_during_child_commit",
+    "counterfactual": true,
+    "status": "cancelled",
+    "known_tokens": 30,
+    "accounting_tokens": 30,
+    "metrics": {
+      "tokens": 30,
+      "calls": 2
+    },
+    "usage_events": [
+      {
+        "node": "helper",
+        "status": "success",
+        "calls": 1,
+        "tokens": 15
+      },
+      {
+        "node": "agent",
+        "status": "cancelled",
+        "calls": 1,
+        "tokens": 15
+      }
+    ]
+  },
+  {
+    "case": "unsafe_finalization",
+    "counterfactual": false,
+    "status": "failed",
+    "known_tokens": 45,
+    "accounting_tokens": 45,
+    "metrics": {
+      "tokens": 60,
+      "calls": 4
+    },
+    "usage_events": [
+      {
+        "node": "helper",
+        "status": "success",
+        "calls": 1,
+        "tokens": 15
+      },
+      {
+        "node": "agent",
+        "status": "failed",
+        "calls": 3,
+        "tokens": 45
+      }
+    ]
+  },
+  {
+    "case": "uncertain_finalization",
+    "counterfactual": false,
+    "status": "failed",
+    "known_tokens": 45,
+    "accounting_tokens": 45,
+    "metrics": {
+      "tokens": 60,
+      "calls": 4
+    },
+    "usage_events": [
+      {
+        "node": "helper",
+        "status": "success",
+        "calls": 1,
+        "tokens": 15
+      },
+      {
+        "node": "agent",
+        "status": "failed",
+        "calls": 3,
+        "tokens": 45
+      }
+    ]
+  }
+]

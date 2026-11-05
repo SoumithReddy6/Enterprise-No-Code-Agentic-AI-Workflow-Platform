@@ -130,6 +130,31 @@ def usage_for(run,identity):
     return deepcopy(usage) if usage else None
 
 
+def with_own_usage(event,run,identity):
+    """An outcome event carrying this invocation's own usage, or none.
+
+    Each invocation reports only what it spent, so the outcomes of a parent and its
+    children never overlap: a parent's spend is never republished to cover a child's.
+    """
+    usage=usage_for(run,identity)
+    return {**event,'usage':usage} if usage else event
+
+
+class PersistedNodeCancellation(asyncio.CancelledError):
+    """Cancellation observed after an invocation's outcome event committed.
+
+    `invocation` names whose outcome it was. Only that invocation's catcher skips its
+    cancellation report; every enclosing invocation still reports its own usage.
+    """
+    def __init__(self,invocation=None):
+        super().__init__();self.invocation=invocation
+
+
+def outcome_saved(exc,identity):
+    """True when exc says this invocation's outcome is already saved and must not be reported again."""
+    return isinstance(exc,PersistedNodeCancellation) and exc.invocation==identity.invocation_id
+
+
 def _work_done(run):
     """Work recorded on the run so far: model calls, and platform work the caller counts
     (a request sent, or the stored result of a write already sent). Never a charge."""

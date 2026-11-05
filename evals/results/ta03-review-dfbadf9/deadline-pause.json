@@ -1,0 +1,49 @@
+{
+  "rows": [
+    {
+      "case": "cancel_during_helper_pause_commit",
+      "deadline": true,
+      "status": "failed",
+      "error": "Run timed out after 60 seconds.",
+      "metrics": {
+        "tokens": 30,
+        "calls": 2,
+        "by_model": {
+          "fixture-b": [
+            15,
+            1
+          ],
+          "fixture": [
+            15,
+            1
+          ]
+        }
+      },
+      "accounting_tokens": 30,
+      "sent_requests": 0
+    },
+    {
+      "case": "cancel_during_agent_pause_commit",
+      "deadline": true,
+      "status": "failed",
+      "error": "Run timed out after 60 seconds.",
+      "metrics": {
+        "tokens": 30,
+        "calls": 2,
+        "by_model": {
+          "fixture-b": [
+            15,
+            1
+          ],
+          "fixture": [
+            15,
+            1
+          ]
+        }
+      },
+      "accounting_tokens": 30,
+      "sent_requests": 0
+    }
+  ],
+  "passed": true
+}
