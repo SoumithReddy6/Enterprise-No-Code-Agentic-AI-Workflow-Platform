@@ -145,6 +145,9 @@ async def record_spend(ctx):
 # Call statuses beyond 'reported'. Each counter is omitted while zero, so a run whose
 # calls all reported usage has the same totals as before the counters existed.
 STATUS_COUNTERS={'partial':'partial_calls','unreported':'unreported_calls','unanswered':'unanswered_calls'}
+# The cache breakdown of prompt_tokens, kept on the same totals and omitted while zero. It
+# is part of prompt_tokens, so tokens_spent and SQL rows never add it.
+CACHE_FIELDS=('cache_read_tokens','cache_write_tokens')
 
 
 def call_status(usage):
@@ -169,6 +172,8 @@ def account_usage(ctx,usage,config,error_type=None):
         if status!='unanswered':totals['calls']+=1
         totals['prompt_tokens']+=usage.get('prompt_tokens',0);totals['completion_tokens']+=usage.get('completion_tokens',0)
         if status in STATUS_COUNTERS:totals[STATUS_COUNTERS[status]]=totals.get(STATUS_COUNTERS[status],0)+1
+        for key in CACHE_FIELDS:
+            if usage.get(key):totals[key]=totals.get(key,0)+usage[key]
     def accumulate(totals):
         add(totals)
         groups=totals.setdefault('by_model',[])
@@ -187,7 +192,7 @@ def account_usage(ctx,usage,config,error_type=None):
     if durability is not None:durability.changed()  # Known spend not yet saved.
     from .observability import journal
     journal(event='model.usage',node_id=ctx.node_id,provider=config.provider,model=config.model,usage_status=status,
-            **{key:usage[key] for key in ('prompt_tokens','completion_tokens') if key in usage},
+            **{key:usage[key] for key in ('prompt_tokens','completion_tokens',*CACHE_FIELDS) if key in usage},
             **({'error_type':error_type} if error_type else {}))
 
 

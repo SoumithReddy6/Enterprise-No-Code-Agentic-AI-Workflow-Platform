@@ -1,0 +1,7 @@
+# Full backend suite at PYTHONHASHSEED 0-4 in the isolation copy (409eb57 = 6c2ea5b + 6 TA07 files)
+imports from <scratchpad>/ta07-iso-JiH0/backend/app
+seed 0: 2012 passed, 4 warnings in 101.95s (0:01:41)
+seed 1: 2012 passed, 4 warnings in 101.53s (0:01:41)
+seed 2: 2012 passed, 4 warnings in 101.61s (0:01:41)
+seed 3: 2012 passed, 4 warnings in 101.93s (0:01:41)
+seed 4: 2012 passed, 4 warnings in 98.58s (0:01:38)

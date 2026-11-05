@@ -1,0 +1,22 @@
+{
+  "preserved_inputs": {
+    "checked": 6,
+    "changed": []
+  },
+  "tracked_status": "",
+  "baseline_tests": {
+    "command": ".venv/bin/python -m pytest backend/tests/test_usage_status.py backend/tests/test_providers.py backend/tests/test_token_budget.py backend/tests/test_usage_attribution.py backend/tests/test_accounting_durability.py backend/tests/test_observability.py -q",
+    "passed": 101,
+    "exit_code": 0
+  },
+  "probe": {
+    "file": "probe_design.py",
+    "adapter_cases": 4,
+    "helper_demonstrations": 2,
+    "exit_code": 0
+  },
+  "verdict": "Approve direction with two P2 clarifications; one recommended existing-case strengthening; no additional design round required.",
+  "baseline_application_commit": "dce6f668d5cb3ffa3d054db696fc9b5aad42018a",
+  "head_verified": "6c2ea5b26c8350f4a62b3b7bcae2596adb5b8f14",
+  "application_files_changed_since_baseline": []
+}

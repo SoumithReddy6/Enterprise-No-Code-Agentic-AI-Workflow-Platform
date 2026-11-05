@@ -1,0 +1,8 @@
+{
+  "docs/superpowers/specs/2026-11-05-cache-input-tokens-design.md": "3fc14ef0d939e211202970002c8da2953a9c37a790d3c3db01c7bd6a38f5fa34",
+  "backend/app/providers.py": "13e4410ba36099672564f09e9a1fdb5dc144c165e8fefb63934e7352906d6e00",
+  "backend/app/registry.py": "320ab1dc3f0aeb0be1c05f1b3ec0507c2a360ca81af7fd1633add83b35077307",
+  "backend/app/observability.py": "5afeac261cce6df724f30814c4c3ca4fac71d1f53d42dca7585a3e1d68ad1951",
+  "backend/app/token_budget.py": "4d100d5162487115739ba1434a99eedd16968b61d2dcf6777ea892f8a2f053a5",
+  "backend/tests/test_usage_status.py": "62ae9ec2126912084608f846d31602f1fc931486301d060a8ae4f707aa3b9e1a"
+}

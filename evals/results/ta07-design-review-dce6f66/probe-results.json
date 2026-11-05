@@ -1,0 +1,150 @@
+{
+  "baseline": "dce6f66",
+  "adapter_rows": [
+    {
+      "case": "claude-cache",
+      "provider": "claude",
+      "requests": 1,
+      "run_status": "success",
+      "metrics": {
+        "calls": 1,
+        "partial_calls": 0,
+        "unreported_calls": 0,
+        "unanswered_calls": 0,
+        "tokens": [
+          10,
+          5
+        ]
+      },
+      "usage": {
+        "calls": 1,
+        "prompt_tokens": 10,
+        "completion_tokens": 5,
+        "by_model": [
+          {
+            "provider": "claude",
+            "model": "claude-fixture",
+            "calls": 1,
+            "prompt_tokens": 10,
+            "completion_tokens": 5
+          }
+        ]
+      },
+      "tokens_spent": 15
+    },
+    {
+      "case": "openai-read-only",
+      "provider": "openai",
+      "requests": 1,
+      "run_status": "success",
+      "metrics": {
+        "calls": 1,
+        "partial_calls": 0,
+        "unreported_calls": 0,
+        "unanswered_calls": 0,
+        "tokens": [
+          100,
+          50
+        ]
+      },
+      "usage": {
+        "calls": 1,
+        "prompt_tokens": 100,
+        "completion_tokens": 50,
+        "by_model": [
+          {
+            "provider": "openai",
+            "model": "gpt-fixture",
+            "calls": 1,
+            "prompt_tokens": 100,
+            "completion_tokens": 50
+          }
+        ]
+      },
+      "tokens_spent": 150
+    },
+    {
+      "case": "ollama-cache",
+      "provider": "ollama",
+      "requests": 1,
+      "run_status": "success",
+      "metrics": {
+        "calls": 1,
+        "partial_calls": 0,
+        "unreported_calls": 0,
+        "unanswered_calls": 0,
+        "tokens": [
+          6024,
+          5
+        ]
+      },
+      "usage": {
+        "calls": 1,
+        "prompt_tokens": 6024,
+        "completion_tokens": 5,
+        "by_model": [
+          {
+            "provider": "ollama",
+            "model": "fixture",
+            "calls": 1,
+            "prompt_tokens": 6024,
+            "completion_tokens": 5
+          }
+        ]
+      },
+      "tokens_spent": 6029
+    },
+    {
+      "case": "claude-no-counts",
+      "provider": "claude",
+      "requests": 1,
+      "run_status": "success",
+      "metrics": {
+        "calls": 1,
+        "partial_calls": 0,
+        "unreported_calls": 1,
+        "unanswered_calls": 0,
+        "tokens": [
+          0,
+          0
+        ]
+      },
+      "usage": {
+        "calls": 1,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "unreported_calls": 1,
+        "by_model": [
+          {
+            "provider": "claude",
+            "model": "claude-fixture",
+            "calls": 1,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "unreported_calls": 1
+          }
+        ]
+      },
+      "tokens_spent": 0
+    }
+  ],
+  "helper_rows": [
+    {
+      "case": "known-subtotal-through-unchanged-helper",
+      "usage": {
+        "prompt_tokens": 410,
+        "completion_tokens": 5
+      },
+      "actual_status": "reported",
+      "needed_if_cache_component_invalid": "partial"
+    },
+    {
+      "case": "zero-fill-missing-input-through-unchanged-helper",
+      "usage": {
+        "prompt_tokens": 0
+      },
+      "actual_status": "partial",
+      "needed_if_no_counts_reported": "unreported"
+    }
+  ]
+}

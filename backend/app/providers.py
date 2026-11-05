@@ -115,6 +115,7 @@ class CallUsage(dict):
         self.undelivered = 0    # of those, attempts whose connection never opened
         self.received = False   # a complete response came back, whatever its content
         self.valid = None       # valid counts in the last recorded usage, 0 to 2
+        self.complete = True    # its prompt count covers every input category reported
 
     def answered(self):
         """A returned answer proves that a response arrived."""
@@ -123,7 +124,10 @@ class CallUsage(dict):
     def status(self):
         """reported, partial, unreported, unanswered, or None when nothing reached a provider."""
         if self.received:
-            return {2: 'reported', 1: 'partial'}.get(self.valid, 'unreported')
+            if not self.valid:
+                return 'unreported'
+            # A prompt subtotal with an invalid input category is known but incomplete (TA07).
+            return 'reported' if self.valid == 2 and self.complete else 'partial'
         return 'unanswered' if self.dispatched > self.undelivered else None
 
 
@@ -149,22 +153,63 @@ async def _send(http, usage, request):
     return response
 
 
-def record_usage(usage, prompt_tokens, completion_tokens):
+def _count(value):
+    return type(value) is int and value >= 0
+
+
+def record_usage(usage, prompt_tokens, completion_tokens, cache=None, input_complete=True):
     """Accumulate valid provider token counts in the caller-owned usage dictionary.
 
-    A missing or invalid count is not written as zero: the dictionary omits it.
+    A missing or invalid count is not written as zero: the dictionary omits it. prompt_tokens
+    is all input processed for the call, cached or not. cache is its breakdown
+    (cache_read_tokens, cache_write_tokens): parts of prompt_tokens, never added to it, and
+    omitted while zero. input_complete is False when prompt_tokens is only the known subtotal
+    of an input whose other categories were invalid.
     """
     if usage is None:
         return
     valid = 0
     for key, value in (('prompt_tokens', prompt_tokens),
                        ('completion_tokens', completion_tokens)):
-        if type(value) is int and value >= 0:
+        if _count(value):
             usage[key] = usage.get(key, 0) + value
             valid += 1
+    for key, value in (cache or {}).items():
+        if _count(value) and value:
+            usage[key] = usage.get(key, 0) + value
     if isinstance(usage, CallUsage):
         usage.received = True
         usage.valid = valid
+        usage.complete = input_complete
+
+
+def _claude_input(usage_data):
+    """Claude's prompt total, its cache breakdown, and whether the total is complete.
+
+    Claude reports input in three disjoint parts: input_tokens (after the last cache
+    breakpoint), cache reads and cache writes. The total is their sum. An absent or null
+    cache part is 0; a present invalid one leaves the total a known subtotal. Absent parts
+    are not evidence, so with no valid part there is no total.
+    """
+    base = usage_data.get('input_tokens')
+    cache = {'cache_read_tokens': usage_data.get('cache_read_input_tokens'),
+             'cache_write_tokens': usage_data.get('cache_creation_input_tokens')}
+    known = [value for value in (base, *cache.values()) if _count(value)]
+    complete = _count(base) and all(value is None or _count(value) for value in cache.values())
+    return (sum(known) if known else None), {k: v for k, v in cache.items() if _count(v)}, complete
+
+
+def _cache_parts(total, read=None, write=None):
+    """The cache breakdown of a prompt total that already includes cached input, or none.
+
+    A missing or null detail is 0. A present invalid detail, or details larger than the
+    total, drop the whole breakdown; the total and the call status are unchanged.
+    """
+    parts = {'cache_read_tokens': read, 'cache_write_tokens': write}
+    if not _count(total) or not all(value is None or _count(value) for value in parts.values()):
+        return {}
+    parts = {key: value for key, value in parts.items() if value}
+    return parts if sum(parts.values()) <= total else {}
 
 
 def _json_object(response, provider):
@@ -218,7 +263,9 @@ async def ollama_chat(model, system, prompt, temperature=None, top_p=None,
             response.raise_for_status()
             body = _json_object(response, 'Ollama')
             # Usage belongs to the response, not the answer: a rejected answer was still paid for.
-            record_usage(usage, body.get('prompt_eval_count'), body.get('eval_count'))
+            # prompt_eval_count includes the prompt tokens read from the cache.
+            record_usage(usage, body.get('prompt_eval_count'), body.get('eval_count'),
+                         _cache_parts(body.get('prompt_eval_count'), body.get('prompt_eval_cached_count')))
             message = body.get('message')
             if not isinstance(message, dict):
                 raise ProviderResponseError('Ollama returned no message object.')
@@ -322,7 +369,8 @@ async def claude_chat(model, system, prompt, key, temperature=None, top_p=None,
                 raise ProviderResponseError('Claude returned invalid usage metadata.')
             usage_data = usage_data or {}
             # Usage belongs to the response, not the answer: a refusal or an empty answer was still paid for.
-            record_usage(usage, usage_data.get('input_tokens'), usage_data.get('output_tokens'))
+            prompt_tokens, cache, complete = _claude_input(usage_data)
+            record_usage(usage, prompt_tokens, usage_data.get('output_tokens'), cache, complete)
             blocks = body.get('content')
             if not isinstance(blocks, list):
                 raise ProviderResponseError('Claude returned no supported text response.')
@@ -375,7 +423,11 @@ async def openai_chat(model, system, prompt, key, temperature=None, top_p=None,
                 raise ProviderResponseError('OpenAI returned invalid usage metadata.')
             usage_data = usage_data or {}
             # Usage belongs to the response, not the answer: a refusal or a length stop was still paid for.
-            record_usage(usage, usage_data.get('prompt_tokens'), usage_data.get('completion_tokens'))
+            # prompt_tokens includes its cached and cache-write details.
+            details = usage_data.get('prompt_tokens_details')
+            cache = (_cache_parts(usage_data.get('prompt_tokens'), details.get('cached_tokens'),
+                                  details.get('cache_write_tokens')) if isinstance(details, dict) else {})
+            record_usage(usage, usage_data.get('prompt_tokens'), usage_data.get('completion_tokens'), cache)
             choices = body.get('choices')
             if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
                 raise ProviderResponseError('OpenAI returned no supported text response.')
