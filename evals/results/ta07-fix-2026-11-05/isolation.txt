@@ -1,0 +1,14 @@
+# TA07 isolation copy: git archive 6c2ea5b + the 6 TA07 files, git init + one commit
+copy: /private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/ta07-iso-JiH0
+commit: 409eb57c4bb77df5432aa23aee3c03a3bd374bc9
+
+## Files copied (sha256; copy == working tree)
+19f567f0614c578d0ff8f58612ced6a2ab0ba050cbfb68f07cc87d3a8f654b4c backend/app/providers.py match
+0bcd41fbcc76571aabb37820b6950cb46c9b6c65351e818963fad2cd671f91a8 backend/app/registry.py match
+06e64ba26eb67355bb1509b86167fc5bb49ffb4fb59d3fada9b608d6c3180dfe backend/app/observability.py match
+2552994cfa4dda925f6ea5dd35f6fda4114811601b7898f8df2a2aa54e6b918b backend/tests/test_cache_input_tokens.py match
+5f1a19cdd3efc09dcf347cd896878e360613a8d8101050ef8bd465439a0f7924 docs/operations.md match
+719ecf682d83e7778c58ad352ce141f3de949790c518a20a2a5fcdc25aa68198 docs/superpowers/specs/2026-11-05-cache-input-tokens-design.md match
+
+## Tracked files that differ from 6c2ea5b, outside the 6 (evals/ and docs/reviews/ excluded)
+none

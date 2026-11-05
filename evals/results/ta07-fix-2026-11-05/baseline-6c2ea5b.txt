@@ -1,0 +1,18 @@
+# New TA07 tests on a clean git archive of 6c2ea5b (application = dce6f66), PYTHONHASHSEED=0
+backend/tests/test_cache_input_tokens.py:69: assert (10, 5) == (1010, 5)
+backend/tests/test_cache_input_tokens.py:113: AssertionError: assert {'calls': 1, ...alls': 0, ...} == {'calls': 1, ...alls': 0, ...}
+backend/tests/test_cache_input_tokens.py:131: AssertionError: assert {} == {'cache_read_...e_tokens': 20}
+backend/tests/test_cache_input_tokens.py:131: AssertionError: assert {} == {'cache_read_tokens': 60}
+backend/tests/test_cache_input_tokens.py:156: AssertionError: assert {} == {'cache_read_tokens': 6016}
+backend/tests/test_cache_input_tokens.py:169: AssertionError: None
+PASSED backend/tests/test_cache_input_tokens.py::test_c02_claude_without_cache_tokens_is_unchanged[absent]
+PASSED backend/tests/test_cache_input_tokens.py::test_c02_claude_without_cache_tokens_is_unchanged[null]
+PASSED backend/tests/test_cache_input_tokens.py::test_c05_openai_cache_above_the_total_is_dropped
+PASSED backend/tests/test_cache_input_tokens.py::test_c08_empty_claude_usage_stays_unreported
+FAILED backend/tests/test_cache_input_tokens.py::test_c01_claude_cache_input_counts_once_and_reaches_the_ceiling
+FAILED backend/tests/test_cache_input_tokens.py::test_c03_invalid_claude_cache_field_gives_a_partial_subtotal
+FAILED backend/tests/test_cache_input_tokens.py::test_c04_openai_cache_details_are_parts_of_the_total[read-write]
+FAILED backend/tests/test_cache_input_tokens.py::test_c04_openai_cache_details_are_parts_of_the_total[read-only]
+FAILED backend/tests/test_cache_input_tokens.py::test_c06_ollama_cached_count_is_part_of_the_prompt
+FAILED backend/tests/test_cache_input_tokens.py::test_c07_journal_keeps_only_valid_status_and_cache_counts
+6 failed, 4 passed in 1.30s

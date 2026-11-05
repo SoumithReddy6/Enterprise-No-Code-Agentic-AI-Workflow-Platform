@@ -1,0 +1,20 @@
+M1: KILLED by planned tests ['test_c01_', 'test_c03_'] | 2 failed, 8 passed in 1.06s
+  failed: test_c01_claude_cache_input_counts_once_and_reaches_the_ceiling, test_c03_invalid_claude_cache_field_gives_a_partial_subtotal
+M2: KILLED by planned tests ['test_c04_', 'test_c06_'] | 3 failed, 7 passed in 0.95s
+  failed: test_c04_openai_cache_details_are_parts_of_the_total[read-only], test_c04_openai_cache_details_are_parts_of_the_total[read-write], test_c06_ollama_cached_count_is_part_of_the_prompt
+M3: KILLED by planned tests ['test_c02_claude_without_cache_tokens_is_unchanged[absent]', 'test_c02_claude_without_cache_tokens_is_unchanged[null]'] | 2 failed, 8 passed in 1.22s
+  failed: test_c02_claude_without_cache_tokens_is_unchanged[absent], test_c02_claude_without_cache_tokens_is_unchanged[null]
+M4: KILLED by planned tests ['test_c03_'] | 1 failed, 9 passed in 0.94s
+  failed: test_c03_invalid_claude_cache_field_gives_a_partial_subtotal
+M5: KILLED by planned tests ['test_c05_'] | 1 failed, 9 passed in 0.98s
+  failed: test_c05_openai_cache_above_the_total_is_dropped
+M6: KILLED by planned tests ['test_c01_', 'test_c04_'] | 3 failed, 7 passed in 0.94s
+  failed: test_c01_claude_cache_input_counts_once_and_reaches_the_ceiling, test_c04_openai_cache_details_are_parts_of_the_total[read-only], test_c04_openai_cache_details_are_parts_of_the_total[read-write]
+M7: KILLED by planned tests ['test_c07_'] | 1 failed, 9 passed in 0.95s
+  failed: test_c07_journal_keeps_only_valid_status_and_cache_counts
+M8: KILLED by planned tests ['test_c08_'] | 1 failed, 9 passed in 0.95s
+  failed: test_c08_empty_claude_usage_stays_unreported
+M9: KILLED by planned tests ['test_c04_openai_cache_details_are_parts_of_the_total[read-only]'] | 2 failed, 8 passed in 1.06s
+  failed: test_c04_openai_cache_details_are_parts_of_the_total[read-only], test_c06_ollama_cached_count_is_part_of_the_prompt
+
+ALL PLANNED KILLS: True
