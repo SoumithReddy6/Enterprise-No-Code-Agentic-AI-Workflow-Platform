@@ -86,6 +86,31 @@ The optional frontend mutant was not run; F01 covers the label.
 6. **Isolation includes the uncommitted design.** The design and its review were not yet
    committed when the copy was built, so the copy is `bcc8d9b` + 11 files, including the spec.
 
+## Corrections after the implementation review
+
+Review: `docs/reviews/ta06-implementation-review-2026-11-05.md` (evidence
+`evals/results/ta06-implementation-review-0b7e8c7/`, not edited). Two P2 findings, both
+corrected without a design round. No new collected case: the checks are added to existing
+cases, so the total stays at 16.
+
+| Finding | Correction | Test |
+|---|---|---|
+| TA06-I01: `observability.journal` filters fields through `FIELDS`, which lacked `usage_status`, so the emitted JSON never had it (deviation 5 above was only partly true) | `usage_status` added to `FIELDS`; any value other than the four generated statuses is dropped | V01 reads the real `relay.journal` records after the filter: three `model.usage` lines with `unreported` and no token fields, and a forged value is dropped |
+| TA06-I02: `httpx.UnsupportedProtocol` (a base URL without `http://`, or `ftp://`) is raised by the transport before any connection, but counted as one unanswered call | Added to `UNDELIVERED` | V05[invalid-url] also runs `localhost:11434` and `ftp://127.0.0.1:9` through the real HTTPX client with `httpcore.AnyIOBackend.connect_tcp` blocked: no connection, no counter, no outcome usage |
+
+Read and write timeouts stay unanswered; other HTTP errors are not excluded.
+
+| File | Content |
+|---|---|
+| `corrections-red-0b7e8c7.txt` | The corrected test module on a clean archive of `0b7e8c7`: V01 and V05[invalid-url] fail (no status in the JSON; one phantom unanswered call), 13 pass. |
+| `corrections-mutants.py`, `corrections-mutants.txt` | M9 (status dropped by the filter), M10 (status not restricted), M11 (`UnsupportedProtocol` counted): all killed by the planned case. |
+| `corrections-isolation.txt` | Clean-export proof (git archive `0b7e8c7` + the 3 corrected files). |
+| `corrections-seeds.txt` | Full backend suite at PYTHONHASHSEED 0–4 in that copy: 2,002 passed at each seed. |
+| `production-corrections/report.json` | Deployed scenario gate on the corrected tree: 24 of 24 rows passed, no source file changed during the run. |
+
+The approved design names three connection-phase errors in §4.2; it is not edited. This
+section and `docs/operations.md` record the fourth.
+
 ## Not claimed
 
 Relay cannot detect a wrong count. `unanswered` is a client-side classification, and

@@ -127,8 +127,9 @@ class CallUsage(dict):
         return 'unanswered' if self.dispatched > self.undelivered else None
 
 
-# Connection-phase failures: no connection carried the request.
-UNDELIVERED = (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout)
+# Failures before any connection carried the request: connection-phase errors, and a
+# scheme the transport rejects before connecting (for example a base URL without http://).
+UNDELIVERED = (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout, httpx.UnsupportedProtocol)
 
 
 async def _send(http, usage, request):

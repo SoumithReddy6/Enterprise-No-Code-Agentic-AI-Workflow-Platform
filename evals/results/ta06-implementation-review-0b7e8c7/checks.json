@@ -1,0 +1,64 @@
+{
+  "commit": "0b7e8c7e09fd660a2d8cad106a48e2e2097910ee",
+  "tracked_status": "",
+  "preserved_inputs": {
+    "checked": 180,
+    "changed": []
+  },
+  "independent_regressions": {
+    "backend_batches": [
+      {
+        "tests": 126,
+        "passed": 126,
+        "exit_code": 0
+      },
+      {
+        "tests": 84,
+        "passed": 84,
+        "exit_code": 0
+      }
+    ],
+    "frontend": {
+      "tests": 115,
+      "passed": 115,
+      "exit_code": 0
+    }
+  },
+  "independent_edges": {
+    "rows": 18,
+    "unmodified_passes": 12,
+    "defect_reproductions_failed": 3,
+    "isolated_correction_controls_passed": 3,
+    "exit_code": 1
+  },
+  "inspected_builder_evidence": {
+    "production": {
+      "path": "evals/results/ta06-fix-2026-11-05/production/report.json",
+      "sha256": "eb9b6738538ea0265ec8d49d24ac9150e9f7f6369a22c0385d0c893539809abe",
+      "rows": 24,
+      "all_passed": true,
+      "source_files_changed": [],
+      "source_hashes_compared": 69,
+      "current_source_mismatches": []
+    },
+    "isolation": {
+      "copied_hashes_compared": 11,
+      "mismatches": []
+    },
+    "mutants": {
+      "recorded_caught": 8,
+      "rerun_by_auditor": false
+    },
+    "full_local_backend": {
+      "recorded_passes_each_seed": 2002,
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "rerun_by_auditor": false
+    }
+  }
+}

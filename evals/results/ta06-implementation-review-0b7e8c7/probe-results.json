@@ -1,0 +1,104 @@
+{
+  "commit": "0b7e8c7e09fd660a2d8cad106a48e2e2097910ee",
+  "exit_code": 1,
+  "counts": {
+    "passed": 15,
+    "failed": 3,
+    "skipped": 0
+  },
+  "rows": [
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_retry_status_is_logical_not_per_attempt[read-then-connect]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_retry_status_is_logical_not_per_attempt[http-error-then-connect]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_retry_status_is_logical_not_per_attempt[pool-timeout]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_retry_status_is_logical_not_per_attempt[write-timeout]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_retry_status_is_logical_not_per_attempt[read-error]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_retry_status_is_logical_not_per_attempt[read-then-partial]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_boolean_is_missing_but_zero_is_reported[ollama]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_boolean_is_missing_but_zero_is_reported[claude]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_boolean_is_missing_but_zero_is_reported[openai]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_nested_statuses_do_not_overlap_on_cancellation",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_unreported_usage_still_sets_pending_barrier",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_checkpointed_unknown_usage_is_not_recounted_on_resume",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_unsupported_protocol_cannot_reach_a_provider[current-ftp://127.0.0.1:9]",
+      "phase": "call",
+      "outcome": "failed",
+      "failure": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py:154: in test_unsupported_protocol_cannot_reach_a_provider\n    assert counted(store, result['id']) == expect(), counted(store, result['id'])\nE   AssertionError: {'calls': 0, 'partial_calls': 0, 'unreported_calls': 0, 'unanswered_calls': 1, ...}\nE   assert {'calls': 0, ...alls': 1, ...} == {'calls': 0, ...alls': 0, ...}\nE     \nE     Omitting 4 identical items, use -vv to show\nE     Differing items:\nE     {'unanswered_calls': 1} != {'unanswered_calls': 0}\nE     Use -v to get more diff"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_unsupported_protocol_cannot_reach_a_provider[current-localhost:11434]",
+      "phase": "call",
+      "outcome": "failed",
+      "failure": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py:154: in test_unsupported_protocol_cannot_reach_a_provider\n    assert counted(store, result['id']) == expect(), counted(store, result['id'])\nE   AssertionError: {'calls': 0, 'partial_calls': 0, 'unreported_calls': 0, 'unanswered_calls': 1, ...}\nE   assert {'calls': 0, ...alls': 1, ...} == {'calls': 0, ...alls': 0, ...}\nE     \nE     Omitting 4 identical items, use -vv to show\nE     Differing items:\nE     {'unanswered_calls': 1} != {'unanswered_calls': 0}\nE     Use -v to get more diff"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_unsupported_protocol_cannot_reach_a_provider[exclude-unsupported-control-ftp://127.0.0.1:9]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_unsupported_protocol_cannot_reach_a_provider[exclude-unsupported-control-localhost:11434]",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_real_journal_retains_managed_status[current]",
+      "phase": "call",
+      "outcome": "failed",
+      "failure": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py:173: in test_real_journal_retains_managed_status\n    assert model[0].get('usage_status') == 'unreported', model[0]\nE   AssertionError: {'timestamp': '2026-11-05T21:21:31.747091+00:00', 'request_id': None, 'run_id': '30e577c21c264cd5b2c1d0d64a735f67', 'tenant': 'local', ...}\nE   assert None == 'unreported'\nE    +  where None = <built-in method get of dict object at 0x10d78eac0>('usage_status')\nE    +    where <built-in method get of dict object at 0x10d78eac0> = {'timestamp': '2026-11-05T21:21:31.747091+00:00', 'request_id': None, 'run_id': '30e577c21c264cd5b2c1d0d64a735f67', 'tenant': 'local', ...}.get"
+    },
+    {
+      "test": "evals/results/ta06-implementation-review-0b7e8c7/probe_edges.py::test_real_journal_retains_managed_status[allow-status-control]",
+      "phase": "call",
+      "outcome": "passed"
+    }
+  ]
+}

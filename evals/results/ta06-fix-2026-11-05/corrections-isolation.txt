@@ -1,0 +1,6 @@
+# Corrections isolation: git archive 0b7e8c7 + 3 files, git init + commit 8963988
+uncommitted files in copy: 0
+copied: backend/app/observability.py sha256 5afeac261cce6df7 identical
+copied: backend/app/providers.py sha256 13e4410ba3609967 identical
+copied: backend/tests/test_usage_status.py sha256 62ae9ec212691208 identical
+other working-tree changes under backend/, frontend/lib, frontend/components, frontend/tests, scripts/, .github/ vs 0b7e8c7: 0

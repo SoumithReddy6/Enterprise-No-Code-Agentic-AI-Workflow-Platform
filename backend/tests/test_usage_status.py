@@ -10,8 +10,10 @@ providers.client, as test_providers.py does.
 """
 import asyncio
 import json
+import logging
 from datetime import datetime, timezone
 
+import httpcore
 import httpx
 import pytest
 from cryptography.fernet import Fernet
@@ -115,8 +117,9 @@ def status_of(event):
 # --------------------------------------------------------------------------- V01: original reproduction
 
 @pytest.mark.asyncio
-async def test_v01_three_responses_without_usage_are_counted(tmp_path, monkeypatch):
+async def test_v01_three_responses_without_usage_are_counted(tmp_path, monkeypatch, caplog):
     """The finding: three valid responses with no counts, one-token ceiling. Soft ceiling unchanged."""
+    caplog.set_level(logging.INFO, logger='relay.journal')
     monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '1')
     seen = http(monkeypatch, [answer('ollama')] * 3)
     store, worker, _ = durable(tmp_path)
@@ -127,6 +130,14 @@ async def test_v01_three_responses_without_usage_are_counted(tmp_path, monkeypat
         rows = [r for r in operator_metrics(store)['tokens'] if r['model'] == 'fixture']
         assert len(rows) == 1 and rows[0]['calls'] == 3 and rows[0].get('unreported_calls') == 3
         assert record['accounting']['tokens_spent'] == 0, 'unknown usage is not estimated'
+        # TA06-I01: the emitted JSON, after the journal's content-free field filter, keeps the status.
+        lines = [json.loads(r.getMessage()) for r in caplog.records if r.name == 'relay.journal']
+        usage_lines = [line for line in lines if line.get('event') == 'model.usage']
+        assert [line.get('usage_status') for line in usage_lines] == ['unreported'] * 3
+        assert not [line for line in usage_lines if 'prompt_tokens' in line or 'completion_tokens' in line]
+        from backend.app.observability import journal
+        caplog.clear(); journal(event='model.usage', usage_status='forged <script>')
+        assert 'usage_status' not in json.loads(caplog.records[-1].getMessage()), 'only the four generated statuses pass'
     finally: store.engine.dispose()
 
 
@@ -204,6 +215,19 @@ async def test_v05_nothing_reached_a_provider(tmp_path, monkeypatch, case):
         assert record['status'] == 'failed' and len(seen) == len(replies)
         assert counted(store, record['id']) == expect()
         assert 'usage' not in outcome(record)
+        if case == 'invalid-url':
+            # TA06-I02: the real transport rejects a missing or unsupported scheme before any connection.
+            connects = []
+            async def no_connect(*args, **kwargs):
+                connects.append(True); raise AssertionError('this URL must be rejected before any connect')
+            monkeypatch.setattr(httpcore.AnyIOBackend, 'connect_tcp', no_connect)
+            monkeypatch.setattr(providers, 'client', lambda timeout: httpx.AsyncClient(timeout=timeout, trust_env=False))
+            for url in ('localhost:11434', 'ftp://127.0.0.1:9'):
+                monkeypatch.setenv('OLLAMA_BASE_URL', url)
+                record = await run(store, worker, flow())
+                assert record['status'] == 'failed' and not connects, url
+                assert counted(store, record['id']) == expect(), url
+                assert 'usage' not in outcome(record), url
     finally: store.engine.dispose()
 
 
