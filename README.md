@@ -10,7 +10,7 @@ This README is about how the system is designed for those cases.
 | --- | --- |
 | **Status** | Working local platform, single workspace per account. Intended for loopback use until the deployment and identity work below lands. |
 | **Stack** | React + React Flow · FastAPI · LangGraph · SQLAlchemy on SQLite or PostgreSQL · Alembic · Ollama, OpenAI, Claude · FAISS, Elasticsearch, Pinecone · Docker sandbox |
-| **Verification** | 1,974 backend tests run under five hash seeds · 114 frontend unit tests + 49 Chromium tests · 23 deployed-process production scenarios · 17 live-model workflows · PostgreSQL conformance · five GitHub Actions jobs · a 53-question grounding gate with thresholds fixed before measurement |
+| **Verification** | 2,021 backend tests run under five hash seeds · 115 frontend unit tests + 49 Chromium tests · 23 deployed-process production scenarios · 17 live-model workflows · PostgreSQL conformance · five GitHub Actions jobs · a 53-question grounding gate with thresholds fixed before measurement |
 
 **Start here (five minutes).** [§2.3](#23-did-the-external-write-happen) shows how a write with an unknown outcome is never sent twice. [§2.6](#26-budgets-that-reset-on-resume-leak-through-nesting-or-lose-their-count) shows how token spend survives a crash at the exact commit. [§4](#4-evaluation-measured-including-what-failed) shows the grounding results, including the three approaches that failed.
 
@@ -220,15 +220,19 @@ Each doubling of item count adds roughly 10–25% more bytes, not 4×.
 - Two run-wide ceilings: an **action budget** (tool calls and retrievals) and a **token ceiling** (all model spend).
 - Both are enforced by one shared execution-policy layer that every graph node, loop body and agent target goes through, so retries and nested calls are charged in the same place.
 - Usage the provider reported is counted even when the answer is rejected, for example empty text or invalid structured output.
+- **Unknown is not zero.** Every model call has a status: `reported`, `partial`, `unreported` or `unanswered`. A count the provider did not send is never stored as 0, so a call with no usage still shows in operator metrics instead of looking free.
+- **One definition of input.** Claude input is base input plus cache reads plus cache writes. OpenAI and Ollama totals already include cached tokens, so their cache counts are kept only as a breakdown and never added again.
+- Each outcome reports only its own usage, so a cancelled nested agent is not counted twice in operator metrics.
 - **A result and its count commit together.** Each saved result goes into the same fenced transaction as the run's token total, its usage rows, its loop item and its checkpoint. A resume therefore never restores an answer without the tokens it cost.
 - A saved total can never go down: a write with a lower total is refused. Before each provider request, the worker waits until all known spend is saved. If it cannot be saved, the run stops with a named reason instead of spending more.
 - When a budget runs out, the node stops cleanly and the run reports a `budget` truncation cause. A token refusal is typed, so `on_error: continue` or `route` cannot make the run look complete.
-- **Honest boundary.** The token ceiling is a soft guard. It is checked before each call against spend already reported, so the last call can go over the limit. A response lost before any save is paid for again on resume. A provider that reports no usage counts as zero. See §7.
+- **Honest boundary.** The token ceiling is an **admission limit**, the same model as Claude Managed Agents session budgets and the Azure API Management token limit. It is checked before each call against spend already reported, and it never aborts a call in flight, so the last call can go over the limit. Every finished run that went over carries a `token_limit` record with the limit, the spend and the overshoot, including cancelled runs and rejected approvals. A strict cap (reserve input plus `max_tokens`, then settle) is not provided. A response lost before any save is paid for again on resume. Missing counts add nothing to the ceiling, so a provider that reports nothing cannot be capped; such calls are counted as `unreported` instead. See §7.
 
 **Evidence.**
 - An early audit found loop-body retries bypassing the retry policy, and replays charging twice. Both were fixed by moving everything onto the shared boundary (S07), and the S07–S09 reviews are kept in [`docs/reviews`](docs/reviews/). A live-model check (L01) confirms real Ollama usage survives into durable events.
-- An independent [token-accounting review](docs/reviews/token-accounting-production-review-2026-10-25.md) compared Relay with published provider and gateway behavior and recorded eight findings (TA01–TA08): four reproduced defects, plus policy limits and conditional gaps. TA01 (lost usage), TA02 (budget refilled on resume) and TA04 (a token refusal shown as complete) are fixed. Each fix has tests that failed on the previous code.
+- An independent [token-accounting review](docs/reviews/token-accounting-production-review-2026-10-25.md) compared Relay with published provider and gateway behavior and recorded eight findings (TA01–TA08): four reproduced defects, plus policy limits and conditional gaps. TA01–TA07 are closed. TA08 (an old snapshot replacing a newer one) was reproduced only with two test threads; Relay has no parallel branches yet, so it stays an A5.3 prerequisite. Each fix had an independently reviewed design, new tests run first against the previous code (the defect tests failed there by wrong values, not by a missing function), mutation testing, the full suite under five hash seeds and the deployed scenario gate: 138 new tests and 72 deliberate breaks of the fixes, all detected.
 - TA02: 24 tests, 22 of which failed on the previous code, and 12 of 12 deliberate breaks of the fix detected. Worker processes are killed with `SIGKILL` while the commit is held, on SQLite, and on PostgreSQL in CI. Evidence: [`evals/results/ta02-fix-2026-10-31`](evals/results/ta02-fix-2026-10-31/).
+- The other fixes: [TA01](evals/results/ta01-fix-2026-10-30/) (23 tests, 7 mutants), [TA03](evals/results/ta03-fix-2026-11-03/) (13, 8), [TA04](evals/results/ta04-fix-2026-10-30/) (43, 16), [TA05](evals/results/ta05-fix-2026-11-05/) (9, 9), [TA06](evals/results/ta06-fix-2026-11-05/) (16, 11), [TA07](evals/results/ta07-fix-2026-11-05/) (10, 9). The independent reviews found real gaps, for example two finish paths that skipped the overshoot record and a log filter that dropped the new usage status; each was fixed before closure.
 
 ### 2.7 Silent truncation
 
@@ -415,7 +419,7 @@ These are substring and abstention heuristics, not proof of semantic correctness
 
 | Layer | What runs | Where |
 | --- | --- | --- |
-| Unit and integration | 1,974 backend tests; 114 frontend tests | CI (a random hash seed, then seed 1) + local (`PYTHONHASHSEED` 0–4 for each change, to catch hidden ordering assumptions) |
+| Unit and integration | 2,021 backend tests; 115 frontend tests | CI (a random hash seed, then seed 1) + local (`PYTHONHASHSEED` 0–4 for each change, to catch hidden ordering assumptions) |
 | Deployed processes | 23 scenarios against a real API process, real worker processes and an HTTP receiver: kill -9 mid-write, restarts between approvals, stale leases, SSRF, tenant isolation | `scripts/check_production_scenarios.py` |
 | Live models | 17 workflow shapes on real Ollama models and real Docker (last full run 2026-10-06) | same runner, `--live-models` |
 | PostgreSQL | migrations up/down/up with populated history, four concurrent workers, a stale lease, `SIGKILL` inside a loop and at the accounting commit | CI `postgres-conformance` |
@@ -440,7 +444,7 @@ flowchart LR
     classDef later fill:#f1f3f4,stroke:#9aa0a6,color:#3c4043
 
     A3["A3 error policy<br/>+ retries"]:::done --> A4["A4 for-each<br/>iteration"]:::done --> A51["A5.1 typed<br/>conditions"]:::done
-    A51 --> A52["A5.2 multi-way<br/>routing"]:::done --> TA["Token accounting<br/>TA01–TA08"]:::next --> A53["A5.3 parallel branches<br/>+ explicit joins"]:::later --> A6["A6 subgraphs +<br/>bounded loops"]:::later
+    A51 --> A52["A5.2 multi-way<br/>routing"]:::done --> TA["Token accounting<br/>TA01–TA07"]:::done --> A53["A5.3 parallel branches<br/>+ explicit joins<br/>+ TA08"]:::next --> A6["A6 subgraphs +<br/>bounded loops"]:::later
     B1["B1 Alembic"]:::done --> B2["B2 Redis: per-tenant budgets,<br/>rate limits, fair queueing"]:::later
     B2 --> B3["B3 object storage<br/>for documents"]:::later
     B2 --> B4["B4 orgs, roles,<br/>resource grants"]:::later --> B5["B5 SSO · SCIM ·<br/>audit log"]:::later
@@ -450,8 +454,8 @@ flowchart LR
 ```
 
 - **A5.2 (done).** The [Switch](docs/multi-way-routing.md) routes to one of up to 15 cases or Default, on checked or trusted values only.
-- **Token accounting (in progress).** TA01, TA02 and TA04 are fixed (§2.6). Next: a cancelled nested agent's tokens counted twice in operator metrics (TA03), then usage that a provider does not report (TA06) and Claude cache tokens (TA07).
-- **A5.3 (after token accounting).** Parallel fan-out with explicit joins. The hard part is concurrency correctness, not syntax. Shared budgets, approvals, cancellation and crash recovery must stay correct when branches run at once, and the binding rule in §2.8 must learn that after a join every branch has run. The design is written and reviewed. The review found that reserving `max_tokens` alone cannot enforce a total-token ceiling, so a strict mode must reserve input and output allowance before each call and settle afterwards (TA05, TA08).
+- **Token accounting (done).** TA01–TA07 are closed (§2.6). TA08 moves to A5.3, because parallel branches are the first feature that can make it happen.
+- **A5.3 (next).** Parallel fan-out with explicit joins. The hard part is concurrency correctness, not syntax. Shared budgets, approvals, cancellation and crash recovery must stay correct when branches run at once, and the binding rule in §2.8 must learn that after a join every branch has run. The design is written and reviewed. The review found that reserving `max_tokens` alone cannot enforce a total-token ceiling, so a strict mode must reserve input and output allowance before each call and settle afterwards (TA05, TA08).
 - **B2.** Shared runtime state in Redis. Today's queue is global FIFO, so one tenant can starve others, and limits are per-run only. Redis stays optional: without it the platform runs exactly as today.
 - **B4–B5.** Organisations with roles and resource-scoped grants, enforced in the worker where credentials resolve (not only at the API), then SSO and SCIM.
 - **C–F.** A data-source interface whose drivers must pass one conformance suite, Text-to-SQL over governed definitions, GraphRAG scored against the existing 53-question gate, and tracing. Each capability lands with a measurement, and anything that does not earn its place gets a written verdict, not a quiet removal.
@@ -463,7 +467,7 @@ flowchart LR
 - Global FIFO queue and in-process rate state (B2).
 - Quality numbers come from an 8B local model and heuristic scoring. Hosted models have not been put through the same gate yet.
 - The opt-in request reader passes its safety gate but fails its usability gate: it admitted 9 of 20 valid requests against 18 required. Improving it needs a new frozen test set, so the old one is not tuned against.
-- The token ceiling is a soft guard (§2.6). A provider that reports no usage counts as zero. Operator metrics count a cancelled nested agent's tokens twice; the run's own accounting is correct. Claude cache tokens are not counted, but Relay does not request Claude prompt caching today.
+- The token ceiling is an admission limit, not a strict cap (§2.6): a run can end above it by its last admitted call, and calls with no reported usage add nothing to it. Relay does not send Claude `cache_control` today, so the cache accounting is tested on recorded response shapes, not on live cached calls. Old runs keep their old counts; nothing is backfilled.
 - Runs created before the TA02 accounting rule are not trusted to resume model calls, and stop with a reason instead.
 - Browser tests cover specific flows on Chromium, not the whole editor.
 
