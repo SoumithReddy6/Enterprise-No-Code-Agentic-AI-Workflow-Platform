@@ -1,0 +1,27 @@
+{
+  "checked_on": "2026-11-06",
+  "sources": [
+    {
+      "title": "Claude Managed Agents session budgets",
+      "url": "https://platform.claude.com/docs/en/managed-agents/budgets",
+      "supports": "Budget checked between requests; in-flight requests complete; model overrun bounded by one request per thread.",
+      "adaptation_limit": "Dollars in Claude; known provider-reported tokens in Relay. Does not prove a bound on unknown usage or retry billing."
+    },
+    {
+      "title": "Python 3.12 asyncio.Lock",
+      "url": "https://docs.python.org/3.12/library/asyncio-sync.html#asyncio.Lock",
+      "supports": "Exclusive access and waiting while the mutex is held."
+    },
+    {
+      "title": "Python 3.12 shielding from cancellation",
+      "url": "https://docs.python.org/3.12/library/asyncio-task.html#shielding-from-cancellation",
+      "supports": "Inner task may continue while the cancelled caller still raises CancelledError."
+    },
+    {
+      "title": "Temporal Python workflow message passing",
+      "url": "https://docs.temporal.io/develop/python/workflows/message-passing#use-asynciolock-to-prevent-concurrent-handler-execution",
+      "supports": "Use asyncio.Lock to serialize handlers accessing shared workflow state.",
+      "adaptation_limit": "Supports the synchronization pattern, not Relay snapshot versioning, database transactions or fencing."
+    }
+  ]
+}

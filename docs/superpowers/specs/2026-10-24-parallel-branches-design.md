@@ -1,11 +1,13 @@
 # A5.3: parallel branches with explicit joins
 
-**Status:** Revision 2 for review (2026-11-06). Revision 1 (`347c82f`) was reviewed in
-`docs/reviews/a53-parallel-design-review-2026-10-25.md` (R01–R05). This revision answers
-every finding (see "Review findings and answers") and records three decisions the user
-made on 2026-11-06: **token policy A** (the admission limit, extended to branches),
-**Part 1 only** (backend first, then a decision), and **the run-scoped lock** for TA08. No
-implementation has started.
+**Status:** Revision 3 (2026-11-06). Revision 1 (`347c82f`) was reviewed in
+`docs/reviews/a53-parallel-design-review-2026-10-25.md` (R01–R05). Revision 2 (`d0dfb6d`)
+was reviewed in `docs/reviews/a53-design-r2-review-2026-11-06.md` (A53-R2-01 to R2-04), which
+keeps the three decisions and asks for bounded corrections; after them, the review says to
+proceed directly to tests-first Part 1. This revision makes those corrections. Decisions
+made by the user on 2026-11-06: **token policy A** (the admission limit, extended to
+branches), **Part 1 only** (backend first, then a decision), and **the run-scoped lock** for
+TA08. No implementation has started.
 **Baseline:** `36bac03` (main after PR #6; hosted CI run `42252633339`, 5/5 green). TA01–TA07
 are closed; TA08 belongs to this step.
 **Tier:** P1 (concurrency). Full design review before tests; failing tests, then
@@ -74,7 +76,8 @@ Sources: [Step Functions Parallel](https://docs.aws.amazon.com/step-functions/la
 | [iron_cost](https://docs.rs/iron_cost), [liter-llm](https://docs.rs/crate/liter-llm/1.12.2/source/src/tower/budget.rs) (small libraries, weak evidence) | One reserves the maximum estimated cost with compare-and-swap; the other says its check is best-effort under concurrent load. | The same two styles exist in libraries; no change. |
 | [LangGraph `INVALID_CONCURRENT_GRAPH_UPDATE`](https://docs.langchain.com/oss/python/langgraph/errors/INVALID_CONCURRENT_GRAPH_UPDATE) | Parallel nodes that write one state key need a reducer; an aggregator node after the fan-out is recommended. | Relay's `values` channel already merges by node id; the Join is the aggregator. |
 | [PostgreSQL transaction isolation](https://www.postgresql.org/docs/current/transaction-iso.html) | Under Read Committed a second `UPDATE` waits, then applies its change to the updated row version. | Explains why `x = x + n` keeps every update and why Relay's whole-snapshot replace does not. Not chosen (see TA08). |
-| [Temporal Python SDK](https://temporal.io/blog/durable-distributed-asyncio-event-loop) | Workflow code runs on one deterministic asyncio loop; shared state between handlers is protected with `asyncio.Lock`. | The chosen TA08 fix: one asyncio lock per run attempt in the worker. |
+| [Temporal workflow message passing](https://docs.temporal.io/develop/python/workflows/message-passing#use-asynciolock-to-prevent-concurrent-handler-execution) | Concurrent handlers that share workflow state are serialized with `asyncio.Lock`. | The chosen TA08 fix: one asyncio lock per run attempt in the worker. It supports serialization only; freshness comes from the publication sequence below, and atomicity from the lease fence and the TA02 transaction. |
+| [Python asyncio synchronization](https://docs.python.org/3.12/library/asyncio-sync.html#asyncio.Lock), [shielding](https://docs.python.org/3.12/library/asyncio-task.html#shielding-from-cancellation) | A lock admits one holder; a shielded inner task keeps running when its caller is cancelled. | The shielded writer, not the cancellable waiter, owns the lock until the commit thread ends. |
 
 Not found: an official statement of LiteLLM, Dify or n8n behavior for one budget under
 parallel calls. This design makes no claim about them.
@@ -120,7 +123,9 @@ From the code at `36bac03`:
 
 **Part 1 (this design's delivery):** forks, the `join` node, validation, the binding rule
 after a Join, compilation, the admission limit under parallel calls, the TA08 lock, the
-memory-Agent refusal, docs. API and runtime only.
+memory-Agent refusal, docs. API and runtime, plus one frontend change: the editor's
+`bindableOutputs` learns the Join union, so its binding choices match the backend
+(A53-R2-04). The Join stays hidden from the palette.
 
 **Later, decided after Part 1:** Part 2 (editor: Join in the palette, multi-edge sources,
 issue messages, browser tests); Part 3 (deployed scenarios S22–S24, README).
@@ -135,8 +140,12 @@ that job), a run-wide concurrency setting, strict token reservation (policy C).
    branches. Control nodes (`is_control`: Condition, Switch, Request reader and the legacy
    router, greeting cache and extraction check) never fork: their edges are routes, and only
    one runs. A fork node cannot use `on_error: route`.
-2. **Branch.** A chain of one or more nodes from the fork to one Join. Each branch node has
-   exactly one incoming and one outgoing flow edge inside the region.
+2. **Branch.** A chain of one or more nodes from the fork to one Join. The region is
+   **closed**: each branch node has exactly one incoming flow edge in total, from its
+   expected predecessor (the fork or the previous node of the same branch), and exactly one
+   outgoing flow edge, to the next node of the same branch or to the branch's Join. No edge
+   from outside the region enters a branch (A53-R2-03): a route that entered the middle of a
+   branch would run that branch alone, and the Join would never run.
 3. **Join.** A new `join` node (category Control) with 2–8 incoming edges, one per branch
    of the same fork. It has no data ports, no settings, `on_error: fail` and no retry. It
    runs once, after every branch has finished, and emits ordinary running/success events.
@@ -156,6 +165,7 @@ tools, specialists (recursively) and loop bodies (`split_graph` deps).
 | Every fork's branches end at exactly one Join, and that Join receives only that fork's branches | "Branches from `fork` must all end at one Join." |
 | A Join has 2–8 incoming edges, all from one fork | "`join`: a Join waits for the branches of one fork." |
 | A Join keeps `on_error: fail` and no retry | "`join`: a Join cannot recover or retry." |
+| A branch node has an incoming flow edge from outside its region, or an outgoing edge that leaves the region other than to its Join | "`node`: a parallel branch can be entered only from its fork and left only to its Join." |
 | No Response, control node, Calculate, error route or nested fork inside a branch (a Calculate is a business check, so it belongs before the fork or after the Join) | "`node`: branches cannot stop, route, decide or fork in A5.3." |
 | No external write in a branch's closure: write tools, Agents with attached write tools (any depth), For each with a write body | "`node`: external writes belong after the Join." |
 | No memory-role Agent in a branch's closure (flow node, specialist or loop body) | "`node`: an Agent that writes memory cannot run in a parallel branch in A5.3." |
@@ -217,38 +227,62 @@ Consequences:
 Policy C (reserve a defensible input bound plus `max_tokens`, persist reservations under the
 lease, settle, reconcile after a crash; R01, R03) stays named as not provided.
 
-## Accounting order: the run-scoped lock (TA08, R02)
+## Accounting order: the run-scoped lock (TA08, R02, A53-R2-01, R2-02)
+
+**Two clocks.** The existing `AccountingDurability.generation` advances only when model usage
+is accumulated (`registry.account_usage`); an action debit (`_debit_action`) changes the
+counter, the remaining budget and the charged keys without advancing it. It therefore cannot
+tell which of two action-only snapshots is newer (A53-R2-01: two actions ran, the
+generation stayed 0, and a newest-by-generation rule saved one). The design keeps that
+generation for its one job, acknowledging saved **spend**, and adds a second clock for
+**freshness**:
+
+- `publication_sequence`: a counter in the worker that advances once for every newly
+  produced full accounting snapshot, including action-only changes.
+- `spend_generation`: `AccountingDurability.generation` at the moment the snapshot was
+  produced. Unchanged in meaning.
 
 **Rule.** One `asyncio.Lock` per run attempt in `Worker._execute` orders every accounting
-commit. The three persistence paths (`persist_accounting`, `persist_spend`, `emit` with
-accounting) do this:
+commit. A small publisher object replaces the worker's plain mirror dict. The three
+persistence paths (`persist_accounting`, `persist_spend`, `emit` with accounting) and the
+compiler's `accounting_sink` update go through it:
 
-1. Each producer records its snapshot **with the generation it was produced at** in the
-   worker's mirror, synchronously and only if that generation is newer than the mirror's.
-   (Callers build the snapshot from `run_state` with no `await` in between, so this pair is
-   exact.)
-2. Under the lock, the writer takes the mirror's **newest** pair, not the caller's argument,
-   and commits it (`reserve_accounting`, `record_accounting`, or with the event in
-   `worker_event`).
-3. On a confirmed commit, it acknowledges **that pair's** generation. It never acknowledges a
-   generation whose spend was not in the committed snapshot.
-4. The lock is released only when the commit thread has finished, including when the awaiting
-   branch is cancelled. (`emit` already shields its write; the lock must be held by the
-   shielded part, not by the cancellable waiter.)
+1. **Publish synchronously.** When a snapshot is produced, the publisher freezes the triple
+   `(publication_sequence, spend_generation, deepcopy(snapshot))`, before any `await` or lock
+   wait. Callers build the snapshot from `run_state` with no `await` in between, so the triple
+   is exact. A publication keeps its sequence while it waits or is retried; an older snapshot
+   never receives a fresh sequence later.
+2. **Commit the newest.** Under the lock, the writer takes the publication with the highest
+   `publication_sequence` (not its caller's argument) and commits its snapshot
+   (`reserve_accounting`, `record_accounting`, or with the event in `worker_event`).
+3. **Acknowledge only what was committed.** On a confirmed commit, the writer acknowledges
+   that publication's frozen `spend_generation`, never the generation current when the thread
+   returns. Spend accumulated during the commit stays pending until a snapshot that contains
+   it is confirmed.
+4. **The shielded writer owns the lock.** The lock is released only when the commit thread has
+   finished, including when the awaiting branch is cancelled. `emit` already shields its
+   write; the lock is acquired and released inside the shielded part, not by the cancellable
+   waiter.
+
+**What is coalesced, and what is not.** Only the accounting snapshot is coalesced: a commit
+may carry a newer snapshot than its caller produced. Each event keeps its own identity and
+body, invocation-scoped outcome usage (`usage_for`, TA03) and cancellation commit receipts
+(`PersistedNodeCancellation`) are unchanged, and each event still commits in its own
+transaction. No ledger, schema change or migration is added.
 
 **Why it is enough.** Only the lease holder writes a run's accounting, and every write is
-fenced. Within that one worker process the lock makes commits happen in generation order,
-and each committed snapshot is at least as new as the one before. A delayed older snapshot
-can no longer commit after a newer one, so neither STALE failures nor action refunds can
-happen. TA02's `_set_accounting` check stays as the last line of defense.
+fenced. Within that one worker process the lock makes commits happen one at a time, and each
+commits the newest publication, so each committed snapshot is at least as new as the one
+before. A delayed older snapshot can no longer commit after a newer one, so neither STALE
+failures nor action refunds can happen. TA02's `_set_accounting` check stays as the last line
+of defense.
 
 **Why not delta updates.** Writing `x = x + n` per field (the PostgreSQL pattern) would also
-keep every update, but it changes the accounting storage format, the TA02 snapshot checks
-and the resume path. The lock changes one module.
+keep every update, but it changes the accounting storage format, the TA02 snapshot checks and
+the resume path. The lock changes the worker's persistence code and the sink.
 
 **Cost.** Accounting commits of one run are serialized. They are already serialized by the
-job-row lock in the database; the lock only fixes their order. Model calls still run
-concurrently.
+job-row lock in the database; the lock fixes their order. Model calls still run concurrently.
 
 ## Runtime
 
@@ -279,52 +313,78 @@ existing consequential-node rules apply after the Join, exactly as today.
 
 ## Editor in Part 1
 
-No frontend change. `paletteCategory` (`frontend/lib/workflow.ts`) is an explicit map, so a
-`join` type is not offered in the palette. A workflow with a Join saved through the API still
-loads, because the canvas draws nodes from the backend definitions. The editor's issue list
-shows the new validation messages through the existing `locate`.
+The editor is **not** a supported way to build forks until Part 2, but it must not offer
+wrong bindings for a workflow that contains one (A53-R2-04):
+
+- **Hidden Join.** `paletteCategory` (`frontend/lib/workflow.ts`) is an explicit map, so a
+  `join` type is not offered in the palette. No change.
+- **Binding parity (one change).** The editor computes its own choices with `bindableOutputs`
+  (`frontend/lib/workflow.ts:441`, used at `workflow-editor.tsx:891`), which intersects the
+  arrivals. It gets the same Join union as the backend. The review probe showed that, without
+  it, the editor offers `input.message` and `fork.text` after a Join and omits the branch
+  outputs.
+- **One shared contract.** A fork/Join case is added to `CASES` in
+  `backend/tests/test_binding_contract.py` and regenerated into
+  `frontend/tests/fixtures/bindable-outputs.json`; `frontend/tests/bindings.test.ts` already
+  holds the frontend helper to that fixture. No new contract file.
+- **Mechanical fixture update.** Registering `join` changes
+  `frontend/tests/browser/request-nodes.json`, which `test_request_examples.py:34` compares
+  with every registered definition. It is regenerated, not hand-edited.
+- **Not in Part 1:** drawing forks, multi-edge sources, issue-list wording and browser tests
+  for parallel workflows (Part 2). `docs/operations.md` states that forks are built through
+  the API until then.
 
 ## Acceptance (Part 1)
 
-Budget: **at most 28 new collected cases and 14 mutants.** HTTP is mocked with
-`httpx.MockTransport` through `providers.client`; the real Worker and Store run. Every
-concurrency test uses barriers (asyncio or threading events), never a wall-clock threshold;
-an outer generous timeout is only a hang guard (R05).
+Budget: **28 new collected backend cases and 17 mutants**, allocated below. HTTP is mocked
+with `httpx.MockTransport` through `providers.client`; the real Worker and Store run. Every
+concurrency test uses barriers (asyncio or threading events) at observable boundaries (a
+publication recorded, a Store method entered, a commit finished), never a wall-clock threshold
+or an immediate check of an unfinished task; an outer generous timeout is only a hang guard
+(R05, A53-R2-02). Several shapes inside one validation case are one collected case; each
+shape asserts its own message.
 
-| ID | Case | Baseline (`36bac03`) expectation |
-| --- | --- | --- |
-| L01–L03 | LangGraph pins: a raising branch cancels its sibling; a list edge runs the join once; plain fan-in runs the target twice | Pass (controls; they fail if a LangGraph upgrade changes them) |
-| V01 | A fork whose branches meet at a non-Join node, or end at a Response, is refused with the named message | Refused, but with the old "not supported yet" message: red by message |
-| V02 | Fork → branches of unequal length → Join → Response validates; two fork/Join regions in sequence validate; a Condition or Switch merge after a Join validates | Red (refused) |
-| V03 | Response, Condition, Switch, Request reader, Calculate, an error route or a nested fork inside a branch: refused | Red by message |
-| V04 | A write in the closure (flow write tool; Agent with a write tool; a specialist two levels down with a write tool; For each with a write body): refused | Red by message |
-| V05 | A memory-role Agent as a branch node, an attached specialist or a loop body: refused; two ordinary Agents with the same default `memory_key` in sibling branches: accepted | Red |
-| V06 | 9 branches refused; 8 accepted | Red |
-| V07 | A Join fed by two forks, a Join with one edge, a Join with `on_error` other than `fail` or with a retry: refused | Red (unknown node type) |
-| B01 | After a Join every branch output validates and is listed by `bindable_outputs` | Red |
-| B02 | Inside a branch, a sibling's output is refused; the fork's output is accepted | Red |
-| B03 | A branch node with `on_error: continue` is not bindable after the Join (existing message) | Red |
-| R01 | Concurrency: both branch providers signal "started" and wait until both started; the Join stays blocked until the last branch finishes, then runs once | Red |
-| R02 | Unequal branch lengths: the Join runs once, after both | Red |
-| R03 | A branch fails with `on_error: fail`: the run fails naming it, the sibling's node shows `cancelled`, and the sibling sends no further request | Red |
-| R04 | A branch node with `on_error: continue` fails: the Join and Response run; the run succeeds with the failure shown | Red |
-| R05 | Limit 100; two branch calls of 80 are both admitted (spend 0 at admission); spend 160; `token_limit.over` 60; a model call after the Join is refused with the typed token refusal | Red |
-| R06 | Contract 2: a fork on the Request reader's continue route; a branch binds the checked text; the run completes | Red |
-| A01 | TA08, reservation order: branch A's `reserve_accounting` commit is held on a threading event while branch B reserves and commits; final stored action counter is the newest, no STALE failure | Red (fork refused); the no-lock mutant reproduces the probe |
-| A02 | TA08, spend and event order: the same with `record_accounting` and `worker_event`; final tokens are the sum, and both branches' usage is in the saved map | Red |
-| A03 | A branch cancelled while its accounting commit is held: the lock is held until that commit finishes, and the next commit lands after it | Red |
-| A04 | A01 and A02 on PostgreSQL (CI `postgres-conformance`; locally a throwaway container on 55433) | Red |
-| D01 | SIGKILL after branch A's checkpoint commit while branch B's call is outstanding (SQLite, and PostgreSQL in CI): the resumed run does not repeat A's call (request count), runs B again, runs the Join once, and the saved tokens include A once | Red |
-| D02 | Eight branches commit checkpoints at the same moment: all eight are saved, on SQLite and PostgreSQL | Red |
+| ID | Cases | Case | Baseline (`36bac03`) expectation |
+| --- | ---: | --- | --- |
+| L01 | 1 | LangGraph pins, three asserts: a raising branch cancels its sibling; a list edge runs the join once; plain fan-in runs the target twice | Pass (control; fails if a LangGraph upgrade changes them) |
+| V01 | 1 | Refused topologies: branches meet at a non-Join node; a branch ends at a Response; **a Condition route enters the middle of a branch** (the A53-R2-03 shape); a branch node leaves the region | Red by message |
+| V02 | 1 | Accepted topologies: unequal branch lengths; two fork/Join regions in sequence; a Condition merge after a Join | Red (refused) |
+| V03 | 1 | Response, Condition, Switch, Request reader, Calculate, an error route or a nested fork inside a branch: each refused | Red by message |
+| V04 | 1 | A write in the closure (flow write tool; Agent with a write tool; a specialist two levels down with a write tool; For each with a write body): each refused | Red by message |
+| V05 | 2 | (a) a memory-role Agent as a branch node, a specialist or a loop body: each refused; (b) two ordinary Agents with the same default `memory_key` in sibling branches: accepted | Red |
+| V06 | 1 | 9 branches refused; 8 accepted | Red |
+| V07 | 1 | A Join fed by two forks, with one edge, with `on_error` other than `fail`, or with a retry: each refused | Red (unknown node type) |
+| B01 | 1 | After a Join every branch output validates and is listed by `bindable_outputs` | Red |
+| B02 | 1 | Inside a branch, a sibling's output is refused; the fork's output is accepted | Red |
+| B03 | 1 | A branch node with `on_error: continue` is not bindable after the Join (existing message) | Red |
+| R01 | 1 | Concurrency: both branch providers signal "started" and wait until both started; the Join stays blocked until the last branch finishes, then runs once | Red |
+| R02 | 1 | Unequal branch lengths at run time: the Join runs once, after both | Red |
+| R03 | 1 | A branch fails with `on_error: fail`: the run fails naming it, the sibling's node shows `cancelled`, and the sibling sends no further request | Red |
+| R04 | 1 | A branch node with `on_error: continue` fails: the Join and Response run; the run succeeds with the failure shown | Red |
+| R05 | 1 | Limit 100; two branch calls of 80 are both admitted (spend 0 at admission); spend 160; `token_limit.over` 60; a model call after the Join is refused with the typed token refusal | Red |
+| R06 | 1 | Contract 2: a fork on the Request reader's continue route; a branch binds the checked text; the run completes | Red |
+| A01 | 1 | **Action-only order** (SQLite). Branch A's `reserve_accounting` is held inside the Store on a threading event. Branch B debits an action (equal tokens) and publishes; the test observes B's publication and that B has **not** entered the Store; then releases A. Both commit, in order A then B. The stored counter, remaining budget and charged keys are the newest (2, 8, both keys). No STALE failure | Red; with the fork allowed and the spend-generation rule, saves 1 action (M15) |
+| A02 | 1 | **Spend and event order** (SQLite). The same schedule with `record_accounting` and `worker_event`: both events are saved with their own identities and non-overlapping invocation usage; final tokens are the sum. A usage update that arrives while A's commit runs stays pending (not acknowledged) until a snapshot containing it is confirmed | Red |
+| A03 | 1 | A branch is cancelled while its commit is held: the lock stays held until that commit finishes, and the next commit enters the Store only after it | Red |
+| A04 | 1 | **Stale queued snapshot.** While A holds the lock, B publishes and waits, then C publishes a newer snapshot and waits; C is cancelled before it acquires. The commit after A carries C's newer snapshot, not B's argument | Red |
+| A05 | 2 | The A01 and the A02 schedule, each on PostgreSQL (CI `postgres-conformance`; locally a throwaway container on 55433; skipped without a URL, as the existing PostgreSQL rows) | Red |
+| D01 | 2 | SIGKILL after branch A's checkpoint commit while branch B's call is outstanding, on SQLite and on PostgreSQL: the resumed run does not repeat A's call (request count), runs B again, runs the Join once, and the saved tokens include A once | Red |
+| D02 | 2 | Eight branches commit checkpoints at the same moment: all eight are saved, on SQLite and on PostgreSQL | Red |
+| **Total** | **28** | | |
+
+**Frontend.** No new frontend test file: the fork/Join case added to the shared binding
+fixture is checked by the existing `bindings.test.ts`, and the two regenerated fixtures are
+checked by their existing tests. These add no collected backend cases.
 
 **What "red on the baseline" means here.** A5.3 is a new feature: on `36bac03` every fork is
 refused by validation, so most cases fail because the run or the expected message never
 happens, and V07 fails on the unknown `join` type. That is a refusal by behavior, as in A5.2,
 not a missing Python interface. The TA08 defect itself is proven on the baseline by the
-probe in `evals/results/a53-design-r2-2026-11-06/`, and in Part 1 by mutants M9–M11 and M14.
+probe in `evals/results/a53-design-r2-2026-11-06/` and by the review's generation probe in
+`evals/results/a53-design-r2-review-d0dfb6d/`; in Part 1 by mutants M9–M11, M14 and M15.
 
-Parametrized cases count individually toward the budget. No existing test may change except
-`compiler.py:162`'s old message, if a test pins it (to be listed in the evidence).
+No existing test may change, except a test that pins the old `compiler.py:162` message and
+the two regenerated fixtures; each is listed in the evidence.
 
 **Mutants** (each must be killed by its named test):
 
@@ -333,36 +393,43 @@ Parametrized cases count individually toward the budget. No existing test may ch
 | M1 Join uses the intersection, not the union | B01 |
 | M2 a Join may receive two forks' branches | V07 |
 | M3 write detection ignores the attachment closure | V04 (specialist) |
-| M4 memory refusal checks flow nodes only | V05 (specialist, loop body) |
-| M5 refuse every sibling Agent pair that shares a `memory_key` | V05 (accepted pair) |
+| M4 memory refusal checks flow nodes only | V05a (specialist, loop body) |
+| M5 refuse every sibling Agent pair that shares a `memory_key` | V05b |
 | M6 branch cap 9 | V06 |
 | M7 plain fan-in after a fork allowed | V01 |
 | M8 the Join compiled as plain edges | R02 (Join runs twice) |
 | M9 no lock | A01 |
-| M10 lock, but commit the caller's snapshot | A01 (STALE) |
+| M10 lock, but commit the caller's snapshot | A04 |
 | M11 lock released when the waiter is cancelled | A03 |
 | M12 a branch may bind a sibling's output | B02 |
 | M13 a control node allowed inside a branch | V03 |
-| M14 acknowledge the generation current at commit time, not the committed pair's | A02 (pending spend reported as saved) |
+| M14 acknowledge the generation current at commit time, not the committed publication's | A02 (pending spend reported as saved) |
+| M15 choose the newest publication by `spend_generation`, not `publication_sequence` | A01 (one action saved) |
+| M16 a branch node may have an incoming edge from outside its region | V01 (side entry) |
+| M17 the frontend `bindableOutputs` intersects at a Join | `bindings.test.ts` (fork/Join fixture case) |
 
 **Gates:** the full backend suite at `PYTHONHASHSEED` 0–4 in an isolation copy; frontend unit,
-typecheck, lint, build and browser tests (unchanged, as regression); the deployed scenario
-gate (24 rows, unchanged); hosted CI on the exact commit. Evidence in
-`evals/results/a53-part1-<date>/`. Docs: `docs/operations.md` (Overshoot bound, the Join,
-read-only branches) and `docs/platform-reference.md` (the `join` node).
+typecheck, lint, build and browser tests; the deployed scenario gate (24 rows, unchanged);
+hosted CI on the exact commit. Evidence in `evals/results/a53-part1-<date>/`. Docs:
+`docs/operations.md` (Overshoot bound, the Join, read-only branches, forks built through the
+API until Part 2) and `docs/platform-reference.md` (the `join` node).
 
-**Stop rule:** if the LangGraph pins (L01–L03) do not hold, or D01 shows a repeated
-checkpointed call, stop and report before changing the design.
+**Stop rule:** if the LangGraph pins (L01) do not hold, or D01 shows a repeated checkpointed
+call, stop and report before changing the design.
 
 ## Review findings and answers
 
 | Finding | Answer in this revision |
 | --- | --- |
 | R01 [P1] reserving `max_tokens` cannot enforce a total-token ceiling | The hard-ceiling claim is removed. Policy A states the guarantee (reported total; one call per running branch past the limit) and its exclusions. Policy C stays named as not provided. |
-| R02 [P1] row locking does not order snapshots | The run-scoped lock, with the newest-pair rule and generation acknowledgment. Tests A01–A04 in Part 1. Re-probed on main: TA02 turned token loss into a STALE failure; equal-token action refunds remain. |
+| R02 [P1] row locking does not order snapshots | The run-scoped lock, committing the newest publication (corrected in revision 3, A53-R2-01). Tests A01–A05 in Part 1. Re-probed on main: TA02 turned token loss into a STALE failure; equal-token action refunds remain. |
 | R03 [P2] reservation contention | Does not apply: there is no reservation under policy A. A refused admission follows the node's `on_error`. |
 | R04 [P2] the memory claim describes the wrong implementation | The rule now refuses memory-role Agents in a branch's closure and allows ordinary Agents; the "lost update" claim is removed. |
 | R05 [P2] prove concurrency with barriers | R01 and A01–A03 use barriers; elapsed time is not an oracle. |
+| A53-R2-01 [P1] the generation misses action changes | Two clocks: `publication_sequence` for freshness (every snapshot, actions included), `spend_generation` for acknowledgment. A01 asserts counter, remaining and charged keys; M15. |
+| A53-R2-02 [P2] A01/A02 describe an impossible schedule | B publishes and waits behind the lock; the test checks B has not entered the Store, then releases A. A04 is M10's stale queued-snapshot oracle; A02 keeps M14's pending-spend check. |
+| A53-R2-03 [P2] side entries into a branch | The region is closed (Model, item 2; a new validation row); the counterexample is in V01; M16. |
+| A53-R2-04 [P2] hiding Join is not editor compatibility | Minimal binding parity in the frontend helper through the existing shared fixture; the registry fixture regeneration is listed; forks are API-built until Part 2. M17. |
 | Additional cases | Unequal lengths, two regions in sequence and a merge after a Join (V02); recovered `continue` nodes on resume (Runtime, Resume); recursive closure (V04, V05); cancellation with accounting (A03). |
 
 ## Later steps (not A5.3)
@@ -392,7 +459,8 @@ checkpointed call, stop and report before changing the design.
 Lesson from A5.2: the feature must never be runnable before its refusals exist.
 
 1. **Part 1 (this design):** validation, the binding rule, the `join` node, compilation, the
-   TA08 lock and the docs, in one commit. Forks stay refused until it lands.
+   TA08 lock, the frontend binding parity and the docs, in one commit. Forks stay refused
+   until it lands.
 2. **Decision point.** After the Part 1 review: Part 2 (editor, browser tests) and Part 3
    (S22–S24, README), or pause.
 
@@ -404,4 +472,7 @@ Lesson from A5.2: the feature must never be runnable before its refusals exist.
 3. 2–8 branches per fork, one level (no nested forks).
 4. Implicit fork plus a mandatory Join node.
 5. **Part 1 only**, then decide.
-6. **TA08 fix: one run-scoped asyncio lock** with the newest-pair commit rule.
+6. **TA08 fix: one run-scoped asyncio lock** that commits the newest publication by
+   `publication_sequence` and acknowledges only its frozen `spend_generation`.
+7. **Editor in Part 1:** binding parity only (A53-R2-04, the review's first option); Join
+   hidden; forks built through the API until Part 2.
