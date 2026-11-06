@@ -1,0 +1,25 @@
+{
+  "checked_on": "2026-11-05",
+  "sources": [
+    {
+      "url": "https://platform.claude.com/docs/en/managed-agents/budgets",
+      "supports": "Budget checked before requests; crossing a budget does not interrupt the current request.",
+      "adaptation_boundary": "List-cost dollars and session stop/resume behavior differ from Relay's known-token workflow accounting."
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/azure/api-management/llm-token-limit-policy",
+      "supports": "Without estimation, actual response usage updates enforcement; concurrent requests can exceed the threshold.",
+      "adaptation_boundary": "Per-key gateway counters are not the same as a fenced durable per-run budget."
+    },
+    {
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/quotas-token-burndown.html",
+      "supports": "Pre-request reservation of input plus output allowance followed by quota settlement.",
+      "adaptation_boundary": "Its quota-specific cache exclusions and output weights are not Relay's token/billing formula."
+    },
+    {
+      "url": "https://docs.litellm.ai/docs/proxy/users",
+      "supports": "Exceeded-budget errors expose spend and budget.",
+      "adaptation_boundary": "Does not prove a one-request overshoot bound or Relay's lifecycle/transaction coverage."
+    }
+  ]
+}

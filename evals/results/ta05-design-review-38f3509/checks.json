@@ -1,0 +1,21 @@
+{
+  "application_baseline": "38f35097523ef4fd592aaa52ff2ee91f6ce3f97a",
+  "head_verified": "599a98d634da8cf4487ed101fed5c8cde4a20ed2",
+  "application_changes_since_baseline": [],
+  "preserved_inputs": {
+    "checked": 6,
+    "changed": []
+  },
+  "tracked_status": "",
+  "baseline_tests": {
+    "passed": 106,
+    "exit_code": 0
+  },
+  "probes": {
+    "terminal_paths": 5,
+    "bypass_finish_run": 4,
+    "retained_record_cases": 3,
+    "exit_code": 0
+  },
+  "verdict": "Admission approach appropriate; two P2 lifecycle gaps require small design edits before implementation; no extra full design round."
+}

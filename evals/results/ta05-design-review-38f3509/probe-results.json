@@ -1,0 +1,96 @@
+{
+  "application_baseline": "38f3509",
+  "terminal_paths": [
+    {
+      "case": "worker-finish-control",
+      "status": "failed",
+      "durable_tokens": 110,
+      "finish_run_calls": 1,
+      "sole_proposed_hook_is_reached": true
+    },
+    {
+      "case": "queued-cancel",
+      "status": "cancelled",
+      "durable_tokens": 110,
+      "finish_run_calls": 0,
+      "sole_proposed_hook_is_reached": false
+    },
+    {
+      "case": "paused-cancel",
+      "status": "cancelled",
+      "durable_tokens": 110,
+      "finish_run_calls": 0,
+      "sole_proposed_hook_is_reached": false
+    },
+    {
+      "case": "approval-reject",
+      "status": "cancelled",
+      "durable_tokens": 110,
+      "finish_run_calls": 0,
+      "sole_proposed_hook_is_reached": false
+    },
+    {
+      "case": "approval-expire",
+      "status": "cancelled",
+      "durable_tokens": 110,
+      "finish_run_calls": 0,
+      "sole_proposed_hook_is_reached": false
+    }
+  ],
+  "retention_cases": [
+    {
+      "case": "resume-under-limit",
+      "limit_at_next_finish": "200",
+      "durable_tokens": 120,
+      "record_after_resume": {
+        "policy": "admission",
+        "limit": 100,
+        "spent": 110,
+        "over": 10
+      },
+      "record_after_finish_with_no_new_record": {
+        "policy": "admission",
+        "limit": 100,
+        "spent": 110,
+        "over": 10
+      },
+      "required_by_draft": "token_limit omitted"
+    },
+    {
+      "case": "resume-unlimited",
+      "limit_at_next_finish": "0",
+      "durable_tokens": 120,
+      "record_after_resume": {
+        "policy": "admission",
+        "limit": 100,
+        "spent": 110,
+        "over": 10
+      },
+      "record_after_finish_with_no_new_record": {
+        "policy": "admission",
+        "limit": 100,
+        "spent": 110,
+        "over": 10
+      },
+      "required_by_draft": "token_limit omitted"
+    },
+    {
+      "case": "resume-invalid-setting",
+      "limit_at_next_finish": "lots",
+      "durable_tokens": 120,
+      "record_after_resume": {
+        "policy": "admission",
+        "limit": 100,
+        "spent": 110,
+        "over": 10
+      },
+      "record_after_finish_with_no_new_record": {
+        "policy": "admission",
+        "limit": 100,
+        "spent": 110,
+        "over": 10
+      },
+      "required_by_draft": "token_limit omitted"
+    }
+  ]
+}
