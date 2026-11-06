@@ -1,0 +1,70 @@
+{
+  "langgraph_version": "1.2.11",
+  "langgraph": {
+    "sibling_cancelled": true,
+    "list_join": {
+      "join_calls": 1,
+      "inputs_seen": [
+        [
+          "a",
+          "b1",
+          "b2"
+        ]
+      ]
+    },
+    "plain_fan_in": {
+      "join_calls": 2,
+      "inputs_seen": [
+        [
+          "a",
+          "b1"
+        ],
+        [
+          "a",
+          "b1",
+          "b2"
+        ]
+      ]
+    }
+  },
+  "draft_token_formula": {
+    "draft_formula_admitted_calls": 2,
+    "ceiling": 1000,
+    "reserved_per_call": 300,
+    "reported_input_tokens_per_call": 600,
+    "reported_output_tokens_per_call": 100,
+    "actual_total_tokens": 1400
+  },
+  "reservation_contention": {
+    "ceiling": 1000,
+    "per_call_reservation": 600,
+    "first_branch_started": true,
+    "first_branch_cancelled_by_second_refusal": true
+  },
+  "sqlite_storage": {
+    "concurrent_checkpoint_count": 8,
+    "stale_accounting": {
+      "reserve_accounting": {
+        "new_snapshot_tokens": 30,
+        "final_tokens": 10,
+        "new_snapshot_actions": 2,
+        "final_actions": 1
+      },
+      "record_accounting": {
+        "new_snapshot_tokens": 30,
+        "final_tokens": 10,
+        "new_snapshot_actions": 2,
+        "final_actions": 1
+      }
+    },
+    "same_key_memory": {
+      "initial_context_lengths": [
+        0,
+        0
+      ],
+      "retained_messages": 2,
+      "lost_update": false
+    }
+  },
+  "design_unchanged": true
+}
