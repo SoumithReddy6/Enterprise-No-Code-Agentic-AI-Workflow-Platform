@@ -123,6 +123,9 @@ async def ensure_accounting_ready(run):
     Pending spend is saved through the strict persistence callback, which charges no
     action. A false or missing acknowledgment, or an ordinary storage failure, refuses the
     request. A lost lease and cancellation keep their own control flow.
+
+    The check is repeated after every save (A53-I01): a parallel branch can report usage
+    while the save is in flight, and a completed save covers only what it captured.
     """
     durability=(run or {}).get('durability')
     if durability is None:return  # Compiler-only execution keeps no durable accounting.
@@ -131,9 +134,10 @@ async def ensure_accounting_ready(run):
     persist=run.get('persist_accounting')
     if persist is None:raise AccountingUnavailable(PENDING)
     from .execution_policy import CONTROL_FLOW,accounting_snapshot
-    generation,snapshot=durability.capture(accounting_snapshot(run))
-    try:saved=await persist(snapshot)
-    except CONTROL_FLOW:raise
-    except Exception:raise AccountingUnavailable(PENDING) from None
-    if saved is not True:raise AccountingUnavailable(PENDING)
-    durability.acknowledge(generation)
+    while durability.pending:
+        generation,snapshot=durability.capture(accounting_snapshot(run))
+        try:saved=await persist(snapshot)
+        except CONTROL_FLOW:raise
+        except Exception:raise AccountingUnavailable(PENDING) from None
+        if saved is not True:raise AccountingUnavailable(PENDING)
+        durability.acknowledge(generation)

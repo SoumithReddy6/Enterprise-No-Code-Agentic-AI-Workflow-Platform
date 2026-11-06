@@ -1,0 +1,10 @@
+# A53-I01 isolation copy: git archive 2ad952a + the 2 changed files, git init + one commit
+copy: <scratchpad>/a53-i01-iso-gejzy4cc
+commit: a4d65fe23de1935a45160bf71fa473075e8002ac
+
+## Files copied (sha256; copy == working tree)
+3e37962dc49362a75d58598a05106bec7b385bbc07b14486b1902eaadcf54545 backend/app/accounting_state.py match
+cba832cf9f5caca5e5ab506109c533676aff7a163a02b049fd08d2ad9a64db1e backend/tests/test_parallel_accounting.py match
+
+## Tracked files that differ from 2ad952a, outside these (evals/ and docs/reviews/ excluded)
+none

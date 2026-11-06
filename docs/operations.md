@@ -369,7 +369,7 @@ A branch can be entered only from its fork and left only to its Join. Two branch
 
 **Resume.** Checkpoints are per node, as before. After a crash, branch nodes with a saved success restore from it, unfinished branch nodes run again, and the Join runs once.
 
-**Budgets.** Branches share the run's action budget and token limit; see **Overshoot** above for the token bound. Within one run attempt the worker commits accounting one save at a time, and each save carries the newest spend, so concurrent branches cannot save an older snapshot over a newer one.
+**Budgets.** Branches share the run's action budget and token limit; see **Overshoot** above for the token bound. Within one run attempt the worker commits accounting one save at a time, and each save carries the newest spend, so concurrent branches cannot save an older snapshot over a newer one. Before each model call, all known spend must be saved; if another branch reports usage while that save runs, the worker saves again before the call starts, and a failed save refuses the call.
 
 ## Loop result and event size bounds
 

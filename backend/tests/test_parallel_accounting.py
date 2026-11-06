@@ -270,3 +270,106 @@ async def test_d02_eight_branches_commit_checkpoints_at_once(backend, tmp_path, 
         assert result['status'] == 'success', result.get('error')
         assert {f'p{i}' for i in range(8)} <= set(result['checkpoints'])
         assert result['accounting']['action_budget']['counter'] == 8
+
+
+# --------------------------------------------------------------------------- A06: the save barrier rechecks (A53-I01)
+
+class Repair:
+    """Branch A is an extraction Agent whose first answer needs a structured repair; branch B
+    is a model call that reports usage while A's strict save is held in the Store.
+
+    A's first response reports 5 tokens and its fast save fails (a TA02 outage), so the
+    barrier before the repair must save them. While that save is held, B reports 5 more.
+    The repair records the durability state and the stored total when it is dispatched.
+    """
+    def __init__(self, store, monkeypatch, refuse_newer=False):
+        from backend.app import providers
+        self.store, self.made, self.calls, self.dispatch = store, durabilities(monkeypatch), [], []
+        self.strict, self.release_strict = threading.Event(), threading.Event()
+        self.newer, self.release_newer = threading.Event(), threading.Event()
+        self.b_started, self.release_b = asyncio.Event(), asyncio.Event()
+        self.id, failed = None, []
+        record, reserve = store.record_accounting, store.reserve_accounting
+        def recording(id, owner, snapshot):
+            if snapshot['tokens_spent'] == 5 and not failed:
+                failed.append(True); raise OSError('fast-save outage')
+            return newer(record, id, owner, snapshot)
+        def reserving(id, owner, snapshot):
+            if snapshot['tokens_spent'] == 5:
+                self.strict.set(); assert self.release_strict.wait(30), 'strict save never released'
+            return newer(reserve, id, owner, snapshot)
+        def newer(original, id, owner, snapshot):
+            if snapshot['tokens_spent'] >= 10:
+                self.newer.set(); assert self.release_newer.wait(30), 'newer save never released'
+                if refuse_newer: raise OSError('accounting outage')
+            return original(id, owner, snapshot)
+        monkeypatch.setattr(store, 'record_accounting', recording)
+        monkeypatch.setattr(store, 'reserve_accounting', reserving)
+        async def chat(model, system, prompt, usage=None, **kwargs):
+            kind = 'b' if system == 'b' else 'a'
+            self.calls.append(kind)
+            if kind == 'b':
+                self.b_started.set(); await self.release_b.wait(); text = 'answer b'
+            elif self.calls.count('a') == 1:
+                await self.b_started.wait(); text = 'not JSON, so a repair follows'
+            else:
+                durability = self.made[0]
+                self.dispatch.append({'pending': durability.pending, 'generation': durability.generation,
+                                      'acknowledged': durability.acknowledged,
+                                      'stored': store.run(self.id)['accounting']['tokens_spent']})
+                text = '{"amount": 1}'
+            providers.record_usage(usage, 5, 0)
+            return text
+        monkeypatch.setattr(providers, 'ollama_chat', chat)
+
+    def workflow(self):
+        agent = {'id': 'a1', 'type': 'agent', 'inputs': {'input': 'fork.text'},
+                 'config': {'provider': 'ollama', 'model': 'fixture', 'role': 'extraction',
+                            'output_schema': {'type': 'object', 'properties': {'amount': {'type': 'number'}}, 'required': ['amount']}}}
+        return document([prompt('fork'), agent, model('b1', 'fork.text', 'b'), join(), response('a1.text')],
+                        [('input', 'fork'), ('fork', 'a1'), ('fork', 'b1'), ('a1', 'join'), ('b1', 'join'), ('join', 'out')])
+
+    async def run(self, worker):
+        """Hold A's strict save, let B report, release A's save; return once the newer save is held."""
+        self.id, task = await start(self.store, worker, self.workflow())
+        await until(self.strict.is_set)
+        self.release_b.set()
+        await until(lambda: self.made[0].generation == 2)
+        self.release_strict.set()
+        await until(self.newer.is_set)
+        return task
+
+    def release(self):
+        self.release_strict.set(); self.release_newer.set(); self.release_b.set()
+
+
+@pytest.mark.asyncio
+async def test_a06a_no_model_call_starts_while_newer_spend_is_unsaved(tmp_path, monkeypatch):
+    monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '1000')
+    with lab('sqlite', tmp_path) as (store, worker):
+        repair = Repair(store, monkeypatch)
+        task = await repair.run(worker)
+        try:
+            # A's save of generation 1 has finished; B's generation 2 is still being saved.
+            await never(lambda: repair.calls.count('a') == 2, 1.0)
+        finally:
+            repair.release()
+        await task
+        result = store.run(repair.id)
+        assert result['status'] == 'success', result.get('error')
+        assert repair.dispatch == [{'pending': False, 'generation': 2, 'acknowledged': 2, 'stored': 10}], repair.dispatch
+        assert result['accounting']['tokens_spent'] == 15
+
+
+@pytest.mark.asyncio
+async def test_a06b_a_refused_follow_up_save_stops_the_repair(tmp_path, monkeypatch):
+    from backend.app.accounting_state import PENDING
+    monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '1000')
+    with lab('sqlite', tmp_path) as (store, worker):
+        repair = Repair(store, monkeypatch, refuse_newer=True)
+        task = await repair.run(worker)
+        repair.release()
+        await task
+        result = store.run(repair.id)
+        assert repair.calls.count('a') == 1 and repair.dispatch == [], repair.calls
+        assert result['status'] == 'failed' and result['error'] == PENDING, result.get('error')

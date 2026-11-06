@@ -1,0 +1,92 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_________ test_a06a_no_model_call_starts_while_newer_spend_is_unsaved __________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-319/test_a06a_no_model_call_starts0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b4f8050>
+
+    @pytest.mark.asyncio
+    async def test_a06a_no_model_call_starts_while_newer_spend_is_unsaved(tmp_path, monkeypatch):
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '1000')
+        with lab('sqlite', tmp_path) as (store, worker):
+            repair = Repair(store, monkeypatch)
+            task = await repair.run(worker)
+            try:
+                # A's save of generation 1 has finished; B's generation 2 is still being saved.
+>               await never(lambda: repair.calls.count('a') == 2, 1.0)
+
+backend/tests/test_parallel_accounting.py:354: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function test_a06a_no_model_call_starts_while_newer_spend_is_unsaved.<locals>.<lambda> at 0x10f0bb1c0>
+seconds = 1.0
+
+    async def never(predicate, seconds=1.0):
+        """The predicate stays false for a bounded wait; correct code passes whatever the timing."""
+>       with pytest.raises(TimeoutError): await until(predicate, seconds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE TimeoutError
+
+backend/tests/test_parallel_accounting.py:107: Failed
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T19:53:43.327134+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T19:53:43.402074+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T19:53:43.402981+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.076}
+{"timestamp":"2026-11-06T19:53:43.408500+00:00","request_id":null,"run_id":"b1fa17ed9bb843acb78d8010f77500c0","tenant":"local","event":"job.lease_acquired","worker_id":"737a5b41a62f4a3bb5e7adb385c6dc52"}
+{"timestamp":"2026-11-06T19:53:43.409023+00:00","request_id":null,"run_id":"b1fa17ed9bb843acb78d8010f77500c0","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+{"timestamp":"2026-11-06T19:53:43.481703+00:00","request_id":null,"run_id":"b1fa17ed9bb843acb78d8010f77500c0","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-06T19:53:43.484084+00:00","request_id":null,"run_id":"b1fa17ed9bb843acb78d8010f77500c0","tenant":"local","event":"node.success","node_id":"fork","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-06T19:53:43.489463+00:00","request_id":null,"run_id":"b1fa17ed9bb843acb78d8010f77500c0","tenant":"local","event":"model.usage","node_id":"a1","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":5,"completion_tokens":0}
+{"timestamp":"2026-11-06T19:53:43.489631+00:00","request_id":null,"run_id":"b1fa17ed9bb843acb78d8010f77500c0","tenant":"local","event":"accounting.persist_failed","node_id":"a1","reason_code":"post_spend","error_type":"OSError"}
+{"timestamp":"2026-11-06T19:53:43.496330+00:00","request_id":null,"run_id":"b1fa17ed9bb843acb78d8010f77500c0","tenant":"local","event":"model.usage","node_id":"b1","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":5,"completion_tokens":0}
+{"timestamp":"2026-11-06T19:53:43.509724+00:00","request_id":null,"run_id":"b1fa17ed9bb843acb78d8010f77500c0","tenant":"local","event":"model.usage","node_id":"a1","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":5,"completion_tokens":0}
+--------------------------- Captured stderr teardown ---------------------------
+{"timestamp":"2026-11-06T19:53:43.561313+00:00","request_id":null,"run_id":"b1fa17ed9bb843acb78d8010f77500c0","tenant":"local","event":"node.cancelled","node_id":"a1","transient":false,"cached":false,"duration_ms":null,"usage":{"calls":2,"prompt_tokens":10,"completion_tokens":0}}
+{"timestamp":"2026-11-06T19:53:43.562165+00:00","request_id":null,"run_id":"b1fa17ed9bb843acb78d8010f77500c0","tenant":"local","event":"node.cancelled","node_id":"b1","transient":false,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":5,"completion_tokens":0}}
+{"timestamp":"2026-11-06T19:53:43.563683+00:00","request_id":null,"run_id":"b1fa17ed9bb843acb78d8010f77500c0","tenant":"local","event":"run.finish","status":"released","seconds":0.155}
+_____________ test_a06b_a_refused_follow_up_save_stops_the_repair ______________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-319/test_a06b_a_refused_follow_up_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f19bad0>
+
+    @pytest.mark.asyncio
+    async def test_a06b_a_refused_follow_up_save_stops_the_repair(tmp_path, monkeypatch):
+        from backend.app.accounting_state import PENDING
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '1000')
+        with lab('sqlite', tmp_path) as (store, worker):
+            repair = Repair(store, monkeypatch, refuse_newer=True)
+            task = await repair.run(worker)
+            repair.release()
+            await task
+            result = store.run(repair.id)
+>           assert repair.calls.count('a') == 1 and repair.dispatch == [], repair.calls
+E           AssertionError: ['a', 'b', 'a']
+E           assert (2 == 1)
+E            +  where 2 = <built-in method count of list object at 0x10f61b080>('a')
+E            +    where <built-in method count of list object at 0x10f61b080> = ['a', 'b', 'a'].count
+E            +      where ['a', 'b', 'a'] = <test_parallel_accounting.Repair object at 0x10f611950>.calls
+
+backend/tests/test_parallel_accounting.py:374: AssertionError
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T19:53:43.564842+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T19:53:43.580960+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T19:53:43.581508+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+{"timestamp":"2026-11-06T19:53:43.586173+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"job.lease_acquired","worker_id":"9500e77dc2234a5da9b1eebc986148dc"}
+{"timestamp":"2026-11-06T19:53:43.586451+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+{"timestamp":"2026-11-06T19:53:43.630889+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-06T19:53:43.633122+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"node.success","node_id":"fork","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-06T19:53:43.637468+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"model.usage","node_id":"a1","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":5,"completion_tokens":0}
+{"timestamp":"2026-11-06T19:53:43.637608+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"accounting.persist_failed","node_id":"a1","reason_code":"post_spend","error_type":"OSError"}
+{"timestamp":"2026-11-06T19:53:43.648689+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"model.usage","node_id":"b1","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":5,"completion_tokens":0}
+{"timestamp":"2026-11-06T19:53:43.660537+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"model.usage","node_id":"a1","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":5,"completion_tokens":0}
+{"timestamp":"2026-11-06T19:53:43.670009+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"accounting.persist_failed","node_id":"b1","reason_code":"post_spend","error_type":"OSError"}
+{"timestamp":"2026-11-06T19:53:43.670417+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"accounting.persist_failed","node_id":"a1","reason_code":"post_spend","error_type":"OSError"}
+{"timestamp":"2026-11-06T19:53:43.672178+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"node.success","node_id":"b1","transient":false,"cached":false,"duration_ms":37,"usage":{"calls":1,"prompt_tokens":5,"completion_tokens":0}}
+{"timestamp":"2026-11-06T19:53:43.673264+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"node.success","node_id":"a1","transient":false,"cached":false,"duration_ms":37,"usage":{"calls":2,"prompt_tokens":10,"completion_tokens":0}}
+{"timestamp":"2026-11-06T19:53:43.675995+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"node.success","node_id":"join","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-06T19:53:43.678508+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-06T19:53:43.680156+00:00","request_id":null,"run_id":"112beb098306480e8634f5089973773c","tenant":"local","event":"run.finish","status":"success","seconds":0.094}
+=========================== short test summary info ============================
+FAILED backend/tests/test_parallel_accounting.py::test_a06a_no_model_call_starts_while_newer_spend_is_unsaved
+FAILED backend/tests/test_parallel_accounting.py::test_a06b_a_refused_follow_up_save_stops_the_repair
+2 failed, 8 deselected in 0.77s

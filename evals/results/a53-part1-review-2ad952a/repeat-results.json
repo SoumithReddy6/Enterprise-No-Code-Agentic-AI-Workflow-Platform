@@ -1,0 +1,54 @@
+[
+  {
+    "iteration": 1,
+    "control": false,
+    "observation": {
+      "provider": "a-repair",
+      "pending_at_dispatch": true,
+      "generation": 2,
+      "acknowledged": 1,
+      "stored_tokens": 5
+    },
+    "status": "success",
+    "final_tokens": 15
+  },
+  {
+    "iteration": 1,
+    "control": true,
+    "observation": {
+      "provider": "a-repair",
+      "pending_at_dispatch": false,
+      "generation": 2,
+      "acknowledged": 2,
+      "stored_tokens": 10
+    },
+    "status": "success",
+    "final_tokens": 15
+  },
+  {
+    "iteration": 2,
+    "control": false,
+    "observation": {
+      "provider": "a-repair",
+      "pending_at_dispatch": true,
+      "generation": 2,
+      "acknowledged": 1,
+      "stored_tokens": 5
+    },
+    "status": "success",
+    "final_tokens": 15
+  },
+  {
+    "iteration": 2,
+    "control": true,
+    "observation": {
+      "provider": "a-repair",
+      "pending_at_dispatch": false,
+      "generation": 2,
+      "acknowledged": 2,
+      "stored_tokens": 10
+    },
+    "status": "success",
+    "final_tokens": 15
+  }
+]

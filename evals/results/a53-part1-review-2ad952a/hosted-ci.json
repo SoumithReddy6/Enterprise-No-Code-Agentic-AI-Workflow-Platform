@@ -1,0 +1,49 @@
+{
+  "commit": "2ad952acb1dde1ba88dee977aab7bdf35c8ce874",
+  "run_id": 42277225039,
+  "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42277225039",
+  "jobs": [
+    {
+      "name": "frontend",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42277225039/job/128096554395"
+    },
+    {
+      "name": "native-macos",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42277225039/job/128096554847"
+    },
+    {
+      "name": "postgres-conformance",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42277225039/job/128096554942"
+    },
+    {
+      "name": "backend",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42277225039/job/128096555034"
+    },
+    {
+      "name": "browser-layout",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42277225039/job/128096555078"
+    }
+  ],
+  "postgres_steps": [
+    {
+      "name": "Run python -u -m scripts.check_milestone_storage --out evals/results/postgres-ci --checks postgres-migrations postgres-four-workers postgres-stale-lease postgres-sigkill-loop postgres-accounting-before-commit postgres-accounting-after-commit postgres-parallel-sigkill",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run python -m pytest backend/tests/test_parallel_accounting.py -q -rs",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ]
+}
