@@ -105,6 +105,7 @@ def _close(store,s,row,run,job,status):
     row.status=status;job.status='cancelled';job.owner='';job.lease_until=0
     message='Approval '+status+'. No external request was sent.' if row.kind=='write' else 'Review '+status+'. No later action was authorized.'
     run.status='cancelled';run.data={**run.data,'status':'cancelled','finished_at':now(),'approval_terminal':True,'error':message}
+    store._settle_token_limit(run)
     from .operator_metrics import run_values
     for key,value in run_values(run.data).items():setattr(run,key,value)
     store._event(s,run,{'kind':'approval','node_id':row.node_id,'status':status,'approval_id':row.id})

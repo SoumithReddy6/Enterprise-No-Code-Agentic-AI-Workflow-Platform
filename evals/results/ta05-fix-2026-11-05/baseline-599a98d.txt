@@ -1,0 +1,16 @@
+# New TA05 tests on a clean git archive of 599a98d (application = 38f3509), PYTHONHASHSEED=0
+backend/tests/test_token_admission_limit.py:45: AssertionError: assert None == {'policy': 'admission', 'limit': 100, 'spent': 110, 'over': 10}
+backend/tests/test_token_admission_limit.py:58: AssertionError: assert ('failed' == 'failed'
+backend/tests/test_token_admission_limit.py:124: AssertionError: assert None == {'policy': 'admission', 'limit': 100, 'spent': 110, 'over': 10}
+backend/tests/test_token_admission_limit.py:138: AssertionError: assert None == {'policy': 'admission', 'limit': 100, 'spent': 110, 'over': 10}
+backend/tests/test_token_admission_limit.py:153: AssertionError: assert None == {'policy': 'admission', 'limit': 100, 'spent': 110, 'over': 10}
+PASSED backend/tests/test_token_admission_limit.py::test_l03_exactly_at_the_limit_refuses_and_records_nothing
+PASSED backend/tests/test_token_admission_limit.py::test_l04_no_overshoot_records_nothing[unlimited]
+PASSED backend/tests/test_token_admission_limit.py::test_l04_no_overshoot_records_nothing[under]
+PASSED backend/tests/test_token_admission_limit.py::test_l05_invalid_limit_still_reaches_a_terminal_state
+FAILED backend/tests/test_token_admission_limit.py::test_l01_final_call_over_the_limit_keeps_success_and_is_recorded
+FAILED backend/tests/test_token_admission_limit.py::test_l02_refused_call_records_overshoot_and_resume_clears_it
+FAILED backend/tests/test_token_admission_limit.py::test_l06_cancellation_after_the_crossing_call_is_recorded
+FAILED backend/tests/test_token_admission_limit.py::test_l07_queued_cancellation_of_paid_work_is_recorded
+FAILED backend/tests/test_token_admission_limit.py::test_l08_rejected_approval_of_an_over_limit_run_is_recorded
+5 failed, 4 passed in 1.55s
