@@ -1,0 +1,54 @@
+{
+  "commit": "51a8318bffc0998b5973d9d6dc7e8bb3dce1d8b6",
+  "tracked_status": "",
+  "preserved_inputs": {
+    "checked": 89,
+    "changed": []
+  },
+  "independent_tests": {
+    "focused_backend": {
+      "passed": 146,
+      "exit_code": 0
+    },
+    "edge_probes": {
+      "passed": 14,
+      "exit_code": 0
+    }
+  },
+  "inspected_builder_evidence": {
+    "production": {
+      "path": "evals/results/ta05-fix-2026-11-05/production/report.json",
+      "rows": 24,
+      "all_passed": true,
+      "source_files_changed": [],
+      "source_hashes_compared": 69,
+      "mismatches": []
+    },
+    "isolation": {
+      "hashes_compared": 6,
+      "mismatches": []
+    },
+    "mutants": {
+      "recorded_caught": 9,
+      "rerun_by_auditor": false
+    },
+    "full_local_backend": {
+      "recorded_passes_each": 2021,
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "rerun_by_auditor": false
+    }
+  },
+  "verdict": "Implementation approved, no blocking finding; all five hosted jobs passed; TA05 option A closed.",
+  "tracked_status_after_review": "",
+  "hosted_ci": {
+    "run_id": 42232453634,
+    "commit": "51a8318bffc0998b5973d9d6dc7e8bb3dce1d8b6",
+    "all_five_passed": true
+  }
+}
