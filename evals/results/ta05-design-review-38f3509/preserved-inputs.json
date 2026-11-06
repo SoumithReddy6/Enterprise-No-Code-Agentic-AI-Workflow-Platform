@@ -1,0 +1,8 @@
+{
+  "docs/superpowers/specs/2026-11-05-token-admission-limit-design.md": "8fc38f4d3ca0f3fcf3ee9fd0fb5ffeac9b415c4a1aaed32ac7574a215f64314c",
+  "backend/app/storage.py": "b82500fec3464481cbd8a3a954e0c47713c262045462e47dbcc5e0bddfa73ccb",
+  "backend/app/approvals.py": "595b54f0f4ace7bf3b85b3215f95f4a37a1a553c5800465c67d085ab68c9d850",
+  "backend/app/worker.py": "b51b42a0249626b51ca858b3062a2d811328c1661d765c8dabc3bc091b1cb2fe",
+  "backend/app/token_budget.py": "4d100d5162487115739ba1434a99eedd16968b61d2dcf6777ea892f8a2f053a5",
+  "backend/app/registry.py": "0bcd41fbcc76571aabb37820b6950cb46c9b6c65351e818963fad2cd671f91a8"
+}

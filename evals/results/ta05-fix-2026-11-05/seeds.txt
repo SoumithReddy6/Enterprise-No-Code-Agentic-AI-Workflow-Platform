@@ -1,0 +1,7 @@
+# Full backend suite at PYTHONHASHSEED 0-4 in the isolation copy (1cac9aa = 599a98d + 6 TA05 files)
+imports from <scratchpad>/ta05-iso-fW91/backend/app
+seed 0: 2021 passed, 4 warnings in 104.94s (0:01:44)
+seed 1: 2021 passed, 4 warnings in 103.27s (0:01:43)
+seed 2: 2021 passed, 4 warnings in 101.95s (0:01:41)
+seed 3: 2021 passed, 4 warnings in 102.05s (0:01:42)
+seed 4: 2021 passed, 4 warnings in 101.71s (0:01:41)

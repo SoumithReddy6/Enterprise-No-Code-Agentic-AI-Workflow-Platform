@@ -595,6 +595,23 @@ class Store:
         return {**outputs,'results':entries}
 
     @staticmethod
+    def _settle_token_limit(row):
+        """Replace the run's token_limit record with one for its durable spend now.
+
+        Called by every terminal writer (finish_run, request_cancel, approvals._close) inside
+        its own transaction. An earlier attempt's record is always removed. An invalid limit
+        or unreadable accounting gives no record and never stops the run from finishing.
+        """
+        from .token_budget import overshoot,run_token_limit
+        data={key:value for key,value in row.data.items() if key!='token_limit'}
+        try:
+            stored=Store._accounting(row)
+            spent=checked_snapshot(stored)['tokens_spent'] if row.data.get('accounting_contract') is not None else restored_tokens(stored)
+            record=overshoot(spent,run_token_limit())
+        except (ValueError,TypeError,AttributeError):record=None  # A bad limit, AccountingUnavailable, or a malformed legacy copy.
+        row.data={**data,**({'token_limit':record} if record else {})}
+
+    @staticmethod
     def _accounting(row):
         """Run-wide spend: the column, or the document copy for runs from before it.
 
@@ -738,6 +755,7 @@ class Store:
             if job.cancel_requested:status='cancelled';updates.pop('output',None)
             row=s.get(RunRecord,id)
             row.data={**row.data,**updates,'status':status,'finished_at':now()};row.status=status
+            Store._settle_token_limit(row)
             from .operator_metrics import run_values
             for key,value in run_values(row.data).items():setattr(row,key,value)
             self._event(s,row,{'kind':'run','status':status})
@@ -764,6 +782,7 @@ class Store:
                 changed=s.execute(update(ApprovalRecord).where(ApprovalRecord.run_id==id,ApprovalRecord.status.in_(('pending','approved'))).values(status='cancelled'))
                 if changed.rowcount:row.data={**row.data,'approval_terminal':True}
                 job.status='cancelled';row.status='cancelled';row.data={**row.data,'status':'cancelled','finished_at':now()}
+                Store._settle_token_limit(row)
                 from .operator_metrics import run_values
                 for key,value in run_values(row.data).items():setattr(row,key,value)
                 self._event(s,row,{'kind':'run','status':'cancelled'})
@@ -855,7 +874,8 @@ class Store:
             self.check_resume_writes(self._document(s,row))
             if not job:job=JobRecord(run_id=id);s.add(job)
             job.status='queued';job.owner='';job.lease_until=0;job.cancel_requested=False
-            row.data={**row.data,'status':'queued','error':'','output':'','finished_at':None,'truncated':False,'truncation_reason':'','truncation_source':'','truncation_causes':[]};row.status='queued'
+            # An active run never shows an earlier attempt's token_limit record.
+            row.data={**{k:v for k,v in row.data.items() if k!='token_limit'},'status':'queued','error':'','output':'','finished_at':None,'truncated':False,'truncation_reason':'','truncation_source':'','truncation_causes':[]};row.status='queued'
             row.duration_seconds=None;row.grounded=False;row.abstained=False;row.truncated=False;row.truncation_source=''
             self._event(s,row,{'kind':'run','status':'queued','resumed':True})
             s.commit();return {**row.data,'events':self._events(s,id,tenant_id)}

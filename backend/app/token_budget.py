@@ -1,7 +1,12 @@
-"""Run-wide token ceiling. Enforcement uses provider-reported counts, never an estimated price.
+"""Run-wide token admission limit. Enforcement uses provider-reported counts, never an estimated price.
 
-Tokens are the only figure a provider states exactly, so the hard limit is denominated in
+Tokens are the only figure a provider states exactly, so the limit is denominated in
 tokens; monetary conversion stays a reporting concern with its own stale-price caveats.
+
+It is an admission limit, not a hard cap: before each model call, the call is refused once
+the run's reported spend has reached the limit. The limit never aborts a call in flight,
+so with sequential execution and an unchanged limit the known total can end above it by
+at most the last admitted call. Missing counts add nothing (see registry.call_status).
 """
 import os
 
@@ -45,6 +50,12 @@ def tokens_spent(run):
             value=node.get(field)
             if type(value) is int and value>0:total+=value
     return total
+
+
+def overshoot(spent,limit):
+    """The record of a run whose durable spend ended above a non-zero limit, or None."""
+    if not limit or type(spent) is not int or spent<=limit:return None
+    return {'policy':'admission','limit':limit,'spent':spent,'over':spent-limit}
 
 
 def exhausted(run,limit=None):

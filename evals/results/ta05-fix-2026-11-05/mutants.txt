@@ -1,0 +1,20 @@
+M1: KILLED by planned tests ['test_l02_', 'test_l06_'] | 2 failed, 7 passed in 1.52s
+  failed: test_l02_refused_call_records_overshoot_and_resume_clears_it, test_l06_cancellation_after_the_crossing_call_is_recorded
+M2: KILLED by planned tests ['test_l03_'] | 1 failed, 8 passed in 1.58s
+  failed: test_l03_exactly_at_the_limit_refuses_and_records_nothing
+M3: KILLED by planned tests ['test_l04_no_overshoot_records_nothing[unlimited]'] | 1 failed, 8 passed in 1.28s
+  failed: test_l04_no_overshoot_records_nothing[unlimited]
+M4: KILLED by planned tests ['test_l05_'] | 1 failed, 8 passed in 1.21s
+  failed: test_l05_invalid_limit_still_reaches_a_terminal_state
+M5: KILLED by planned tests ['test_l01_'] | 5 failed, 4 passed in 1.17s
+  failed: test_l01_final_call_over_the_limit_keeps_success_and_is_recorded, test_l02_refused_call_records_overshoot_and_resume_clears_it, test_l06_cancellation_after_the_crossing_call_is_recorded, test_l07_queued_cancellation_of_paid_work_is_recorded, test_l08_rejected_approval_of_an_over_limit_run_is_recorded
+M6: KILLED by planned tests ['test_l01_'] | 5 failed, 4 passed in 1.13s
+  failed: test_l01_final_call_over_the_limit_keeps_success_and_is_recorded, test_l02_refused_call_records_overshoot_and_resume_clears_it, test_l06_cancellation_after_the_crossing_call_is_recorded, test_l07_queued_cancellation_of_paid_work_is_recorded, test_l08_rejected_approval_of_an_over_limit_run_is_recorded
+M7: KILLED by planned tests ['test_l07_'] | 1 failed, 8 passed in 1.22s
+  failed: test_l07_queued_cancellation_of_paid_work_is_recorded
+M8: KILLED by planned tests ['test_l08_'] | 1 failed, 8 passed in 1.19s
+  failed: test_l08_rejected_approval_of_an_over_limit_run_is_recorded
+M9: KILLED by planned tests ['test_l02_'] | 1 failed, 8 passed in 1.12s
+  failed: test_l02_refused_call_records_overshoot_and_resume_clears_it
+
+ALL PLANNED KILLS: True

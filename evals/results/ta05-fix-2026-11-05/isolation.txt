@@ -1,0 +1,14 @@
+# TA05 isolation copy: git archive 599a98d + the 6 TA05 files, git init + one commit
+copy: <scratchpad>/ta05-iso-fW91
+commit: 1cac9aaa7b1ed4d842c7da1994df766cf131aa13
+
+## Files copied (sha256; copy == working tree)
+c5df4875a6dfe54e43d5698c27e9fee6d7e53b43c7584c888e015938e98461cf backend/app/token_budget.py match
+2623212b96a2cce7dadcfe590ea5eb3991ebe9218d0aff5d84c39ba25c08e44c backend/app/storage.py match
+18cf531945465b88e984fabb181be6a4bdd8276a7ce70a5345285cb687a2dc18 backend/app/approvals.py match
+f830840eb1ba77ee112fa532bfcb34db06f889610fd5b16a7220e74b9b5c0f61 backend/tests/test_token_admission_limit.py match
+cb2af24fd7a60ddc00e96242d47d226126edf19bf5b99893694d271d601f5d89 docs/operations.md match
+8f5e170b59ebb42f46a89379d07b110f1352e341447b62dc44ee911bc0e0c1a8 docs/superpowers/specs/2026-11-05-token-admission-limit-design.md match
+
+## Tracked files that differ from 599a98d, outside the 6 (evals/ and docs/reviews/ excluded)
+none

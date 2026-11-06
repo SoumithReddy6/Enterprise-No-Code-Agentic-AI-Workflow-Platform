@@ -1,0 +1,68 @@
+{
+  "commit": "51a8318bffc0998b5973d9d6dc7e8bb3dce1d8b6",
+  "run_id": 42232453634,
+  "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42232453634",
+  "verified_at_utc": "2026-11-06T14:26:29.412Z",
+  "jobs": [
+    {
+      "name": "backend",
+      "id": 127941477718,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "browser-layout",
+      "id": 127941478089,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "frontend",
+      "id": 127941478206,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "postgres-conformance",
+      "id": 127941478305,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "native-macos",
+      "id": 127941478418,
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "log_summaries": [
+    {
+      "name": "backend",
+      "summary": [
+        "2026-11-06T14:19:51.1947155Z 2019 passed, 2 skipped, 4 warnings in 173.77s (0:02:53)",
+        "2026-11-06T14:22:50.5215743Z 2019 passed, 2 skipped, 4 warnings in 172.41s (0:02:52)",
+        "2026-11-06T14:22:58.0301365Z 25 passed in 2.19s"
+      ]
+    },
+    {
+      "name": "frontend",
+      "summary": [
+        "2026-11-06T14:16:52.6909962Z ℹ tests 115",
+        "2026-11-06T14:16:52.6910739Z ℹ pass 115",
+        "2026-11-06T14:17:00.5376083Z Found 0 warnings and 0 errors."
+      ]
+    },
+    {
+      "name": "browser-layout",
+      "summary": [
+        "2026-11-06T14:19:38.2403236Z   49 passed (2.2m)"
+      ]
+    },
+    {
+      "name": "native-macos",
+      "summary": [
+        "2026-11-06T14:17:05.1053630Z 16 passed in 9.38s"
+      ]
+    }
+  ]
+}
