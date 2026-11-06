@@ -43,14 +43,18 @@ def binding_guarantees(order, arrivals, nodes):
     no outputs, so it passes on the first set but not the second; so does a node using
     on_error 'continue'. Propagation is per edge, not per parent, because a routed node's
     normal and error edges may both reach the same consumer.
+
+    A Join runs only after every branch of its fork, so there the sets are the union of its
+    arrivals; anywhere else only one of several arrivals may have run.
     """
     def yields(edge):
         return edge.sourceHandle != 'error' and nodes[edge.source].on_error != 'continue'
     executed, available = {}, {}
     for id in order:
         edges = arrivals[id]
-        executed[id] = set.intersection(*(executed.get(e.source, set()) | {e.source} for e in edges)) if edges else set()
-        available[id] = set.intersection(*(available.get(e.source, set()) | ({e.source} if yields(e) else set()) for e in edges)) if edges else set()
+        combine = set.union if nodes[id].type == 'join' else set.intersection
+        executed[id] = combine(*(executed.get(e.source, set()) | {e.source} for e in edges)) if edges else set()
+        available[id] = combine(*(available.get(e.source, set()) | ({e.source} if yields(e) else set()) for e in edges)) if edges else set()
     return executed, available
 
 
@@ -158,8 +162,11 @@ def _validate_flow(workflow: Workflow) -> list[str]:
         elif node.on_error == 'route':
             if len(links) != 2 or {e.sourceHandle for e in links} != {None, 'error'} and {e.sourceHandle for e in links} != {'output', 'error'}:
                 errors.append(f'{node.id}: on_error route needs exactly one normal edge and one error edge.')
-        elif len(links) != 1:
-            errors.append(f'{node.id}: connect exactly one next node; parallel branches are not supported yet.')
+        elif len(links) > 8:
+            errors.append(f'{node.id}: A fork has 2–8 branches.')
+        elif not links:
+            # Two or more next nodes start parallel branches; branch_errors checks them.
+            errors.append(f'{node.id}: connect one next node, or 2–8 parallel branches that end at one Join.')
         if not routes and node.on_error != 'route' and any(e.sourceHandle not in (None, 'output') for e in links):
             errors.append(f'{node.id}: invalid source handle.')
         if node.on_error != 'route' and any(e.sourceHandle == 'error' for e in links):
@@ -228,8 +235,91 @@ def validate_workflow(workflow: Workflow) -> list[str]:
     if len({n.id for n in workflow.nodes})!=len(workflow.nodes):errors.append('Node IDs must be unique.')
     if len({e.id for e in workflow.edges})!=len(workflow.edges):errors.append('Edge IDs must be unique.')
     errors += _validate_flow(flow)
+    errors += branch_errors(workflow, flow, deps)
     errors += request_contract_errors(workflow, flow, deps)
     return errors
+
+
+BRANCH_CLOSED = 'a parallel branch can be entered only from its fork and left only to its Join.'
+
+
+def branch_errors(workflow, flow, deps):
+    """Parallel branches (A5.3). A fork is a non-control node with two or more next nodes.
+    Each branch is a closed chain from the fork to one Join, and holds only read-only steps:
+    when one branch fails its siblings are cancelled, which must change nothing outside Relay.
+    Every rule covers a branch node's attachment closure: its tools, specialists and loop body."""
+    nodes = {n.id: n for n in flow.nodes}
+    full = {n.id: n for n in workflow.nodes}
+    outgoing = {id: [] for id in nodes}
+    arrivals = {id: [] for id in nodes}
+    for edge in sorted(flow.edges, key=lambda e: e.id):
+        if edge.source in nodes and edge.target in nodes:
+            outgoing[edge.source].append(edge); arrivals[edge.target].append(edge)
+    def forks(id):
+        node = nodes[id]
+        return (node.type != 'response' and node.on_error != 'route' and len(outgoing[id]) >= 2
+                and not is_control(REGISTRY.get(node.type)))
+    def downstream(id):
+        seen, stack = set(), [e.target for e in outgoing[id]]
+        while stack:
+            step = stack.pop()
+            if step not in seen: seen.add(step); stack += [e.target for e in outgoing[step]]
+        return seen
+    def closure(id):
+        found, stack = [], [id]
+        while stack:
+            step = stack.pop()
+            if step not in found: found.append(step); stack += deps.get(step, [])
+        return found
+    errors = []
+    # First the plain part of every branch (one arrival, one next node), so that a merge of
+    # two branches can be told from an edge that enters or leaves a branch.
+    owner, paths = {}, {}
+    for fork in sorted(id for id in nodes if forks(id)):
+        paths[fork] = []
+        for edge in outgoing[fork]:
+            chain, last, step = [], fork, edge.target
+            while nodes[step].type != 'join' and len(arrivals[step]) == 1 and step not in owner:
+                owner[step] = fork; chain.append(step); last = step
+                if len(outgoing[step]) != 1: step = None; break
+                step = outgoing[step][0].target
+            paths[fork].append((chain, last, step))
+    for fork, branches in paths.items():
+        ends, reach = set(), downstream(fork)
+        for chain, last, step in branches:
+            for id in chain:
+                node, definition = nodes[id], REGISTRY.get(nodes[id].type)
+                if (node.type in ('response', 'calculate') or is_control(definition)
+                        or node.on_error == 'route' or len(outgoing[id]) != 1):
+                    errors.append(f'{id}: parallel branches cannot stop, route, decide or fork.')
+                attached = [full[c] for c in closure(id) if c in full]
+                if any(is_write_node(n, REGISTRY.get(n.type)) for n in attached):
+                    errors.append(f'{id}: external writes belong after the Join.')
+                errors += [f'{n.id}: an Agent that writes memory cannot run in a parallel branch.'
+                           for n in attached if n.type == 'agent' and n.config.get('role') == 'memory']
+            if step is not None and nodes[step].type == 'join':
+                if not chain: errors.append(f'{fork}: a parallel branch needs at least one node before its Join.')
+                ends.add(step); continue
+            ends.add(None)
+            if step is None: continue  # The branch stops early; its last node is reported above.
+            others = [e.source for e in arrivals[step] if e.source != last]
+            if not chain: errors.append(f'{step}: {BRANCH_CLOSED}')
+            elif any(owner.get(source) == fork for source in others):
+                errors.append(f'{step}: Parallel branches meet only at a Join.')
+            elif others and all(source in reach for source in others):
+                errors.append(f'{last}: {BRANCH_CLOSED}')  # It leaves to a node after the region.
+            else:
+                errors.append(f'{step}: {BRANCH_CLOSED}')  # Entered from outside the region.
+        if len(ends) != 1 or None in ends:
+            errors.append(f'{fork}: Branches from {fork} must all end at one Join.')
+    for id in sorted(id for id in nodes if nodes[id].type == 'join'):
+        sources = [e.source for e in arrivals[id]]
+        feeding = {owner.get(source) for source in sources}
+        if not 2 <= len(sources) <= 8 or len(feeding) != 1 or None in feeding:
+            errors.append(f'{id}: a Join waits for the branches of one fork.')
+        if nodes[id].on_error != 'fail' or nodes[id].retry.attempts:
+            errors.append(f'{id}: a Join cannot recover or retry.')
+    return list(dict.fromkeys(errors))
 
 
 def request_contract_errors(workflow, flow, deps):
@@ -677,6 +767,7 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
         graph.add_node(node.id, handler_factory(node, definition, config))
     trigger = next(n.id for n in workflow.nodes if n.type in ('chat_input','manual_input'))
     graph.add_edge(START, trigger)
+    nodes_by_id = {n.id: n for n in workflow.nodes}
     for node in sorted(workflow.nodes, key=lambda n: n.id):
         edges = sorted((e for e in workflow.edges if e.source == node.id), key=lambda e:e.id)
         if is_control(REGISTRY[node.type]):
@@ -689,5 +780,11 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
             targets={('error' if e.sourceHandle=='error' else 'output'):e.target for e in edges}
             graph.add_conditional_edges(node.id, recover, targets)
         elif node.type == 'response': graph.add_edge(node.id, END)
-        else: graph.add_edge(node.id, edges[0].target)
+        else:
+            # A fork adds one edge per branch. A Join is entered by one list edge from every
+            # branch's last node, which LangGraph runs once, after all of them.
+            for edge in edges:
+                if nodes_by_id[edge.target].type != 'join': graph.add_edge(node.id, edge.target)
+        if node.type == 'join':
+            graph.add_edge(sorted(e.source for e in workflow.edges if e.target == node.id), node.id)
     return CompiledWorkflow(graph.compile(), full_workflow.model_dump(mode='json'))

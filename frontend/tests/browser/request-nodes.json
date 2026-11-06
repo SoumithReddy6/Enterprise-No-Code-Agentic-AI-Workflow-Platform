@@ -281,6 +281,26 @@
     "hidden": false
   },
   {
+    "type": "join",
+    "name": "Join",
+    "version": 1,
+    "category": "Control",
+    "description": "Wait for every parallel branch of one fork, then continue. Later nodes bind any branch output.",
+    "inputs": {},
+    "optional_inputs": {},
+    "outputs": {},
+    "branch_routes": [],
+    "configurable_routes": false,
+    "config_schema": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "EmptyConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
     "type": "calculate",
     "name": "Calculate",
     "version": 1,

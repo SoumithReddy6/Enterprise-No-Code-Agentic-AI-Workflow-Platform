@@ -1,0 +1,28 @@
+{
+  "reviewed_commit": "89129ca564d201ebf4511dac7bf63522927641a5",
+  "design_sha256": "6cb411ffbedebc672d6975d4b77e8f44080848086c6a7cae38058b443bebe7ba",
+  "backend_case_count": 28,
+  "named_mutants": 17,
+  "unchanged_revision_2_inputs": 12,
+  "changed_revision_2_inputs": [],
+  "tracked_worktree_clean": true,
+  "application_frontend_unchanged_since_revision_2": true,
+  "git_diff_check": 0,
+  "probe_exit": 0,
+  "baseline_tests": {
+    "exit": 0,
+    "result": "59 passed, 1 warning in 4.33s",
+    "files": [
+      "backend/tests/test_binding_contract.py",
+      "backend/tests/test_request_examples.py",
+      "backend/tests/test_accounting_durability.py"
+    ]
+  },
+  "not_run": [
+    "full suites",
+    "PostgreSQL process tests",
+    "deployed gate",
+    "hosted CI"
+  ],
+  "verdict": "approved for tests-first Part 1 implementation"
+}

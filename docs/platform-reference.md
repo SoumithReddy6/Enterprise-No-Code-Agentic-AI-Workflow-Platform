@@ -268,12 +268,13 @@ The opt-in `section` strategy retains heading paths, inline section headings, an
 - Deterministic bindings and validation before execution.
 - Conditions choose a true or false branch with a typed comparison: `contains`, `eq`, `ne`, numeric `gt`/`gte`/`lt`/`lte`, `in` (one of several options), or `empty`. A condition can read a field from JSON, such as the `amount` an extraction agent returned. Numbers compare as exact decimals. A value that cannot be compared, such as text where a number is required, fails the run with the reason instead of choosing a branch. Saved `contains` conditions behave exactly as before. See [typed conditions](typed-conditions.md).
 - A Switch takes one of up to 15 ordered cases (each a typed condition) or Default, on checked or trusted values only, in contract-2 workflows. See [multi-way routing](multi-way-routing.md).
-- Parallel fan-out is the next planned work; cycles and parallel branches are rejected.
+- Parallel branches with an explicit Join run read-only work at the same time (API and JSON import only until the editor supports them). Cycles are rejected.
 
 ### Execution control
 
 - Each node has an error policy: `fail` (default), `continue`, or `route` to an error branch carrying `{code, message, attempts}`. Bindings to outputs that a failure path cannot provide are rejected at validation.
 - Transient failures retry up to five times with jittered exponential backoff. Nodes that write externally are never retried, and a write whose outcome is uncertain is not repeated: the run stops until someone reconciles it with the remote system.
+- A node with 2–8 next nodes forks into parallel branches that end at one `join` node. The Join runs once, after every branch; later nodes bind any branch output. Branches are read-only: no external writes, memory-role Agents, Responses, routing nodes or Calculate. A branch that fails with `on_error: fail` fails the run and cancels the others. See [parallel branches](operations.md#parallel-branches).
 - A For-each node runs one attached callable per list element (1–1,000 items, default 100), with per-item `continue` or `stop`. Item results are stored per row, so a crash resumes mid-collection without repeating committed items.
 - Run-wide action and token ceilings cover tool calls, retrievals and model spend, including retries and loop items. Truncation from limits, budgets or capped tool results is reported as incomplete work with its cause, never silently.
 
@@ -477,13 +478,14 @@ Configuration can be supplied through a root `.env` file. See [.env.example](../
 
 | Implemented | Next engineering work | Later platform work |
 | --- | --- | --- |
-| Visual workflow editor, section-aware chunking, and durable write approvals | Multi-way routing (A5.2) | Subgraphs and bounded loops |
-| Local/cloud providers and opt-in local reranking | Parallel execution and explicit joins (A5.3) | Published workflow versions |
+| Visual workflow editor, section-aware chunking, and durable write approvals | Editor support for parallel branches (A5.3 Part 2) | Subgraphs and bounded loops |
+| Local/cloud providers and opt-in local reranking | Writes and approvals inside parallel branches (A5.3b) | Published workflow versions |
 | Agent roles and specialist delegation | Regex matching for conditions, with a ReDoS-safe engine | Webhooks and scheduled triggers |
 | Named, versioned knowledge bases | Remaining regulatory retrieval misses | Shared runtime state and per-tenant budgets |
 | Four retrieval techniques | Structured numeric-policy verifier | Team roles and invitations |
 | Durable queued execution with per-node error policy and retries | Improved retrieval test lab | Audit, retention, and PII controls |
-| Typed conditions over text, numbers and JSON fields | | |
+| Typed conditions over text, numbers and JSON fields; Switch multi-way routing | | |
+| Parallel read-only branches with an explicit Join (API) | | |
 | For-each iteration with per-item checkpoints and bounded storage | Broader browser interaction tests | Managed production deployment |
 | Grounding and citation validation | Real remote-adapter integration tests | |
 | Tool integrations and probed Python sandbox | | |

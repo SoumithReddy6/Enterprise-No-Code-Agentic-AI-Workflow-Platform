@@ -1,0 +1,24 @@
+# A5.3 Part 1 isolation copy: git archive 89129ca + the 16 changed files, git init + one commit
+copy: <scratchpad>/a53-iso-gnfx4ylz
+commit: eeb6119b4bc7c721742af4cd0153b9f9e13f29eb
+
+## Files copied (sha256; copy == working tree)
+1dd3ad76bb52f45892895f42ce11d30bec9a6231d8b48e188123f37fd1433fc8 .github/workflows/ci.yml match
+74fc719964b12aeeee174cb44dd19d40a05b6202804a282b28a828a22c32d56c README.md match
+f99a985740abe52375f31c5f639bf9aebb22ad0598e6ae3ad70e5d95ed207588 backend/app/accounting_state.py match
+6697020d7e04cd24f3a7680f8813b745c303251dbc966e62523c7f9dc03ee21d backend/app/compiler.py match
+cce5911774edafe441c0f631e9e7f5ec2e193fec87086b6a5804dea5ccc5a919 backend/app/registry.py match
+f8825c22069f93b505e5c0c8b84d48c0c47ffe4b78fec0091bfc8ee47eea514d backend/app/worker.py match
+5d9ffef731fe0f71e6020120821e7fad58c40e28a7d56cc21cbcffff748f88ee backend/tests/test_binding_contract.py match
+8d91989bc67add561b34462b6726d8acc545d921e4e80bbb3cc27f760599e1c4 docs/operations.md match
+66d201944d843465cb8e8704c005b1670f71632f65b6c9616f4bcd61532822c7 docs/platform-reference.md match
+7e4fac71a875599a90a7e88685f6bd0e0fa8b0e8649a1ff3922e7c34653bac5b frontend/lib/workflow.ts match
+910f925348e391d903c67623bf9f87d23d48bcd5fcd9692179b0b244fdfce1ef frontend/tests/browser/request-nodes.json match
+1181d36f145716048101a8d4654a415f45eb0148ef7bec36ed57882fcddb8309 frontend/tests/fixtures/bindable-outputs.json match
+a6f578576c8224c24262a7b4326fd929ea8c10039bdf1de6d1359f6792eadc46 scripts/check_milestone_storage.py match
+3bd0eeb3e36862e692eefe13d7dbb2063838793378610c63e83ec47470f24fa4 scripts/scenarios/milestone_worker.py match
+436cc45e4f0fed94aee5251b011eaf069d643ef1a4a200c34722ed315b9d27b6 backend/tests/test_parallel_accounting.py match
+500b116e91f40407b94dd979f4fb448972c8c5916fbe7cf4c3a1196e853f9a0d backend/tests/test_parallel_branches.py match
+
+## Tracked files that differ from 89129ca, outside the 16 (evals/ and docs/reviews/ excluded)
+none

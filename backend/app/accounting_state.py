@@ -7,6 +7,7 @@ request is started on their behalf.
 
 Deliberately free of storage and approval imports: both of those modules use it.
 """
+import asyncio
 from copy import deepcopy
 
 CONTRACT=1
@@ -88,6 +89,32 @@ class AccountingDurability:
     def capture(self,snapshot):return self.generation,deepcopy(snapshot)
 
     def acknowledge(self,generation):self.acknowledged=max(self.acknowledged,generation)
+
+
+class AccountingPublications:
+    """The newest accounting snapshot of one run attempt, and the lock that orders its commits.
+
+    Parallel branches produce snapshots concurrently and commit them in threads (TA08). Each
+    snapshot is published here synchronously, before any await, with the order it was
+    produced in and the spend generation it contains. A commit, under the lock, saves the
+    newest publication, not its caller's snapshot, and acknowledges only that publication's
+    generation. So a delayed older snapshot never commits after a newer one: no tokens are
+    refused as stale and no action is refunded. The generation alone cannot order them,
+    because an action debit changes the snapshot without advancing it.
+
+    Callers pass it as the compiler's accounting sink, which publishes through update().
+    """
+    def __init__(self,durability):
+        self.durability=durability;self.sequence=0;self.latest=None;self.lock=asyncio.Lock()
+
+    def update(self,snapshot):
+        """Publish a snapshot built from the run state with no await since."""
+        self.sequence+=1
+        self.latest=(self.sequence,self.durability.generation,deepcopy(snapshot))
+
+    def newest(self):
+        """(spend generation, snapshot) of the newest publication, or (None, None)."""
+        return self.latest[1:] if self.latest else (None,None)
 
 
 async def ensure_accounting_ready(run):

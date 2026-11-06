@@ -243,6 +243,10 @@ async def llm_node(inputs, config, ctx):
     text=await call_model(ctx,config,lambda usage: openai_chat(config.model, config.system, inputs['prompt'], ctx.resolve_credential(config.credential_id),usage=usage,**params))
     return {'text': text, 'provider': 'openai'}
 
+async def join_node(inputs, config, ctx):
+    # The graph runs a Join only after every branch of its fork has finished; it adds nothing.
+    return {}
+
 async def condition_node(inputs, config, ctx):
     return {'branch': 'true' if evaluate_condition(inputs['value'], config) else 'false'}
 
@@ -279,6 +283,7 @@ for definition in [
     NodeDefinition('prompt', 'Prompt template', 'Transform', 'Compose a prompt with {message}.', {'message':'string'}, {'text':'string'}, PromptConfig, prompt_node),
     NodeDefinition('llm', 'Language model', 'AI', 'Generate text with a model, or test with demo mode.', {'prompt':'string'}, {'text':'string','provider':'string'}, LLMConfig, llm_node, ('external_model_request',)),
     NodeDefinition('condition', 'Condition', 'Control', 'Route to true or false by comparing a value: text, number, membership or empty.', {'value':'string'}, {'branch':'string'}, ConditionConfig, condition_node, branch_routes=('true','false')),
+    NodeDefinition('join', 'Join', 'Control', 'Wait for every parallel branch of one fork, then continue. Later nodes bind any branch output.', {}, {}, EmptyConfig, join_node),
     NodeDefinition('calculate', 'Calculate', 'Transform', 'Compute or check numbers from JSON fields exactly, in code rather than a model.', {'value':'string'}, {'text':'string'}, CalculateConfig, calculate_node),
     NodeDefinition('response', 'Response', 'Output', 'Finish this path and return text.', {'text':'string'}, {'text':'string','sources':'string'}, EmptyConfig, response_node),
 ]:

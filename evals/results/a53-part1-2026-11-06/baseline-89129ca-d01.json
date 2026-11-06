@@ -1,0 +1,14 @@
+[
+  {
+    "name": "sqlite-parallel-sigkill",
+    "passed": false,
+    "error": "AssertionError: {\"detail\":[\"fork: connect exactly one next node; parallel branches are not supported yet.\",\"Unknown node type: join.\",\"out: invalid binding text = a1.text; use a declared output from a guaranteed upstream node.\"]}",
+    "seconds": 2.01
+  },
+  {
+    "name": "postgres-parallel-sigkill",
+    "passed": false,
+    "error": "AssertionError: {\"detail\":[\"fork: connect exactly one next node; parallel branches are not supported yet.\",\"Unknown node type: join.\",\"out: invalid binding text = a1.text; use a declared output from a guaranteed upstream node.\"]}",
+    "seconds": 2.008
+  }
+]

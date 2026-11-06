@@ -13,6 +13,8 @@ def main():
     # at the selected boundary of m0's outcome commit until the parent kills it.
     parser.add_argument('--accounting-barrier', choices=['before_commit', 'after_commit'])
     parser.add_argument('--fail-fast-saves', action='store_true')
+    # A5.3 D01 rows: hold at the outcome commit of this node instead of m0.
+    parser.add_argument('--barrier-node', default='m0')
     args = parser.parse_args()
     directory = Path(os.environ['DATA_DIR'])
     if not (directory / 'SCENARIO_LAB_ONLY').is_file():
@@ -28,7 +30,7 @@ def main():
         def unavailable(*_args, **_kwargs): raise OSError('Scenario accounting outage')
         store.record_accounting = unavailable
     if args.accounting_barrier:
-        accounting_barrier(store, directory, args.accounting_barrier)
+        accounting_barrier(store, directory, args.accounting_barrier, args.barrier_node)
     if args.mode == 'serve':
         asyncio.run(Worker(store, concurrency=1).serve())
         return
@@ -60,8 +62,9 @@ def main():
         raise SystemExit(1)
 
 
-def accounting_barrier(store, directory, moment):
-    """Hold m0's fresh outcome commit at one boundary; the parent SIGKILLs this process there.
+def accounting_barrier(store, directory, moment, node='m0'):
+    """Hold a node's fresh outcome commit (m0 by default) at one boundary; the parent SIGKILLs
+    this process there.
 
     before_commit uses SQLAlchemy's ConnectionEvents.commit, which runs after the Session
     flushed every write and before the DBAPI commit. after_commit holds once the real
@@ -78,7 +81,7 @@ def accounting_barrier(store, directory, moment):
             time.sleep(.05)
     original = store.worker_event
     def worker_event(id, owner, payload, **kwargs):
-        active.on = payload.get('node_id') == 'm0' and payload.get('status') == 'success' and not payload.get('cached')
+        active.on = payload.get('node_id') == node and payload.get('status') == 'success' and not payload.get('cached')
         try:
             result = original(id, owner, payload, **kwargs)
         finally:

@@ -437,7 +437,8 @@ export function unparsedJsonSettings(
 // The outputs each node may bind: those of upstream nodes whose outputs exist on every flow
 // path to it. Mirrors bindable_outputs in backend/app/compiler.py, and both are held to
 // tests/fixtures/bindable-outputs.json. A node reached by an error edge, or through a node
-// using on_error 'continue', ran without outputs on that path, so it does not count.
+// using on_error 'continue', ran without outputs on that path, so it does not count. A Join
+// runs after every branch of its fork, so it takes the union of its arrivals.
 export function bindableOutputs(
   workflow: Pick<Workflow, 'nodes' | 'edges'>,
   outputs: (type: string) => string[],
@@ -475,9 +476,12 @@ export function bindableOutputs(
     const sets = edges.map(
       (e) => new Set([...(available.get(e.source) ?? []), ...(yields(e) ? [e.source] : [])]),
     );
+    const join = byId.get(id)?.type === 'join';
     available.set(
       id,
-      sets.length ? sets.reduce((a, b) => new Set([...a].filter((x) => b.has(x)))) : new Set(),
+      sets.length
+        ? sets.reduce((a, b) => new Set(join ? [...a, ...b] : [...a].filter((x) => b.has(x))))
+        : new Set(),
     );
   }
   const result: Record<string, string[]> = {};

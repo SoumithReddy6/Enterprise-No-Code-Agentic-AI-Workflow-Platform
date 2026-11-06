@@ -48,6 +48,12 @@ CASES = {
     'attached_tool': {'nodes': [node('input', 'chat_input'), node('agent', 'agent', {'input': 'input.message'}),
                                 node('calc', 'tool_python', {}, config={'code': 'print(1)'}), node('out', 'response', {'text': 'agent.text'})],
                       'edges': flow('input', 'agent', 'out') + [{'id': 'tool', 'source': 'calc', 'target': 'agent', 'kind': 'tool', 'targetHandle': 'tools'}]},
+    # A5.3: a branch binds only its own nodes and those before the fork; after the Join, every branch output.
+    'fork_join': {'nodes': [node('input', 'chat_input'), node('fork', 'prompt', {'message': 'input.message'}),
+                            node('a', 'prompt', {'message': 'fork.text'}), node('b1', 'prompt', {'message': 'fork.text'}),
+                            node('b2', 'prompt', {'message': 'b1.text'}), node('join', 'join'), node('out', 'response', {'text': 'b2.text'})],
+                  'edges': [edge('input', 'fork'), edge('fork', 'a'), edge('fork', 'b1'), edge('a', 'join'), edge('b1', 'b2'),
+                            edge('b2', 'join'), edge('join', 'out')]},
 }
 
 
@@ -84,7 +90,7 @@ def test_bindable_outputs_follow_every_path_rule():
 
 def test_every_offered_binding_validates_and_others_do_not():
     """What the editor offers is exactly what validation accepts."""
-    for name in ('linear', 'condition_branches', 'branches_rejoin'):
+    for name in ('linear', 'condition_branches', 'branches_rejoin', 'fork_join'):
         case = CASES[name]
         offered = bindable_outputs(workflow(case))
         for target in case['nodes']:

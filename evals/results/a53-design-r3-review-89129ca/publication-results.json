@@ -1,0 +1,69 @@
+{
+  "scope": "Publication/acknowledgement design simulation, using the actual AccountingDurability class; no database, Worker implementation, or provider call.",
+  "revision_3_schedule": {
+    "commits": [
+      {
+        "writer": "A",
+        "sequence": 1,
+        "actions": 1
+      },
+      {
+        "writer": "B",
+        "sequence": 3,
+        "actions": 3
+      },
+      {
+        "writer": "C",
+        "sequence": 3,
+        "actions": 3
+      }
+    ],
+    "pending_after_a": true,
+    "b_commits_latest_publication": true,
+    "cancelled_waiter_did_not_cancel_writer": true
+  },
+  "caller_snapshot_negative_control": {
+    "commits": [
+      {
+        "writer": "A",
+        "sequence": 1,
+        "actions": 1
+      },
+      {
+        "writer": "B",
+        "sequence": 2,
+        "actions": 2
+      },
+      {
+        "writer": "C",
+        "sequence": 3,
+        "actions": 3
+      }
+    ],
+    "pending_after_a": true,
+    "b_commits_latest_publication": false,
+    "cancelled_waiter_did_not_cancel_writer": true
+  },
+  "current_generation_ack_negative_control": {
+    "commits": [
+      {
+        "writer": "A",
+        "sequence": 1,
+        "actions": 1
+      },
+      {
+        "writer": "B",
+        "sequence": 3,
+        "actions": 3
+      },
+      {
+        "writer": "C",
+        "sequence": 3,
+        "actions": 3
+      }
+    ],
+    "pending_after_a": false,
+    "b_commits_latest_publication": true,
+    "cancelled_waiter_did_not_cancel_writer": true
+  }
+}
