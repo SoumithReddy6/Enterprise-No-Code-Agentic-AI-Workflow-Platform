@@ -1,0 +1,74 @@
+{
+  "literal_model_generation_policy": {
+    "control": false,
+    "publications": [
+      {
+        "model_generation": 0,
+        "sequence": 1,
+        "counter": 1
+      },
+      {
+        "model_generation": 0,
+        "sequence": 2,
+        "counter": 2
+      }
+    ],
+    "runtime_counter": 2,
+    "stored_counter": 1,
+    "stored_remaining": 9,
+    "model_generation": 0
+  },
+  "publication_sequence_control": {
+    "control": true,
+    "publications": [
+      {
+        "model_generation": 0,
+        "sequence": 1,
+        "counter": 1
+      },
+      {
+        "model_generation": 0,
+        "sequence": 2,
+        "counter": 2
+      }
+    ],
+    "runtime_counter": 2,
+    "stored_counter": 2,
+    "stored_remaining": 8,
+    "model_generation": 0
+  },
+  "valid_commit_barrier": {
+    "B_published_while_A_held": true,
+    "B_committed_while_A_held": false,
+    "commit_order": [
+      "A",
+      "B"
+    ]
+  },
+  "raw_langgraph_side_entry": [
+    {
+      "take_fork": true,
+      "trace": [
+        "choose",
+        "fork",
+        "a",
+        "b",
+        "join",
+        "out"
+      ],
+      "join_ran": true,
+      "answer_ran": true,
+      "graph_returned": true
+    },
+    {
+      "take_fork": false,
+      "trace": [
+        "choose",
+        "a"
+      ],
+      "join_ran": false,
+      "answer_ran": false,
+      "graph_returned": true
+    }
+  ]
+}

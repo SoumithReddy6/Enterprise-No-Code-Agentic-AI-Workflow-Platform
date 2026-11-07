@@ -1,0 +1,64 @@
+{
+  "reviewed_commit": "2ad952acb1dde1ba88dee977aab7bdf35c8ce874",
+  "verdict": "request changes",
+  "findings": [
+    {
+      "id": "A53-I01",
+      "priority": 1,
+      "reason": "new provider request starts while a newer known usage generation is still pending"
+    }
+  ],
+  "preserved_input_count": 77,
+  "changed_inputs": [],
+  "tracked_worktree_clean": true,
+  "git_diff_check": 0,
+  "focused_backend": {
+    "passed": 113,
+    "skipped": 3,
+    "reason": "RELAY_TEST_POSTGRES_URL unset"
+  },
+  "full_backend": {
+    "seed": 0,
+    "passed": 2044,
+    "skipped": 3,
+    "seconds": 104.04
+  },
+  "frontend_bindings": {
+    "passed": 8
+  },
+  "real_worker_probe": {
+    "reproduction_runs": 3,
+    "control_runs": 3,
+    "original_dispatch": {
+      "generation": 2,
+      "acknowledged": 1,
+      "stored_tokens": 5,
+      "pending": true
+    },
+    "control_dispatch": {
+      "generation": 2,
+      "acknowledged": 2,
+      "stored_tokens": 10,
+      "pending": false
+    }
+  },
+  "sqlite_sigkill": {
+    "passed": true,
+    "model_calls": {
+      "branch-a": 1,
+      "branch-b": 2
+    },
+    "join_runs": 1,
+    "final_tokens": 30
+  },
+  "hosted_jobs_passed": 5,
+  "hosted_run": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42277225039",
+  "not_independently_rerun": [
+    "remaining four hash seeds",
+    "local PostgreSQL rows",
+    "full frontend build/browser suites",
+    "deployed scenario gate",
+    "all 17 implementation mutants"
+  ],
+  "application_changes": false
+}

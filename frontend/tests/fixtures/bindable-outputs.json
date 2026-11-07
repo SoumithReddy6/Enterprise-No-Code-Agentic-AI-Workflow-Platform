@@ -15,6 +15,7 @@
   "condition": [
    "branch"
   ],
+  "join": [],
   "prompt": [
    "text"
   ],
@@ -728,6 +729,127 @@
      "agent.provider",
      "agent.sources",
      "agent.grounding"
+    ]
+   }
+  },
+  "fork_join": {
+   "workflow": {
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "inputs": {}
+     },
+     {
+      "id": "fork",
+      "type": "prompt",
+      "inputs": {
+       "message": "input.message"
+      }
+     },
+     {
+      "id": "a",
+      "type": "prompt",
+      "inputs": {
+       "message": "fork.text"
+      }
+     },
+     {
+      "id": "b1",
+      "type": "prompt",
+      "inputs": {
+       "message": "fork.text"
+      }
+     },
+     {
+      "id": "b2",
+      "type": "prompt",
+      "inputs": {
+       "message": "b1.text"
+      }
+     },
+     {
+      "id": "join",
+      "type": "join",
+      "inputs": {}
+     },
+     {
+      "id": "out",
+      "type": "response",
+      "inputs": {
+       "text": "b2.text"
+      }
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-fork-",
+      "source": "input",
+      "target": "fork"
+     },
+     {
+      "id": "fork-a-",
+      "source": "fork",
+      "target": "a"
+     },
+     {
+      "id": "fork-b1-",
+      "source": "fork",
+      "target": "b1"
+     },
+     {
+      "id": "a-join-",
+      "source": "a",
+      "target": "join"
+     },
+     {
+      "id": "b1-b2-",
+      "source": "b1",
+      "target": "b2"
+     },
+     {
+      "id": "b2-join-",
+      "source": "b2",
+      "target": "join"
+     },
+     {
+      "id": "join-out-",
+      "source": "join",
+      "target": "out"
+     }
+    ]
+   },
+   "bindable": {
+    "input": [],
+    "fork": [
+     "input.message"
+    ],
+    "a": [
+     "input.message",
+     "fork.text"
+    ],
+    "b1": [
+     "input.message",
+     "fork.text"
+    ],
+    "b2": [
+     "input.message",
+     "fork.text",
+     "b1.text"
+    ],
+    "join": [
+     "input.message",
+     "fork.text",
+     "a.text",
+     "b1.text",
+     "b2.text"
+    ],
+    "out": [
+     "input.message",
+     "fork.text",
+     "a.text",
+     "b1.text",
+     "b2.text"
     ]
    }
   }

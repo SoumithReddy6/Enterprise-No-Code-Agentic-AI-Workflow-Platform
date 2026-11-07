@@ -1,0 +1,13 @@
+## npm test
+ℹ tests 116
+ℹ pass 116
+ℹ fail 0
+## typecheck
+exit 0
+## lint
+exit 0 (no findings)
+
+## build
+exit 0
+## browser (Chromium)
+  49 passed (49.0s)

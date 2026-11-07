@@ -10,7 +10,7 @@ This README is about how the system is designed for those cases.
 | --- | --- |
 | **Status** | Working local platform, single workspace per account. Intended for loopback use until the deployment and identity work below lands. |
 | **Stack** | React + React Flow · FastAPI · LangGraph · SQLAlchemy on SQLite or PostgreSQL · Alembic · Ollama, OpenAI, Claude · FAISS, Elasticsearch, Pinecone · Docker sandbox |
-| **Verification** | 2,021 backend tests run under five hash seeds · 115 frontend unit tests + 49 Chromium tests · 23 deployed-process production scenarios · 17 live-model workflows · PostgreSQL conformance · five GitHub Actions jobs · a 53-question grounding gate with thresholds fixed before measurement |
+| **Verification** | 2,049 backend tests run under five hash seeds · 116 frontend unit tests + 49 Chromium tests · 23 deployed-process production scenarios · 17 live-model workflows · PostgreSQL conformance · five GitHub Actions jobs · a 53-question grounding gate with thresholds fixed before measurement |
 
 **Start here (five minutes).** [§2.3](#23-did-the-external-write-happen) shows how a write with an unknown outcome is never sent twice. [§2.6](#26-budgets-that-reset-on-resume-leak-through-nesting-or-lose-their-count) shows how token spend survives a crash at the exact commit. [§4](#4-evaluation-measured-including-what-failed) shows the grounding results, including the three approaches that failed.
 
@@ -230,7 +230,7 @@ Each doubling of item count adds roughly 10–25% more bytes, not 4×.
 
 **Evidence.**
 - An early audit found loop-body retries bypassing the retry policy, and replays charging twice. Both were fixed by moving everything onto the shared boundary (S07), and the S07–S09 reviews are kept in [`docs/reviews`](docs/reviews/). A live-model check (L01) confirms real Ollama usage survives into durable events.
-- An independent [token-accounting review](docs/reviews/token-accounting-production-review-2026-10-25.md) compared Relay with published provider and gateway behavior and recorded eight findings (TA01–TA08): four reproduced defects, plus policy limits and conditional gaps. TA01–TA07 are closed. TA08 (an old snapshot replacing a newer one) was reproduced only with two test threads; Relay has no parallel branches yet, so it stays an A5.3 prerequisite. Each fix had an independently reviewed design, new tests run first against the previous code (the defect tests failed there by wrong values, not by a missing function), mutation testing, the full suite under five hash seeds and the deployed scenario gate: 138 new tests and 72 deliberate breaks of the fixes, all detected.
+- An independent [token-accounting review](docs/reviews/token-accounting-production-review-2026-10-25.md) compared Relay with published provider and gateway behavior and recorded eight findings (TA01–TA08): four reproduced defects, plus policy limits and conditional gaps. All eight are closed. TA08 (an old snapshot replacing a newer one) needs concurrent commits, so it was fixed with parallel branches (A5.3 Part 1): one lock per run attempt orders the accounting commits, and each commit saves the newest snapshot. Each fix had an independently reviewed design, new tests run first against the previous code (the defect tests failed there by wrong values, not by a missing function), mutation testing, the full suite under five hash seeds and the deployed scenario gate: 138 new tests and 72 deliberate breaks of the fixes, all detected. A5.3 Part 1 added 30 tests and 20 breaks on the same terms, including the correction its review found (a save before a model call now also covers spend another branch reported during that save).
 - TA02: 24 tests, 22 of which failed on the previous code, and 12 of 12 deliberate breaks of the fix detected. Worker processes are killed with `SIGKILL` while the commit is held, on SQLite, and on PostgreSQL in CI. Evidence: [`evals/results/ta02-fix-2026-10-31`](evals/results/ta02-fix-2026-10-31/).
 - The other fixes: [TA01](evals/results/ta01-fix-2026-10-30/) (23 tests, 7 mutants), [TA03](evals/results/ta03-fix-2026-11-03/) (13, 8), [TA04](evals/results/ta04-fix-2026-10-30/) (43, 16), [TA05](evals/results/ta05-fix-2026-11-05/) (9, 9), [TA06](evals/results/ta06-fix-2026-11-05/) (16, 11), [TA07](evals/results/ta07-fix-2026-11-05/) (10, 9). The independent reviews found real gaps, for example two finish paths that skipped the overshoot record and a log filter that dropped the new usage status; each was fixed before closure.
 
@@ -419,7 +419,7 @@ These are substring and abstention heuristics, not proof of semantic correctness
 
 | Layer | What runs | Where |
 | --- | --- | --- |
-| Unit and integration | 2,021 backend tests; 115 frontend tests | CI (a random hash seed, then seed 1) + local (`PYTHONHASHSEED` 0–4 for each change, to catch hidden ordering assumptions) |
+| Unit and integration | 2,049 backend tests (3 need PostgreSQL); 116 frontend tests | CI (a random hash seed, then seed 1) + local (`PYTHONHASHSEED` 0–4 for each change, to catch hidden ordering assumptions) |
 | Deployed processes | 23 scenarios against a real API process, real worker processes and an HTTP receiver: kill -9 mid-write, restarts between approvals, stale leases, SSRF, tenant isolation | `scripts/check_production_scenarios.py` |
 | Live models | 17 workflow shapes on real Ollama models and real Docker (last full run 2026-10-06) | same runner, `--live-models` |
 | PostgreSQL | migrations up/down/up with populated history, four concurrent workers, a stale lease, `SIGKILL` inside a loop and at the accounting commit | CI `postgres-conformance` |
@@ -444,7 +444,7 @@ flowchart LR
     classDef later fill:#f1f3f4,stroke:#9aa0a6,color:#3c4043
 
     A3["A3 error policy<br/>+ retries"]:::done --> A4["A4 for-each<br/>iteration"]:::done --> A51["A5.1 typed<br/>conditions"]:::done
-    A51 --> A52["A5.2 multi-way<br/>routing"]:::done --> TA["Token accounting<br/>TA01–TA07"]:::done --> A53["A5.3 parallel branches<br/>+ explicit joins<br/>+ TA08"]:::next --> A6["A6 subgraphs +<br/>bounded loops"]:::later
+    A51 --> A52["A5.2 multi-way<br/>routing"]:::done --> TA["Token accounting<br/>TA01–TA07"]:::done --> A53["A5.3 Part 1: parallel<br/>branches + joins + TA08"]:::done --> A53E["A5.3 Part 2:<br/>editor support"]:::next --> A6["A6 subgraphs +<br/>bounded loops"]:::later
     B1["B1 Alembic"]:::done --> B2["B2 Redis: per-tenant budgets,<br/>rate limits, fair queueing"]:::later
     B2 --> B3["B3 object storage<br/>for documents"]:::later
     B2 --> B4["B4 orgs, roles,<br/>resource grants"]:::later --> B5["B5 SSO · SCIM ·<br/>audit log"]:::later
@@ -454,8 +454,9 @@ flowchart LR
 ```
 
 - **A5.2 (done).** The [Switch](docs/multi-way-routing.md) routes to one of up to 15 cases or Default, on checked or trusted values only.
-- **Token accounting (done).** TA01–TA07 are closed (§2.6). TA08 moves to A5.3, because parallel branches are the first feature that can make it happen.
-- **A5.3 (next).** Parallel fan-out with explicit joins. The hard part is concurrency correctness, not syntax. Shared budgets, approvals, cancellation and crash recovery must stay correct when branches run at once, and the binding rule in §2.8 must learn that after a join every branch has run. The design is written and reviewed. The review found that reserving `max_tokens` alone cannot enforce a total-token ceiling, so a strict mode must reserve input and output allowance before each call and settle afterwards (TA05, TA08).
+- **Token accounting (done).** TA01–TA08 are closed (§2.6); TA08 closed with A5.3 Part 1.
+- **A5.3 Part 1 (done).** A node with 2–8 next nodes forks into [parallel branches](docs/operations.md#parallel-branches) that end at one Join; after the Join every branch output is bindable (§2.8). Branches are read-only, so cancelling the others when one fails changes nothing outside Relay. The token limit stays an admission limit: inside a fork a run can end above it by one call per running branch. Forks are built through the API until the editor supports them.
+- **A5.3 Part 2 (next).** Drawing forks and Joins in the editor. Writes and approvals inside branches need a different runtime and stay later work (A5.3b), as does a strict token cap that reserves input and output allowance before each call (TA05).
 - **B2.** Shared runtime state in Redis. Today's queue is global FIFO, so one tenant can starve others, and limits are per-run only. Redis stays optional: without it the platform runs exactly as today.
 - **B4–B5.** Organisations with roles and resource-scoped grants, enforced in the worker where credentials resolve (not only at the API), then SSO and SCIM.
 - **C–F.** A data-source interface whose drivers must pass one conformance suite, Text-to-SQL over governed definitions, GraphRAG scored against the existing 53-question gate, and tracing. Each capability lands with a measurement, and anything that does not earn its place gets a written verdict, not a quiet removal.
@@ -467,7 +468,7 @@ flowchart LR
 - Global FIFO queue and in-process rate state (B2).
 - Quality numbers come from an 8B local model and heuristic scoring. Hosted models have not been put through the same gate yet.
 - The opt-in request reader passes its safety gate but fails its usability gate: it admitted 9 of 20 valid requests against 18 required. Improving it needs a new frozen test set, so the old one is not tuned against.
-- The token ceiling is an admission limit, not a strict cap (§2.6): a run can end above it by its last admitted call, and calls with no reported usage add nothing to it. Relay does not send Claude `cache_control` today, so the cache accounting is tested on recorded response shapes, not on live cached calls. Old runs keep their old counts; nothing is backfilled.
+- The token ceiling is an admission limit, not a strict cap (§2.6): a run can end above it by its last admitted call (one call per running branch inside a fork), and calls with no reported usage add nothing to it. Relay does not send Claude `cache_control` today, so the cache accounting is tested on recorded response shapes, not on live cached calls. Old runs keep their old counts; nothing is backfilled.
 - Runs created before the TA02 accounting rule are not trusted to resume model calls, and stop with a reason instead.
 - Browser tests cover specific flows on Chromium, not the whole editor.
 

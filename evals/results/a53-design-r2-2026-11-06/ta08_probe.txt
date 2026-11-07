@@ -1,0 +1,4 @@
+reserve_accounting lower tokens : refused: The accounting write was refused because it would lower tokens_spent. | final tokens 30 actions 2
+reserve_accounting equal tokens : True | final tokens 30 actions 2 (newer was 3)
+record_accounting lower tokens : refused: The accounting write was refused because it would lower tokens_spent. | final tokens 30 actions 2
+record_accounting equal tokens : True | final tokens 30 actions 2 (newer was 3)

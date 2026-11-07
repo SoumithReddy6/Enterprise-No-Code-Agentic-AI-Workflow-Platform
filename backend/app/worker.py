@@ -14,7 +14,7 @@ from .platform_validation import platform_errors,kb_errors
 from .kb_gateway import KnowledgeServices
 from . import approvals
 from .execution_policy import ExecutionIdentity
-from .accounting_state import AccountingDurability,AccountingUnavailable,LEGACY_APPROVED_WRITE,accounting_trusted
+from .accounting_state import AccountingDurability,AccountingPublications,AccountingUnavailable,LEGACY_APPROVED_WRITE,accounting_trusted
 
 RUN_TIMEOUT_SECONDS=120
 from .observability import journal,request_id,run_id,tenant_id
@@ -62,15 +62,30 @@ class Worker:
     async def _execute(self,run):
         id=run['id'];owner=run.get('_claim_owner',self.owner);started=time.perf_counter()
         journal(event='run.start',run_id=id,tenant=run.get('tenant_id'),workflow=run['workflow'].get('name'),nodes=len(run['workflow'].get('nodes',[])),resumed=bool(run.get('checkpoints')))
-        accounting={}
         # Trust is decided at claim, inside graph_run, so a malformed snapshot fails the run.
         durability=AccountingDurability(False)
+        accounting=AccountingPublications(durability)
+        async def commit(write):
+            # One commit at a time, each saving the newest publication. Spend that arrives
+            # while it runs stays pending until a snapshot containing it is confirmed.
+            async with accounting.lock:
+                generation,snapshot=accounting.newest()
+                saved=await asyncio.to_thread(write,snapshot)
+                if saved is True and generation is not None:durability.acknowledge(generation)
+                return saved
+        async def committed(write):
+            # The commit owns the lock until its thread finishes, so a cancelled caller still
+            # waits for it: the next commit can never overtake it. Returns (result, cancelled).
+            task=asyncio.create_task(commit(write));cancelled=False
+            while True:
+                try:return await asyncio.shield(task),cancelled
+                except asyncio.CancelledError:
+                    if task.cancelled():raise
+                    cancelled=True
         async def persist_accounting(snapshot):
-            # The generation the caller's snapshot was taken at; a later one stays pending.
-            generation=durability.generation
             accounting.update(snapshot)
-            saved=await asyncio.to_thread(self.store.reserve_accounting,id,owner,snapshot)
-            if saved is True:durability.acknowledge(generation)
+            saved,cancelled=await committed(lambda newest:self.store.reserve_accounting(id,owner,newest))
+            if cancelled:raise asyncio.CancelledError()
             return saved
         # Platform work this attempt performed: a request sent now, or the stored result of
         # a write this run already sent. Neither is charged here. The policy reads it to tell
@@ -81,24 +96,15 @@ class Worker:
         async def action_settled(invocation):
             return await asyncio.to_thread(self.store.completed_action,id,invocation) is not None
         async def persist_spend(snapshot):
-            generation=durability.generation
             accounting.update(snapshot)
-            saved=await asyncio.to_thread(self.store.record_accounting,id,owner,snapshot)
-            if saved is True:durability.acknowledge(generation)
+            saved,cancelled=await committed(lambda newest:self.store.record_accounting(id,owner,newest))
+            if cancelled:raise asyncio.CancelledError()
             return saved
         async def emit(event):
-            # Frozen before the thread starts: the event commits with the spend known when it
-            # was emitted, and only that version is acknowledged.
-            generation,frozen=durability.capture(accounting) if accounting else (None,None)
-            write=asyncio.create_task(asyncio.to_thread(self.store.worker_event,id,owner,event,accounting=frozen));cancelled=False
-            while True:
-                try:
-                    persisted=await asyncio.shield(write);break
-                except asyncio.CancelledError:
-                    if write.cancelled():raise
-                    cancelled=True
+            # The event keeps its own body; it commits with the newest published spend, and
+            # only that publication's generation is acknowledged.
+            persisted,cancelled=await committed(lambda newest:self.store.worker_event(id,owner,event,accounting=newest))
             if not persisted:raise asyncio.CancelledError()
-            if frozen is not None:durability.acknowledge(generation)
             if event.get('node_id') and event['status']!='running':
                 journal(event='node.'+event['status'],run_id=id,node_id=event['node_id'],transient=event.get('transient',False),cached=event.get('cached',False),duration_ms=event.get('duration_ms'),usage=event.get('usage'),error=event.get('error'))
             if cancelled:
@@ -239,9 +245,10 @@ class Worker:
             journal(event='run.finish',run_id=id,status='success',seconds=round(time.perf_counter()-started,3))
         except approvals.ApprovalPause as exc:
             try:
-                # The frame commits with the in-memory spend, not the older database copy.
-                generation,frozen=durability.capture(accounting) if accounting else (None,None)
-                approvals.pause(self.store,id,owner,exc,accounting=frozen)
+                # The frame commits with the newest published spend, not the older database copy.
+                async with accounting.lock:
+                    generation,frozen=accounting.newest()
+                    approvals.pause(self.store,id,owner,exc,accounting=frozen)
                 durability.acknowledge(generation)
                 journal(event='run.awaiting_approval',run_id=id)
             except Exception as pause_error:

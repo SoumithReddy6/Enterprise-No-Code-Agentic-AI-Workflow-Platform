@@ -332,7 +332,7 @@ Changing `AGENT_RUN_BUDGET` requires a worker restart. A paused or interrupted r
 
 It is an **admission limit**, the same model as published per-session budgets such as Claude Managed Agents session budgets and the Azure API Management token limit without prompt estimation. It is checked before each model call, using counts the provider itself reported (`prompt_eval_count`/`eval_count` on Ollama, `usage` on OpenAI and Claude). Missing counts add nothing to the ceiling, so a provider that reports nothing cannot be capped. Such calls are still counted as partial, unreported or unanswered in operator metrics (see **Call status**); check those counters before relying on the ceiling. A strict rule for unknown consumption is not part of this ceiling.
 
-**Overshoot.** The limit never aborts a call in flight; cancellation, timeouts and provider errors still apply. With sequential execution and an unchanged limit, the known total can end above the limit by at most the last admitted call. That bound does not cover consumption hidden by missing counts or by HTTP retries inside one call, and one call's own size is not bounded. A run that crosses the limit on its last model call keeps its status: `success` stays `success` and is not truncated, because no work was refused. Every finished run (success, failed or cancelled, including queued cancellation and a rejected or expired approval) whose durable spend is above a non-zero limit carries `token_limit: {"policy": "admission", "limit": 100, "spent": 110, "over": 10}` in its run data. It is compared with the limit in force when the run finished, so a limit lowered before then can show more than one call of overshoot. Runs at or under the limit, or with the limit unset to 0, have no record; resuming a run removes it until the run finishes again. A strict cap (reserving input plus `max_tokens` before each call, then settling) is not provided.
+**Overshoot.** The limit never aborts a call in flight; cancellation, timeouts and provider errors still apply. With an unchanged limit, the known total can end above the limit by at most the calls that were admitted and not yet reported when the limit was crossed. Outside parallel branches that is the last admitted call. Inside a fork it is one call for each branch running at that moment, so at most 8 for one fork: every running branch can be admitted against the same reported spend. This is the bound Claude Managed Agents states for multiagent sessions. That bound does not cover consumption hidden by missing counts or by HTTP retries inside one call, and one call's own size is not bounded. A run that crosses the limit on its last model call keeps its status: `success` stays `success` and is not truncated, because no work was refused. Every finished run (success, failed or cancelled, including queued cancellation and a rejected or expired approval) whose durable spend is above a non-zero limit carries `token_limit: {"policy": "admission", "limit": 100, "spent": 110, "over": 10}` in its run data. It is compared with the limit in force when the run finished, so a limit lowered before then can show more than one call of overshoot. Runs at or under the limit, or with the limit unset to 0, have no record; resuming a run removes it until the run finishes again. A strict cap (reserving input plus `max_tokens` before each call, then settling) is not provided.
 
 Once the ceiling is reached, no further model call is made, and the run is flagged `truncated` with
 
@@ -350,6 +350,26 @@ A call admitted under the ceiling can still finish above it: the ceiling stops f
 **Tokens are not money.** Prices differ by model by more than an order of magnitude, so convert with your provider's current price list rather than treating this number as a cost. The limit is denominated in tokens precisely because that is the only figure a provider states exactly.
 
 Sizing: a single multi-agent run over a large knowledge base typically consumes tens of thousands of tokens, so the 2,000,000 default is a runaway guard rather than a working limit. Lower it deliberately when moving to a metered provider, and set it per deployment rather than per workflow. Changing it requires a worker restart and does not affect runs already in flight.
+
+## Parallel branches
+
+A node with 2–8 next nodes is a **fork**: its branches run at the same time. Every branch is a chain of one or more nodes that ends at the same **Join**. The Join has no settings; it runs once, after every branch has finished. Nodes after the Join can bind the output of any branch node. Inside a branch, a node can bind only its own branch and the nodes before the fork, because a sibling branch may not have run yet.
+
+Until the editor supports forks (A5.3 Part 2), build them through the API or JSON import. The editor does not offer the Join in its palette, but it shows the correct bindings after a Join.
+
+**Branches are read-only.** Validation refuses these inside a branch, including in attached tools, specialists and loop bodies:
+
+- an external write (a write tool, an Agent with a write tool at any depth, a For each with a write body); put writes after the Join;
+- an Agent with the `memory` role;
+- a Response, a Condition, Switch, Request reader or other routing node, a Calculate, an error route or a nested fork.
+
+A branch can be entered only from its fork and left only to its Join. Two branches can meet only at a Join, and a Join waits for the branches of one fork only. A Join keeps `on_error: fail` and has no retry.
+
+**Failure.** A branch node that fails with `on_error: fail` fails the run. The other branches are cancelled, which is safe because they are read-only, and their running nodes show `cancelled`. Each node's own retry setting applies inside its branch first. With `on_error: continue` the branch finishes without outputs and the Join still runs.
+
+**Resume.** Checkpoints are per node, as before. After a crash, branch nodes with a saved success restore from it, unfinished branch nodes run again, and the Join runs once.
+
+**Budgets.** Branches share the run's action budget and token limit; see **Overshoot** above for the token bound. Within one run attempt the worker commits accounting one save at a time, and each save carries the newest spend, so concurrent branches cannot save an older snapshot over a newer one. Before each model call, all known spend must be saved; if another branch reports usage while that save runs, the worker saves again before the call starts, and a failed save refuses the call.
 
 ## Loop result and event size bounds
 

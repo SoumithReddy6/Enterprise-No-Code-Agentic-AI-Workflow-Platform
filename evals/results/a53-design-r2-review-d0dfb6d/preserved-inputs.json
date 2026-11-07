@@ -1,0 +1,15 @@
+{
+  "backend/app/accounting_state.py": "44caa810456c2c6edeed6d99fa1e418d480a554ff9ff70ecc01d8696f326d4b1",
+  "backend/app/compiler.py": "7340a5a7b901f3e5c69af6c1df575649bca14701a48b93bc50d1121766822915",
+  "backend/app/execution_policy.py": "797b67c23a9f8fd2ae916216234fda7d4bfa06baca582d035e750ee1177cd0b9",
+  "backend/app/worker.py": "b51b42a0249626b51ca858b3062a2d811328c1661d765c8dabc3bc091b1cb2fe",
+  "docs/reviews/a53-parallel-design-review-2026-10-25.md": "3a70b5ea6a9b1ae4b09511091bde0716790fe735f596ad0b64a88de9ba379475",
+  "docs/superpowers/specs/2026-10-24-parallel-branches-design.md": "91ff60c3ffdefed1247ef35bcb3f8ab6a1f55271403cd3a3791ed2440c39cd6e",
+  "evals/results/a53-design-r2-2026-11-06/README.md": "bfc87562d6ec0058a096228dfb470d360a18f6d12d656281a61a949fe877c97d",
+  "evals/results/a53-design-r2-2026-11-06/ta08_probe.py": "ea41157c15655194c315675a1163d3a81b153256d510016ff9560cc5c8a921e1",
+  "evals/results/a53-design-r2-2026-11-06/ta08_probe.txt": "c8ac149a4c8c447d49233e9a31353435dd5dd73144c385c19c1187698e0f7958",
+  "evals/results/a53-design-review-2026-10-25/README.md": "fb2cfd58177f3bc18a802abcf368863e882b3e3e760c7c5b9943e66e3a024471",
+  "evals/results/a53-design-review-2026-10-25/probe.py": "52b7b133fecebb1b65302b636b85edf11b17d8ce7848298ac2160fc41ce65708",
+  "evals/results/a53-design-review-2026-10-25/results.json": "d97238420783621313a23ae861cc2a07faba11d3144310af4773f51d39cc0f55",
+  "frontend/lib/workflow.ts": "d346f12b84a0ebe219601752ba26c57b069d0187523ec87460139698220816d2"
+}

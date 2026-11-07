@@ -1,0 +1,18 @@
+{
+  "joinHiddenFromPalette": true,
+  "currentEditorBindableAfterJoin": [
+    "input.message",
+    "fork.text"
+  ],
+  "requiredByBackendDesign": [
+    "input.message",
+    "fork.text",
+    "a.text",
+    "b.text"
+  ],
+  "missingBranchBindings": [
+    "a.text",
+    "b.text"
+  ],
+  "scope": "Current helper on a proposed Join graph; backend parallel implementation does not yet exist."
+}

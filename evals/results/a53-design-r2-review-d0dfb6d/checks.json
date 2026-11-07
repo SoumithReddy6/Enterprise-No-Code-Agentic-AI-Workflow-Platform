@@ -1,0 +1,33 @@
+{
+  "reviewed_commit": "d0dfb6dfcb1f5aa13b0c0bce4e4a00f369e4072d",
+  "preserved_inputs": {
+    "count": 13,
+    "changed": []
+  },
+  "tracked_worktree_clean": true,
+  "application_and_frontend_match_design_baseline_36bac03": true,
+  "git_diff_check": 0,
+  "commands": [
+    {
+      "command": "PYTHONPATH=. .venv/bin/python evals/results/a53-design-r2-review-d0dfb6d/probe_design.py",
+      "exit": 0
+    },
+    {
+      "command": "node --experimental-strip-types evals/results/a53-design-r2-review-d0dfb6d/probe_editor.mjs",
+      "exit": 0
+    },
+    {
+      "command": ".venv/bin/python -m pytest backend/tests/test_compiler.py backend/tests/test_accounting_durability.py backend/tests/test_usage_attribution.py backend/tests/test_execution_policy.py backend/tests/test_request_examples.py -q",
+      "exit": 0,
+      "result": "87 passed in 4.89s"
+    }
+  ],
+  "not_run": [
+    "full backend suite",
+    "frontend build",
+    "PostgreSQL process tests",
+    "hosted CI",
+    "implementation mutants"
+  ],
+  "new_report": "docs/reviews/a53-design-r2-review-2026-11-06.md"
+}

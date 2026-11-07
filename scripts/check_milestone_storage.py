@@ -241,6 +241,88 @@ def accounting_commit(kind, moment, output):
         model.close()
 
 
+class BranchModels:
+    """Ollama fixture for the A5.3 D01 rows: branch A answers at once; branch B's first
+    request is held open, so it is outstanding when the worker is killed."""
+    def __init__(self):
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        self.calls, self.lock, self.release = [], threading.Lock(), threading.Event()
+        owner = self
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, *args): pass
+            def do_POST(self):
+                model = json.loads(self.rfile.read(int(self.headers['Content-Length'])))['model']
+                with owner.lock:
+                    owner.calls.append(model)
+                    held = model == 'branch-b' and owner.calls.count('branch-b') == 1
+                if held: owner.release.wait(120)
+                body = json.dumps({'message': {'role': 'assistant', 'content': f'answer {model}'},
+                                   'prompt_eval_count': 10, 'eval_count': 5}).encode()
+                try:
+                    self.send_response(200); self.send_header('Content-Length', str(len(body)))
+                    self.send_header('Content-Type', 'application/json'); self.end_headers(); self.wfile.write(body)
+                except OSError: pass  # The killed worker's connection is gone.
+        self.server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True); self.thread.start()
+        self.url = f'http://127.0.0.1:{self.server.server_address[1]}'
+
+    def count(self, model):
+        with self.lock: return self.calls.count(model)
+
+    def close(self):
+        self.release.set(); self.server.shutdown(); self.server.server_close(); self.thread.join()
+
+
+def parallel_flow():
+    model = lambda id, name: {'id': id, 'type': 'llm', 'inputs': {'prompt': 'fork.text'}, 'config': {'provider': 'ollama', 'model': name}}
+    nodes = [{'id': 'input', 'type': 'chat_input'}, {'id': 'fork', 'type': 'prompt', 'inputs': {'message': 'input.message'}},
+             model('a1', 'branch-a'), model('b1', 'branch-b'), {'id': 'join', 'type': 'join'},
+             {'id': 'out', 'type': 'response', 'inputs': {'text': 'a1.text'}}]
+    pairs = [('input', 'fork'), ('fork', 'a1'), ('fork', 'b1'), ('a1', 'join'), ('b1', 'join'), ('join', 'out')]
+    return {'version': 1, 'name': 'A5.3 parallel crash', 'nodes': nodes,
+            'edges': [{'id': str(i), 'source': a, 'target': b} for i, (a, b) in enumerate(pairs)]}
+
+
+def parallel_crash(kind, output):
+    """A5.3 D01: SIGKILL after branch A's checkpoint commit while branch B's call is outstanding.
+
+    The resumed run restores A from its checkpoint without a request, sends B again, runs the
+    Join once, and saves A's 15 tokens once (A 15 + B's resumed call 15; B's killed call was
+    never answered, so it reported nothing).
+    """
+    models = BranchModels()
+    try:
+        with database(kind) as url, deployed(url, output, {'OLLAMA_BASE_URL': models.url}) as (lab, store):
+            for name in ('branch-a', 'branch-b'):
+                response = lab.client.post('/api/models', json={'provider': 'ollama', 'model': name})
+                assert response.status_code == 201, response.text
+            identifier = lab.submit(parallel_flow(), 'synthetic parallel probe')
+            held = start_worker(lab, 'serve', '--accounting-barrier', 'after_commit', '--barrier-node', 'a1')
+            barrier = lab.directory / 'accounting-barrier'
+            wait_for(lambda: barrier.exists() and models.count('branch-b') == 1, 60)
+            os.kill(held.pid, signal.SIGKILL); held.wait(timeout=10)
+            prior = store.run(identifier, lab.tenant)
+            assert 'a1' in prior['checkpoints'] and 'b1' not in prior['checkpoints'], sorted(prior['checkpoints'])
+            assert prior['accounting']['tokens_spent'] == 15, prior['accounting']
+            # Wait for the real default 30-second lease, without mutating the database.
+            start_worker(lab)
+            resumed = lab.wait(identifier, timeout=90)
+            assert resumed['status'] == 'success', resumed.get('error')
+            calls = {'branch-a': models.count('branch-a'), 'branch-b': models.count('branch-b')}
+            assert calls == {'branch-a': 1, 'branch-b': 2}, calls
+            joins = [e for e in resumed['events'] if e.get('node_id') == 'join' and e.get('status') == 'success']
+            assert len(joins) == 1, joins
+            assert resumed['output'] == 'answer branch-a'
+            assert resumed['accounting']['tokens_spent'] == 30, resumed['accounting']
+            assert lab.provider.calls == []
+            return {'database': kind, 'sigkill': 'after branch A checkpoint, branch B outstanding',
+                    'prior_checkpoints': sorted(prior['checkpoints']), 'prior_tokens_spent': 15,
+                    'model_calls': calls, 'join_runs': 1, 'final_tokens_spent': 30}
+    finally:
+        models.close()
+
+
 async def measure(url, n):
     import pytest
     from backend.app.worker import Worker
@@ -365,6 +447,7 @@ def main():
         ('populated-downgrade', lambda: populated_downgrade(output / 'downgrade')),
         *[(f'{kind}-accounting-{moment.replace("_", "-")}', lambda kind=kind, moment=moment: accounting_commit(kind, moment, output / f'accounting-{kind}-{moment}'))
           for kind in ('sqlite', 'postgres') for moment in ('before_commit', 'after_commit')],
+        *[(f'{kind}-parallel-sigkill', lambda kind=kind: parallel_crash(kind, output / f'parallel-{kind}')) for kind in ('sqlite', 'postgres')],
     ]
     if args.checks and set(args.checks) - {name for name, _ in checks}:
         parser.error('Unknown check name')

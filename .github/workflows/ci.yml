@@ -126,7 +126,11 @@ jobs:
       - run: >-
           python -u -m scripts.check_milestone_storage --out evals/results/postgres-ci
           --checks postgres-migrations postgres-four-workers postgres-stale-lease postgres-sigkill-loop
-          postgres-accounting-before-commit postgres-accounting-after-commit
+          postgres-accounting-before-commit postgres-accounting-after-commit postgres-parallel-sigkill
+      # The parallel accounting cases skip without this URL; each uses a temporary schema.
+      - run: python -m pytest backend/tests/test_parallel_accounting.py -q -rs
+        env:
+          RELAY_TEST_POSTGRES_URL: postgresql+psycopg://relay:relay_local@127.0.0.1:55432/relay
       - run: python -u -m scripts.scenarios.request_enforcement --out evals/results/postgres-ci/request-reviews
       - uses: actions/upload-artifact@v4
         if: always()

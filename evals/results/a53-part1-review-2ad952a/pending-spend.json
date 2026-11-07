@@ -1,0 +1,20 @@
+{
+  "control": false,
+  "observations": [
+    {
+      "provider": "a-repair",
+      "pending_at_dispatch": true,
+      "generation": 2,
+      "acknowledged": 1,
+      "stored_tokens": 5
+    }
+  ],
+  "calls": [
+    "a",
+    "b",
+    "a"
+  ],
+  "status": "success",
+  "final_tokens": 15,
+  "scope": "Real Worker and Store, actual Agent repair; only external model responses and persistence failures/timing are controlled."
+}

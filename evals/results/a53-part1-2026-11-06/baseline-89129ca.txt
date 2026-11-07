@@ -1,0 +1,1560 @@
+.FFFFFFFFFFFFFFFFFFFFFFFFF                                               [100%]
+=================================== FAILURES ===================================
+_________________________ test_v01_refused_topologies __________________________
+
+    def test_v01_refused_topologies():
+        # Branches that meet at an ordinary node.
+        meet = document([prompt('fork'), prompt('a1', 'fork.text'), prompt('b1', 'fork.text'), prompt('m', 'fork.text'), response('m.text')],
+                        [('input', 'fork'), ('fork', 'a1'), ('fork', 'b1'), ('a1', 'm'), ('b1', 'm'), ('m', 'out')])
+>       has(errors(meet), MEET)
+
+backend/tests/test_parallel_branches.py:130: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['fork: connect exactly one next node; parallel branches are not supported yet.']
+text = 'Parallel branches meet only at a Join', node = None, shape = ''
+
+    def has(messages, text, node=None, shape=''):
+        found = [m for m in messages if text in m and (node is None or m.startswith(f'{node}: ') or f' {node} ' in m)]
+>       assert found, f'{shape}: expected {text!r}{" for " + node if node else ""} in {messages}'
+E       AssertionError: : expected 'Parallel branches meet only at a Join' in ['fork: connect exactly one next node; parallel branches are not supported yet.']
+E       assert []
+
+backend/tests/test_parallel_branches.py:71: AssertionError
+_________________________ test_v02_accepted_topologies _________________________
+
+    def test_v02_accepted_topologies():
+        # Unequal lengths, then a second fork/Join region in sequence.
+        sequence = document([prompt('fork'), prompt('a1', 'fork.text'), prompt('b1', 'fork.text'), prompt('b2', 'b1.text'), join('j1'),
+                             prompt('g', 'a1.text'), prompt('c1', 'g.text'), prompt('d1', 'b2.text'), join('j2'), response('d1.text')],
+                            [('input', 'fork'), ('fork', 'a1'), ('fork', 'b1'), ('a1', 'j1'), ('b1', 'b2'), ('b2', 'j1'),
+                             ('j1', 'g'), ('g', 'c1'), ('g', 'd1'), ('c1', 'j2'), ('d1', 'j2'), ('j2', 'out')])
+>       assert errors(sequence) == []
+E       AssertionError: assert ['fork: conne...m node.', ...] == []
+E         
+E         Left contains 7 more items, first extra item: 'fork: connect exactly one next node; parallel branches are not supported yet.'
+E         Use -v to get more diff
+
+backend/tests/test_parallel_branches.py:152: AssertionError
+______________ test_v03_branches_cannot_stop_route_decide_or_fork ______________
+
+    def test_v03_branches_cannot_stop_route_decide_or_fork():
+        shapes = {
+            'response': (response('fork.text', 'a1'), []),
+            'condition': (condition('a1', 'fork.text'), ['true', 'false']),
+            'switch': ({'id': 'a1', 'type': 'switch', 'inputs': {'value': 'fork.text'}, 'config': {'cases': [
+                {'id': 'billing', 'label': 'Billing', 'when': {'field': 'category', 'operator': 'eq', 'compare_to': 'billing'}}]}}, ['billing', 'default']),
+            'request_reader': ({'id': 'a1', 'type': 'request_reader', 'inputs': {'message': 'fork.text'}, 'config': {}}, ['continue', 'reply']),
+            'calculate': ({'id': 'a1', 'type': 'calculate', 'inputs': {'value': 'fork.text'}, 'config': {'expression': '1 + 1'}}, []),
+            'error route': (prompt('a1', 'fork.text', on_error='route'), ['error']),
+            'nested fork': (prompt('a1', 'fork.text'), ['fork2']),
+        }
+        for name, (node, extra) in shapes.items():
+            raw = standard(a=node)
+            if name == 'response':
+                raw['edges'] = [e for e in raw['edges'] if not (e['source'] == 'a1' and e['target'] == 'join')]
+            for handle in extra:
+                if handle == 'fork2':
+                    raw['nodes'].append(prompt('a2', 'a1.text')); raw['nodes'].append(response('a2.text', 'out2'))
+                    raw['edges'].append({'id': 'x-fork2', 'source': 'a1', 'target': 'a2'})
+                    raw['edges'].append({'id': 'x-fork2b', 'source': 'a2', 'target': 'out2'})
+                elif handle == 'error':
+                    raw['nodes'].append(response('fork.text', 'recovered'))
+                    raw['edges'].append({'id': 'x-error', 'source': 'a1', 'target': 'recovered', 'sourceHandle': 'error'})
+                else:
+                    raw['nodes'].append(response('fork.text', f'r-{handle}'))
+                    raw['edges'].append({'id': f'x-{handle}', 'source': 'a1', 'target': f'r-{handle}', 'sourceHandle': handle})
+>           has(errors(raw), INSIDE, 'a1', name)
+
+backend/tests/test_parallel_branches.py:187: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['fork: connect exactly one next node; parallel branches are not supported yet.', 'Unknown node type: join.']
+text = 'branches cannot stop, route, decide or fork', node = 'a1'
+shape = 'response'
+
+    def has(messages, text, node=None, shape=''):
+        found = [m for m in messages if text in m and (node is None or m.startswith(f'{node}: ') or f' {node} ' in m)]
+>       assert found, f'{shape}: expected {text!r}{" for " + node if node else ""} in {messages}'
+E       AssertionError: response: expected 'branches cannot stop, route, decide or fork' for a1 in ['fork: connect exactly one next node; parallel branches are not supported yet.', 'Unknown node type: join.']
+E       assert []
+
+backend/tests/test_parallel_branches.py:71: AssertionError
+________________ test_v04_external_writes_belong_after_the_join ________________
+
+    def test_v04_external_writes_belong_after_the_join():
+        # A write tool as the branch step.
+        flow_write = standard(a={**write_tool('a1'), 'inputs': {'input': 'fork.text'}})
+>       has(errors(flow_write), WRITES, 'a1')
+
+backend/tests/test_parallel_branches.py:193: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['fork: connect exactly one next node; parallel branches are not supported yet.', 'Unknown node type: join.', 'out: invalid binding text = b2.text; use a declared output from a guaranteed upstream node.']
+text = 'external writes belong after the Join', node = 'a1', shape = ''
+
+    def has(messages, text, node=None, shape=''):
+        found = [m for m in messages if text in m and (node is None or m.startswith(f'{node}: ') or f' {node} ' in m)]
+>       assert found, f'{shape}: expected {text!r}{" for " + node if node else ""} in {messages}'
+E       AssertionError: : expected 'external writes belong after the Join' for a1 in ['fork: connect exactly one next node; parallel branches are not supported yet.', 'Unknown node type: join.', 'out: invalid binding text = b2.text; use a declared output from a guaranteed upstream node.']
+E       assert []
+
+backend/tests/test_parallel_branches.py:71: AssertionError
+________________ test_v05a_memory_agents_cannot_run_in_a_branch ________________
+
+    def test_v05a_memory_agents_cannot_run_in_a_branch():
+        as_step = standard(a=agent('a1', role='memory'))
+>       has(errors(as_step), MEMORY, 'a1')
+
+backend/tests/test_parallel_branches.py:215: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['fork: connect exactly one next node; parallel branches are not supported yet.', 'Unknown node type: join.', 'out: invalid binding text = b2.text; use a declared output from a guaranteed upstream node.']
+text = 'an Agent that writes memory cannot run in a parallel branch'
+node = 'a1', shape = ''
+
+    def has(messages, text, node=None, shape=''):
+        found = [m for m in messages if text in m and (node is None or m.startswith(f'{node}: ') or f' {node} ' in m)]
+>       assert found, f'{shape}: expected {text!r}{" for " + node if node else ""} in {messages}'
+E       AssertionError: : expected 'an Agent that writes memory cannot run in a parallel branch' for a1 in ['fork: connect exactly one next node; parallel branches are not supported yet.', 'Unknown node type: join.', 'out: invalid binding text = b2.text; use a declared output from a guaranteed upstream node.']
+E       assert []
+
+backend/tests/test_parallel_branches.py:71: AssertionError
+__________ test_v05b_ordinary_agents_may_share_the_default_memory_key __________
+
+    def test_v05b_ordinary_agents_may_share_the_default_memory_key():
+        raw = standard(a=agent('a1'), b=agent('b1'), out='a1.text')
+        assert all(n['config'].get('memory_key', 'default') == 'default' for n in raw['nodes'] if n['type'] == 'agent')
+>       assert errors(raw) == []
+E       AssertionError: assert ['fork: conne...stream node.'] == []
+E         
+E         Left contains 3 more items, first extra item: 'fork: connect exactly one next node; parallel branches are not supported yet.'
+E         Use -v to get more diff
+
+backend/tests/test_parallel_branches.py:229: AssertionError
+__________________ test_v06_a_fork_has_two_to_eight_branches ___________________
+
+    def test_v06_a_fork_has_two_to_eight_branches():
+        def wide(count):
+            nodes = [prompt('fork')] + [prompt(f'p{i}', 'fork.text') for i in range(count)] + [join(), response('p0.text')]
+            edges = [('input', 'fork')] + [('fork', f'p{i}') for i in range(count)] + [(f'p{i}', 'join') for i in range(count)] + [('join', 'out')]
+            return document(nodes, edges)
+>       assert errors(wide(8)) == []
+E       AssertionError: assert ['fork: conne...stream node.'] == []
+E         
+E         Left contains 3 more items, first extra item: 'fork: connect exactly one next node; parallel branches are not supported yet.'
+E         Use -v to get more diff
+
+backend/tests/test_parallel_branches.py:237: AssertionError
+_____________________________ test_v07_join_rules ______________________________
+
+    def test_v07_join_rules():
+        two_forks = document([prompt('f'), prompt('a1', 'f.text'), prompt('b1', 'f.text'), prompt('g', 'input.message'),
+                              prompt('c1', 'g.text'), prompt('d1', 'g.text'), join(), response('a1.text')],
+                             [('input', 'f'), ('f', 'a1'), ('f', 'b1'), ('a1', 'join'), ('b1', 'join'),
+                              ('f', 'g'), ('g', 'c1'), ('g', 'd1'), ('c1', 'join'), ('d1', 'join'), ('join', 'out')])
+>       has(errors(two_forks), ONE_FORK, 'join')
+
+backend/tests/test_parallel_branches.py:246: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['f: connect exactly one next node; parallel branches are not supported yet.', 'g: connect exactly one next node; para...known node type: join.', 'out: invalid binding text = a1.text; use a declared output from a guaranteed upstream node.']
+text = 'a Join waits for the branches of one fork', node = 'join', shape = ''
+
+    def has(messages, text, node=None, shape=''):
+        found = [m for m in messages if text in m and (node is None or m.startswith(f'{node}: ') or f' {node} ' in m)]
+>       assert found, f'{shape}: expected {text!r}{" for " + node if node else ""} in {messages}'
+E       AssertionError: : expected 'a Join waits for the branches of one fork' for join in ['f: connect exactly one next node; parallel branches are not supported yet.', 'g: connect exactly one next node; parallel branches are not supported yet.', 'Unknown node type: join.', 'out: invalid binding text = a1.text; use a declared output from a guaranteed upstream node.']
+E       assert []
+
+backend/tests/test_parallel_branches.py:71: AssertionError
+____________ test_b01_after_a_join_every_branch_output_is_bindable _____________
+
+    def test_b01_after_a_join_every_branch_output_is_bindable():
+        raw = standard(out='a1.text')
+>       assert errors(raw) == []
+E       AssertionError: assert ['fork: conne...stream node.'] == []
+E         
+E         Left contains 3 more items, first extra item: 'fork: connect exactly one next node; parallel branches are not supported yet.'
+E         Use -v to get more diff
+
+backend/tests/test_parallel_branches.py:259: AssertionError
+__________________ test_b02_a_branch_cannot_bind_its_sibling ___________________
+
+    def test_b02_a_branch_cannot_bind_its_sibling():
+        sibling = standard(b=prompt('b1', 'a1.text'))
+        has(errors(sibling), 'invalid binding message = a1.text', 'b1')
+>       assert errors(standard(b=prompt('b1', 'fork.text'))) == []
+E       AssertionError: assert ['fork: conne...stream node.'] == []
+E         
+E         Left contains 3 more items, first extra item: 'fork: connect exactly one next node; parallel branches are not supported yet.'
+E         Use -v to get more diff
+
+backend/tests/test_parallel_branches.py:269: AssertionError
+_____ test_b03_a_continue_node_in_a_branch_is_not_bindable_after_the_join ______
+
+    def test_b03_a_continue_node_in_a_branch_is_not_bindable_after_the_join():
+        raw = standard(a=prompt('a1', 'fork.text', on_error='continue'), out='a1.text')
+>       assert errors(raw) == ["a1: on_error 'continue' is not allowed while out reads its output; use 'route' instead."]
+E       assert ['fork: conne...stream node.'] == ["a1: on_erro...te' instead."]
+E         
+E         At index 0 diff: 'fork: connect exactly one next node; parallel branches are not supported yet.' != "a1: on_error 'continue' is not allowed while out reads its output; use 'route' instead."
+E         Left contains 3 more items, first extra item: "a1: on_error 'continue' is not allowed while out reads its output; use 'route' instead."
+E         Use -v to get more diff
+
+backend/tests/test_parallel_branches.py:276: AssertionError
+______ test_r01_branches_run_concurrently_and_the_join_waits_for_the_last ______
+
+fut = <_GatheringFuture finished exception=CancelledError()>, timeout = 10
+
+    async def wait_for(fut, timeout):
+        """Wait for the single Future or coroutine to complete, with timeout.
+    
+        Coroutine will be wrapped in Task.
+    
+        Returns result of the Future or coroutine.  When a timeout occurs,
+        it cancels the task and raises TimeoutError.  To avoid the task
+        cancellation, wrap it in shield().
+    
+        If the wait is cancelled, the task is also cancelled.
+    
+        If the task suppresses the cancellation and returns a value instead,
+        that value is returned.
+    
+        This function is a coroutine.
+        """
+        # The special case for timeout <= 0 is for the following case:
+        #
+        # async def test_waitfor():
+        #     func_started = False
+        #
+        #     async def func():
+        #         nonlocal func_started
+        #         func_started = True
+        #
+        #     try:
+        #         await asyncio.wait_for(func(), 0)
+        #     except asyncio.TimeoutError:
+        #         assert not func_started
+        #     else:
+        #         assert False
+        #
+        # asyncio.run(test_waitfor())
+    
+    
+        if timeout is not None and timeout <= 0:
+            fut = ensure_future(fut)
+    
+            if fut.done():
+                return fut.result()
+    
+            await _cancel_and_wait(fut)
+            try:
+                return fut.result()
+            except exceptions.CancelledError as exc:
+                raise TimeoutError from exc
+    
+        async with timeouts.timeout(timeout):
+>           return await fut
+                   ^^^^^^^^^
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <asyncio.locks.Event object at 0x10d32d860 [unset]>
+
+    async def wait(self):
+        """Block until the internal flag is true.
+    
+        If the internal flag is true on entry, return True
+        immediately.  Otherwise, block until another task calls
+        set() to set the flag to true, then return True.
+        """
+        if self._value:
+            return True
+    
+        fut = self._get_loop().create_future()
+        self._waiters.append(fut)
+        try:
+>           await fut
+E           asyncio.exceptions.CancelledError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/locks.py:213: CancelledError
+
+The above exception was the direct cause of the following exception:
+
+lab = (<backend.app.storage.Store object at 0x10befe510>, <backend.app.worker.Worker object at 0x10d1c34d0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bd4d490>
+
+    @pytest.mark.asyncio
+    async def test_r01_branches_run_concurrently_and_the_join_waits_for_the_last(lab, monkeypatch):
+        store, worker = lab
+        models = Models(monkeypatch, gated=('a', 'b'), barrier=('a', 'b'))
+        id, task = await start(store, worker, two_models())
+>       await asyncio.wait_for(asyncio.gather(models.started['a'].wait(), models.started['b'].wait()), 10)
+
+backend/tests/test_parallel_branches.py:350: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:487: in wait_for
+    async with timeouts.timeout(timeout):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Timeout [expired]>
+exc_type = <class 'asyncio.exceptions.CancelledError'>
+exc_val = CancelledError(), exc_tb = <traceback object at 0x10d367000>
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
+        assert self._state in (_State.ENTERED, _State.EXPIRING)
+    
+        if self._timeout_handler is not None:
+            self._timeout_handler.cancel()
+            self._timeout_handler = None
+    
+        if self._state is _State.EXPIRING:
+            self._state = _State.EXPIRED
+    
+            if self._task.uncancel() <= self._cancelling and exc_type is not None:
+                # Since there are no new cancel requests, we're
+                # handling this.
+                if issubclass(exc_type, exceptions.CancelledError):
+>                   raise TimeoutError from exc_val
+E                   TimeoutError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/timeouts.py:115: TimeoutError
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-06T18:36:01.304466+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:36:01.383854+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:36:01.384897+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.08}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:36:01.391440+00:00","request_id":null,"run_id":"af14c22a3cc04c1cb26eb10a7f3259dd","tenant":"local","event":"job.lease_acquired","worker_id":"456c454811c74d35afd2bd67a93ec0e3"}
+{"timestamp":"2026-11-06T18:36:01.391872+00:00","request_id":null,"run_id":"af14c22a3cc04c1cb26eb10a7f3259dd","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+{"timestamp":"2026-11-06T18:36:01.394095+00:00","request_id":null,"run_id":"af14c22a3cc04c1cb26eb10a7f3259dd","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:36:01.395195+00:00","request_id":null,"run_id":"af14c22a3cc04c1cb26eb10a7f3259dd","tenant":"local","event":"run.finish","status":"failed","seconds":0.003}
+_________________ test_r02_unequal_branches_run_the_join_once __________________
+
+lab = (<backend.app.storage.Store object at 0x10d2c2710>, <backend.app.worker.Worker object at 0x10d3cfc50>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bca9650>
+
+    @pytest.mark.asyncio
+    async def test_r02_unequal_branches_run_the_join_once(lab, monkeypatch):
+        store, worker = lab
+        Models(monkeypatch)
+        raw = document([prompt('fork'), model('a1', 'fork.text', 'a'), model('b1', 'fork.text', 'b'), model('b2', 'b1.text', 'b2'), join(), response('b2.text')],
+                       [('input', 'fork'), ('fork', 'a1'), ('fork', 'b1'), ('a1', 'join'), ('b1', 'b2'), ('b2', 'join'), ('join', 'out')])
+        id, task = await start(store, worker, raw); await task
+        result = store.run(id)
+>       assert result['status'] == 'success', result.get('error')
+E       AssertionError: fork: connect exactly one next node; parallel branches are not supported yet.
+E         Unknown node type: join.
+E         out: invalid binding text = b2.text; use a declared output from a guaranteed upstream node.
+E       assert 'failed' == 'success'
+E         
+E         - success
+E         + failed
+
+backend/tests/test_parallel_branches.py:370: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-06T18:36:11.441107+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:36:11.463706+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:36:11.464337+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.023}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:36:11.469995+00:00","request_id":null,"run_id":"cc5f91863abd43cf814cfbd9fa0ea7b8","tenant":"local","event":"job.lease_acquired","worker_id":"1bd57f2c122e40e181eb931de992906c"}
+{"timestamp":"2026-11-06T18:36:11.470337+00:00","request_id":null,"run_id":"cc5f91863abd43cf814cfbd9fa0ea7b8","tenant":"local","event":"run.start","nodes":7,"resumed":false}
+{"timestamp":"2026-11-06T18:36:11.472640+00:00","request_id":null,"run_id":"cc5f91863abd43cf814cfbd9fa0ea7b8","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:36:11.473824+00:00","request_id":null,"run_id":"cc5f91863abd43cf814cfbd9fa0ea7b8","tenant":"local","event":"run.finish","status":"failed","seconds":0.003}
+________ test_r03_a_failed_branch_fails_the_run_and_cancels_its_sibling ________
+
+fut = <coroutine object Event.wait at 0x10d578e40>, timeout = 10
+
+    async def wait_for(fut, timeout):
+        """Wait for the single Future or coroutine to complete, with timeout.
+    
+        Coroutine will be wrapped in Task.
+    
+        Returns result of the Future or coroutine.  When a timeout occurs,
+        it cancels the task and raises TimeoutError.  To avoid the task
+        cancellation, wrap it in shield().
+    
+        If the wait is cancelled, the task is also cancelled.
+    
+        If the task suppresses the cancellation and returns a value instead,
+        that value is returned.
+    
+        This function is a coroutine.
+        """
+        # The special case for timeout <= 0 is for the following case:
+        #
+        # async def test_waitfor():
+        #     func_started = False
+        #
+        #     async def func():
+        #         nonlocal func_started
+        #         func_started = True
+        #
+        #     try:
+        #         await asyncio.wait_for(func(), 0)
+        #     except asyncio.TimeoutError:
+        #         assert not func_started
+        #     else:
+        #         assert False
+        #
+        # asyncio.run(test_waitfor())
+    
+    
+        if timeout is not None and timeout <= 0:
+            fut = ensure_future(fut)
+    
+            if fut.done():
+                return fut.result()
+    
+            await _cancel_and_wait(fut)
+            try:
+                return fut.result()
+            except exceptions.CancelledError as exc:
+                raise TimeoutError from exc
+    
+        async with timeouts.timeout(timeout):
+>           return await fut
+                   ^^^^^^^^^
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <asyncio.locks.Event object at 0x10d69c440 [unset]>
+
+    async def wait(self):
+        """Block until the internal flag is true.
+    
+        If the internal flag is true on entry, return True
+        immediately.  Otherwise, block until another task calls
+        set() to set the flag to true, then return True.
+        """
+        if self._value:
+            return True
+    
+        fut = self._get_loop().create_future()
+        self._waiters.append(fut)
+        try:
+>           await fut
+E           asyncio.exceptions.CancelledError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/locks.py:213: CancelledError
+
+The above exception was the direct cause of the following exception:
+
+lab = (<backend.app.storage.Store object at 0x10d22c550>, <backend.app.worker.Worker object at 0x10d5dbc50>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d3ad590>
+
+    @pytest.mark.asyncio
+    async def test_r03_a_failed_branch_fails_the_run_and_cancels_its_sibling(lab, monkeypatch):
+        store, worker = lab
+        models = Models(monkeypatch, fail=('a',), gated=('b',))
+        id, task = await start(store, worker, two_models())
+>       await asyncio.wait_for(models.started['b'].wait(), 10)
+
+backend/tests/test_parallel_branches.py:380: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:487: in wait_for
+    async with timeouts.timeout(timeout):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Timeout [expired]>
+exc_type = <class 'asyncio.exceptions.CancelledError'>
+exc_val = CancelledError(), exc_tb = <traceback object at 0x10d543880>
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
+        assert self._state in (_State.ENTERED, _State.EXPIRING)
+    
+        if self._timeout_handler is not None:
+            self._timeout_handler.cancel()
+            self._timeout_handler = None
+    
+        if self._state is _State.EXPIRING:
+            self._state = _State.EXPIRED
+    
+            if self._task.uncancel() <= self._cancelling and exc_type is not None:
+                # Since there are no new cancel requests, we're
+                # handling this.
+                if issubclass(exc_type, exceptions.CancelledError):
+>                   raise TimeoutError from exc_val
+E                   TimeoutError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/timeouts.py:115: TimeoutError
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-06T18:36:11.481609+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:36:11.497451+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:36:11.497925+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.016}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:36:11.502493+00:00","request_id":null,"run_id":"7c83cc6a615641a29c3e33c0347a62b9","tenant":"local","event":"job.lease_acquired","worker_id":"bd4312cf9d3e425d91d0ce847ddc267f"}
+{"timestamp":"2026-11-06T18:36:11.502762+00:00","request_id":null,"run_id":"7c83cc6a615641a29c3e33c0347a62b9","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+{"timestamp":"2026-11-06T18:36:11.504560+00:00","request_id":null,"run_id":"7c83cc6a615641a29c3e33c0347a62b9","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:36:11.505641+00:00","request_id":null,"run_id":"7c83cc6a615641a29c3e33c0347a62b9","tenant":"local","event":"run.finish","status":"failed","seconds":0.003}
+_____________ test_r04_a_continue_branch_failure_lets_the_join_run _____________
+
+lab = (<backend.app.storage.Store object at 0x10d28b950>, <backend.app.worker.Worker object at 0x10d556650>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d1f98d0>
+
+    @pytest.mark.asyncio
+    async def test_r04_a_continue_branch_failure_lets_the_join_run(lab, monkeypatch):
+        store, worker = lab
+        Models(monkeypatch, fail=('a',))
+        id, task = await start(store, worker, two_models(out='b1.text', a1={'on_error': 'continue'})); await task
+        result = store.run(id)
+>       assert result['status'] == 'success' and result['output'] == 'answer b'
+E       AssertionError: assert ('failed' == 'success'
+E         
+E         - success
+E         + failed)
+
+backend/tests/test_parallel_branches.py:395: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-06T18:36:21.545911+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:36:21.569704+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:36:21.570370+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.024}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:36:21.575782+00:00","request_id":null,"run_id":"2d64d9b6d563404f993998c097d05846","tenant":"local","event":"job.lease_acquired","worker_id":"01635e2c163f4078a28ca7e7c8234942"}
+{"timestamp":"2026-11-06T18:36:21.576103+00:00","request_id":null,"run_id":"2d64d9b6d563404f993998c097d05846","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+{"timestamp":"2026-11-06T18:36:21.578380+00:00","request_id":null,"run_id":"2d64d9b6d563404f993998c097d05846","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:36:21.579611+00:00","request_id":null,"run_id":"2d64d9b6d563404f993998c097d05846","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+_________ test_r05_admission_limit_admits_one_call_per_running_branch __________
+
+lab = (<backend.app.storage.Store object at 0x10d557230>, <backend.app.worker.Worker object at 0x10d7e49d0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d4e9860>
+
+    @pytest.mark.asyncio
+    async def test_r05_admission_limit_admits_one_call_per_running_branch(lab, monkeypatch):
+        store, worker = lab
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '100')
+        models = Models(monkeypatch, tokens={'a': 80, 'b': 80, 'after': 10}, barrier=('a', 'b'))
+        raw = document([prompt('fork'), model('a1', 'fork.text', 'a'), model('b1', 'fork.text', 'b'), join(), model('after', 'a1.text', 'after'), response('after.text')],
+                       [('input', 'fork'), ('fork', 'a1'), ('fork', 'b1'), ('a1', 'join'), ('b1', 'join'), ('join', 'after'), ('after', 'out')])
+        id, task = await start(store, worker, raw); await task
+        result = store.run(id)
+>       assert sorted(models.calls) == ['a', 'b'], 'both branch calls are admitted at spend 0; the call after the Join is refused'
+E       AssertionError: both branch calls are admitted at spend 0; the call after the Join is refused
+E       assert [] == ['a', 'b']
+E         
+E         Right contains 2 more items, first extra item: 'a'
+E         Use -v to get more diff
+
+backend/tests/test_parallel_branches.py:409: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-06T18:36:21.587170+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:36:21.603551+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:36:21.604043+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:36:21.609194+00:00","request_id":null,"run_id":"5b9a88bfd10e442e9f50f52f5493ee4e","tenant":"local","event":"job.lease_acquired","worker_id":"23d724216d774dc0a9883f1223005479"}
+{"timestamp":"2026-11-06T18:36:21.609464+00:00","request_id":null,"run_id":"5b9a88bfd10e442e9f50f52f5493ee4e","tenant":"local","event":"run.start","nodes":7,"resumed":false}
+{"timestamp":"2026-11-06T18:36:21.611532+00:00","request_id":null,"run_id":"5b9a88bfd10e442e9f50f52f5493ee4e","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:36:21.612550+00:00","request_id":null,"run_id":"5b9a88bfd10e442e9f50f52f5493ee4e","tenant":"local","event":"run.finish","status":"failed","seconds":0.003}
+________ test_r06_contract_2_fork_on_the_request_readers_continue_route ________
+
+lab = (<backend.app.storage.Store object at 0x10d3aa690>, <backend.app.worker.Worker object at 0x10d428290>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d87d470>
+
+    @pytest.mark.asyncio
+    async def test_r06_contract_2_fork_on_the_request_readers_continue_route(lab, monkeypatch):
+        """The reader is a control node and never forks itself; a node on its continue route does."""
+        from backend.tests.test_request_reader import reading, settings
+        store, worker = lab
+        answers = [reading(item='chair', quantity=2, unit_price=10)]
+        async def chat(model, system, prompt, usage=None, **kwargs):
+            if usage is not None: usage.update(prompt_tokens=5, completion_tokens=2)
+            return answers.pop(0)
+        monkeypatch.setattr(providers, 'ollama_chat', chat)
+        raw = document([{'id': 'reader', 'type': 'request_reader', 'inputs': {'message': 'input.message'}, 'config': settings()},
+                        response('reader.reply', 'replied'), prompt('fork', 'reader.text'), prompt('p1', 'reader.text'), prompt('p2', 'reader.text'),
+                        join(), response('p1.text')],
+                       [('input', 'reader'), ('reader', 'replied', 'reply'), ('reader', 'fork', 'continue'), ('fork', 'p1'), ('fork', 'p2'),
+                        ('p1', 'join'), ('p2', 'join'), ('join', 'out')], contract=2)
+>       assert errors(raw) == []
+E       AssertionError: assert ['fork: conne...stream node.'] == []
+E         
+E         Left contains 3 more items, first extra item: 'fork: connect exactly one next node; parallel branches are not supported yet.'
+E         Use -v to get more diff
+
+backend/tests/test_parallel_branches.py:431: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-06T18:36:21.619378+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:36:21.634975+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:36:21.635443+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.016}
+____________ test_a01_action_only_snapshots_commit_in_order[sqlite] ____________
+
+fut = <coroutine object until.<locals>.poll at 0x10da51490>, timeout = 10
+
+    async def wait_for(fut, timeout):
+        """Wait for the single Future or coroutine to complete, with timeout.
+    
+        Coroutine will be wrapped in Task.
+    
+        Returns result of the Future or coroutine.  When a timeout occurs,
+        it cancels the task and raises TimeoutError.  To avoid the task
+        cancellation, wrap it in shield().
+    
+        If the wait is cancelled, the task is also cancelled.
+    
+        If the task suppresses the cancellation and returns a value instead,
+        that value is returned.
+    
+        This function is a coroutine.
+        """
+        # The special case for timeout <= 0 is for the following case:
+        #
+        # async def test_waitfor():
+        #     func_started = False
+        #
+        #     async def func():
+        #         nonlocal func_started
+        #         func_started = True
+        #
+        #     try:
+        #         await asyncio.wait_for(func(), 0)
+        #     except asyncio.TimeoutError:
+        #         assert not func_started
+        #     else:
+        #         assert False
+        #
+        # asyncio.run(test_waitfor())
+    
+    
+        if timeout is not None and timeout <= 0:
+            fut = ensure_future(fut)
+    
+            if fut.done():
+                return fut.result()
+    
+            await _cancel_and_wait(fut)
+            try:
+                return fut.result()
+            except exceptions.CancelledError as exc:
+                raise TimeoutError from exc
+    
+        async with timeouts.timeout(timeout):
+>           return await fut
+                   ^^^^^^^^^
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_parallel_branches.py:325: in poll
+    while not predicate(): await asyncio.sleep(.01)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+delay = 0.01, result = None
+
+    async def sleep(delay, result=None):
+        """Coroutine that completes after a given time (in seconds)."""
+        if delay <= 0:
+            await __sleep0()
+            return result
+    
+        if math.isnan(delay):
+            raise ValueError("Invalid delay: NaN (not a number)")
+    
+        loop = events.get_running_loop()
+        future = loop.create_future()
+        h = loop.call_later(delay,
+                            futures._set_result_unless_cancelled,
+                            future, result)
+        try:
+>           return await future
+                   ^^^^^^^^^^^^
+E           asyncio.exceptions.CancelledError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:704: CancelledError
+
+The above exception was the direct cause of the following exception:
+
+backend = 'sqlite'
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-309/test_a01_action_only_snapshots0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d8c8130>
+
+    @pytest.mark.asyncio
+    async def test_a01_action_only_snapshots_commit_in_order(backend, tmp_path, monkeypatch):
+        monkeypatch.setenv('AGENT_RUN_BUDGET', '10')
+        with lab(backend, tmp_path) as (store, worker):
+            tools(worker, monkeypatch); charged = debits(monkeypatch)
+            calls = Calls(store, monkeypatch); calls.hold('reserve_accounting')
+            id, task = await start(store, worker, fork_of([tool('a1'), tool('b1')], 'a1.text'))
+>           await until(calls.entered.is_set)
+
+backend/tests/test_parallel_accounting.py:159: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_parallel_branches.py:326: in until
+    await asyncio.wait_for(poll(), seconds)
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:487: in wait_for
+    async with timeouts.timeout(timeout):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Timeout [expired]>
+exc_type = <class 'asyncio.exceptions.CancelledError'>
+exc_val = CancelledError(), exc_tb = <traceback object at 0x10d7b1900>
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
+        assert self._state in (_State.ENTERED, _State.EXPIRING)
+    
+        if self._timeout_handler is not None:
+            self._timeout_handler.cancel()
+            self._timeout_handler = None
+    
+        if self._state is _State.EXPIRING:
+            self._state = _State.EXPIRED
+    
+            if self._task.uncancel() <= self._cancelling and exc_type is not None:
+                # Since there are no new cancel requests, we're
+                # handling this.
+                if issubclass(exc_type, exceptions.CancelledError):
+>                   raise TimeoutError from exc_val
+E                   TimeoutError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/timeouts.py:115: TimeoutError
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:36:21.684118+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:36:21.699881+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:36:21.700396+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.016}
+{"timestamp":"2026-11-06T18:36:21.704559+00:00","request_id":null,"run_id":"e958bdf8cc1546bfb851a2f9bf7e8dbb","tenant":"local","event":"job.lease_acquired","worker_id":"462e5546d9fb45e289f467dc2a2cbf02"}
+{"timestamp":"2026-11-06T18:36:21.704817+00:00","request_id":null,"run_id":"e958bdf8cc1546bfb851a2f9bf7e8dbb","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+{"timestamp":"2026-11-06T18:36:21.706280+00:00","request_id":null,"run_id":"e958bdf8cc1546bfb851a2f9bf7e8dbb","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:36:21.707449+00:00","request_id":null,"run_id":"e958bdf8cc1546bfb851a2f9bf7e8dbb","tenant":"local","event":"run.finish","status":"failed","seconds":0.003}
+___________ test_a01_action_only_snapshots_commit_in_order[postgres] ___________
+
+fut = <coroutine object until.<locals>.poll at 0x10ddc1ff0>, timeout = 10
+
+    async def wait_for(fut, timeout):
+        """Wait for the single Future or coroutine to complete, with timeout.
+    
+        Coroutine will be wrapped in Task.
+    
+        Returns result of the Future or coroutine.  When a timeout occurs,
+        it cancels the task and raises TimeoutError.  To avoid the task
+        cancellation, wrap it in shield().
+    
+        If the wait is cancelled, the task is also cancelled.
+    
+        If the task suppresses the cancellation and returns a value instead,
+        that value is returned.
+    
+        This function is a coroutine.
+        """
+        # The special case for timeout <= 0 is for the following case:
+        #
+        # async def test_waitfor():
+        #     func_started = False
+        #
+        #     async def func():
+        #         nonlocal func_started
+        #         func_started = True
+        #
+        #     try:
+        #         await asyncio.wait_for(func(), 0)
+        #     except asyncio.TimeoutError:
+        #         assert not func_started
+        #     else:
+        #         assert False
+        #
+        # asyncio.run(test_waitfor())
+    
+    
+        if timeout is not None and timeout <= 0:
+            fut = ensure_future(fut)
+    
+            if fut.done():
+                return fut.result()
+    
+            await _cancel_and_wait(fut)
+            try:
+                return fut.result()
+            except exceptions.CancelledError as exc:
+                raise TimeoutError from exc
+    
+        async with timeouts.timeout(timeout):
+>           return await fut
+                   ^^^^^^^^^
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_parallel_branches.py:325: in poll
+    while not predicate(): await asyncio.sleep(.01)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+delay = 0.01, result = None
+
+    async def sleep(delay, result=None):
+        """Coroutine that completes after a given time (in seconds)."""
+        if delay <= 0:
+            await __sleep0()
+            return result
+    
+        if math.isnan(delay):
+            raise ValueError("Invalid delay: NaN (not a number)")
+    
+        loop = events.get_running_loop()
+        future = loop.create_future()
+        h = loop.call_later(delay,
+                            futures._set_result_unless_cancelled,
+                            future, result)
+        try:
+>           return await future
+                   ^^^^^^^^^^^^
+E           asyncio.exceptions.CancelledError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:704: CancelledError
+
+The above exception was the direct cause of the following exception:
+
+backend = 'postgres'
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-309/test_a01_action_only_snapshots1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d8c8d70>
+
+    @pytest.mark.asyncio
+    async def test_a01_action_only_snapshots_commit_in_order(backend, tmp_path, monkeypatch):
+        monkeypatch.setenv('AGENT_RUN_BUDGET', '10')
+        with lab(backend, tmp_path) as (store, worker):
+            tools(worker, monkeypatch); charged = debits(monkeypatch)
+            calls = Calls(store, monkeypatch); calls.hold('reserve_accounting')
+            id, task = await start(store, worker, fork_of([tool('a1'), tool('b1')], 'a1.text'))
+>           await until(calls.entered.is_set)
+
+backend/tests/test_parallel_accounting.py:159: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_parallel_branches.py:326: in until
+    await asyncio.wait_for(poll(), seconds)
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:487: in wait_for
+    async with timeouts.timeout(timeout):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Timeout [expired]>
+exc_type = <class 'asyncio.exceptions.CancelledError'>
+exc_val = CancelledError(), exc_tb = <traceback object at 0x10dec8b40>
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
+        assert self._state in (_State.ENTERED, _State.EXPIRING)
+    
+        if self._timeout_handler is not None:
+            self._timeout_handler.cancel()
+            self._timeout_handler = None
+    
+        if self._state is _State.EXPIRING:
+            self._state = _State.EXPIRED
+    
+            if self._task.uncancel() <= self._cancelling and exc_type is not None:
+                # Since there are no new cancel requests, we're
+                # handling this.
+                if issubclass(exc_type, exceptions.CancelledError):
+>                   raise TimeoutError from exc_val
+E                   TimeoutError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/timeouts.py:115: TimeoutError
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:36:31.845695+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:36:31.929364+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:36:31.931452+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.086}
+{"timestamp":"2026-11-06T18:36:31.982490+00:00","request_id":null,"run_id":"dbd68ca882704287a022182c69589ee6","tenant":"local","event":"job.lease_acquired","worker_id":"03ad3c7f3a9a49dbae735b830b6e0d3d"}
+{"timestamp":"2026-11-06T18:36:31.983490+00:00","request_id":null,"run_id":"dbd68ca882704287a022182c69589ee6","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+{"timestamp":"2026-11-06T18:36:31.992461+00:00","request_id":null,"run_id":"dbd68ca882704287a022182c69589ee6","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:36:31.996702+00:00","request_id":null,"run_id":"dbd68ca882704287a022182c69589ee6","tenant":"local","event":"run.finish","status":"failed","seconds":0.013}
+_ test_a02_spend_and_events_commit_in_order_and_pending_spend_stays_pending[sqlite] _
+
+fut = <_GatheringFuture finished exception=CancelledError()>, timeout = 10
+
+    async def wait_for(fut, timeout):
+        """Wait for the single Future or coroutine to complete, with timeout.
+    
+        Coroutine will be wrapped in Task.
+    
+        Returns result of the Future or coroutine.  When a timeout occurs,
+        it cancels the task and raises TimeoutError.  To avoid the task
+        cancellation, wrap it in shield().
+    
+        If the wait is cancelled, the task is also cancelled.
+    
+        If the task suppresses the cancellation and returns a value instead,
+        that value is returned.
+    
+        This function is a coroutine.
+        """
+        # The special case for timeout <= 0 is for the following case:
+        #
+        # async def test_waitfor():
+        #     func_started = False
+        #
+        #     async def func():
+        #         nonlocal func_started
+        #         func_started = True
+        #
+        #     try:
+        #         await asyncio.wait_for(func(), 0)
+        #     except asyncio.TimeoutError:
+        #         assert not func_started
+        #     else:
+        #         assert False
+        #
+        # asyncio.run(test_waitfor())
+    
+    
+        if timeout is not None and timeout <= 0:
+            fut = ensure_future(fut)
+    
+            if fut.done():
+                return fut.result()
+    
+            await _cancel_and_wait(fut)
+            try:
+                return fut.result()
+            except exceptions.CancelledError as exc:
+                raise TimeoutError from exc
+    
+        async with timeouts.timeout(timeout):
+>           return await fut
+                   ^^^^^^^^^
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <asyncio.locks.Event object at 0x10d713150 [unset]>
+
+    async def wait(self):
+        """Block until the internal flag is true.
+    
+        If the internal flag is true on entry, return True
+        immediately.  Otherwise, block until another task calls
+        set() to set the flag to true, then return True.
+        """
+        if self._value:
+            return True
+    
+        fut = self._get_loop().create_future()
+        self._waiters.append(fut)
+        try:
+>           await fut
+E           asyncio.exceptions.CancelledError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/locks.py:213: CancelledError
+
+The above exception was the direct cause of the following exception:
+
+backend = 'sqlite'
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-309/test_a02_spend_and_events_comm0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d753e70>
+
+    @pytest.mark.asyncio
+    async def test_a02_spend_and_events_commit_in_order_and_pending_spend_stays_pending(backend, tmp_path, monkeypatch):
+        with lab(backend, tmp_path) as (store, worker):
+            made = durabilities(monkeypatch)
+            models = Models(monkeypatch, tokens={'a': 4, 'b': 6}, gated=('a', 'b'), barrier=('a', 'b'))
+            calls = Calls(store, monkeypatch); calls.hold('record_accounting')
+            seen = []
+            def observe(name, snapshot):
+                if not seen: seen.append((made[0].generation, made[0].acknowledged))
+            raw = document([prompt('fork'), model('a1', 'fork.text', 'a'), model('b1', 'fork.text', 'b'), join(), response('a1.text')],
+                           [('input', 'fork'), ('fork', 'a1'), ('fork', 'b1'), ('a1', 'join'), ('b1', 'join'), ('join', 'out')])
+            id, task = await start(store, worker, raw)
+>           await asyncio.wait_for(asyncio.gather(models.started['a'].wait(), models.started['b'].wait()), 10)
+
+backend/tests/test_parallel_accounting.py:188: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:487: in wait_for
+    async with timeouts.timeout(timeout):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Timeout [expired]>
+exc_type = <class 'asyncio.exceptions.CancelledError'>
+exc_val = CancelledError(), exc_tb = <traceback object at 0x10d539bc0>
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
+        assert self._state in (_State.ENTERED, _State.EXPIRING)
+    
+        if self._timeout_handler is not None:
+            self._timeout_handler.cancel()
+            self._timeout_handler = None
+    
+        if self._state is _State.EXPIRING:
+            self._state = _State.EXPIRED
+    
+            if self._task.uncancel() <= self._cancelling and exc_type is not None:
+                # Since there are no new cancel requests, we're
+                # handling this.
+                if issubclass(exc_type, exceptions.CancelledError):
+>                   raise TimeoutError from exc_val
+E                   TimeoutError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/timeouts.py:115: TimeoutError
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:36:42.066932+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:36:42.090195+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:36:42.090847+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.024}
+{"timestamp":"2026-11-06T18:36:42.096012+00:00","request_id":null,"run_id":"47a5e25162d14d94acc24639ae698447","tenant":"local","event":"job.lease_acquired","worker_id":"1c5bf10b905b4877b04627f06f803f9e"}
+{"timestamp":"2026-11-06T18:36:42.096350+00:00","request_id":null,"run_id":"47a5e25162d14d94acc24639ae698447","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+{"timestamp":"2026-11-06T18:36:42.098569+00:00","request_id":null,"run_id":"47a5e25162d14d94acc24639ae698447","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:36:42.099937+00:00","request_id":null,"run_id":"47a5e25162d14d94acc24639ae698447","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+_ test_a02_spend_and_events_commit_in_order_and_pending_spend_stays_pending[postgres] _
+
+fut = <_GatheringFuture finished exception=CancelledError()>, timeout = 10
+
+    async def wait_for(fut, timeout):
+        """Wait for the single Future or coroutine to complete, with timeout.
+    
+        Coroutine will be wrapped in Task.
+    
+        Returns result of the Future or coroutine.  When a timeout occurs,
+        it cancels the task and raises TimeoutError.  To avoid the task
+        cancellation, wrap it in shield().
+    
+        If the wait is cancelled, the task is also cancelled.
+    
+        If the task suppresses the cancellation and returns a value instead,
+        that value is returned.
+    
+        This function is a coroutine.
+        """
+        # The special case for timeout <= 0 is for the following case:
+        #
+        # async def test_waitfor():
+        #     func_started = False
+        #
+        #     async def func():
+        #         nonlocal func_started
+        #         func_started = True
+        #
+        #     try:
+        #         await asyncio.wait_for(func(), 0)
+        #     except asyncio.TimeoutError:
+        #         assert not func_started
+        #     else:
+        #         assert False
+        #
+        # asyncio.run(test_waitfor())
+    
+    
+        if timeout is not None and timeout <= 0:
+            fut = ensure_future(fut)
+    
+            if fut.done():
+                return fut.result()
+    
+            await _cancel_and_wait(fut)
+            try:
+                return fut.result()
+            except exceptions.CancelledError as exc:
+                raise TimeoutError from exc
+    
+        async with timeouts.timeout(timeout):
+>           return await fut
+                   ^^^^^^^^^
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <asyncio.locks.Event object at 0x10d809a90 [unset]>
+
+    async def wait(self):
+        """Block until the internal flag is true.
+    
+        If the internal flag is true on entry, return True
+        immediately.  Otherwise, block until another task calls
+        set() to set the flag to true, then return True.
+        """
+        if self._value:
+            return True
+    
+        fut = self._get_loop().create_future()
+        self._waiters.append(fut)
+        try:
+>           await fut
+E           asyncio.exceptions.CancelledError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/locks.py:213: CancelledError
+
+The above exception was the direct cause of the following exception:
+
+backend = 'postgres'
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-309/test_a02_spend_and_events_comm1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d887310>
+
+    @pytest.mark.asyncio
+    async def test_a02_spend_and_events_commit_in_order_and_pending_spend_stays_pending(backend, tmp_path, monkeypatch):
+        with lab(backend, tmp_path) as (store, worker):
+            made = durabilities(monkeypatch)
+            models = Models(monkeypatch, tokens={'a': 4, 'b': 6}, gated=('a', 'b'), barrier=('a', 'b'))
+            calls = Calls(store, monkeypatch); calls.hold('record_accounting')
+            seen = []
+            def observe(name, snapshot):
+                if not seen: seen.append((made[0].generation, made[0].acknowledged))
+            raw = document([prompt('fork'), model('a1', 'fork.text', 'a'), model('b1', 'fork.text', 'b'), join(), response('a1.text')],
+                           [('input', 'fork'), ('fork', 'a1'), ('fork', 'b1'), ('a1', 'join'), ('b1', 'join'), ('join', 'out')])
+            id, task = await start(store, worker, raw)
+>           await asyncio.wait_for(asyncio.gather(models.started['a'].wait(), models.started['b'].wait()), 10)
+
+backend/tests/test_parallel_accounting.py:188: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:487: in wait_for
+    async with timeouts.timeout(timeout):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Timeout [expired]>
+exc_type = <class 'asyncio.exceptions.CancelledError'>
+exc_val = CancelledError(), exc_tb = <traceback object at 0x10d7fdb40>
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
+        assert self._state in (_State.ENTERED, _State.EXPIRING)
+    
+        if self._timeout_handler is not None:
+            self._timeout_handler.cancel()
+            self._timeout_handler = None
+    
+        if self._state is _State.EXPIRING:
+            self._state = _State.EXPIRED
+    
+            if self._task.uncancel() <= self._cancelling and exc_type is not None:
+                # Since there are no new cancel requests, we're
+                # handling this.
+                if issubclass(exc_type, exceptions.CancelledError):
+>                   raise TimeoutError from exc_val
+E                   TimeoutError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/timeouts.py:115: TimeoutError
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:36:52.162780+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:36:52.256144+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:36:52.257960+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.095}
+{"timestamp":"2026-11-06T18:36:52.269876+00:00","request_id":null,"run_id":"439e2241ce8840a2afa01495ec265c43","tenant":"local","event":"job.lease_acquired","worker_id":"1ba90d129a7c43399f231e2366f5e841"}
+{"timestamp":"2026-11-06T18:36:52.271000+00:00","request_id":null,"run_id":"439e2241ce8840a2afa01495ec265c43","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+{"timestamp":"2026-11-06T18:36:52.283140+00:00","request_id":null,"run_id":"439e2241ce8840a2afa01495ec265c43","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:36:52.287276+00:00","request_id":null,"run_id":"439e2241ce8840a2afa01495ec265c43","tenant":"local","event":"run.finish","status":"failed","seconds":0.016}
+_____ test_a03_the_lock_is_held_until_a_cancelled_branchs_commit_finishes ______
+
+fut = <coroutine object until.<locals>.poll at 0x10d1a3780>, timeout = 10
+
+    async def wait_for(fut, timeout):
+        """Wait for the single Future or coroutine to complete, with timeout.
+    
+        Coroutine will be wrapped in Task.
+    
+        Returns result of the Future or coroutine.  When a timeout occurs,
+        it cancels the task and raises TimeoutError.  To avoid the task
+        cancellation, wrap it in shield().
+    
+        If the wait is cancelled, the task is also cancelled.
+    
+        If the task suppresses the cancellation and returns a value instead,
+        that value is returned.
+    
+        This function is a coroutine.
+        """
+        # The special case for timeout <= 0 is for the following case:
+        #
+        # async def test_waitfor():
+        #     func_started = False
+        #
+        #     async def func():
+        #         nonlocal func_started
+        #         func_started = True
+        #
+        #     try:
+        #         await asyncio.wait_for(func(), 0)
+        #     except asyncio.TimeoutError:
+        #         assert not func_started
+        #     else:
+        #         assert False
+        #
+        # asyncio.run(test_waitfor())
+    
+    
+        if timeout is not None and timeout <= 0:
+            fut = ensure_future(fut)
+    
+            if fut.done():
+                return fut.result()
+    
+            await _cancel_and_wait(fut)
+            try:
+                return fut.result()
+            except exceptions.CancelledError as exc:
+                raise TimeoutError from exc
+    
+        async with timeouts.timeout(timeout):
+>           return await fut
+                   ^^^^^^^^^
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_parallel_branches.py:325: in poll
+    while not predicate(): await asyncio.sleep(.01)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+delay = 0.01, result = None
+
+    async def sleep(delay, result=None):
+        """Coroutine that completes after a given time (in seconds)."""
+        if delay <= 0:
+            await __sleep0()
+            return result
+    
+        if math.isnan(delay):
+            raise ValueError("Invalid delay: NaN (not a number)")
+    
+        loop = events.get_running_loop()
+        future = loop.create_future()
+        h = loop.call_later(delay,
+                            futures._set_result_unless_cancelled,
+                            future, result)
+        try:
+>           return await future
+                   ^^^^^^^^^^^^
+E           asyncio.exceptions.CancelledError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:704: CancelledError
+
+The above exception was the direct cause of the following exception:
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-309/test_a03_the_lock_is_held_unti0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d885400>
+
+    @pytest.mark.asyncio
+    async def test_a03_the_lock_is_held_until_a_cancelled_branchs_commit_finishes(tmp_path, monkeypatch):
+        with lab('sqlite', tmp_path) as (store, worker):
+            tools(worker, monkeypatch)
+            calls = Calls(store, monkeypatch); calls.hold('reserve_accounting')
+            cancelled = threading.Event()
+            original = store.cancel_requested
+            def cancel_requested(*args, **kwargs):
+                value = original(*args, **kwargs)
+                if value: cancelled.set()
+                return value
+            monkeypatch.setattr(store, 'cancel_requested', cancel_requested)
+            id, task = await start(store, worker, fork_of([tool('a1'), tool('b1')], 'a1.text'))
+>           await until(calls.entered.is_set)
+
+backend/tests/test_parallel_accounting.py:221: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_parallel_branches.py:326: in until
+    await asyncio.wait_for(poll(), seconds)
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:487: in wait_for
+    async with timeouts.timeout(timeout):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Timeout [expired]>
+exc_type = <class 'asyncio.exceptions.CancelledError'>
+exc_val = CancelledError(), exc_tb = <traceback object at 0x10968ccc0>
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
+        assert self._state in (_State.ENTERED, _State.EXPIRING)
+    
+        if self._timeout_handler is not None:
+            self._timeout_handler.cancel()
+            self._timeout_handler = None
+    
+        if self._state is _State.EXPIRING:
+            self._state = _State.EXPIRED
+    
+            if self._task.uncancel() <= self._cancelling and exc_type is not None:
+                # Since there are no new cancel requests, we're
+                # handling this.
+                if issubclass(exc_type, exceptions.CancelledError):
+>                   raise TimeoutError from exc_val
+E                   TimeoutError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/timeouts.py:115: TimeoutError
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:37:02.348415+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:37:02.374400+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:37:02.375087+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.027}
+{"timestamp":"2026-11-06T18:37:02.380624+00:00","request_id":null,"run_id":"2d34a932641b4e6798161338fab874ee","tenant":"local","event":"job.lease_acquired","worker_id":"ad7af745fd4d4198a4b5ee45a50cfd2f"}
+{"timestamp":"2026-11-06T18:37:02.380991+00:00","request_id":null,"run_id":"2d34a932641b4e6798161338fab874ee","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+{"timestamp":"2026-11-06T18:37:02.382945+00:00","request_id":null,"run_id":"2d34a932641b4e6798161338fab874ee","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:37:02.384276+00:00","request_id":null,"run_id":"2d34a932641b4e6798161338fab874ee","tenant":"local","event":"run.finish","status":"failed","seconds":0.003}
+_____ test_a04_the_commit_after_the_holder_carries_the_newest_publication ______
+
+fut = <coroutine object until.<locals>.poll at 0x10d7f71d0>, timeout = 10
+
+    async def wait_for(fut, timeout):
+        """Wait for the single Future or coroutine to complete, with timeout.
+    
+        Coroutine will be wrapped in Task.
+    
+        Returns result of the Future or coroutine.  When a timeout occurs,
+        it cancels the task and raises TimeoutError.  To avoid the task
+        cancellation, wrap it in shield().
+    
+        If the wait is cancelled, the task is also cancelled.
+    
+        If the task suppresses the cancellation and returns a value instead,
+        that value is returned.
+    
+        This function is a coroutine.
+        """
+        # The special case for timeout <= 0 is for the following case:
+        #
+        # async def test_waitfor():
+        #     func_started = False
+        #
+        #     async def func():
+        #         nonlocal func_started
+        #         func_started = True
+        #
+        #     try:
+        #         await asyncio.wait_for(func(), 0)
+        #     except asyncio.TimeoutError:
+        #         assert not func_started
+        #     else:
+        #         assert False
+        #
+        # asyncio.run(test_waitfor())
+    
+    
+        if timeout is not None and timeout <= 0:
+            fut = ensure_future(fut)
+    
+            if fut.done():
+                return fut.result()
+    
+            await _cancel_and_wait(fut)
+            try:
+                return fut.result()
+            except exceptions.CancelledError as exc:
+                raise TimeoutError from exc
+    
+        async with timeouts.timeout(timeout):
+>           return await fut
+                   ^^^^^^^^^
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_parallel_branches.py:325: in poll
+    while not predicate(): await asyncio.sleep(.01)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+delay = 0.01, result = None
+
+    async def sleep(delay, result=None):
+        """Coroutine that completes after a given time (in seconds)."""
+        if delay <= 0:
+            await __sleep0()
+            return result
+    
+        if math.isnan(delay):
+            raise ValueError("Invalid delay: NaN (not a number)")
+    
+        loop = events.get_running_loop()
+        future = loop.create_future()
+        h = loop.call_later(delay,
+                            futures._set_result_unless_cancelled,
+                            future, result)
+        try:
+>           return await future
+                   ^^^^^^^^^^^^
+E           asyncio.exceptions.CancelledError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:704: CancelledError
+
+The above exception was the direct cause of the following exception:
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-309/test_a04_the_commit_after_the_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d6b6040>
+
+    @pytest.mark.asyncio
+    async def test_a04_the_commit_after_the_holder_carries_the_newest_publication(tmp_path, monkeypatch):
+        """B and C publish and wait behind A. Whichever commits next carries the newest snapshot
+        (three actions), not its own caller's (two). The held commit itself saves whatever was
+        newest when it took the lock, which depends on the schedule, so it is not asserted."""
+        monkeypatch.setenv('AGENT_RUN_BUDGET', '10')
+        with lab('sqlite', tmp_path) as (store, worker):
+            tools(worker, monkeypatch); charged = debits(monkeypatch)
+            calls = Calls(store, monkeypatch); calls.hold('reserve_accounting')
+            id, task = await start(store, worker, fork_of([tool('a1'), tool('b1'), tool('c1')], 'a1.text'))
+>           await until(calls.entered.is_set)
+
+backend/tests/test_parallel_accounting.py:246: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_parallel_branches.py:326: in until
+    await asyncio.wait_for(poll(), seconds)
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/tasks.py:487: in wait_for
+    async with timeouts.timeout(timeout):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Timeout [expired]>
+exc_type = <class 'asyncio.exceptions.CancelledError'>
+exc_val = CancelledError(), exc_tb = <traceback object at 0x10d67dec0>
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
+        assert self._state in (_State.ENTERED, _State.EXPIRING)
+    
+        if self._timeout_handler is not None:
+            self._timeout_handler.cancel()
+            self._timeout_handler = None
+    
+        if self._state is _State.EXPIRING:
+            self._state = _State.EXPIRED
+    
+            if self._task.uncancel() <= self._cancelling and exc_type is not None:
+                # Since there are no new cancel requests, we're
+                # handling this.
+                if issubclass(exc_type, exceptions.CancelledError):
+>                   raise TimeoutError from exc_val
+E                   TimeoutError
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/timeouts.py:115: TimeoutError
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:37:12.431447+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:37:12.452594+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:37:12.453239+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.022}
+{"timestamp":"2026-11-06T18:37:12.458013+00:00","request_id":null,"run_id":"0c2bdd16256f4f4e9865eca4e64fd64d","tenant":"local","event":"job.lease_acquired","worker_id":"ee7c13881a0b4147b6fe7ec4037b2160"}
+{"timestamp":"2026-11-06T18:37:12.458331+00:00","request_id":null,"run_id":"0c2bdd16256f4f4e9865eca4e64fd64d","tenant":"local","event":"run.start","nodes":7,"resumed":false}
+{"timestamp":"2026-11-06T18:37:12.460490+00:00","request_id":null,"run_id":"0c2bdd16256f4f4e9865eca4e64fd64d","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:37:12.461694+00:00","request_id":null,"run_id":"0c2bdd16256f4f4e9865eca4e64fd64d","tenant":"local","event":"run.finish","status":"failed","seconds":0.003}
+__________ test_d02_eight_branches_commit_checkpoints_at_once[sqlite] __________
+
+backend = 'sqlite'
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-309/test_d02_eight_branches_commit0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d6b5ef0>
+
+    @pytest.mark.asyncio
+    async def test_d02_eight_branches_commit_checkpoints_at_once(backend, tmp_path, monkeypatch):
+        monkeypatch.setenv('AGENT_RUN_BUDGET', '20')
+        with lab(backend, tmp_path) as (store, worker):
+            started, ready = [], asyncio.Event()
+            async def execute(*_args, **_kwargs):
+                started.append(1)
+                if len(started) == 8: ready.set()
+                await asyncio.wait_for(ready.wait(), 10)
+                return 'ok'
+            monkeypatch.setattr(worker.tools, 'execute', execute)
+            branches = [tool(f'p{i}') for i in range(8)]
+            id, task = await start(store, worker, fork_of(branches, 'p0.text')); await task
+            result = store.run(id)
+>           assert result['status'] == 'success', result.get('error')
+E           AssertionError: fork: connect exactly one next node; parallel branches are not supported yet.
+E             Unknown node type: join.
+E             out: invalid binding text = p0.text; use a declared output from a guaranteed upstream node.
+E           assert 'failed' == 'success'
+E             
+E             - success
+E             + failed
+
+backend/tests/test_parallel_accounting.py:270: AssertionError
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:37:22.509083+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:37:22.531846+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:37:22.532432+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.023}
+{"timestamp":"2026-11-06T18:37:22.537530+00:00","request_id":null,"run_id":"09d93f56d0ef45c891ca72970c3fcdf2","tenant":"local","event":"job.lease_acquired","worker_id":"12b27d5c629e4cb5aab6fab1be906339"}
+{"timestamp":"2026-11-06T18:37:22.537824+00:00","request_id":null,"run_id":"09d93f56d0ef45c891ca72970c3fcdf2","tenant":"local","event":"run.start","nodes":12,"resumed":false}
+{"timestamp":"2026-11-06T18:37:22.539799+00:00","request_id":null,"run_id":"09d93f56d0ef45c891ca72970c3fcdf2","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:37:22.541502+00:00","request_id":null,"run_id":"09d93f56d0ef45c891ca72970c3fcdf2","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+_________ test_d02_eight_branches_commit_checkpoints_at_once[postgres] _________
+
+backend = 'postgres'
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-309/test_d02_eight_branches_commit1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d87d010>
+
+    @pytest.mark.asyncio
+    async def test_d02_eight_branches_commit_checkpoints_at_once(backend, tmp_path, monkeypatch):
+        monkeypatch.setenv('AGENT_RUN_BUDGET', '20')
+        with lab(backend, tmp_path) as (store, worker):
+            started, ready = [], asyncio.Event()
+            async def execute(*_args, **_kwargs):
+                started.append(1)
+                if len(started) == 8: ready.set()
+                await asyncio.wait_for(ready.wait(), 10)
+                return 'ok'
+            monkeypatch.setattr(worker.tools, 'execute', execute)
+            branches = [tool(f'p{i}') for i in range(8)]
+            id, task = await start(store, worker, fork_of(branches, 'p0.text')); await task
+            result = store.run(id)
+>           assert result['status'] == 'success', result.get('error')
+E           AssertionError: fork: connect exactly one next node; parallel branches are not supported yet.
+E             Unknown node type: join.
+E             out: invalid binding text = p0.text; use a declared output from a guaranteed upstream node.
+E           assert 'failed' == 'success'
+E             
+E             - success
+E             + failed
+
+backend/tests/test_parallel_accounting.py:270: AssertionError
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-06T18:37:22.562793+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-06T18:37:22.638534+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-06T18:37:22.640608+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.078}
+{"timestamp":"2026-11-06T18:37:22.653720+00:00","request_id":null,"run_id":"84fa76a3d08640b9bae9c81c09433653","tenant":"local","event":"job.lease_acquired","worker_id":"106158d0d81d4cfd96acb3d08f8d9f92"}
+{"timestamp":"2026-11-06T18:37:22.654866+00:00","request_id":null,"run_id":"84fa76a3d08640b9bae9c81c09433653","tenant":"local","event":"run.start","nodes":12,"resumed":false}
+{"timestamp":"2026-11-06T18:37:22.666650+00:00","request_id":null,"run_id":"84fa76a3d08640b9bae9c81c09433653","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-06T18:37:22.671585+00:00","request_id":null,"run_id":"84fa76a3d08640b9bae9c81c09433653","tenant":"local","event":"run.finish","status":"failed","seconds":0.017}
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED backend/tests/test_parallel_branches.py::test_l01_langgraph_behaviour_this_design_relies_on
+FAILED backend/tests/test_parallel_branches.py::test_v01_refused_topologies
+FAILED backend/tests/test_parallel_branches.py::test_v02_accepted_topologies
+FAILED backend/tests/test_parallel_branches.py::test_v03_branches_cannot_stop_route_decide_or_fork
+FAILED backend/tests/test_parallel_branches.py::test_v04_external_writes_belong_after_the_join
+FAILED backend/tests/test_parallel_branches.py::test_v05a_memory_agents_cannot_run_in_a_branch
+FAILED backend/tests/test_parallel_branches.py::test_v05b_ordinary_agents_may_share_the_default_memory_key
+FAILED backend/tests/test_parallel_branches.py::test_v06_a_fork_has_two_to_eight_branches
+FAILED backend/tests/test_parallel_branches.py::test_v07_join_rules - Asserti...
+FAILED backend/tests/test_parallel_branches.py::test_b01_after_a_join_every_branch_output_is_bindable
+FAILED backend/tests/test_parallel_branches.py::test_b02_a_branch_cannot_bind_its_sibling
+FAILED backend/tests/test_parallel_branches.py::test_b03_a_continue_node_in_a_branch_is_not_bindable_after_the_join
+FAILED backend/tests/test_parallel_branches.py::test_r01_branches_run_concurrently_and_the_join_waits_for_the_last
+FAILED backend/tests/test_parallel_branches.py::test_r02_unequal_branches_run_the_join_once
+FAILED backend/tests/test_parallel_branches.py::test_r03_a_failed_branch_fails_the_run_and_cancels_its_sibling
+FAILED backend/tests/test_parallel_branches.py::test_r04_a_continue_branch_failure_lets_the_join_run
+FAILED backend/tests/test_parallel_branches.py::test_r05_admission_limit_admits_one_call_per_running_branch
+FAILED backend/tests/test_parallel_branches.py::test_r06_contract_2_fork_on_the_request_readers_continue_route
+FAILED backend/tests/test_parallel_accounting.py::test_a01_action_only_snapshots_commit_in_order[sqlite]
+FAILED backend/tests/test_parallel_accounting.py::test_a01_action_only_snapshots_commit_in_order[postgres]
+FAILED backend/tests/test_parallel_accounting.py::test_a02_spend_and_events_commit_in_order_and_pending_spend_stays_pending[sqlite]
+FAILED backend/tests/test_parallel_accounting.py::test_a02_spend_and_events_commit_in_order_and_pending_spend_stays_pending[postgres]
+FAILED backend/tests/test_parallel_accounting.py::test_a03_the_lock_is_held_until_a_cancelled_branchs_commit_finishes
+FAILED backend/tests/test_parallel_accounting.py::test_a04_the_commit_after_the_holder_carries_the_newest_publication
+FAILED backend/tests/test_parallel_accounting.py::test_d02_eight_branches_commit_checkpoints_at_once[sqlite]
+FAILED backend/tests/test_parallel_accounting.py::test_d02_eight_branches_commit_checkpoints_at_once[postgres]
+25 failed, 1 passed in 81.94s (0:01:21)

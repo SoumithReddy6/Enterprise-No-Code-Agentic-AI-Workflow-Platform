@@ -1,0 +1,36 @@
+M1: KILLED by planned tests ['test_b01_'] | 18 failed, 11 passed, 3 skipped, 1 warning in 61.39s (0:01:01)
+  failed: test_a01_action_only_snapshots_commit_in_order[sqlite], test_a02_spend_and_events_commit_in_order_and_pending_spend_stays_pending[sqlite], test_a03_the_lock_is_held_until_a_cancelled_branchs_commit_finishes, test_a04_the_commit_after_the_holder_carries_the_newest_publication, test_b01_after_a_join_every_branch_output_is_bindable, test_b02_a_branch_cannot_bind_its_sibling, test_b03_a_continue_node_in_a_branch_is_not_bindable_after_the_join, test_d02_eight_branches_commit_checkpoints_at_once[sqlite], test_r01_branches_run_concurrently_and_the_join_waits_for_the_last, test_r02_unequal_branches_run_the_join_once, test_r03_a_failed_branch_fails_the_run_and_cancels_its_sibling, test_r04_a_continue_branch_failure_lets_the_join_run, test_r05_admission_limit_admits_one_call_per_running_branch, test_r06_contract_2_fork_on_the_request_readers_continue_route, test_the_editor_fixture_matches_the_backend_rule, test_v02_accepted_topologies, test_v05b_ordinary_agents_may_share_the_default_memory_key, test_v06_a_fork_has_two_to_eight_branches
+M2: KILLED by planned tests ['test_v07_'] | 1 failed, 28 passed, 3 skipped, 1 warning in 5.17s
+  failed: test_v07_join_rules
+M3: KILLED by planned tests ['test_v04_'] | 1 failed, 28 passed, 3 skipped, 1 warning in 5.06s
+  failed: test_v04_external_writes_belong_after_the_join
+M4: KILLED by planned tests ['test_v05a_'] | 1 failed, 28 passed, 3 skipped, 1 warning in 4.98s
+  failed: test_v05a_memory_agents_cannot_run_in_a_branch
+M5: KILLED by planned tests ['test_v05b_'] | 1 failed, 28 passed, 3 skipped, 1 warning in 4.99s
+  failed: test_v05b_ordinary_agents_may_share_the_default_memory_key
+M6: KILLED by planned tests ['test_v06_'] | 1 failed, 28 passed, 3 skipped, 1 warning in 5.00s
+  failed: test_v06_a_fork_has_two_to_eight_branches
+M7: KILLED by planned tests ['test_v01_'] | 1 failed, 28 passed, 3 skipped, 1 warning in 4.98s
+  failed: test_v01_refused_topologies
+M8: KILLED by planned tests ['test_r02_'] | 1 failed, 28 passed, 3 skipped, 1 warning in 5.00s
+  failed: test_r02_unequal_branches_run_the_join_once
+M9: KILLED by planned tests ['test_a01_action_only_snapshots_commit_in_order[sqlite]'] | 5 failed, 24 passed, 3 skipped, 1 warning in 101.87s (0:01:41)
+  failed: test_a01_action_only_snapshots_commit_in_order[sqlite], test_a02_spend_and_events_commit_in_order_and_pending_spend_stays_pending[sqlite], test_a03_the_lock_is_held_until_a_cancelled_branchs_commit_finishes, test_a04_the_commit_after_the_holder_carries_the_newest_publication, test_r03_a_failed_branch_fails_the_run_and_cancels_its_sibling
+M10: KILLED by planned tests ['test_a04_'] | 1 failed, 28 passed, 3 skipped, 1 warning in 5.13s
+  failed: test_a04_the_commit_after_the_holder_carries_the_newest_publication
+M11: KILLED by planned tests ['test_a03_'] | 2 failed, 27 passed, 3 skipped, 1 warning in 33.81s
+  failed: test_a03_the_lock_is_held_until_a_cancelled_branchs_commit_finishes, test_r03_a_failed_branch_fails_the_run_and_cancels_its_sibling
+M12: KILLED by planned tests ['test_b02_'] | 2 failed, 27 passed, 3 skipped, 1 warning in 5.05s
+  failed: test_b02_a_branch_cannot_bind_its_sibling, test_every_offered_binding_validates_and_others_do_not
+M13: KILLED by planned tests ['test_v03_'] | 1 failed, 28 passed, 3 skipped, 1 warning in 4.99s
+  failed: test_v03_branches_cannot_stop_route_decide_or_fork
+M14: KILLED by planned tests ['test_a02_spend_and_events_commit_in_order_and_pending_spend_stays_pending[sqlite]'] | 1 failed, 28 passed, 3 skipped, 1 warning in 4.98s
+  failed: test_a02_spend_and_events_commit_in_order_and_pending_spend_stays_pending[sqlite]
+M15: KILLED by planned tests ['test_a01_action_only_snapshots_commit_in_order[sqlite]'] | 3 failed, 26 passed, 3 skipped, 1 warning in 4.98s
+  failed: test_a01_action_only_snapshots_commit_in_order[sqlite], test_a04_the_commit_after_the_holder_carries_the_newest_publication, test_d02_eight_branches_commit_checkpoints_at_once[sqlite]
+M16: KILLED by planned tests ['test_v01_'] | 1 failed, 28 passed, 3 skipped, 1 warning in 4.99s
+  failed: test_v01_refused_topologies
+M17: KILLED by planned tests ['the editor offers the bindings the backend accepts: fork_join'] | # pass 7 # fail 1
+  failed: the editor offers the bindings the backend accepts: fork_join
+
+ALL PLANNED KILLS: True

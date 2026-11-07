@@ -1,0 +1,8 @@
+M18: KILLED by planned tests ['test_a06a_', 'test_a06b_'] | 2 failed, 5 passed, 3 skipped in 4.64s
+  failed: test_a06a_no_model_call_starts_while_newer_spend_is_unsaved, test_a06b_a_refused_follow_up_save_stops_the_repair
+M19: KILLED by planned tests ['test_a06b_'] | 1 failed, 6 passed, 3 skipped in 5.48s
+  failed: test_a06b_a_refused_follow_up_save_stops_the_repair
+M20: KILLED by planned tests ['test_a06a_'] | 2 failed, 5 passed, 3 skipped in 4.48s
+  failed: test_a06a_no_model_call_starts_while_newer_spend_is_unsaved, test_a06b_a_refused_follow_up_save_stops_the_repair
+
+ALL PLANNED KILLS: True

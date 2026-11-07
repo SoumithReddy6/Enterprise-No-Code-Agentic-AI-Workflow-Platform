@@ -1,0 +1,132 @@
+{
+  "scope": "scripts.check_milestone_storage; SQLite local, PostgreSQL 17 in a throwaway container (127.0.0.1:55433). PG rows run with the full current postgres-conformance check list, including postgres-parallel-sigkill.",
+  "head": "89129ca564d201ebf4511dac7bf63522927641a5",
+  "source_files_changed": [],
+  "rows": [
+    {
+      "name": "postgres-migrations",
+      "passed": true,
+      "details": {
+        "upgrade_downgrade_upgrade": true,
+        "metadata_diff": []
+      },
+      "seconds": 0.297
+    },
+    {
+      "name": "postgres-four-workers",
+      "passed": true,
+      "details": {
+        "processes": 4,
+        "worker_slots_per_process": 1,
+        "runs": 50,
+        "claims": 50,
+        "deliveries": 100,
+        "loop_rows": 100,
+        "action_counter_each": 3
+      },
+      "seconds": 5.122
+    },
+    {
+      "name": "postgres-stale-lease",
+      "passed": true,
+      "details": {
+        "sigstop_sigcont": true,
+        "replacement_completed": true,
+        "refused_operations": {
+          "event": true,
+          "finish": true,
+          "reserve": true,
+          "mark_write": true,
+          "settle_write": true
+        }
+      },
+      "seconds": 4.065
+    },
+    {
+      "name": "postgres-sigkill-loop",
+      "passed": true,
+      "details": {
+        "sigkill": true,
+        "committed_items_repeated": 0,
+        "in_flight_read_repeated": 1,
+        "checkpoint_equals_uninterrupted": true,
+        "actions_including_retry": 5
+      },
+      "seconds": 47.68
+    },
+    {
+      "name": "postgres-accounting-before-commit",
+      "passed": true,
+      "details": {
+        "database": "postgres",
+        "moment": "before_commit",
+        "sigkill": true,
+        "fast_saves": "failing",
+        "prior_checkpoint": false,
+        "prior_tokens_spent": 0,
+        "model_calls": 2,
+        "final_tokens_spent": 15,
+        "resumed_status": "failed (token limit before m1)"
+      },
+      "seconds": 32.898
+    },
+    {
+      "name": "postgres-accounting-after-commit",
+      "passed": true,
+      "details": {
+        "database": "postgres",
+        "moment": "after_commit",
+        "sigkill": true,
+        "fast_saves": "failing",
+        "prior_checkpoint": true,
+        "prior_tokens_spent": 15,
+        "model_calls": 1,
+        "final_tokens_spent": 15,
+        "resumed_status": "failed (token limit before m1)"
+      },
+      "seconds": 32.188
+    },
+    {
+      "name": "sqlite-parallel-sigkill",
+      "passed": true,
+      "details": {
+        "database": "sqlite",
+        "sigkill": "after branch A checkpoint, branch B outstanding",
+        "prior_checkpoints": [
+          "a1",
+          "fork",
+          "input"
+        ],
+        "prior_tokens_spent": 15,
+        "model_calls": {
+          "branch-a": 1,
+          "branch-b": 2
+        },
+        "join_runs": 1,
+        "final_tokens_spent": 30
+      },
+      "seconds": 32.507
+    },
+    {
+      "name": "postgres-parallel-sigkill",
+      "passed": true,
+      "details": {
+        "database": "postgres",
+        "sigkill": "after branch A checkpoint, branch B outstanding",
+        "prior_checkpoints": [
+          "a1",
+          "fork",
+          "input"
+        ],
+        "prior_tokens_spent": 15,
+        "model_calls": {
+          "branch-a": 1,
+          "branch-b": 2
+        },
+        "join_runs": 1,
+        "final_tokens_spent": 30
+      },
+      "seconds": 32.349
+    }
+  ]
+}

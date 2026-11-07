@@ -7,6 +7,7 @@ request is started on their behalf.
 
 Deliberately free of storage and approval imports: both of those modules use it.
 """
+import asyncio
 from copy import deepcopy
 
 CONTRACT=1
@@ -90,12 +91,41 @@ class AccountingDurability:
     def acknowledge(self,generation):self.acknowledged=max(self.acknowledged,generation)
 
 
+class AccountingPublications:
+    """The newest accounting snapshot of one run attempt, and the lock that orders its commits.
+
+    Parallel branches produce snapshots concurrently and commit them in threads (TA08). Each
+    snapshot is published here synchronously, before any await, with the order it was
+    produced in and the spend generation it contains. A commit, under the lock, saves the
+    newest publication, not its caller's snapshot, and acknowledges only that publication's
+    generation. So a delayed older snapshot never commits after a newer one: no tokens are
+    refused as stale and no action is refunded. The generation alone cannot order them,
+    because an action debit changes the snapshot without advancing it.
+
+    Callers pass it as the compiler's accounting sink, which publishes through update().
+    """
+    def __init__(self,durability):
+        self.durability=durability;self.sequence=0;self.latest=None;self.lock=asyncio.Lock()
+
+    def update(self,snapshot):
+        """Publish a snapshot built from the run state with no await since."""
+        self.sequence+=1
+        self.latest=(self.sequence,self.durability.generation,deepcopy(snapshot))
+
+    def newest(self):
+        """(spend generation, snapshot) of the newest publication, or (None, None)."""
+        return self.latest[1:] if self.latest else (None,None)
+
+
 async def ensure_accounting_ready(run):
     """Before a new provider request: the run's known spend is trusted and durably saved.
 
     Pending spend is saved through the strict persistence callback, which charges no
     action. A false or missing acknowledgment, or an ordinary storage failure, refuses the
     request. A lost lease and cancellation keep their own control flow.
+
+    The check is repeated after every save (A53-I01): a parallel branch can report usage
+    while the save is in flight, and a completed save covers only what it captured.
     """
     durability=(run or {}).get('durability')
     if durability is None:return  # Compiler-only execution keeps no durable accounting.
@@ -104,9 +134,10 @@ async def ensure_accounting_ready(run):
     persist=run.get('persist_accounting')
     if persist is None:raise AccountingUnavailable(PENDING)
     from .execution_policy import CONTROL_FLOW,accounting_snapshot
-    generation,snapshot=durability.capture(accounting_snapshot(run))
-    try:saved=await persist(snapshot)
-    except CONTROL_FLOW:raise
-    except Exception:raise AccountingUnavailable(PENDING) from None
-    if saved is not True:raise AccountingUnavailable(PENDING)
-    durability.acknowledge(generation)
+    while durability.pending:
+        generation,snapshot=durability.capture(accounting_snapshot(run))
+        try:saved=await persist(snapshot)
+        except CONTROL_FLOW:raise
+        except Exception:raise AccountingUnavailable(PENDING) from None
+        if saved is not True:raise AccountingUnavailable(PENDING)
+        durability.acknowledge(generation)
