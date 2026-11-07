@@ -1,0 +1,91 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_________ test_a06a_no_model_call_starts_while_newer_spend_is_unsaved __________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-326/test_a06a_no_model_call_starts0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f8b8770>
+
+    @pytest.mark.asyncio
+    async def test_a06a_no_model_call_starts_while_newer_spend_is_unsaved(tmp_path, monkeypatch):
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '1000')
+        with lab('sqlite', tmp_path) as (store, worker):
+            repair = Repair(store, monkeypatch)
+            task = await repair.run(worker)
+            try:
+                # A's save of generation 1 has finished; B's generation 2 is still being saved.
+>               await never(lambda: repair.calls.count('a') == 2, 1.0)
+
+backend/tests/test_parallel_accounting.py:354: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+predicate = <function test_a06a_no_model_call_starts_while_newer_spend_is_unsaved.<locals>.<lambda> at 0x1102cf1c0>
+seconds = 1.0
+
+    async def never(predicate, seconds=1.0):
+        """The predicate stays false for a bounded wait; correct code passes whatever the timing."""
+>       with pytest.raises(TimeoutError): await until(predicate, seconds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE TimeoutError
+
+backend/tests/test_parallel_accounting.py:107: Failed
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.211283+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.284607+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.285373+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.074}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.290663+00:00","request_id":null,"run_id":"cf5c2dbaf6c34ce5ad783bca461d4611","tenant":"local","event":"job.lease_acquired","worker_id":"d1edd2ebabd742a4aae73eff05958495"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.291091+00:00","request_id":null,"run_id":"cf5c2dbaf6c34ce5ad783bca461d4611","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.367373+00:00","request_id":null,"run_id":"cf5c2dbaf6c34ce5ad783bca461d4611","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.369443+00:00","request_id":null,"run_id":"cf5c2dbaf6c34ce5ad783bca461d4611","tenant":"local","event":"node.success","node_id":"fork","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.373280+00:00","request_id":null,"run_id":"cf5c2dbaf6c34ce5ad783bca461d4611","tenant":"local","event":"model.usage","node_id":"a1","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":5,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.373444+00:00","request_id":null,"run_id":"cf5c2dbaf6c34ce5ad783bca461d4611","tenant":"local","event":"accounting.persist_failed","node_id":"a1","reason_code":"post_spend","error_type":"OSError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.383951+00:00","request_id":null,"run_id":"cf5c2dbaf6c34ce5ad783bca461d4611","tenant":"local","event":"model.usage","node_id":"b1","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":5,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.397003+00:00","request_id":null,"run_id":"cf5c2dbaf6c34ce5ad783bca461d4611","tenant":"local","event":"model.usage","node_id":"a1","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":5,"completion_tokens":0}
+---------------------------- Captured log teardown -----------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.467941+00:00","request_id":null,"run_id":"cf5c2dbaf6c34ce5ad783bca461d4611","tenant":"local","event":"run.finish","status":"released","seconds":0.177}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.468201+00:00","request_id":null,"run_id":"cf5c2dbaf6c34ce5ad783bca461d4611","tenant":"local","event":"node.cancelled","node_id":"a1","transient":false,"cached":false,"duration_ms":null,"usage":{"calls":2,"prompt_tokens":10,"completion_tokens":0}}
+_____________ test_a06b_a_refused_follow_up_save_stops_the_repair ______________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-326/test_a06b_a_refused_follow_up_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x110459b50>
+
+    @pytest.mark.asyncio
+    async def test_a06b_a_refused_follow_up_save_stops_the_repair(tmp_path, monkeypatch):
+        from backend.app.accounting_state import PENDING
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '1000')
+        with lab('sqlite', tmp_path) as (store, worker):
+            repair = Repair(store, monkeypatch, refuse_newer=True)
+            task = await repair.run(worker)
+            repair.release()
+            await task
+            result = store.run(repair.id)
+>           assert repair.calls.count('a') == 1 and repair.dispatch == [], repair.calls
+E           AssertionError: ['a', 'b', 'a']
+E           assert (2 == 1)
+E            +  where 2 = <built-in method count of list object at 0x110727ac0>('a')
+E            +    where <built-in method count of list object at 0x110727ac0> = ['a', 'b', 'a'].count
+E            +      where ['a', 'b', 'a'] = <test_parallel_accounting.Repair object at 0x1107e1d10>.calls
+
+backend/tests/test_parallel_accounting.py:374: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.469590+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.481725+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.482210+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.013}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.486335+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"job.lease_acquired","worker_id":"e54d66bfe1334740982050bc9f84384c"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.486626+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.532269+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.534187+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"node.success","node_id":"fork","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.538354+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"model.usage","node_id":"a1","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":5,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.538494+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"accounting.persist_failed","node_id":"a1","reason_code":"post_spend","error_type":"OSError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.549030+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"model.usage","node_id":"b1","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":5,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.561738+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"model.usage","node_id":"a1","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":5,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.571238+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"accounting.persist_failed","node_id":"b1","reason_code":"post_spend","error_type":"OSError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.571550+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"accounting.persist_failed","node_id":"a1","reason_code":"post_spend","error_type":"OSError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.573031+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"node.success","node_id":"b1","transient":false,"cached":false,"duration_ms":37,"usage":{"calls":1,"prompt_tokens":5,"completion_tokens":0}}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.574018+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"node.success","node_id":"a1","transient":false,"cached":false,"duration_ms":37,"usage":{"calls":2,"prompt_tokens":10,"completion_tokens":0}}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.576425+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"node.success","node_id":"join","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.578498+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-06T21:46:43.580011+00:00","request_id":null,"run_id":"a804035408ac4a8b810018043cf397c2","tenant":"local","event":"run.finish","status":"success","seconds":0.093}
+=========================== short test summary info ============================
+FAILED backend/tests/test_parallel_accounting.py::test_a06a_no_model_call_starts_while_newer_spend_is_unsaved
+FAILED backend/tests/test_parallel_accounting.py::test_a06b_a_refused_follow_up_save_stops_the_repair
+2 failed, 8 deselected in 0.85s

@@ -1,0 +1,23 @@
+{
+  "backend/app/accounting_state.py": "3e37962dc49362a75d58598a05106bec7b385bbc07b14486b1902eaadcf54545",
+  "backend/tests/test_parallel_accounting.py": "cba832cf9f5caca5e5ab506109c533676aff7a163a02b049fd08d2ad9a64db1e",
+  "evals/results/a53-i01-fix-2026-11-06/README.md": "0c1a76518391a0e8d7b5e0d2c3ca91e4247b5a6b215058fddee95422c7b9a2af",
+  "evals/results/a53-i01-fix-2026-11-06/baseline-2ad952a.txt": "2732494b50dd563cd4ff8a54fc07a28b2610b4320360027b45a7d8ed8c81f551",
+  "evals/results/a53-i01-fix-2026-11-06/isolate.py": "308c9aca4624da3cc175a12a957b304b22c4f982d5d8b52930bf0e3146846dec",
+  "evals/results/a53-i01-fix-2026-11-06/isolation.txt": "18d8f5cfea74c3a788fb77cde0e094a7eafa79b8aefb9bb7316f5e95a7c1a930",
+  "evals/results/a53-i01-fix-2026-11-06/mutants.py": "9a15898bd76a30af9f68ebc3d3e6b6270623e823b1081fc05f8c30c89473847c",
+  "evals/results/a53-i01-fix-2026-11-06/mutants.txt": "f9024430578dd5827225a56b75a8eadc74fdad0fb5380074c80bed0e713ade83",
+  "evals/results/a53-i01-fix-2026-11-06/process-rows.json": "1d2493e63befdc4973c2c432e1f18f31bbafef312219bca6fe4ad39dc89156ce",
+  "evals/results/a53-i01-fix-2026-11-06/production/report.json": "c66580388f8020944139fad554e5dbdc6a369d161e7a127c7f620163d34fc831",
+  "evals/results/a53-i01-fix-2026-11-06/seeds.txt": "22fa032c6cdffd76456e4b1658bc692187eab2b8e71bd1877a24ad9d293aed03",
+  "evals/results/a53-part1-review-2ad952a/README.md": "e9f74426eaffbe494d9b4f5cc688fbf1ccbe8cc41cd072018e36662f70cbd13c",
+  "evals/results/a53-part1-review-2ad952a/checks.json": "a6bad847f0d261d8b7410f50f0deee6ac280f3fd93e1d69e1e7b0d80e4bc3dfe",
+  "evals/results/a53-part1-review-2ad952a/hosted-ci.json": "6ce090ee1eaf894251c933a03111052225960c4d8b33622d9cff86fb726ced52",
+  "evals/results/a53-part1-review-2ad952a/pending-spend-control.json": "a6dcc4f23af2c6623f95fa104552220e366a7c58ebc599de9c587e4b8e3b454e",
+  "evals/results/a53-part1-review-2ad952a/pending-spend.json": "46006e1d4cc5debfd3920109e5e6cc2f4b2d4fd57bbbe98ed58d8e39fb0ecd52",
+  "evals/results/a53-part1-review-2ad952a/preserved-inputs.json": "e54e41c32418901d4ed96529b9301dd11a3e850dffae8c4fed6837f1f1b21a9f",
+  "evals/results/a53-part1-review-2ad952a/probe_pending_spend.py": "92f6ed5dde43389317f04a82bd770de7793328f290c60a04e9a018fbfaea4713",
+  "evals/results/a53-part1-review-2ad952a/repeat-results.json": "d6789b0e60550988e3bddfd67bb2f17ebec22eaa912b9b4a48594374e2f97175",
+  "evals/results/a53-part1-review-2ad952a/storage/report.json": "5e5de60d098ee44c84800f1e2dfe0fafdd2c4df956057c966c927d49b95347eb",
+  "evals/results/a53-part1-review-2ad952a/storage-rerun/report.json": "d538001f1fe103c6416c9da3e5216dfc97b579610f1d41957c4a283195845fe8"
+}

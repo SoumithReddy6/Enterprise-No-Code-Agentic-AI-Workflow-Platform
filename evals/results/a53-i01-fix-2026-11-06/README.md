@@ -63,4 +63,4 @@ released, and the next save carrying 10 tokens is held.
 | Storage-script rows | 10 of 10: TA02 accounting before/after commit and D01 on SQLite and PostgreSQL, plus migrations, four workers, stale lease and the SIGKILL loop; no source file changed during the run |
 | Deployed scenario gate | 24 of 24 rows passed; `source_files_changed` empty |
 | Frontend | not rerun: no frontend file changed |
-| Hosted CI | to be recorded on the correction commit |
+| Hosted CI | `55e1538`, run 42299009521: 5 of 5 jobs passed; postgres-conformance ran `test_parallel_accounting.py` with PostgreSQL (10 passed, A06a and A06b included) |

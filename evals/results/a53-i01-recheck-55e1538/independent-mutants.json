@@ -1,0 +1,20 @@
+[
+  {
+    "mutant": "M18",
+    "exit": 1,
+    "expected_failed_tests": 2,
+    "summary": "2 failed, 8 deselected in 0.85s"
+  },
+  {
+    "mutant": "M19",
+    "exit": 1,
+    "expected_failed_tests": 1,
+    "summary": "1 failed, 1 passed, 8 deselected in 1.73s"
+  },
+  {
+    "mutant": "M20",
+    "exit": 1,
+    "expected_failed_tests": 2,
+    "summary": "2 failed, 8 deselected in 0.62s"
+  }
+]

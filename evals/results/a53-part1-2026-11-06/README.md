@@ -46,7 +46,7 @@ Baseline: `89129ca` (the rev-3 design commit; application identical to `main`).
 | D01 | A restored from its checkpoint with no new request (branch-a calls 1), B sent again (branch-b calls 2), the Join ran once, tokens 30 = A 15 once + B's resumed call 15. Stop rule not triggered |
 | Frontend | 116 unit tests, typecheck, lint, build, 49 Chromium tests |
 | Deployed scenario gate | 24 of 24 rows passed (23 deployed-process scenarios + the M01 probe); `source_files_changed` empty |
-| Hosted CI | To be recorded on the exact commit |
+| Hosted CI | `2ad952a`, run 42277225039: 5 of 5 jobs passed |
 
 ## Acceptance count
 

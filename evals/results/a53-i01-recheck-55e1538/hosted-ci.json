@@ -1,0 +1,73 @@
+{
+  "commit": "55e15388826b457955ad8fa74c5614aa8cbf597d",
+  "run_id": 42299009521,
+  "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42299009521",
+  "checked_at": "2026-11-06 21:49:24 UTC",
+  "jobs": [
+    {
+      "name": "native-macos",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42299009521/job/128171600940",
+      "steps": [
+        {
+          "name": "Run python -m pytest backend/tests/test_onnxruntime_telemetry.py -q -rs",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "postgres-conformance",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42299009521/job/128171601124",
+      "steps": [
+        {
+          "name": "Run python -m pytest backend/tests/test_parallel_accounting.py -q -rs",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "frontend",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42299009521/job/128171601171",
+      "steps": []
+    },
+    {
+      "name": "browser-layout",
+      "status": "in_progress",
+      "conclusion": null,
+      "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42299009521/job/128171601236",
+      "current_step": "Run npx playwright install --with-deps chromium",
+      "steps": []
+    },
+    {
+      "name": "backend",
+      "status": "in_progress",
+      "conclusion": null,
+      "url": "https://github.com/SoumithReddy6/Enterprise-No-Code-Agentic-AI-Workflow-Platform/actions/runs/42299009521/job/128171601331",
+      "current_step": "Run python -u -m scripts.eval_request_admission --profile fault --out evals/results/request-admission-ci",
+      "steps": [
+        {
+          "name": "Run python -m pytest backend/tests -q",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run PYTHONHASHSEED=1 python -m pytest backend/tests -q",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run python -m pytest backend/tests/test_schema_migrations.py -q",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ]
+}
