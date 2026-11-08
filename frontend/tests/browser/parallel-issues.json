@@ -1,0 +1,1276 @@
+{
+ "model": {
+  "id": "model-tiny",
+  "provider": "ollama",
+  "model": "tiny:latest",
+  "credential_id": "",
+  "enabled": true
+ },
+ "valid": {
+  "version": 1,
+  "contract": 2,
+  "name": "My first AI workflow",
+  "description": "Answer broad questions. Narrative replies do not authorize business actions.",
+  "nodes": [
+   {
+    "id": "input",
+    "type": "chat_input",
+    "version": 1,
+    "label": "Chat input",
+    "position": {
+     "x": 300,
+     "y": 40
+    },
+    "inputs": {},
+    "config": {}
+   },
+   {
+    "id": "reader",
+    "type": "request_reader",
+    "version": 1,
+    "label": "Request reader",
+    "position": {
+     "x": 300,
+     "y": 210
+    },
+    "inputs": {
+     "message": "input.message"
+    },
+    "config": {
+     "purpose": "Answer general questions and help explain topics. A greeting or a message with no question gets a reply.",
+     "accepted_requests": [
+      "General questions, explanations and requests for help."
+     ],
+     "excluded_requests": [
+      "Requests to perform external actions or approve business transactions."
+     ],
+     "examples": [
+      "How do AI workflows work?"
+     ],
+     "prepared_replies": [
+      {
+       "message": "hello",
+       "reply": "Hello! Send your request and I will check whether this workflow can help."
+      },
+      {
+       "message": "hello!",
+       "reply": "Hello! Send your request and I will check whether this workflow can help."
+      }
+     ],
+     "expected_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+       "question": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "question"
+      ]
+     },
+     "required_fields": [
+      "/question"
+     ],
+     "required_any": [],
+     "field_rules": [
+      {
+       "field": "/question",
+       "kind": "accept_quoted"
+      }
+     ],
+     "cross_checks": [],
+     "provider": "ollama",
+     "model": "tiny:latest",
+     "credential_id": "",
+     "max_tokens": 2048
+    }
+   },
+   {
+    "id": "agent",
+    "type": "agent",
+    "version": 1,
+    "label": "Agent",
+    "position": {
+     "x": 300,
+     "y": 380
+    },
+    "inputs": {
+     "input": "input.message"
+    },
+    "config": {
+     "provider": "ollama",
+     "model": "tiny:latest",
+     "credential_id": "",
+     "max_tokens": 2048,
+     "role": "reasoner",
+     "system": "Answer the user question clearly. Ask for clarification when needed. Do not claim to have taken external actions.",
+     "user_prompt": "{input}",
+     "max_steps": 6,
+     "memory_key": "default"
+    }
+   },
+   {
+    "id": "response",
+    "type": "response",
+    "version": 1,
+    "label": "Response",
+    "position": {
+     "x": 300,
+     "y": 890
+    },
+    "inputs": {
+     "text": "branchB.text"
+    },
+    "config": {}
+   },
+   {
+    "id": "readerReply",
+    "type": "response",
+    "version": 1,
+    "label": "Reader reply",
+    "position": {
+     "x": -180,
+     "y": 300
+    },
+    "inputs": {
+     "text": "reader.reply"
+    },
+    "config": {}
+   },
+   {
+    "id": "branchA",
+    "type": "agent",
+    "version": 1,
+    "label": "Branch A",
+    "position": {
+     "x": 120,
+     "y": 550
+    },
+    "inputs": {
+     "input": "agent.text"
+    },
+    "config": {
+     "provider": "ollama",
+     "model": "tiny:latest",
+     "credential_id": "",
+     "system": "You are a helpful assistant.",
+     "max_tokens": 2048,
+     "role": "reasoner",
+     "user_prompt": "{input}",
+     "max_steps": 6,
+     "memory_key": "default",
+     "description": ""
+    }
+   },
+   {
+    "id": "branchB",
+    "type": "agent",
+    "version": 1,
+    "label": "Branch B",
+    "position": {
+     "x": 480,
+     "y": 550
+    },
+    "inputs": {
+     "input": "agent.text"
+    },
+    "config": {
+     "provider": "ollama",
+     "model": "tiny:latest",
+     "credential_id": "",
+     "system": "You are a helpful assistant.",
+     "max_tokens": 2048,
+     "role": "reasoner",
+     "user_prompt": "{input}",
+     "max_steps": 6,
+     "memory_key": "default",
+     "description": ""
+    }
+   },
+   {
+    "id": "join",
+    "type": "join",
+    "version": 1,
+    "label": "Join",
+    "position": {
+     "x": 300,
+     "y": 720
+    },
+    "inputs": {},
+    "config": {}
+   }
+  ],
+  "edges": [
+   {
+    "id": "input-reader",
+    "source": "input",
+    "target": "reader"
+   },
+   {
+    "id": "reader-agent",
+    "source": "reader",
+    "target": "agent",
+    "sourceHandle": "continue"
+   },
+   {
+    "id": "reader-readerReply",
+    "source": "reader",
+    "target": "readerReply",
+    "sourceHandle": "reply"
+   },
+   {
+    "id": "agent-branchA",
+    "source": "agent",
+    "target": "branchA"
+   },
+   {
+    "id": "agent-branchB",
+    "source": "agent",
+    "target": "branchB"
+   },
+   {
+    "id": "branchA-join",
+    "source": "branchA",
+    "target": "join"
+   },
+   {
+    "id": "branchB-join",
+    "source": "branchB",
+    "target": "join"
+   },
+   {
+    "id": "join-response",
+    "source": "join",
+    "target": "response"
+   }
+  ]
+ },
+ "broken": [
+  {
+   "name": "branch_ends_early",
+   "workflow": {
+    "version": 1,
+    "contract": 2,
+    "name": "My first AI workflow",
+    "description": "Answer broad questions. Narrative replies do not authorize business actions.",
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "Chat input",
+      "position": {
+       "x": 300,
+       "y": 40
+      },
+      "inputs": {},
+      "config": {}
+     },
+     {
+      "id": "reader",
+      "type": "request_reader",
+      "version": 1,
+      "label": "Request reader",
+      "position": {
+       "x": 300,
+       "y": 210
+      },
+      "inputs": {
+       "message": "input.message"
+      },
+      "config": {
+       "purpose": "Answer general questions and help explain topics. A greeting or a message with no question gets a reply.",
+       "accepted_requests": [
+        "General questions, explanations and requests for help."
+       ],
+       "excluded_requests": [
+        "Requests to perform external actions or approve business transactions."
+       ],
+       "examples": [
+        "How do AI workflows work?"
+       ],
+       "prepared_replies": [
+        {
+         "message": "hello",
+         "reply": "Hello! Send your request and I will check whether this workflow can help."
+        },
+        {
+         "message": "hello!",
+         "reply": "Hello! Send your request and I will check whether this workflow can help."
+        }
+       ],
+       "expected_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "question": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "question"
+        ]
+       },
+       "required_fields": [
+        "/question"
+       ],
+       "required_any": [],
+       "field_rules": [
+        {
+         "field": "/question",
+         "kind": "accept_quoted"
+        }
+       ],
+       "cross_checks": [],
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "max_tokens": 2048
+      }
+     },
+     {
+      "id": "agent",
+      "type": "agent",
+      "version": 1,
+      "label": "Agent",
+      "position": {
+       "x": 300,
+       "y": 380
+      },
+      "inputs": {
+       "input": "input.message"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "system": "Answer the user question clearly. Ask for clarification when needed. Do not claim to have taken external actions.",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default"
+      }
+     },
+     {
+      "id": "response",
+      "type": "response",
+      "version": 1,
+      "label": "Response",
+      "position": {
+       "x": 300,
+       "y": 890
+      },
+      "inputs": {
+       "text": "branchB.text"
+      },
+      "config": {}
+     },
+     {
+      "id": "readerReply",
+      "type": "response",
+      "version": 1,
+      "label": "Reader reply",
+      "position": {
+       "x": -180,
+       "y": 300
+      },
+      "inputs": {
+       "text": "reader.reply"
+      },
+      "config": {}
+     },
+     {
+      "id": "branchA",
+      "type": "agent",
+      "version": 1,
+      "label": "Branch A",
+      "position": {
+       "x": 120,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "system": "You are a helpful assistant.",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default",
+       "description": ""
+      }
+     },
+     {
+      "id": "branchB",
+      "type": "agent",
+      "version": 1,
+      "label": "Branch B",
+      "position": {
+       "x": 480,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "system": "You are a helpful assistant.",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default",
+       "description": ""
+      }
+     },
+     {
+      "id": "join",
+      "type": "join",
+      "version": 1,
+      "label": "Join",
+      "position": {
+       "x": 300,
+       "y": 720
+      },
+      "inputs": {},
+      "config": {}
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-reader",
+      "source": "input",
+      "target": "reader"
+     },
+     {
+      "id": "reader-agent",
+      "source": "reader",
+      "target": "agent",
+      "sourceHandle": "continue"
+     },
+     {
+      "id": "reader-readerReply",
+      "source": "reader",
+      "target": "readerReply",
+      "sourceHandle": "reply"
+     },
+     {
+      "id": "agent-branchA",
+      "source": "agent",
+      "target": "branchA"
+     },
+     {
+      "id": "agent-branchB",
+      "source": "agent",
+      "target": "branchB"
+     },
+     {
+      "id": "branchA-join",
+      "source": "branchA",
+      "target": "join"
+     },
+     {
+      "id": "join-response",
+      "source": "join",
+      "target": "response"
+     }
+    ]
+   },
+   "issues": [
+    {
+     "node_id": "branchB",
+     "message": "connect one next node, or 2–8 parallel branches that end at one Join."
+    },
+    {
+     "node_id": "response",
+     "message": "invalid binding text = branchB.text; use a declared output from a guaranteed upstream node."
+    },
+    {
+     "node_id": "branchB",
+     "message": "parallel branches cannot stop, route, decide or fork."
+    },
+    {
+     "node_id": "agent",
+     "message": "Branches from agent must all end at one Join."
+    },
+    {
+     "node_id": "join",
+     "message": "a Join waits for the branches of one fork."
+    }
+   ]
+  },
+  {
+   "name": "write_in_branch",
+   "workflow": {
+    "version": 1,
+    "contract": 2,
+    "name": "My first AI workflow",
+    "description": "Answer broad questions. Narrative replies do not authorize business actions.",
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "Chat input",
+      "position": {
+       "x": 300,
+       "y": 40
+      },
+      "inputs": {},
+      "config": {}
+     },
+     {
+      "id": "reader",
+      "type": "request_reader",
+      "version": 1,
+      "label": "Request reader",
+      "position": {
+       "x": 300,
+       "y": 210
+      },
+      "inputs": {
+       "message": "input.message"
+      },
+      "config": {
+       "purpose": "Answer general questions and help explain topics. A greeting or a message with no question gets a reply.",
+       "accepted_requests": [
+        "General questions, explanations and requests for help."
+       ],
+       "excluded_requests": [
+        "Requests to perform external actions or approve business transactions."
+       ],
+       "examples": [
+        "How do AI workflows work?"
+       ],
+       "prepared_replies": [
+        {
+         "message": "hello",
+         "reply": "Hello! Send your request and I will check whether this workflow can help."
+        },
+        {
+         "message": "hello!",
+         "reply": "Hello! Send your request and I will check whether this workflow can help."
+        }
+       ],
+       "expected_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "question": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "question"
+        ]
+       },
+       "required_fields": [
+        "/question"
+       ],
+       "required_any": [],
+       "field_rules": [
+        {
+         "field": "/question",
+         "kind": "accept_quoted"
+        }
+       ],
+       "cross_checks": [],
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "max_tokens": 2048
+      }
+     },
+     {
+      "id": "agent",
+      "type": "agent",
+      "version": 1,
+      "label": "Agent",
+      "position": {
+       "x": 300,
+       "y": 380
+      },
+      "inputs": {
+       "input": "input.message"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "system": "Answer the user question clearly. Ask for clarification when needed. Do not claim to have taken external actions.",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default"
+      }
+     },
+     {
+      "id": "response",
+      "type": "response",
+      "version": 1,
+      "label": "Response",
+      "position": {
+       "x": 300,
+       "y": 890
+      },
+      "inputs": {
+       "text": "branchA.text"
+      },
+      "config": {}
+     },
+     {
+      "id": "readerReply",
+      "type": "response",
+      "version": 1,
+      "label": "Reader reply",
+      "position": {
+       "x": -180,
+       "y": 300
+      },
+      "inputs": {
+       "text": "reader.reply"
+      },
+      "config": {}
+     },
+     {
+      "id": "branchA",
+      "type": "agent",
+      "version": 1,
+      "label": "Branch A",
+      "position": {
+       "x": 120,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "system": "You are a helpful assistant.",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default",
+       "description": ""
+      }
+     },
+     {
+      "id": "branchB",
+      "type": "tool_http",
+      "version": 1,
+      "label": "Post update",
+      "position": {
+       "x": 480,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "connection_id": "sink",
+       "method": "POST",
+       "enable_writes": true,
+       "approval": false
+      }
+     },
+     {
+      "id": "join",
+      "type": "join",
+      "version": 1,
+      "label": "Join",
+      "position": {
+       "x": 300,
+       "y": 720
+      },
+      "inputs": {},
+      "config": {}
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-reader",
+      "source": "input",
+      "target": "reader"
+     },
+     {
+      "id": "reader-agent",
+      "source": "reader",
+      "target": "agent",
+      "sourceHandle": "continue"
+     },
+     {
+      "id": "reader-readerReply",
+      "source": "reader",
+      "target": "readerReply",
+      "sourceHandle": "reply"
+     },
+     {
+      "id": "agent-branchA",
+      "source": "agent",
+      "target": "branchA"
+     },
+     {
+      "id": "agent-branchB",
+      "source": "agent",
+      "target": "branchB"
+     },
+     {
+      "id": "branchA-join",
+      "source": "branchA",
+      "target": "join"
+     },
+     {
+      "id": "branchB-join",
+      "source": "branchB",
+      "target": "join"
+     },
+     {
+      "id": "join-response",
+      "source": "join",
+      "target": "response"
+     }
+    ]
+   },
+   "issues": [
+    {
+     "node_id": "branchB",
+     "message": "external writes belong after the Join."
+    },
+    {
+     "node_id": "branchB",
+     "message": "bind verified values; a raw model output cannot bypass extraction checking."
+    },
+    {
+     "node_id": "branchB",
+     "message": "an external write must bind a verified value or its deterministic calculation."
+    },
+    {
+     "node_id": "branchB",
+     "message": "connection, permissions or operation settings are unavailable. Check this node configuration."
+    }
+   ]
+  },
+  {
+   "name": "nine_branches",
+   "workflow": {
+    "version": 1,
+    "contract": 2,
+    "name": "My first AI workflow",
+    "description": "Answer broad questions. Narrative replies do not authorize business actions.",
+    "nodes": [
+     {
+      "id": "input",
+      "type": "chat_input",
+      "version": 1,
+      "label": "Chat input",
+      "position": {
+       "x": 300,
+       "y": 40
+      },
+      "inputs": {},
+      "config": {}
+     },
+     {
+      "id": "reader",
+      "type": "request_reader",
+      "version": 1,
+      "label": "Request reader",
+      "position": {
+       "x": 300,
+       "y": 210
+      },
+      "inputs": {
+       "message": "input.message"
+      },
+      "config": {
+       "purpose": "Answer general questions and help explain topics. A greeting or a message with no question gets a reply.",
+       "accepted_requests": [
+        "General questions, explanations and requests for help."
+       ],
+       "excluded_requests": [
+        "Requests to perform external actions or approve business transactions."
+       ],
+       "examples": [
+        "How do AI workflows work?"
+       ],
+       "prepared_replies": [
+        {
+         "message": "hello",
+         "reply": "Hello! Send your request and I will check whether this workflow can help."
+        },
+        {
+         "message": "hello!",
+         "reply": "Hello! Send your request and I will check whether this workflow can help."
+        }
+       ],
+       "expected_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "question": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        },
+        "required": [
+         "question"
+        ]
+       },
+       "required_fields": [
+        "/question"
+       ],
+       "required_any": [],
+       "field_rules": [
+        {
+         "field": "/question",
+         "kind": "accept_quoted"
+        }
+       ],
+       "cross_checks": [],
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "max_tokens": 2048
+      }
+     },
+     {
+      "id": "agent",
+      "type": "agent",
+      "version": 1,
+      "label": "Agent",
+      "position": {
+       "x": 300,
+       "y": 380
+      },
+      "inputs": {
+       "input": "input.message"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "system": "Answer the user question clearly. Ask for clarification when needed. Do not claim to have taken external actions.",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default"
+      }
+     },
+     {
+      "id": "response",
+      "type": "response",
+      "version": 1,
+      "label": "Response",
+      "position": {
+       "x": 300,
+       "y": 890
+      },
+      "inputs": {
+       "text": "branchB.text"
+      },
+      "config": {}
+     },
+     {
+      "id": "readerReply",
+      "type": "response",
+      "version": 1,
+      "label": "Reader reply",
+      "position": {
+       "x": -180,
+       "y": 300
+      },
+      "inputs": {
+       "text": "reader.reply"
+      },
+      "config": {}
+     },
+     {
+      "id": "branchA",
+      "type": "agent",
+      "version": 1,
+      "label": "Branch A",
+      "position": {
+       "x": 120,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "system": "You are a helpful assistant.",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default",
+       "description": ""
+      }
+     },
+     {
+      "id": "branchB",
+      "type": "agent",
+      "version": 1,
+      "label": "Branch B",
+      "position": {
+       "x": 480,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "system": "You are a helpful assistant.",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default",
+       "description": ""
+      }
+     },
+     {
+      "id": "join",
+      "type": "join",
+      "version": 1,
+      "label": "Join",
+      "position": {
+       "x": 300,
+       "y": 720
+      },
+      "inputs": {},
+      "config": {}
+     },
+     {
+      "id": "branch3",
+      "type": "agent",
+      "version": 1,
+      "label": "Branch 3",
+      "position": {
+       "x": 360,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "system": "You are a helpful assistant.",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default",
+       "description": ""
+      }
+     },
+     {
+      "id": "branch4",
+      "type": "agent",
+      "version": 1,
+      "label": "Branch 4",
+      "position": {
+       "x": 480,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "system": "You are a helpful assistant.",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default",
+       "description": ""
+      }
+     },
+     {
+      "id": "branch5",
+      "type": "agent",
+      "version": 1,
+      "label": "Branch 5",
+      "position": {
+       "x": 600,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "system": "You are a helpful assistant.",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default",
+       "description": ""
+      }
+     },
+     {
+      "id": "branch6",
+      "type": "agent",
+      "version": 1,
+      "label": "Branch 6",
+      "position": {
+       "x": 720,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "system": "You are a helpful assistant.",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default",
+       "description": ""
+      }
+     },
+     {
+      "id": "branch7",
+      "type": "agent",
+      "version": 1,
+      "label": "Branch 7",
+      "position": {
+       "x": 840,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "system": "You are a helpful assistant.",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default",
+       "description": ""
+      }
+     },
+     {
+      "id": "branch8",
+      "type": "agent",
+      "version": 1,
+      "label": "Branch 8",
+      "position": {
+       "x": 960,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "system": "You are a helpful assistant.",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default",
+       "description": ""
+      }
+     },
+     {
+      "id": "branch9",
+      "type": "agent",
+      "version": 1,
+      "label": "Branch 9",
+      "position": {
+       "x": 1080,
+       "y": 550
+      },
+      "inputs": {
+       "input": "agent.text"
+      },
+      "config": {
+       "provider": "ollama",
+       "model": "tiny:latest",
+       "credential_id": "",
+       "system": "You are a helpful assistant.",
+       "max_tokens": 2048,
+       "role": "reasoner",
+       "user_prompt": "{input}",
+       "max_steps": 6,
+       "memory_key": "default",
+       "description": ""
+      }
+     }
+    ],
+    "edges": [
+     {
+      "id": "input-reader",
+      "source": "input",
+      "target": "reader"
+     },
+     {
+      "id": "reader-agent",
+      "source": "reader",
+      "target": "agent",
+      "sourceHandle": "continue"
+     },
+     {
+      "id": "reader-readerReply",
+      "source": "reader",
+      "target": "readerReply",
+      "sourceHandle": "reply"
+     },
+     {
+      "id": "agent-branchA",
+      "source": "agent",
+      "target": "branchA"
+     },
+     {
+      "id": "agent-branchB",
+      "source": "agent",
+      "target": "branchB"
+     },
+     {
+      "id": "branchA-join",
+      "source": "branchA",
+      "target": "join"
+     },
+     {
+      "id": "branchB-join",
+      "source": "branchB",
+      "target": "join"
+     },
+     {
+      "id": "join-response",
+      "source": "join",
+      "target": "response"
+     },
+     {
+      "id": "agent-branch3",
+      "source": "agent",
+      "target": "branch3"
+     },
+     {
+      "id": "branch3-join",
+      "source": "branch3",
+      "target": "join"
+     },
+     {
+      "id": "agent-branch4",
+      "source": "agent",
+      "target": "branch4"
+     },
+     {
+      "id": "branch4-join",
+      "source": "branch4",
+      "target": "join"
+     },
+     {
+      "id": "agent-branch5",
+      "source": "agent",
+      "target": "branch5"
+     },
+     {
+      "id": "branch5-join",
+      "source": "branch5",
+      "target": "join"
+     },
+     {
+      "id": "agent-branch6",
+      "source": "agent",
+      "target": "branch6"
+     },
+     {
+      "id": "branch6-join",
+      "source": "branch6",
+      "target": "join"
+     },
+     {
+      "id": "agent-branch7",
+      "source": "agent",
+      "target": "branch7"
+     },
+     {
+      "id": "branch7-join",
+      "source": "branch7",
+      "target": "join"
+     },
+     {
+      "id": "agent-branch8",
+      "source": "agent",
+      "target": "branch8"
+     },
+     {
+      "id": "branch8-join",
+      "source": "branch8",
+      "target": "join"
+     },
+     {
+      "id": "agent-branch9",
+      "source": "agent",
+      "target": "branch9"
+     },
+     {
+      "id": "branch9-join",
+      "source": "branch9",
+      "target": "join"
+     }
+    ]
+   },
+   "issues": [
+    {
+     "node_id": "agent",
+     "message": "A fork has 2–8 branches."
+    },
+    {
+     "node_id": "join",
+     "message": "a Join waits for the branches of one fork."
+    }
+   ]
+  }
+ ]
+}

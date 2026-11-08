@@ -1,0 +1,6 @@
+# Full backend suite in the first isolation copy (4dcb9d9; identical except the browser spec, which no backend test reads), PostgreSQL cases on a throwaway container
+PYTHONHASHSEED=0: 2050 passed, 4 warnings in 110.83s (0:01:50)
+PYTHONHASHSEED=1: 2050 passed, 4 warnings in 109.68s (0:01:49)
+PYTHONHASHSEED=2: 2050 passed, 4 warnings in 109.12s (0:01:49)
+PYTHONHASHSEED=3: 2050 passed, 4 warnings in 109.10s (0:01:49)
+PYTHONHASHSEED=4: 2050 passed, 4 warnings in 109.29s (0:01:49)

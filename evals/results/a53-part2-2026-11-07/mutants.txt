@@ -1,0 +1,12 @@
+M21: KILLED by planned ['B01'] | unit 1/2 passed, browser {'failed': 1, 'passed': 4}
+  failed: U01, B01
+M22: KILLED by planned ['U02'] | unit 1/2 passed, browser {'passed': 5}
+  failed: U02
+M23: KILLED by planned ['B01'] | unit 2/2 passed, browser {'failed': 1, 'passed': 4}
+  failed: B01
+M24: KILLED by planned ['B05'] | unit 2/2 passed, browser {'failed': 1, 'passed': 4}
+  failed: B05
+M25: KILLED by planned ['B04'] | unit 2/2 passed, browser {'failed': 1, 'passed': 4}
+  failed: B04
+
+ALL PLANNED KILLS: True

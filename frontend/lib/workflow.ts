@@ -331,12 +331,24 @@ export function paletteCategory(type: string): string | null {
         agent: 'Agent',
         condition: 'Control',
         calculate: 'Control',
+        join: 'Control',
         request_reader: 'Control',
         switch: 'Control',
         response: 'Output',
       } as Record<string, string>
     )[type] || null
   );
+}
+
+// How many branches arrive at a Join: the distinct sources of its normal flow edges. Error
+// routes, attached tools and specialists do not count, and a repeated edge counts once.
+// Validate decides whether the branches are correct.
+export function joinArrivals(edges: WorkflowEdge[], join: string): number {
+  return new Set(
+    edges
+      .filter((e) => e.target === join && (!e.kind || e.kind === 'flow') && e.sourceHandle !== 'error')
+      .map((e) => e.source),
+  ).size;
 }
 
 export function flowBinding(

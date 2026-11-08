@@ -1,0 +1,33 @@
+# A5.3 Part 2 baseline: git archive 4db70a7 + the 4 new test files
+copy: <scratchpad>/a53-p2-baseline-ku7de3l9
+
+## Unit (node --test tests/parallel.test.ts)
+not ok 1 - U01 the Join is offered in the Control group of the palette
+not ok 2 - U02 a Join card counts distinct sources of its normal flow arrivals
+expected: 'Control'
+actual: ~
+name: 'TypeError'
+
+## Browser (playwright tests/browser/parallel-branches.spec.ts, 15 s timeout)
+  1) tests/browser/parallel-branches.spec.ts:176:1 › B01 a fork with a Join is built from the palette after the Request reader
+    Error: locator.dragTo: Test timeout of 15000ms exceeded.
+      - waiting for getByRole('button', { name: 'Join', exact: true })
+  2) tests/browser/parallel-branches.spec.ts:210:1 › B02 the Join card counts the branches that arrive at it
+    Error: expect(locator).toContainText(expected) failed
+    Expected substring: "Waits for 2 branches"
+    Received string:    "JoinWait for every parallel branch of one fork, then continue. Later nodes bind any branch output.joinReady"
+  3) tests/browser/parallel-branches.spec.ts:243:1 › B04 branches show as running together, then failed and cancelled
+    Error: expect(received).toBe(expected) // Object.is equality
+    Expected: "dashed"
+    Received: "solid"
+  4) tests/browser/parallel-branches.spec.ts:262:1 › B05 the quick guide explains forks and no longer lists parallel execution as future work
+    Error: expect(locator).toContainText(expected) failed
+    Expected substring: "connect the last step of every branch to the same Join"
+    Received string:    "Build your first workflowCompose your workflowClick or drag nodes from the library. Connect an output handle to the next node’s input handle.Map inputs and configure nodesSelect a node to bind upstream outputs. Conditions need both a true and false connection, each leading to a response.Test, inspect, iterateEnter a message and run. The execution log shows real node inputs, outputs, timings and errors. Demo mode needs no credential.Save or exportSave to the local backend or export a portable JSON file. Changes are not autosaved.This foundation supports single-user, acyclic workflows. Loops, parallel execution, approvals and team permissions are future releases."
+      - waiting for getByRole('dialog', { name: 'Quick guide' })
+  4 failed
+  1 passed (34.1s)
+
+## Backend (pytest backend/tests/test_parallel_editor_contract.py)
+PASSED backend/tests/test_parallel_editor_contract.py::test_k01_the_editor_fork_validates_and_broken_forks_report_located_issues
+1 passed, 1 warning in 0.60s

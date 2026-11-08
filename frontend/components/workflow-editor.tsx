@@ -44,6 +44,7 @@ import {
   Code2,
   Copy,
   GitBranch,
+  GitMerge,
   GripVertical,
   KeyRound,
   Layers3,
@@ -96,6 +97,7 @@ import {
   trustText,
   type Issue,
   isControl,
+  joinArrivals,
   nodeRoutes,
   inputPorts,
   setInputBinding,
@@ -135,6 +137,7 @@ type CanvasNode = FlowNode<
     definition?: Definition;
     status?: string;
     invalid?: boolean;
+    arrivals?: number;
   },
   'workflow'
 >;
@@ -150,12 +153,13 @@ const icons: Record<string, typeof Zap> = {
   tool_email: Send,
   tool_python: Code2,
   condition: GitBranch,
+  join: GitMerge,
   calculate: Calculator,
   response: Send,
 };
 
 function WorkflowCard({ id, data, selected }: NodeProps<CanvasNode>) {
-  const { spec, definition, status, invalid } = data;
+  const { spec, definition, status, invalid, arrivals } = data;
   const Icon = Object.hasOwn(icons, spec.type) ? icons[spec.type] : Layers3;
   const routes = isControl(definition) ? nodeRoutes(definition, spec) : [];
   const labels = spec.type === 'switch' ? routes.map((route) => routeLabel(spec.config, route)) : routes;
@@ -180,7 +184,9 @@ function WorkflowCard({ id, data, selected }: NodeProps<CanvasNode>) {
           ? spec.config.provider === 'demo'
             ? 'Demo provider'
             : String(spec.config.model)
-          : definition?.description || spec.type}
+          : spec.type === 'join'
+            ? `Waits for ${arrivals ?? 0} ${arrivals === 1 ? 'branch' : 'branches'}`
+            : definition?.description || spec.type}
       </p>
       <div className="node-bottom">
         <span className="mono">{spec.type.replaceAll('_', ' ')}</span>
@@ -898,6 +904,7 @@ function Editor() {
       ...n.data,
       invalid: invalidNodes.has(n.id),
       definition: catalog.find((d) => d.type === n.data.spec.type),
+      arrivals: n.data.spec.type === 'join' ? joinArrivals(edges, n.id) : undefined,
       status:
         run && sameExecutionGraph(run.workflow, workflow)
           ? statuses[n.id]
@@ -2095,7 +2102,10 @@ function Editor() {
                   <strong>Compose your workflow</strong>
                   <p>
                     Click or drag nodes from the library. Connect an output
-                    handle to the next node’s input handle.
+                    handle to the next node’s input handle. To run steps at the
+                    same time, connect a step after the Request reader to 2–8
+                    next steps, and connect the last step of every branch to the
+                    same Join.
                   </p>
                 </li>
                 <li>
@@ -2124,9 +2134,8 @@ function Editor() {
               <div className="info-note">
                 <ShieldCheck size={16} />
                 <p>
-                  This foundation supports single-user, acyclic workflows.
-                  Loops, parallel execution, approvals and team permissions are
-                  future releases.
+                  This foundation supports single-user, acyclic workflows. Team
+                  permissions are a future release.
                 </p>
               </div>
             </>

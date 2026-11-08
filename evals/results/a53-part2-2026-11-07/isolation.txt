@@ -1,0 +1,20 @@
+# A5.3 Part 2 isolation copy: git archive 4db70a7 + the 11 changed files, git init + one commit
+copy: <scratchpad>/a53-p2-iso-0q70d0sp
+commit: 2456d1a931a4e0f17416993d862337a46bea98b7
+frontend/node_modules: symlink to the working tree (no dependency change)
+
+## Files copied (sha256; copy == working tree)
+512d8d861b02447e2cd730d8331d78c60ab32f0e897dfe63945f4571b596dbd8 frontend/lib/workflow.ts match
+56fbe5ff382638a284640ce53009611cf0b1cb7fb1f2fceb5ba3c9e92c52566d frontend/components/workflow-editor.tsx match
+b2b313ddc4c2574cf68e4b423cb7144bed3490bb7f57c4edb5b1169f9dcea78d frontend/app/globals.css match
+577ec1cd88fc7da88363650811041f82ef018f28fa5d72b4c2802efb6b0e7415 frontend/tests/parallel.test.ts match
+e2500a29ea84cd8a6d0aae4ed2ed002dd4e17a934fa4f787bad006aa148719ff frontend/tests/browser/parallel-branches.spec.ts match
+6d638313153c927e6feb4672fa47ee8ea243e889894e6182fb6e3ec5f68a61be frontend/tests/browser/parallel-issues.json match
+e1b14f58f971cf23be02e4721eb5c6352d1f1690d080ade6076d0505141899f8 backend/tests/test_parallel_editor_contract.py match
+dd7cac45808590383f654732cc4d89eb3ded5d120a0ccc554f5d6cf01cb071ab README.md match
+da6526620c2dd3e4edce3c7cd8e049e41a123edd5fea450a87c8661ec60dfe4f docs/operations.md match
+5be02c25afafe1fd223ad0413efe29a09684cdb2c6627952fd539ccf87957e81 docs/platform-reference.md match
+34b37b3c6fdfbde464a33a7b83a858c8db94bcd08372fb0acd44d89d0832980a docs/superpowers/specs/2026-11-07-parallel-branches-editor-design.md match
+
+## Other changed or untracked files outside evals/ and docs/reviews/
+none
