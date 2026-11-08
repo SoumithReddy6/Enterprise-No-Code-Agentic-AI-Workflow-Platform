@@ -1,0 +1,44 @@
+{
+  "M27": {
+    "S22": "passed",
+    "S23a": "passed",
+    "S23b": "passed",
+    "S24": "passed"
+  },
+  "M28": {
+    "S22": "AssertionError: [{'node_id': 'join', 'status': 'running', 'inputs': {}, 'seq': 8, 'timestamp': '2026-11-08T17:31:55.211111+00:00'}, {'node_id': 'join', 'status': 'success', 'outputs': {'_provenance': {'v': 2, 'ports': {}}}, 'duration_ms': 2, 'seq': 9, 'timestamp': '2026-11-08T17:31:55.212756+00:00'}, {'node_id': 'join', 'status': 'running', 'inputs': {}, 'seq': 11, 'timestamp': '2026-11-08T17:31:55.219744+00:00'}, {'node_id': 'join', 'status': 'success', 'outputs': {'_provenance': {'v': 2, 'ports': {}}}, 'duration_ms': 1, 'seq': 13, 'timestamp': '2026-11-08T17:31:55.221554+00:00'}]",
+    "S23a": "passed",
+    "S23b": "passed",
+    "S24": "passed"
+  },
+  "M29": {
+    "S22": "passed",
+    "S23a": "AssertionError: ('failed', 'Run failed unexpectedly.')",
+    "S23b": "passed",
+    "S24": "passed"
+  },
+  "M30": {
+    "S22": "passed",
+    "S23a": "passed",
+    "S23b": "AssertionError: {'valid': True, 'errors': [], 'warnings': [], 'issues': [], 'warning_issues': [], 'workflow': {'version': 1, 'contract': 1, 'name': 'Parallel branches', 'description': '', 'nodes': [{'id': 'input', 'type': 'chat_input', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {}, 'config': {}, 'on_error': 'fail', 'retry': {'attempts': 0, 'base_delay': 0.5}}, {'id': 'a1', 'type': 'tool_http', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {'input': 'input.message'}, 'config': {'connection_id': 'f0283ea725e44378baa06ef24321ffd3', 'method': 'GET', 'path': '/lookup/s23b-a'}, 'on_error': 'fail', 'retry': {'attempts': 0, 'base_delay': 0.5}}, {'id': 'b1', 'type': 'tool_http', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {'input': 'input.message'}, 'config': {'connection_id': 'f0283ea725e44378baa06ef24321ffd3', 'meth",
+    "S24": "passed"
+  },
+  "M31": {
+    "S22": "passed",
+    "S23a": "passed",
+    "S23b": "passed",
+    "S24": "AssertionError: the restored branch was read again"
+  },
+  "M32": {
+    "S22": "AssertionError: {'valid': False, 'errors': ['send: invalid binding input = a1.text; use a declared output from a guaranteed upstream node.', 'out: invalid binding text = b2.text; use a declared output from a guaranteed upstream node.'], 'warnings': [], 'issues': [{'node_id': 'send', 'message': 'invalid binding input = a1.text; use a declared output from a guaranteed upstream node.'}, {'node_id': 'out', 'message': 'invalid binding text = b2.text; use a declared output from a guaranteed upstream node.'}], 'warning_issues': [], 'workflow': {'version': 1, 'contract': 1, 'name': 'Parallel branches', 'description': '', 'nodes': [{'id': 'input', 'type': 'chat_input', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {}, 'config': {}, 'on_error': 'fail', 'retry': {'attempts': 0, 'base_delay': 0.5}}, {'id': 'a1', 'type': 'tool_http', 'version': 1, 'label': '', 'position': {'x",
+    "S23a": "AssertionError: {\"detail\":[\"send: invalid binding input = a1.text; use a declared output from a guaranteed upstream node.\",\"out: invalid binding text = b1.text; use a declared output from a guaranteed upstream node.\"]}",
+    "S23b": "AssertionError: {'valid': False, 'errors': ['out: invalid binding text = a1.text; use a declared output from a guaranteed upstream node.', 'b1: external writes belong after the Join.'], 'warnings': [], 'issues': [{'node_id': 'out', 'message': 'invalid binding text = a1.text; use a declared output from a guaranteed upstream node.'}, {'node_id': 'b1', 'message': 'external writes belong after the Join.'}], 'warning_issues': [], 'workflow': {'version': 1, 'contract': 1, 'name': 'Parallel branches', 'description': '', 'nodes': [{'id': 'input', 'type': 'chat_input', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {}, 'config': {}, 'on_error': 'fail', 'retry': {'attempts': 0, 'base_delay': 0.5}}, {'id': 'a1', 'type': 'tool_http', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {'input': 'input.message'}, 'config': {'connection_id': '8c4c966ba8234533",
+    "S24": "AssertionError: {\"detail\":[\"send: invalid binding input = a1.text; use a declared output from a guaranteed upstream node.\",\"out: invalid binding text = b1.text; use a declared output from a guaranteed upstream node.\"]}"
+  },
+  "M33": {
+    "S22": "AssertionError: {'join_running': 8, 'branch_success': {'a1': 6, 'b2': 10}}",
+    "S23a": "passed",
+    "S23b": "passed",
+    "S24": "passed"
+  }
+}

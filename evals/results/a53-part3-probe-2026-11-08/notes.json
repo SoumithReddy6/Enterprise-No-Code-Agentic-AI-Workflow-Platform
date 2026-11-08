@@ -1,0 +1,453 @@
+{
+  "S22": {
+    "valid": {
+      "valid": true,
+      "errors": [],
+      "warnings": [],
+      "issues": [],
+      "warning_issues": [],
+      "workflow": {
+        "version": 1,
+        "contract": 1,
+        "name": "Fork",
+        "description": "",
+        "nodes": [
+          {
+            "id": "input",
+            "type": "chat_input",
+            "version": 1,
+            "label": "",
+            "position": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "inputs": {},
+            "config": {},
+            "on_error": "fail",
+            "retry": {
+              "attempts": 0,
+              "base_delay": 0.5
+            }
+          },
+          {
+            "id": "a1",
+            "type": "tool_http",
+            "version": 1,
+            "label": "",
+            "position": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "inputs": {
+              "input": "input.message"
+            },
+            "config": {
+              "connection_id": "1f03d1c9717040d08c33a1400083eb2e",
+              "method": "GET",
+              "path": "/meet/s22/a"
+            },
+            "on_error": "fail",
+            "retry": {
+              "attempts": 0,
+              "base_delay": 0.5
+            }
+          },
+          {
+            "id": "b1",
+            "type": "tool_http",
+            "version": 1,
+            "label": "",
+            "position": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "inputs": {
+              "input": "input.message"
+            },
+            "config": {
+              "connection_id": "1f03d1c9717040d08c33a1400083eb2e",
+              "method": "GET",
+              "path": "/meet/s22/b"
+            },
+            "on_error": "fail",
+            "retry": {
+              "attempts": 0,
+              "base_delay": 0.5
+            }
+          },
+          {
+            "id": "b2",
+            "type": "tool_http",
+            "version": 1,
+            "label": "",
+            "position": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "inputs": {
+              "input": "b1.text"
+            },
+            "config": {
+              "connection_id": "1f03d1c9717040d08c33a1400083eb2e",
+              "method": "GET",
+              "path": "/lookup/b2"
+            },
+            "on_error": "fail",
+            "retry": {
+              "attempts": 0,
+              "base_delay": 0.5
+            }
+          },
+          {
+            "id": "join",
+            "type": "join",
+            "version": 1,
+            "label": "",
+            "position": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "inputs": {},
+            "config": {},
+            "on_error": "fail",
+            "retry": {
+              "attempts": 0,
+              "base_delay": 0.5
+            }
+          },
+          {
+            "id": "send",
+            "type": "tool_http",
+            "version": 1,
+            "label": "",
+            "position": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "inputs": {
+              "input": "a1.text"
+            },
+            "config": {
+              "connection_id": "1f03d1c9717040d08c33a1400083eb2e",
+              "method": "POST",
+              "path": "/deliver/s22",
+              "body": "{input}",
+              "enable_writes": true,
+              "approval": false
+            },
+            "on_error": "fail",
+            "retry": {
+              "attempts": 0,
+              "base_delay": 0.5
+            }
+          },
+          {
+            "id": "out",
+            "type": "response",
+            "version": 1,
+            "label": "",
+            "position": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "inputs": {
+              "text": "b2.text"
+            },
+            "config": {},
+            "on_error": "fail",
+            "retry": {
+              "attempts": 0,
+              "base_delay": 0.5
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e0",
+            "source": "input",
+            "target": "a1",
+            "sourceHandle": null,
+            "targetHandle": null,
+            "kind": "flow"
+          },
+          {
+            "id": "e1",
+            "source": "input",
+            "target": "b1",
+            "sourceHandle": null,
+            "targetHandle": null,
+            "kind": "flow"
+          },
+          {
+            "id": "e2",
+            "source": "b1",
+            "target": "b2",
+            "sourceHandle": null,
+            "targetHandle": null,
+            "kind": "flow"
+          },
+          {
+            "id": "e3",
+            "source": "a1",
+            "target": "join",
+            "sourceHandle": null,
+            "targetHandle": null,
+            "kind": "flow"
+          },
+          {
+            "id": "e4",
+            "source": "b2",
+            "target": "join",
+            "sourceHandle": null,
+            "targetHandle": null,
+            "kind": "flow"
+          },
+          {
+            "id": "e5",
+            "source": "join",
+            "target": "send",
+            "sourceHandle": null,
+            "targetHandle": null,
+            "kind": "flow"
+          },
+          {
+            "id": "e6",
+            "source": "send",
+            "target": "out",
+            "sourceHandle": null,
+            "targetHandle": null,
+            "kind": "flow"
+          }
+        ]
+      }
+    },
+    "status": "success",
+    "error": "",
+    "output": "{\"lookup\": \"b2\"}",
+    "deliveries": [
+      "{\"lookup\":\"a\"}"
+    ],
+    "join_success": 1,
+    "meet_arrivals": 2,
+    "tokens": {
+      "action_budget": {
+        "remaining": 36,
+        "counter": 4,
+        "ceiling": 40,
+        "charged": [
+          "a1#0",
+          "b1#0",
+          "b2#0",
+          "send#0"
+        ]
+      },
+      "tokens_spent": 0,
+      "usage": {},
+      "usage_by_invocation": {}
+    }
+  },
+  "S23": {
+    "status": "failed",
+    "error": "Tool provider returned HTTP 500",
+    "a1": [
+      "running",
+      "failed"
+    ],
+    "b1": [
+      "running",
+      "cancelled"
+    ],
+    "join_events": 0,
+    "deliveries": 0,
+    "slow_branch_answered_before_run_failed": false,
+    "slow_branch_answered_later": true
+  },
+  "S23b": {
+    "validate": {
+      "valid": false,
+      "errors": [
+        "b1: external writes belong after the Join."
+      ],
+      "warnings": [],
+      "issues": [
+        {
+          "node_id": "b1",
+          "message": "external writes belong after the Join."
+        }
+      ],
+      "warning_issues": [],
+      "workflow": {
+        "version": 1,
+        "contract": 1,
+        "name": "Fork",
+        "description": "",
+        "nodes": [
+          {
+            "id": "input",
+            "type": "chat_input",
+            "version": 1,
+            "label": "",
+            "position": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "inputs": {},
+            "config": {},
+            "on_error": "fail",
+            "retry": {
+              "attempts": 0,
+              "base_delay": 0.5
+            }
+          },
+          {
+            "id": "a1",
+            "type": "tool_http",
+            "version": 1,
+            "label": "",
+            "position": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "inputs": {
+              "input": "input.message"
+            },
+            "config": {
+              "connection_id": "1f03d1c9717040d08c33a1400083eb2e",
+              "method": "GET",
+              "path": "/lookup/s23b-a"
+            },
+            "on_error": "fail",
+            "retry": {
+              "attempts": 0,
+              "base_delay": 0.5
+            }
+          },
+          {
+            "id": "b1",
+            "type": "tool_http",
+            "version": 1,
+            "label": "",
+            "position": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "inputs": {
+              "input": "input.message"
+            },
+            "config": {
+              "connection_id": "1f03d1c9717040d08c33a1400083eb2e",
+              "method": "POST",
+              "path": "/deliver/s23b",
+              "body": "{input}",
+              "enable_writes": true,
+              "approval": false
+            },
+            "on_error": "fail",
+            "retry": {
+              "attempts": 0,
+              "base_delay": 0.5
+            }
+          },
+          {
+            "id": "join",
+            "type": "join",
+            "version": 1,
+            "label": "",
+            "position": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "inputs": {},
+            "config": {},
+            "on_error": "fail",
+            "retry": {
+              "attempts": 0,
+              "base_delay": 0.5
+            }
+          },
+          {
+            "id": "out",
+            "type": "response",
+            "version": 1,
+            "label": "",
+            "position": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "inputs": {
+              "text": "a1.text"
+            },
+            "config": {},
+            "on_error": "fail",
+            "retry": {
+              "attempts": 0,
+              "base_delay": 0.5
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e0",
+            "source": "input",
+            "target": "a1",
+            "sourceHandle": null,
+            "targetHandle": null,
+            "kind": "flow"
+          },
+          {
+            "id": "e1",
+            "source": "input",
+            "target": "b1",
+            "sourceHandle": null,
+            "targetHandle": null,
+            "kind": "flow"
+          },
+          {
+            "id": "e2",
+            "source": "a1",
+            "target": "join",
+            "sourceHandle": null,
+            "targetHandle": null,
+            "kind": "flow"
+          },
+          {
+            "id": "e3",
+            "source": "b1",
+            "target": "join",
+            "sourceHandle": null,
+            "targetHandle": null,
+            "kind": "flow"
+          },
+          {
+            "id": "e4",
+            "source": "join",
+            "target": "out",
+            "sourceHandle": null,
+            "targetHandle": null,
+            "kind": "flow"
+          }
+        ]
+      }
+    },
+    "submit": 422,
+    "submit_body": "{\"detail\":[\"b1: external writes belong after the Join.\"]}",
+    "runs_created": 0,
+    "requests": 0
+  },
+  "S24": {
+    "checkpoints_at_kill": [
+      "a1",
+      "input"
+    ],
+    "status": "success",
+    "error": "",
+    "resume_seconds": 35.2,
+    "a_reads": 1,
+    "b_reads": 2,
+    "deliveries": [
+      "{\"lookup\":\"s24-a\"}"
+    ],
+    "join_success": 1,
+    "output": "{\"lookup\": \"s24-b\"}"
+  }
+}

@@ -10,7 +10,7 @@ This README is about how the system is designed for those cases.
 | --- | --- |
 | **Status** | Working local platform, single workspace per account. Intended for loopback use until the deployment and identity work below lands. |
 | **Stack** | React + React Flow · FastAPI · LangGraph · SQLAlchemy on SQLite or PostgreSQL · Alembic · Ollama, OpenAI, Claude · FAISS, Elasticsearch, Pinecone · Docker sandbox |
-| **Verification** | 2,050 backend tests run under five hash seeds · 118 frontend unit tests + 54 Chromium tests · 23 deployed-process production scenarios · 17 live-model workflows · PostgreSQL conformance · five GitHub Actions jobs · a 53-question grounding gate with thresholds fixed before measurement |
+| **Verification** | 2,050 backend tests run under five hash seeds · 118 frontend unit tests + 54 Chromium tests · 27 deployed-process production scenarios · 17 live-model workflows · PostgreSQL conformance · five GitHub Actions jobs · a 53-question grounding gate with thresholds fixed before measurement |
 
 **Start here (five minutes).** [§2.3](#23-did-the-external-write-happen) shows how a write with an unknown outcome is never sent twice. [§2.6](#26-budgets-that-reset-on-resume-leak-through-nesting-or-lose-their-count) shows how token spend survives a crash at the exact commit. [§4](#4-evaluation-measured-including-what-failed) shows the grounding results, including the three approaches that failed.
 
@@ -115,7 +115,7 @@ sequenceDiagram
 
 ## 2. Production problems Relay is designed for
 
-These are failure modes of shared, long-running, side-effecting systems, the kind that do not show up in a single-user demo. For each one: what goes wrong, how Relay handles it, and the evidence. Scenario IDs (S01–S21) refer to the [deployed-process scenario gate](docs/production-scenario-testing.md), which runs a real API process, real worker processes and a real HTTP receiver.
+These are failure modes of shared, long-running, side-effecting systems, the kind that do not show up in a single-user demo. For each one: what goes wrong, how Relay handles it, and the evidence. Scenario IDs (S01–S24) refer to the [deployed-process scenario gate](docs/production-scenario-testing.md), which runs a real API process, real worker processes and a real HTTP receiver.
 
 ### 2.1 Two workers believe they own the same run
 
@@ -148,6 +148,7 @@ sequenceDiagram
 
 **Evidence.**
 - S15: the worker exits right after an item's SQL commit, and real lease expiry hands the run to a new worker without repeating the completed write.
+- S24: the worker is killed in the middle of a fork; the finished branch is restored without a new request, the unfinished one runs again, and the write after the Join is sent once.
 - PostgreSQL CI: `SIGKILL` mid-loop; committed items are not repeated, and checkpoints match an uninterrupted run.
 - Honest boundary: a *read* in flight at the moment of the kill has an unknown outcome and is retried once, and that retry is charged. Relay promises "no duplicate writes", not "every call exactly once".
 
@@ -252,7 +253,7 @@ Each doubling of item count adds roughly 10–25% more bytes, not 4×.
 
 **Design.** The compiler applies a **guaranteed-upstream** rule: a node may bind only to outputs of nodes that run on *every* path reaching it. Error branches cannot read the failed node's outputs, and a node using `on_error: continue` cannot have readers at all. Violations are rejected at validation, before a run exists.
 
-**Evidence.** S08: an invalid recovery binding is rejected before execution through the deployed API.
+**Evidence.** S08: an invalid recovery binding is rejected before execution through the deployed API. S22: after a Join, one write reads one branch and the Response reads the other, and the history shows that the Join started only after both branches finished. S23a–b: a failing branch cancels its sibling and nothing after the Join is sent; a write inside a branch is refused before any run.
 
 ### 2.9 Conditions that guess
 
@@ -420,7 +421,7 @@ These are substring and abstention heuristics, not proof of semantic correctness
 | Layer | What runs | Where |
 | --- | --- | --- |
 | Unit and integration | 2,050 backend tests (3 need PostgreSQL); 118 frontend tests | CI (a random hash seed, then seed 1) + local (`PYTHONHASHSEED` 0–4 for each change, to catch hidden ordering assumptions) |
-| Deployed processes | 23 scenarios against a real API process, real worker processes and an HTTP receiver: kill -9 mid-write, restarts between approvals, stale leases, SSRF, tenant isolation | `scripts/check_production_scenarios.py` |
+| Deployed processes | 27 scenarios against a real API process, real worker processes and an HTTP receiver: kill -9 mid-write and mid-fork, restarts between approvals, stale leases, SSRF, tenant isolation, parallel branches | `scripts/check_production_scenarios.py` |
 | Live models | 17 workflow shapes on real Ollama models and real Docker (last full run 2026-10-06) | same runner, `--live-models` |
 | PostgreSQL | migrations up/down/up with populated history, four concurrent workers, a stale lease, `SIGKILL` inside a loop and at the accounting commit | CI `postgres-conformance` |
 | Browser | 54 Chromium tests: layout, the condition and Switch editors, request routing, building a fork with real drags, invalid-JSON edits that must never run, and validation errors that name and open their node, against intercepted API fixtures (the fork fixtures are held to the real validator) | CI `browser-layout` |
@@ -444,7 +445,7 @@ flowchart LR
     classDef later fill:#f1f3f4,stroke:#9aa0a6,color:#3c4043
 
     A3["A3 error policy<br/>+ retries"]:::done --> A4["A4 for-each<br/>iteration"]:::done --> A51["A5.1 typed<br/>conditions"]:::done
-    A51 --> A52["A5.2 multi-way<br/>routing"]:::done --> TA["Token accounting<br/>TA01–TA07"]:::done --> A53["A5.3 Part 1: parallel<br/>branches + joins + TA08"]:::done --> A53E["A5.3 Part 2:<br/>editor support"]:::done --> A53S["A5.3 Part 3:<br/>deployed scenarios"]:::next --> A6["A6 subgraphs +<br/>bounded loops"]:::later
+    A51 --> A52["A5.2 multi-way<br/>routing"]:::done --> TA["Token accounting<br/>TA01–TA07"]:::done --> A53["A5.3 Part 1: parallel<br/>branches + joins + TA08"]:::done --> A53E["A5.3 Part 2:<br/>editor support"]:::done --> A53S["A5.3 Part 3:<br/>deployed scenarios"]:::done --> A6["A6 subgraphs +<br/>bounded loops"]:::next
     B1["B1 Alembic"]:::done --> B2["B2 Redis: per-tenant budgets,<br/>rate limits, fair queueing"]:::later
     B2 --> B3["B3 object storage<br/>for documents"]:::later
     B2 --> B4["B4 orgs, roles,<br/>resource grants"]:::later --> B5["B5 SSO · SCIM ·<br/>audit log"]:::later
@@ -457,7 +458,8 @@ flowchart LR
 - **Token accounting (done).** TA01–TA08 are closed (§2.6); TA08 closed with A5.3 Part 1.
 - **A5.3 Part 1 (done).** A node with 2–8 next nodes forks into [parallel branches](docs/operations.md#parallel-branches) that end at one Join; after the Join every branch output is bindable (§2.8). Branches are read-only, so cancelling the others when one fails changes nothing outside Relay. The token limit stays an admission limit: inside a fork a run can end above it by one call per running branch.
 - **A5.3 Part 2 (done).** Forks are built in the editor: the Join is in the palette, its card shows how many branches arrive, validation messages mark the node they concern, and a branch stopped by a failing sibling shows `cancelled`. The editor does not copy the graph rules; Validate applies the backend's.
-- **A5.3 Part 3 (next).** Deployed-process scenarios for forks. Writes and approvals inside branches need a different runtime and stay later work (A5.3b), as does a strict token cap that reserves input and output allowance before each call (TA05).
+- **A5.3 Part 3 (done).** The [scenario gate](docs/production-scenario-testing.md) runs forks through the deployed processes (S22–S24): branches meet at the receiver, the Join waits for both, a failure cancels the sibling and sends nothing, and a killed worker resumes without repeating finished work. Writes and approvals inside branches need a different runtime and stay later work (A5.3b), as does a strict token cap that reserves input and output allowance before each call (TA05).
+- **A6 (next).** Subgraphs and bounded loops.
 - **B2.** Shared runtime state in Redis. Today's queue is global FIFO, so one tenant can starve others, and limits are per-run only. Redis stays optional: without it the platform runs exactly as today.
 - **B4–B5.** Organisations with roles and resource-scoped grants, enforced in the worker where credentials resolve (not only at the API), then SSO and SCIM.
 - **C–F.** A data-source interface whose drivers must pass one conformance suite, Text-to-SQL over governed definitions, GraphRAG scored against the existing 53-question gate, and tracing. Each capability lands with a measurement, and anything that does not earn its place gets a written verdict, not a quiet removal.

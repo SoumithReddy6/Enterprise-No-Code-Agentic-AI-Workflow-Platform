@@ -48,6 +48,10 @@ Exit zero means every requested scenario/stage passed. Failures, missing results
 | S21a | A saved route is forged while the run waits for approval | Restore recomputes the route, the run fails before any send |
 | S21b | A Switch routes on an HTTP result, or sits in a contract-1 workflow | Refused at validation and at run submission; nothing is read or sent |
 | S21c | A case is named `approved` | It cannot bypass a required approval: its write, configured for approval, waits, and a rejection sends nothing |
+| S22 | An order desk looks up the customer and the order at the same time, then sends one delivery | Both branch reads are open together at the receiver (a sequential run gets 504); the Join's `running` event comes after both branches' last success; the Join runs once; one POST carries branch A's answer and the run output is branch B's; the branches share one action budget (4 actions, each charged once) |
+| S23a | One branch fails while its sibling's answer is still held | The run fails with the receiver's HTTP 500 and the sibling shows `cancelled` before its answer is released; the Join never runs; nothing is sent |
+| S23b | A write is placed inside a branch | Refused at validation and at run submission with `external writes belong after the Join`; no run is created, nothing is read or sent |
+| S24 | The worker is killed in the middle of a fork | Before restart: branch A is checkpointed, branch B is not, nothing is sent. After real lease expiry (the replacement's claim comes after the killed worker's `lease_until`): A is restored without a new request, B runs again, the Join runs once, one POST is sent |
 | L01 | Two tickets processed by real Ollama agents (optional) | Model usage survives into durable run events |
 | M01 | One agent performs a write, then asks approval for another | Approved continuation completes without repeating the first write; deterministic Worker/Store probe |
 
@@ -56,7 +60,8 @@ The optional existing live campaign adds grounded retrieval, query generation, a
 ## Evidence and realism boundaries
 
 - Real processes, sockets, authentication, leases, SQL persistence, approval endpoints, actual tool transport, and SIGKILL/abrupt process exit.
-- S01–S21 and L01 use no API/worker function stubs. S20–S21 run in a second lab whose model is a local HTTP fixture: they measure routing and enforcement with structured JSON input, not prose classification. M01 is separately labelled: it exercises real Worker/Store logic with scripted model and delivery fixtures, not deployed HTTP. One test-only failpoint exits after the real item SQL commit to deterministically hit the settled-item crash boundary.
+- S01–S24 and L01 use no API/worker function stubs. S20–S21 run in a second lab whose model is a local HTTP fixture: they measure routing and enforcement with structured JSON input, not prose classification. M01 is separately labelled: it exercises real Worker/Store logic with scripted model and delivery fixtures, not deployed HTTP. One test-only failpoint exits after the real item SQL commit to deterministically hit the settled-item crash boundary.
+- S22–S24 use HTTP read tools as branches, not model branches, so every branch's answer is exact; model branches and token accounting under forks are covered by the backend suite and the storage script's D01 rows. The receiver holds an answer until the row releases it, so no row depends on a sleep.
 - DNS substitution permits only scenario-provider.invalid at the fixture's allocated port. The helper is never imported by product code. Other connection targets use ordinary SSRF checks.
 - The receiver records requests before dropping the response to simulate an ambiguous external outcome.
 - A second synthetic tenant is seeded as setup; its access tests use real login and HTTP authorization. This is not an invitation/registration conformance test.

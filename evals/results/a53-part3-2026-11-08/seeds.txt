@@ -1,0 +1,6 @@
+# Full backend suite in the isolation copy (5bc15e1), PostgreSQL cases on a throwaway container (127.0.0.1:55433)
+PYTHONHASHSEED=0: 2050 passed, 4 warnings in 108.42s (0:01:48)
+PYTHONHASHSEED=1: 2050 passed, 4 warnings in 107.49s (0:01:47)
+PYTHONHASHSEED=2: 2050 passed, 4 warnings in 107.51s (0:01:47)
+PYTHONHASHSEED=3: 2050 passed, 4 warnings in 108.87s (0:01:48)
+PYTHONHASHSEED=4: 2050 passed, 4 warnings in 107.67s (0:01:47)

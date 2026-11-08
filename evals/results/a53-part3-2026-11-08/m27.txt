@@ -1,0 +1,6 @@
+M27: KILLED by planned S22 | failed: S22, S23a, S24
+  S22: AssertionError: Tool provider returned HTTP 504
+  S23a: AssertionError: Timed out waiting for the run to end while b1 is held
+  S24: AssertionError: Timed out waiting for a1's checkpoint
+
+ALL PLANNED KILLS: True
