@@ -1,0 +1,33 @@
+{
+ "palette_join_button": 0,
+ "palette_control": [
+  "Condition",
+  "Calculate",
+  "Switch",
+  "Request reader"
+ ],
+ "join_card_text": "Join\n\nWait for every parallel branch of one fork, then continue. Later nodes bind any branch output.\n\njoin\nReady",
+ "join_handles": {
+  "target": 1,
+  "source": 1
+ },
+ "edges_drawn": 5,
+ "options_out": [
+  "Choose upstream output",
+  "Chat input → message",
+  "Branch A → text",
+  "Branch A → provider",
+  "Branch A → sources",
+  "Branch A → grounding",
+  "Branch B → text",
+  "Branch B → provider",
+  "Branch B → sources",
+  "Branch B → grounding"
+ ],
+ "options_b": [
+  "Choose upstream output",
+  "Chat input → message"
+ ],
+ "edges_after_duplicate_drag": 5,
+ "edges_after_new_drag": 6
+}

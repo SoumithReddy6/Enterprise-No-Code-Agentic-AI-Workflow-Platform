@@ -355,7 +355,7 @@ Sizing: a single multi-agent run over a large knowledge base typically consumes 
 
 A node with 2–8 next nodes is a **fork**: its branches run at the same time. Every branch is a chain of one or more nodes that ends at the same **Join**. The Join has no settings; it runs once, after every branch has finished. Nodes after the Join can bind the output of any branch node. Inside a branch, a node can bind only its own branch and the nodes before the fork, because a sibling branch may not have run yet.
 
-Until the editor supports forks (A5.3 Part 2), build them through the API or JSON import. The editor does not offer the Join in its palette, but it shows the correct bindings after a Join.
+**In the editor.** Connect a node to 2–8 next nodes, add a **Join** from the Control group of the palette, and connect the last node of every branch to it. In a Request workflow the fork goes after the Request reader's `continue` route, not on the input. The Join card shows how many branches arrive (`Waits for 2 branches`); Validate decides whether they are correct and marks the node each message is about. After the Join, the input lists offer every branch output; inside a branch they offer only that branch and the nodes before the fork. During a run, branches show `running` at the same time, and a branch stopped because a sibling failed shows `cancelled` with a dashed border. Forks can also be built through the API or JSON import.
 
 **Branches are read-only.** Validation refuses these inside a branch, including in attached tools, specialists and loop bodies:
 

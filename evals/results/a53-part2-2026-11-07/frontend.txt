@@ -1,0 +1,13 @@
+# Frontend gates in the isolation copy (2456d1a)
+## unit
+ℹ tests 118
+ℹ pass 118
+ℹ fail 0
+## typecheck
+tsc exit 0
+## lint
+oxlint exit 0
+## build
+build exit 0
+## browser (all specs)
+  54 passed (58.2s)

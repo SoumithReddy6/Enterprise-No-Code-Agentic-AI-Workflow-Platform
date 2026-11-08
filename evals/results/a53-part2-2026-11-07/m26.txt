@@ -1,0 +1,8 @@
+old spec + M26: B01 1 passed
+corrected spec + M26: B01 1 failed
+  Error: expect(received).toEqual(expected) // deep equality
+  -     "Branch A: -> Join: [flow]",
+  -     "Branch B: -> Join: [flow]",
+  +     "Branch A: -> Join:tools [flow]",
+  +     "Branch B: -> Join:tools [flow]",
+corrected spec, no mutant: B01 1 passed
