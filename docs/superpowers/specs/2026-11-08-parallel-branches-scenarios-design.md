@@ -141,6 +141,9 @@ Steps and asserts:
 5. The run succeeds. `/meet/s24/a` was requested once, so `a1` was restored. `/meet/s24/hold-b`
    was requested twice. The Join has one success.
 6. The receiver got exactly one POST, with `a1`'s answer.
+7. (Implementation review, P3.) The job's `lease_until`, read after the SIGKILL, is not later
+   than the replacement worker's claim event in the run history, and the two claims are by
+   different workers. Proof: mutant M34 (claim 25 s early) passes the earlier S24 and fails this one.
 
 Difference from D01: D01 restores model branches and checks tokens on SQLite and PostgreSQL. S24
 uses HTTP tool branches and checks the external write after the Join. Both stay.

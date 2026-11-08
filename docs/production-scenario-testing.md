@@ -51,7 +51,7 @@ Exit zero means every requested scenario/stage passed. Failures, missing results
 | S22 | An order desk looks up the customer and the order at the same time, then sends one delivery | Both branch reads are open together at the receiver (a sequential run gets 504); the Join's `running` event comes after both branches' last success; the Join runs once; one POST carries branch A's answer and the run output is branch B's; the branches share one action budget (4 actions, each charged once) |
 | S23a | One branch fails while its sibling's answer is still held | The run fails with the receiver's HTTP 500 and the sibling shows `cancelled` before its answer is released; the Join never runs; nothing is sent |
 | S23b | A write is placed inside a branch | Refused at validation and at run submission with `external writes belong after the Join`; no run is created, nothing is read or sent |
-| S24 | The worker is killed in the middle of a fork | Before restart: branch A is checkpointed, branch B is not, nothing is sent. After real lease expiry: A is restored without a new request, B runs again, the Join runs once, one POST is sent |
+| S24 | The worker is killed in the middle of a fork | Before restart: branch A is checkpointed, branch B is not, nothing is sent. After real lease expiry (the replacement's claim comes after the killed worker's `lease_until`): A is restored without a new request, B runs again, the Join runs once, one POST is sent |
 | L01 | Two tickets processed by real Ollama agents (optional) | Model usage survives into durable run events |
 | M01 | One agent performs a write, then asks approval for another | Approved continuation completes without repeating the first write; deterministic Worker/Store probe |
 

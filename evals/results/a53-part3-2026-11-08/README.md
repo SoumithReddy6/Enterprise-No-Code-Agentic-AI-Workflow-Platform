@@ -23,7 +23,7 @@ the runtime, validation, storage, accounting, API or editor.
 | S22 | Both branch reads are open together at the receiver (a sequential run gets 504). The Join's `running` event comes after the last success of both branches. The Join runs once. One POST carries branch A's answer; the output is branch B's last node. 4 actions, each charged once |
 | S23a | While the sibling's answer is still held, the run is `failed` with `Tool provider returned HTTP 500`, `a1` failed and `b1` cancelled. After the release: no Join event, no POST, `b1` requested once |
 | S23b | A write in a branch: Validate returns exactly `b1: external writes belong after the Join.`; submission 422 with the same text; no run; no request |
-| S24 | SIGKILL while `b1`'s first answer is held. Before restart: `a1` checkpointed, `b1` not, 0 deliveries. After the real 30 s lease: `a1` not requested again, `b1` requested twice, Join once, one POST with `a1`'s answer |
+| S24 | SIGKILL while `b1`'s first answer is held. Before restart: `a1` checkpointed, `b1` not, 0 deliveries. After the real 30 s lease: `a1` not requested again, `b1` requested twice, Join once, one POST with `a1`'s answer. The replacement worker's claim event comes after the killed worker's `lease_until` (added by the review, below) |
 
 ## Files
 
@@ -34,6 +34,7 @@ the runtime, validation, storage, accounting, API or editor.
 | `mutants.py`, `mutants-run1.txt/.json`, `m27.txt/.json` | M27–M33 on fresh copies of the isolation base |
 | `production-1/2/3/report.json` | Three consecutive full gate runs in the isolation copy |
 | `seeds.txt` | Full backend suite at PYTHONHASHSEED 0–4, PostgreSQL cases on a throwaway container |
+| `m34.py`, `m34.txt`, `production-p3fix/report.json` | The review correction: M34 proof and a full gate run on `945cae5` + the corrected S24 |
 
 ## Baseline (control)
 
@@ -65,7 +66,7 @@ against deployed API and worker processes.
 | Mutants M27–M33 | all 7 planned kills (M27 after the correction below) |
 | Deployed scenario gate, isolation copy `5bc15e1` | 3 consecutive runs: 28 of 28 rows each, `source_files_changed` empty, clean tree, about 100 s each (S24 about 30.3 s) |
 | Full backend suite, PYTHONHASHSEED 0–4 | 2,050 passed at every seed (no new backend test), PostgreSQL cases included; isolation copy `5bc15e1` |
-| Hosted CI | recorded after the commit |
+| Hosted CI | `945cae5`, run 42508216963: 5 of 5 jobs passed (the scenario gate is not part of hosted CI) |
 
 ## Deviations (recorded, not hidden)
 
@@ -81,6 +82,28 @@ against deployed API and worker processes.
    remains the later line of defense.
 4. **Hosted CI does not run the scenario gate** (the manual `production-scenarios.yml`), so the
    gate evidence is these local reports.
+
+## Review correction (P3, implementation review of `945cae5`)
+
+The review found that S24 reported a real lease expiry but did not check it: with a scratch
+mutation, the replacement worker claimed the run 24.9 s early and S24 still passed. S24 now reads
+the job's `lease_until` after the SIGKILL (while the old owner still holds it) and requires the
+run history to show exactly two claims: the first by the killed worker, the second by another
+worker at or after `lease_until`.
+
+`m34.py`, `m34.txt`: mutant M34 lets `claim_next` take a running job 25 s before its lease ends.
+Each case runs the four rows on a fresh `git archive 945cae5`:
+
+| Case | S24 |
+|---|---|
+| old S24 + M34 | passes (the gap; resumed after 5.2 s) |
+| new S24 + M34 | fails: `claimed_before_lease_end_seconds: 24.923` |
+| new S24, no mutant | passes: claimed 0.076 s after the lease ended |
+
+After the change: the full gate on `945cae5` + the corrected file (copy `f9624ec`, clean tree)
+passed 28 of 28 (`production-p3fix/report.json`; the claim came 0.031 s after the lease ended).
+Only `scripts/scenarios/parallel_branches.py` changed, and no backend test imports it, so the seed
+runs were not repeated.
 
 ## Not claimed
 

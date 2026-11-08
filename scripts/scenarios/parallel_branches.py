@@ -10,6 +10,7 @@ S24: a worker killed in a fork resumes; the finished branch is restored, the wri
 """
 import json
 import time
+from datetime import datetime
 
 
 def read(lab, id, path, source='input.message'):
@@ -134,6 +135,8 @@ def parallel_scenarios(lab):
             prior = lab.client.get('/api/runs/' + id).json()
             assert 'a1' in prior['checkpoints'] and 'b1' not in prior['checkpoints'], sorted(prior['checkpoints'])
             assert posts(lab, deliver) == []
+            status, owner, lease_until = lab.read_job(id)
+            assert status == 'running' and owner, (status, owner)
         finally:
             lab.provider.release('s24/hold-b')
         # Wait for the real default 30-second lease, without mutating the database.
@@ -144,9 +147,15 @@ def parallel_scenarios(lab):
         assert lab.provider.count(held) == 2
         assert len(events(run, 'join', 'success')) == 1, events(run, 'join')
         assert posts(lab, deliver) == [lookup('a')], posts(lab, deliver)
+        # The replacement claimed the run only after the killed worker's lease ended.
+        claims = [e for e in run['events'] if e.get('kind') == 'run' and e['status'] == 'running']
+        assert len(claims) == 2 and claims[0]['worker'] == owner and claims[1]['worker'] != owner, claims
+        claimed = datetime.fromisoformat(claims[1]['timestamp']).timestamp()
+        assert claimed >= lease_until, {'claimed_before_lease_end_seconds': round(lease_until - claimed, 3)}
         return {'run_id': id, 'checkpoints_at_kill': sorted(prior['checkpoints']), 'deliveries_at_kill': 0,
                 'resumed_after_seconds': round(time.monotonic() - started, 1), 'a1_requests': 1, 'b1_requests': 2,
-                'join_runs': 1, 'deliveries': posts(lab, deliver), 'lease_expiry': 'real'}
+                'join_runs': 1, 'deliveries': posts(lab, deliver), 'lease_expiry': 'real',
+                'claimed_after_lease_end_seconds': round(claimed - lease_until, 3)}
 
     return [
         ('S22', 'A5.3', 'Fork: branches run together, the Join waits for both, one write is sent', fork_and_join),
