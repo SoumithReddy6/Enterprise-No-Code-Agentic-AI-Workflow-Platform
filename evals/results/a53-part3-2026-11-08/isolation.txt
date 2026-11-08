@@ -1,0 +1,14 @@
+# A5.3 Part 3 isolation copy: git archive f571853 + the 6 changed files, git init + one commit
+copy: <scratchpad>/a53-p3-iso-kdlwiyeo
+commit: 5bc15e1923ccc4008e1e4e7e4f0742d402eb4620
+
+## Files copied (sha256; copy == working tree)
+f21da6ac78af712f1dcba9b096433976e07f8ec7fd8045d1305df8ed17919b1f scripts/check_production_scenarios.py match
+a53e214481d3093206743dbb0d36f736e7ae29a4b83dc10fb3b1262a7aef2564 scripts/scenarios/parallel_branches.py match
+59eada0691c9bfd717c9073ff03360d7ad4c1ad3e301d97ae57e47199e4328ef README.md match
+bbcdc281ae9a290f6d01365cf533151af6a28cc165492fa45ff70db6197cce2a docs/platform-reference.md match
+26bf20bba12b1d88d09c825942856356b9145d1fe07e82e127779b8a3eecad43 docs/production-scenario-testing.md match
+58bd8b22451624d138dbab0272827b9233016a50e7517d4f878ef9586f79499f docs/superpowers/specs/2026-11-08-parallel-branches-scenarios-design.md match
+
+## Other changed or untracked files outside evals/ and docs/reviews/
+none

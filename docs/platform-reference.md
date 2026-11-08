@@ -478,14 +478,14 @@ Configuration can be supplied through a root `.env` file. See [.env.example](../
 
 | Implemented | Next engineering work | Later platform work |
 | --- | --- | --- |
-| Visual workflow editor, section-aware chunking, and durable write approvals | Deployed scenarios for parallel branches (A5.3 Part 3) | Subgraphs and bounded loops |
-| Local/cloud providers and opt-in local reranking | Writes and approvals inside parallel branches (A5.3b) | Published workflow versions |
+| Visual workflow editor, section-aware chunking, and durable write approvals | Subgraphs and bounded loops (A6) | Published workflow versions |
+| Local/cloud providers and opt-in local reranking | Writes and approvals inside parallel branches (A5.3b) | |
 | Agent roles and specialist delegation | Regex matching for conditions, with a ReDoS-safe engine | Webhooks and scheduled triggers |
 | Named, versioned knowledge bases | Remaining regulatory retrieval misses | Shared runtime state and per-tenant budgets |
 | Four retrieval techniques | Structured numeric-policy verifier | Team roles and invitations |
 | Durable queued execution with per-node error policy and retries | Improved retrieval test lab | Audit, retention, and PII controls |
 | Typed conditions over text, numbers and JSON fields; Switch multi-way routing | | |
-| Parallel read-only branches with an explicit Join, in the API and the editor | | |
+| Parallel read-only branches with an explicit Join, in the API and the editor, with deployed-process scenarios | | |
 | For-each iteration with per-item checkpoints and bounded storage | Broader browser interaction tests | Managed production deployment |
 | Grounding and citation validation | Real remote-adapter integration tests | |
 | Tool integrations and probed Python sandbox | | |

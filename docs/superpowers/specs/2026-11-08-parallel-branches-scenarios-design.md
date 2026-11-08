@@ -1,6 +1,7 @@
 # A5.3 Part 3: deployed scenarios for parallel branches
 
-**Status:** Revision 1 (2026-11-08), for design review.
+**Status:** Revision 2 (2026-11-08). The design review approved it with two test changes and a
+correction to the mutant table; all three are in this revision (see "Review decisions").
 **Baseline:** `36afe6b` (application code identical to `main` `2c3f26d`, PR #8; main CI run
 `42438718978`, 5/5 green). A5.3 Part 1 and Part 2 are closed.
 **Parent design:** `docs/superpowers/specs/2026-10-24-parallel-branches-design.md` (rev 3),
@@ -66,17 +67,19 @@ detect a defect is shown by a planned mutant (below) that the row must fail.
 
 ### Fixture
 
-The gate's `Provider` (in `check_production_scenarios.py`) gets three new path prefixes.
-Existing prefixes and their answers do not change, so the 24 existing rows see the same fixture.
+The gate's `Provider` (in `check_production_scenarios.py`) gets two new path prefixes and a
+release control. Existing prefixes (`/hold/` included) and their answers do not change, so the 24
+existing rows see the same fixture.
 
 | Path | Answer |
 |---|---|
-| `/meet/<group>/<name>` | Waits until 2 requests of `<group>` have arrived, at most 10 s. If the other request does not arrive: **504**, so a sequential run fails with a clear reason. After the meeting, a name that starts with `fail` gets 500, one that starts with `slow` waits 5 s, any other gets 200. The body is `{"lookup": "<name>"}` |
+| `/meet/<group>/<name>` | Waits until 2 requests of `<group>` have arrived, at most 10 s. If the other request does not arrive: **504**, so a sequential run fails with a clear reason. After the meeting, a name that starts with `fail` gets 500; a name that starts with `hold` is **held until the row releases it** (`provider.release('<group>/<name>')`, at most 60 s); any other gets 200. The body is `{"lookup": "<name>"}` |
 | `/lookup/<name>` | 200, `{"lookup": "<name>"}`, at once |
-| `/hold/<name>` | Unchanged: waits 5 s, then 200. A **GET** now gets `{"lookup": "<name>"}` instead of `accepted`; a POST still gets `accepted`. S16 is the only existing user, with POST, and asserts nothing on the body |
 
-The fixture also records when each answer was sent, so a row can show that the run finished
-before a slow answer.
+A release is permanent: later requests of a released name answer at once. The fixture records
+when each answer was sent. A hold replaces a fixed sleep, so a row never races a timer: the slow
+answer exists only after the row has checked what it must check (the D01 `BranchModels`
+pattern).
 
 The barrier is the concurrency proof. It does not use a timing threshold: two requests are either
 open together or the row fails with 504.
@@ -95,24 +98,27 @@ input ─┬─► a1 customer lookup  /meet/s22/a ─────────�
 ```
 
 Branch B is one node longer on purpose: a Join that ran once per arriving branch would run twice
-here, and the write would be sent twice (M28).
+here (M28), and a Join that waited only for `a1` would start before `b2` finished (M33).
 
 Asserts:
 - `/api/validate` accepts it;
 - the run succeeds, and the fixture saw both meet requests;
 - the Join has exactly one success event;
+- the success events of `a1` and `b2` (the last node of each branch) both come before the Join's
+  `running` event in the run history: the Join waited for every branch;
 - the receiver got exactly one POST, and its body equals branch A's answer;
 - the run output equals `b2`'s answer, so both branches' outputs were bound after the Join;
 - the action counter is 4, and each of `a1#0`, `b1#0`, `b2#0`, `send#0` was charged once: the branches share one budget.
 
 **S23a — A failed branch cancels its sibling, and nothing after the Join is sent.** The same shape
-without `b2`. `a1` is `/meet/s23/fail-a` and `b1` is `/meet/s23/slow-b`.
+without `b2`. `a1` is `/meet/s23/fail-a` and `b1` is `/meet/s23/hold-b`.
 
 Asserts:
-- the run fails with `Tool provider returned HTTP 500`;
-- `a1`'s outcome is `failed` and `b1`'s is `cancelled`;
+- while `b1`'s answer is still held, the API reports the run `failed` with
+  `Tool provider returned HTTP 500`, `a1`'s outcome is `failed` and `b1`'s is `cancelled`: the
+  cancellation did not wait for the sibling;
+- then the row releases `b1`'s answer;
 - the Join has no event, and `/deliver/s23` got 0 requests;
-- the run is `failed` before the fixture sent the slow answer, so cancellation did not wait for the sibling;
 - `b1` was requested once and never retried.
 
 **S23b — A write inside a branch is refused before any run.** Branch `b1` is an HTTP write.
@@ -123,13 +129,18 @@ Asserts:
 - the run count does not change, and the fixture got no request.
 
 **S24 — A worker killed in a fork resumes without repeating finished work.** `a1` is
-`/lookup/s24-a` and `b1` is `/hold/s24-b`. The write after the Join reads `a1.text`.
+`/meet/s24/a` and `b1` is `/meet/s24/hold-b`, so `a1` answers only when `b1`'s request is open,
+and `b1`'s first answer is held. The write after the Join reads `a1.text`.
 
 Steps and asserts:
-1. Wait until `GET /api/runs/{id}` shows `a1`'s checkpoint while `b1`'s read is outstanding (the fixture saw it).
-2. SIGKILL the worker, then start a new one. Wait for the real 30 s lease, with no database change (the S15 precedent).
-3. The run succeeds. `/lookup/s24-a` was requested once, so `a1` was restored. `/hold/s24-b` was requested twice. The Join has one success.
-4. The receiver got exactly one POST, with `a1`'s answer.
+1. Wait until `GET /api/runs/{id}` shows `a1`'s checkpoint.
+2. SIGKILL the worker while `b1`'s first answer is still held.
+3. Before a new worker starts: `a1` is checkpointed, `b1` is not, and the receiver has 0
+   deliveries. Then release `b1`'s answer (the killed worker's connection is gone).
+4. Start a new worker. Wait for the real 30 s lease, with no database change (the S15 precedent).
+5. The run succeeds. `/meet/s24/a` was requested once, so `a1` was restored. `/meet/s24/hold-b`
+   was requested twice. The Join has one success.
+6. The receiver got exactly one POST, with `a1`'s answer.
 
 Difference from D01: D01 restores model branches and checks tokens on SQLite and PostgreSQL. S24
 uses HTTP tool branches and checks the external write after the Join. Both stay.
@@ -155,15 +166,14 @@ result is recorded:
 | Id | Mutant (product code) | Planned oracle | Why it fails |
 |---|---|---|---|
 | M27 | One node handler at a time (a module-level `asyncio.Lock` around node execution) | S22 | The second meet request never opens with the first: 504, run fails |
-| M28 | The Join is entered by one edge per branch instead of one list edge | S22 | Branch B is longer, so the Join runs twice and the write is sent twice |
-| M29 | A failed branch node is swallowed as if `on_error: continue` | S23a | The Join runs and the write is sent |
+| M28 | The Join is entered by one edge per branch instead of one list edge | S22 | Branch B is longer, so the Join runs twice. The receiver still gets one POST, because the settled write is reused (review probe), so the oracle is "the Join has exactly one success event" |
+| M29 | A failed branch node is swallowed as if `on_error: continue` | S23a | The run reaches the Join. No POST is sent, because the failed branch leaves `a1.text` unavailable (review probe), so the oracle is "the Join has no event" |
 | M30 | The "external writes belong after the Join" rule is removed | S23b | Validation accepts; submission creates a run |
 | M31 | Restore ignores saved checkpoints of branch nodes | S24 | `/lookup/s24-a` is requested twice |
 | M32 | Join bindings use the intersection, not the union | S22 | `send` cannot bind `a1.text`: refused at validation |
+| M33 | The Join waits only for its first branch (`a1`) (review probe) | S22 | Every other S22 assertion passes; the Join's `running` event comes before `b2`'s success |
 
-If a mutant survives, the row is strengthened before review, and the change is recorded. M28's
-failure mode (two Join runs with unequal branches) is a prediction from LangGraph's superstep
-model. It is checked first, and if it does not hold, the row and the table are corrected.
+If a mutant survives, the row is strengthened before review, and the change is recorded.
 
 **Gates.**
 - The deployed scenario gate: 28 of 28 rows, `source_files_changed` empty, **3 consecutive runs** (the new rows depend on concurrency, so one green run is not enough).
@@ -173,19 +183,25 @@ model. It is checked first, and if it does not hold, the row and the table are c
 
 **Cost.** S24 waits for the real lease, so the gate takes about 40 s longer (today about 70 s).
 
-## Review questions
+## Review decisions
 
-1. **Contract 1 tool branches, not a contract-2 Request reader fork.** I recommend contract 1 in
-   the main lab:
-   - The rows measure fork, Join, cancellation and resume. HTTP tool branches give exact,
-     per-branch answers.
-   - The model fixture answers from one queue, so with concurrent model branches the answer order
-     is not fixed. That makes per-branch assertions weaker.
-   - The contract-2 fork is covered by R06 (runtime), B01 and K01 (editor and real validator).
+The design review (2026-11-08, pasted in the session; the reviewer reran the four baseline probes)
+approved revision 1 with these changes:
 
-   Accept, or ask for one contract-2 row in the Switch lab?
-2. **The real 30 s lease in S24.** I recommend keeping it, as S15 does (no database change to
-   speed recovery). The cost is about 35 s per gate run. Accept?
+1. **Both review questions accepted:** HTTP lookup branches in the main lab, and the real 30 s
+   lease in S24.
+2. **S22 proves the wait.** With a scratch copy whose Join waited only for `a1`, every revision-1
+   S22 assertion passed, but the history showed the Join starting before `b2` finished. S22 now
+   asserts that both branch success events come before `Join: running`, and M33 is that
+   mutation. This is the wait-for-all contract of a LangGraph list edge
+   ([`state.py`](https://github.com/langchain-ai/langgraph/blob/main/libs/langgraph/langgraph/graph/state.py))
+   and of an AWS Step Functions
+   [Parallel state](https://docs.aws.amazon.com/step-functions/latest/dg/state-parallel.html).
+3. **Holds, not sleeps.** A 5 s sleep gives the runner only 5 s to observe a failure or kill a
+   worker. S23a and S24 now hold the answer until the row releases it, as D01's `BranchModels`
+   does. S24 also checks the state before restarting.
+4. **Mutant table corrected** from the reviewer's M28 and M29 runs (the receiver-count
+   predictions were wrong; the Join event assertions catch both).
 
 ## Not claimed
 

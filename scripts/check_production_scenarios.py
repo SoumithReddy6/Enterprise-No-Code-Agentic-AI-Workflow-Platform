@@ -42,7 +42,9 @@ def response(binding='input.message',id='out'):return {'id':id,'type':'response'
 
 class Provider:
     def __init__(self):
-        self.calls=[];self.lock=threading.Lock()
+        self.calls=[];self.lock=threading.Lock();self.answered=[]
+        # A5.3 fork rows: meetings per group and the holds a row has released.
+        self.meeting=threading.Condition(self.lock);self.arrived={};self.released=set()
         owner=self
         class Handler(BaseHTTPRequestHandler):
             def log_message(self,*args):pass
@@ -57,6 +59,13 @@ class Provider:
                     n=int(query) if query.isdigit() else 3
                     result=json.dumps({'issues':[{'key':f'LAB-{i}','fields':{'summary':f'Ticket {i}'}} for i in range(n)]}).encode()
                 else:result=b'accepted'
+                parts=path.strip('/').split('/')
+                if parts[0]=='lookup' and len(parts)==2 or parts[0]=='meet' and len(parts)==3:
+                    code=owner.fork_answer(parts);result=json.dumps({'lookup':parts[-1]}).encode()
+                    self.send_response(code);self.send_header('Content-Length',str(len(result)));self.send_header('Content-Type','application/json');self.end_headers()
+                    with contextlib.suppress(BrokenPipeError,ConnectionResetError):self.wfile.write(result)
+                    with owner.lock:owner.answered.append(path)
+                    return
                 if path.startswith('/uncertain/'):
                     self.connection.shutdown(socket.SHUT_RDWR);self.connection.close();return
                 if path.startswith('/hold/'):time.sleep(5)
@@ -68,9 +77,23 @@ class Provider:
         self.server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
         self.thread=threading.Thread(target=self.server.serve_forever,daemon=True);self.thread.start()
         self.port=self.server.server_address[1]
+    def fork_answer(self,parts):
+        """/lookup/<name> answers at once. /meet/<group>/<name> waits until two requests of the
+        group are open (504 after 10 s, so branches run one at a time fail clearly); then a
+        `fail` name gets 500 and a `hold` name waits until the row releases it."""
+        if parts[0]=='lookup':return 200
+        group,name=parts[1],parts[2]
+        with self.meeting:
+            self.arrived[group]=self.arrived.get(group,0)+1;self.meeting.notify_all()
+            if not self.meeting.wait_for(lambda:self.arrived[group]>=2,10):return 504
+            if name.startswith('fail'):return 500
+            if name.startswith('hold') and not self.meeting.wait_for(lambda:{'*',f'{group}/{name}'}&self.released,60):return 504
+        return 200
+    def release(self,key):
+        with self.meeting:self.released.add(key);self.meeting.notify_all()
     def count(self,path):
         with self.lock:return sum(c['path']==path for c in self.calls)
-    def close(self):self.server.shutdown();self.server.server_close()
+    def close(self):self.release('*');self.server.shutdown();self.server.server_close()
 
 
 class Lab:
@@ -340,6 +363,8 @@ def main():
         try:
             lab.boot()
             for id,phase,name,fn in scenarios(lab):record(id,phase,name,fn)
+            from scripts.scenarios.parallel_branches import parallel_scenarios
+            for id,phase,name,fn in parallel_scenarios(lab):record(id,phase,name,fn)
             if args.live_models:
                 def live_loop_usage():
                     r=lab.client.post('/api/models',json={'provider':'ollama','model':'llama3.1:latest'})
