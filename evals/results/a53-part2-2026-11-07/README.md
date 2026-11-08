@@ -75,7 +75,7 @@ All 5 planned kills; every run collected 2 unit and 5 browser cases.
 | Full backend suite, PYTHONHASHSEED 0–4 | 2,050 passed at every seed (2,049 + K01), PostgreSQL included. Run in the first isolation copy `4dcb9d9`, which differs from `2456d1a` only in the browser spec (two sort calls fixed for lint); no backend test reads it |
 | Mutants M21–M25 | all planned kills |
 | Deployed scenario gate | 24 of 24 rows passed; `source_files_changed` empty |
-| Hosted CI | to be recorded on the commit |
+| Hosted CI | `db48e52`, run 42428260501: 5 of 5 jobs passed (backend 2,045 + 5 PostgreSQL-only skipped = 2,050 at two seeds; frontend 118 unit; browser-layout 54 Chromium) |
 
 `README.md` counts were edited after the isolation copy was built; no test reads them.
 
@@ -90,6 +90,16 @@ All 5 planned kills; every run collected 2 unit and 5 browser cases.
 3. **B04 drives the run through the editor's recovery path**: the mocked event stream sends both
    `running` events and ends without `done`; the editor then polls the run, which the test
    switches from stage 1 (running) to stage 2 (failed and cancelled).
+
+## Review correction (P3, `docs/reviews/a53-part2-implementation-review-2026-11-07.md`)
+
+B01's graph comparison left out target handles, so an edge into the wrong port of the Join still
+matched the fixture (the real validator rejects it: "flow must enter the input port"). `shape()`
+now compares both ports of every edge. `m26.py`, `m26.txt`: mutant M26 serializes every edge into
+a Join with `targetHandle: 'tools'` while the canvas still draws it. With the old spec B01 passes
+(the gap); with the corrected spec B01 fails on the two `Join:tools` edges; without the mutant B01
+passes. After the change: lint, typecheck and the five browser cases pass. Only the test file
+changed, so no other gate was rerun.
 
 ## Not claimed
 

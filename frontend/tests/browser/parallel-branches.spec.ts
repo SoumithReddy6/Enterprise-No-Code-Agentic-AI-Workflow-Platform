@@ -147,7 +147,9 @@ function shape(workflow: Workflow) {
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
   const edges = workflow.edges
-    .map((e: WorkflowEdge) => `${label.get(e.source)} -${e.sourceHandle || ''}-> ${label.get(e.target)} [${e.kind || 'flow'}]`)
+    // Both ports count: an edge into the wrong port of the right node is a different graph.
+    .map((e: WorkflowEdge) =>
+      `${label.get(e.source)}:${e.sourceHandle || ''} -> ${label.get(e.target)}:${e.targetHandle || ''} [${e.kind || 'flow'}]`)
     .sort();
   return { contract: workflow.contract, nodes, edges };
 }
