@@ -1,8 +1,9 @@
 # A6: bounded loops (Repeat), and the plan for subgraphs
 
-**Status:** Revision 3 (2026-11-09). Revision 1 (`1d97cb9`) and revision 2 (`84b6930`) were
-reviewed. Decision 2a is confirmed. Revision 3 applies the four narrow changes from the
-second review (see "Review of revision 2"). No implementation has started.
+**Status:** Revision 4 (2026-11-09). Revisions 1 (`1d97cb9`), 2 (`84b6930`) and 3 (`cf35175`)
+were reviewed. Decision 2a and the durable halt row are kept. Revision 4 applies the three
+details from the third review (see "Review of revision 3"); they fit into the Part 1 tests
+and do not reopen the decisions. No implementation has started.
 **Baseline:** `3b89a3e` (same tree as `main` `758f869`, after PR #9; main CI run
 `42527293067`, 5/5 green). A5.3 is complete.
 **Probe:** `evals/results/a6-probe-2026-11-09/`.
@@ -285,10 +286,17 @@ than once.
   every saved iteration row (`run_state['loop_progress'][r]`, rows survive the node
   checkpoint). It also confirms that the checkpoint matches the terminal state.
 - **One function derives the outcome on both paths.** `repeat_outcome(rows, config)` takes
-  the iteration rows and returns the complete outputs: `text`, `feedback`, `summary` and,
+  the iteration rows and returns the *outcome fields*: `text`, `feedback`, `summary` and,
   for an incomplete result, the reserved truncation key `_truncation`. The fresh handler
   returns its result. The restore branch calls it on the saved rows and requires the
-  checkpoint to be **equal** to it, key by key, including `_truncation` present or absent.
+  checkpoint's outcome fields to be **equal** to it, key by key, including `_truncation`
+  present or absent. The checkpoint also holds compiler metadata that `repeat_outcome` does
+  not produce: the compiler adds `_provenance` before it saves a checkpoint. So the
+  comparison covers exactly the outcome fields, and any other key except `_provenance` is a
+  mismatch. `_provenance` is validated separately by the existing `restored_record` check
+  (an invalid record refuses restore with the existing malformed-provenance message). A
+  literal comparison of the whole checkpoint would reject every valid checkpoint (review of
+  revision 3, finding 2).
   The rows are valid only as `0 … n-1` fully evaluated with no gap, plus at most one
   `interrupted` row at index `n`; `stopped_by: budget` requires that row. Any difference
   refuses restore with the message above, so a downstream node never runs on a changed
@@ -296,9 +304,16 @@ than once.
 - **The run verdict reads the Repeat summary.** `worker.run_truncation` reads `summary` only
   for `for_each` nodes; other nodes are read through `grounding` and `_truncation`. So a cached
   fallback without `_truncation` would look complete (confirmed in the code). Part 1 adds
-  `repeat` to the nodes whose `summary` is read (cause kind `repeat`). With the equality
-  check above, a missing `_truncation` is refused on restore, and if it were ever missing on
-  a fresh path the summary still marks the run incomplete.
+  `repeat` to the nodes whose `summary` is read, and a Repeat gives **exactly one cause**, of
+  kind `loop`, from its summary. Its `_truncation` is not read by `run_truncation`: today a
+  node whose outputs hold `_truncation` beside other outputs gets a second cause, labelled
+  `tool` ("Tool returned capped results"), which would be wrong for a Repeat (the review fed
+  the summarizer a loop result with both and got two causes). `_truncation` stays in the
+  outputs for the restore check. The frontend already has the `loop` kind
+  (`frontend/lib/run-status.ts`), so Part 1 needs no frontend change; a Repeat-specific label
+  is Part 2 work. With the equality check above, a missing `_truncation` is refused on
+  restore, and if it were ever missing on a fresh path the summary still marks the run
+  incomplete.
 - **The unit of work is the iteration.** A crash after the body and before the checker repeats
   that iteration's body. This is at most one iteration's calls. It is the same as a For-each
   item, and the same accepted limit as TA02 (a response lost before a durable save is paid
@@ -326,9 +341,15 @@ than once.
   at the point of use, with the same message, through the existing
   `ctx.platform('verify_vector_sources', …)` call (the one a grounded Agent uses for its own
   answer):
-  - in the handler, immediately before the first fresh call that receives restored text (the
-    next iteration's body, which gets the saved `previous` and `feedback`), for the saved
-    dependencies of every restored owner `r:0 … r:<i-1>`;
+  - in the handler, immediately before restored text is **used in any way**, for the saved
+    dependencies of every restored owner `r:0 … r:<i-1>`. There are two uses:
+    - a fresh call receives it: the next iteration's body gets the saved `previous` and
+      `feedback`;
+    - the handler returns it with no fresh call. This happens when the worker dies after a
+      terminal row commits (a passing iteration, or a budget halt under `last`) and before the
+      Repeat's node checkpoint is saved. On resume the rows already hold the final answer, and
+      neither the fresh-call check nor the restore-branch check would run (review of
+      revision 3, finding 1). The handler verifies before it returns.
   - in the restore branch of a checkpointed Repeat, before it returns its outputs, for the
     saved dependencies of every `r:<j>`. A downstream node receives the text only after this
     check.
@@ -412,12 +433,22 @@ fake provider, with exact scripted outputs.
   provider receives **no further call** (the next writer never gets the draft).
 - R18 **Removed source, checkpointed Repeat.** The same, with `r` checkpointed and a
   downstream Agent not yet run: refused before the downstream Agent's call.
-- R17b **Removed after the pre-run check, partial progress.** As R17, but the fake knowledge
-  service passes the pre-run check and removes S right after it. The run fails with the same
-  message at the Repeat's point-of-use check, and the next writer's provider call never
-  happens.
-- R18b **Removed after the pre-run check, checkpointed Repeat.** As R18, with the same
-  late removal: the restore branch refuses, and the downstream Agent's call never happens.
+- **Removal timing for R17b, R17c and R18b.** S is removed *after the last check that is not
+  the Repeat's*: after the pre-run check and after the upstream cached step has finished (an
+  upstream cached step that reads the same source runs its own check, which would otherwise
+  catch the removal first and hide a missing Repeat guard; the review verified this). The
+  fake knowledge service removes S on a hook that fires when the Repeat's own check is the
+  next check to run.
+- R17b **Removed late, partial progress.** As R17, with the late removal. The run fails with
+  the same message at the Repeat's point-of-use check, and the next writer's provider call
+  never happens.
+- R17c **Removed late, final answer already in the rows.** Row 1 passes and commits; the
+  worker stops before the Repeat's node checkpoint. Then S (a source of row 0 or row 1) is
+  removed late. On resume the handler refuses before it returns the saved draft: no provider
+  call, and the downstream node never runs. The same with a budget-halt row under `last` as
+  the terminal row.
+- R18b **Removed late, checkpointed Repeat.** As R18, with the late removal: the restore
+  branch refuses, and the downstream Agent's call never happens.
 - R19 **Budget between writer and checker.** The writer spends the last tokens; the checker
   is refused at admission. Row 1 is saved as `interrupted` with `budget_halt: tokens` and
   `calls: 1`. `on_limit: last` returns row 0's draft (`iterations = 1`, `stopped_by:
@@ -461,11 +492,18 @@ fake provider, with exact scripted outputs.
   holds, (b) a row's saved `met`, (c) the checkpoint's `text` so it differs from the terminal
   row. Each resume is refused with the restore message, and the downstream node never runs
   (no `running` event, no provider call).
+- R24c **Control: an untouched checkpoint resumes.** For each checkpoint shape that R24, R25
+  and R26 tamper with (met, limit `last`, budget `last`), the same checkpoint, unchanged and
+  with its compiler-added `_provenance`, resumes: no Repeat call, the restored outputs are
+  the saved ones, and the downstream node runs. A tampering test counts only next to its
+  passing control. (d) A checkpoint with an extra unknown key is refused.
 - R25 **Cached fallback without its truncation key.** A `last` result checkpointed after a
   limit stop and after a budget stop. The test removes `_truncation` from the checkpoint:
-  restore is refused. Separately, `run_truncation` on the intact checkpoint reports a
-  `repeat` cause with the exact reason, and on a checkpoint whose `summary` is intact but
-  whose `_truncation` is removed it still reports the run incomplete.
+  restore is refused. Separately, `run_truncation` on the intact checkpoint reports
+  **exactly one** cause for `r`, of kind `loop`, with the exact reason (the cause count is
+  asserted, so a second `tool` cause fails the test). On a checkpoint whose `summary` is
+  intact but whose `_truncation` is removed, it still reports the run incomplete with the
+  same single cause.
 - R26 **Cached budget fallback without its halt row.** A checkpointed `last` result with
   `stopped_by: budget`; the test deletes the interrupted row: restore is refused.
 
@@ -505,6 +543,10 @@ are counted exactly, and each call is charged exactly once for each attempt that
 | M26 `run_truncation` does not read the Repeat summary | R25 |
 | M27 saving a `calls: 0` halt row charges an action | R19b |
 | M28 the replay re-runs a fully evaluated row before the halt row commits | R21b |
+| M29 the handler returns a terminal row's draft without the source check | R17c |
+| M30 the restore check compares the whole checkpoint, `_provenance` included | R24c |
+| M31 the restore check ignores keys outside the outcome fields | R24c (d) |
+| M32 `run_truncation` also reads a Repeat's `_truncation` (two causes) | R25 |
 
 **Gates.** The full backend suite at PYTHONHASHSEED 0–4 (PostgreSQL on a throwaway container),
 the storage rows, the frontend unit and browser suites (no editor change in Part 1, so they
@@ -592,3 +634,16 @@ against the code before it was applied.
 | 2 (P2) | A budget refusal before any call saved no row, so a cached `last` has no evidence for `stopped_by: budget`; the replay guarantee before the row commits was overstated | Revision 2 text; the review reproduced a replay refused for actions where the first attempt was refused for tokens | Runtime "Every budget stop is saved" and "Replay guarantee"; R19b, R21a, R21b, R26; M24, M27, M28 |
 | 3 (P2) | A cached fallback without `_truncation` looks complete | `worker.run_truncation` reads `summary` only for `for_each` | Runtime "One function derives the outcome" and "The run verdict reads the Repeat summary"; R25; M25, M26 |
 | 4 (P3) | R22 cannot catch M19: the Agent's schema check fails first | `agent_runtime`: `validate_with_repair` raises `Agent output did not match the required structure` | "Typed verdict"; R22a, R22b; M19 oracle |
+
+## Review of revision 3 (2026-11-09)
+
+Verdict: keep decision 2a and the durable halt row; three details before Part 1. They fit
+into the existing Part 1 tests and do not reopen the decisions. Each finding was checked
+against the code before it was applied.
+
+| # | Finding | Code confirming it | Applied in |
+|---|---|---|---|
+| 1 (P1) | When the rows already hold the final answer (crash after a terminal row, before the node checkpoint), the handler returns the saved draft with no fresh call, so neither point-of-use check runs | Revision 3 text: checks only before a fresh call and in the restore branch | Runtime "Saved sources are checked again…" (second use); removal timing; R17c; M29 |
+| 2 (P2) | Literal equality with `repeat_outcome()` rejects every valid checkpoint, because the compiler adds `_provenance` | `compile_workflow` restore branch reads `PROVENANCE_KEY` from saved outputs; the fresh path adds `provenance.checked(record)` | Runtime "One function derives the outcome"; R24c control and (d); M30, M31 |
+| 3 (P2) | A Repeat with a truncated summary and `_truncation` gets two causes, one labelled as a capped tool | `worker.run_truncation`: `_truncation` beside other outputs gives a `tool` cause; frontend `TruncationKind` has `loop` | Runtime "The run verdict reads the Repeat summary"; R25 exact cause count; M32 |
+
