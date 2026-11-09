@@ -1,6 +1,9 @@
 # A6: bounded loops (Repeat), and the plan for subgraphs
 
-**Status:** Revision 1 (2026-11-09), for design review. No implementation has started.
+**Status:** Revision 2 (2026-11-09). Revision 1 (`1d97cb9`) was reviewed: keep the Repeat
+design, revise the runtime contract before Part 1 (four findings, all applied below; see
+"Review of revision 1"). One change goes beyond the review and needs confirmation (budget
+stop under `on_limit: fail`, decision 2a). No implementation has started.
 **Baseline:** `3b89a3e` (same tree as `main` `758f869`, after PR #9; main CI run
 `42527293067`, 5/5 green). A5.3 is complete.
 **Probe:** `evals/results/a6-probe-2026-11-09/`.
@@ -108,9 +111,18 @@ input ─► [Repeat r]  ─► out
    checker output or "">}`, produced by `exact_json.dumps(..., compact=True)`.
 2. **The checker runs, if attached.** Its input is `{"input": <Repeat input>, "answer": <this
    body output>}`, as compact JSON.
-3. **The stop rule** is `conditions.evaluate(verdict, until)`. The verdict is the checker's
-   output text, or the body's output text when there is no checker.
-4. **The iteration is saved** (see Runtime). Then:
+3. **Completeness is checked first.** An iteration is *fully evaluated* only when the body
+   output and the checker output (if attached) are complete: `iteration.body_truncation`
+   returns `''` for each, and neither call was refused or failed by a budget. An incomplete
+   output never reaches the stop rule (see "Incomplete iterations"). This matters because a
+   free-text Agent stopped by the token limit *succeeds* with an abstention text and
+   `truncated: true` (`agent_runtime.budget_abstention`), and a `contains` rule can match
+   that text.
+4. **The stop rule** is `conditions.evaluate(verdict, until)`, on a fully evaluated iteration
+   only. The verdict is the checker's output text, or the body's output text when there is
+   no checker. With a checker, the verdict field's JSON type is checked first (see "Typed
+   verdict").
+5. **The iteration is saved** (see Runtime). Then:
    - If the rule is true, the Repeat succeeds with this iteration's outputs.
    - If it is false and `i + 1 < max_iterations`, the next iteration starts.
    - If it is false at the limit, `on_limit` applies:
@@ -124,14 +136,51 @@ input ─► [Repeat r]  ─► out
 **The stop rule errors loudly.** If the verdict cannot be compared (not JSON, missing field,
 text where a number is needed), the Repeat fails with `r: iteration 2: <condition error>`.
 A malformed verdict never counts as "not met", because that would spend more iterations on
-a checker that cannot answer. A checker Agent should set `output_schema` (for example
-`{"type":"object","required":["pass","feedback"],...}`). Its one repair attempt is unchanged.
+a checker that cannot answer.
+
+**Typed verdict.** The condition compares text, so `true` and `"true"` both equal
+`compare_to: true` (`conditions.as_text`). A checker's verdict must not depend on that. With
+a checker attached, validation requires:
+
+- the checker sets `output_schema`, and `until.field` is set;
+- each key of `until.field` is a `required` property of the schema (nested objects for a
+  dotted path);
+- the property type matches the rule: `boolean` for `eq`/`ne` with `compare_to` `true` or
+  `false`; `number` or `integer` for `gt`, `gte`, `lt`, `lte` and `compare_as: number`;
+  `string` for `contains`, `in`, and other `eq`/`ne`. `empty` is refused for a checker.
+
+At run time the Repeat parses the verdict and checks the field's JSON type before
+`conditions.evaluate`, because the schema repair is one attempt, not a guarantee:
+`r: iteration 1: the verdict field pass must be a JSON boolean.` Without a checker, the rule
+reads the body output as today (any operator), after the completeness check.
 
 **A body or checker failure fails the Repeat.** Each call keeps its own `retry` policy. There
-is no per-iteration `continue`. A failed draft is not a draft to improve.
+is no per-iteration `continue`. A failed draft is not a draft to improve. An output that is
+incomplete for a reason other than a run-wide budget (the Agent's own `max_steps`, or a tool
+that capped its result) also fails the Repeat:
+`r: iteration 1: the body's output is incomplete (<reason>).` (or `the checker's output`).
+
+**Incomplete iterations (run-wide budget).** The token limit or the action budget can stop an
+iteration at any call: before the body, between the body and the checker, or inside either.
+Then:
+
+- The loop stops. The interrupted iteration is never judged, and its draft is never returned.
+- The fallback draft is the *last fully evaluated iteration*. It did not meet the rule
+  (otherwise the loop would have stopped there).
+- With `on_limit: last` and a fully evaluated iteration, the Repeat succeeds with it, marked
+  incomplete (`stopped_by: budget`, reason from `iteration.HALT_REASONS`).
+- With `on_limit: fail` (the default), or with no fully evaluated iteration, the Repeat fails
+  with the budget error (`TokenBudgetExhausted` or the action-budget error), and `on_error`
+  applies. **This changes revision 1**, which returned the last draft for a budget stop under
+  either setting. The returned draft never met the rule, so returning it under `fail`
+  contradicts decision 2 (see decision 2a).
+- To tell a run-wide budget from the Agent's own `max_steps`, Part 1 adds `kind`
+  (`tokens`, `action` or `steps`) to each Agent truncation record. The Repeat reads the kind,
+  never the reason text. Existing readers of `truncations` ignore unknown keys.
 
 **Summary** (JSON text): `{"iterations": n, "max_iterations": m, "met": bool,
 "stopped_by": "rule" | "limit" | "budget", "truncated": bool, "truncation_reason": str}`.
+`iterations` counts fully evaluated iterations only.
 
 ## Validation rules
 
@@ -149,6 +198,8 @@ New messages. The existing messages keep their text, except the cycle message.
 | A memory-role Agent in the closure | `<id>: an Agent that writes memory cannot run inside a Repeat.` |
 | Repeat in For-each, For-each in Repeat, Repeat in Repeat | `Nested loops are not supported yet.` (existing text) |
 | `max_iterations` outside 1–10, invalid `until` | Shown as written, as for Condition settings |
+| A checker without `output_schema`, or `until` without `field` | `r: a checker needs an output schema, and the stop rule must read one of its fields.` |
+| `until.field` not a required property, or its type does not match the rule | `r: the stop rule reads <field>, which the checker's schema must require as <type>.` |
 | A cycle | `Workflow contains a cycle; use a Repeat node for a bounded loop.` |
 
 The closure walk is the one that `branch_errors` uses (`deps`: tools, specialists, loop
@@ -168,16 +219,52 @@ The Repeat handler runs the body and the checker as attached callables through
 `invoke_attached` and `execute_with_policy`, as For-each does. No LangGraph node runs more
 than once.
 
-- **Identity.** The checkpoint owner is `r:<i>`. The invocation IDs are `r:<i>:<body>` and
+- **Identity.** The checkpoint owner of iteration `i` is `r:<i>`, shared by the body and the
+  checker, because the iteration is the save unit. The invocation IDs are `r:<i>:<body>` and
   `r:<i>:<check>`, and the parent node is `r`. Every nested event carries `loop_node_id = r`
   and `item_index = i`, applied last by the wrapper, as in `_run_item`.
-- **Persistence.** Each finished iteration is one `loop_item` event with `item_result =
-  {index, status, value, verdict, met}` and provenance. The existing fenced commit saves it as
-  a `run_loop_items` row. The table needs no migration.
-- **Resume.** Saved iterations are not run again. Their saved `value` and `verdict` rebuild the
-  next iteration's input. The stop rule is evaluated again on the saved verdict. If the result
-  differs from the saved `met`, restore is refused: `r cannot be restored: a saved iteration no
-  longer matches its stop rule. Start a new run.`
+- **Child invocations derive from the invocation, not the owner.** Today a root Agent's call
+  is `<checkpoint owner>:<step>:<target>` (`agent_runtime._execute_agent`: at depth 0,
+  `identity_base` is the checkpoint owner). Under a shared owner, a writer and a checker that
+  both call tool `shared` on their first step both get `r:0:1:shared`, so their usage and
+  cancellation records mix (review finding 2). Part 1 adds an optional `child_base` to
+  `ExecutionIdentity` (default `None`). The Repeat sets it to the invocation ID, and
+  `_execute_agent` uses it as the depth-0 base when it is set:
+  `r:0:writer:1:shared` and `r:0:judge:1:shared`. Specialists below already derive from the
+  calling invocation (`>`), so they become distinct too. `child_base` stays `None` for every
+  other caller, so For-each items and top-level Agents keep their current IDs, and an
+  in-flight run resumes across the upgrade with the same identities.
+- **Persistence.** Each fully evaluated iteration is one `loop_item` event with `item_result =
+  {index, status: "success", value, verdict, met}` and provenance. The existing fenced commit
+  saves it as a `run_loop_items` row. The table needs no migration.
+- **The stop reason is saved with the accounting.** An iteration interrupted by a run-wide
+  budget after any call is also saved, as `{index, status: "interrupted", budget_halt:
+  "tokens" | "action"}`, without its draft (it is never used). This is the For-each
+  `budget_halt` mechanism. The row commits with the accounting snapshot: `record_progress`
+  updates the accounting sink first, and `storage.publishes` treats a `loop_item` event as one
+  that needs accounting, so the row and the spend commit in one fenced transaction. A replay
+  that reads the row stops at the same place with the same outcome and makes no call. If a
+  crash comes before that row, the replay reaches the same budget refusal from the durable
+  accounting. Because the fallback uses only fully evaluated iterations, the outcome does not
+  depend on which call the replay is refused at. (A response lost before any durable save is
+  paid again: the accepted TA02 limit.)
+- **Resume from iteration rows.** Saved iterations are not run again. Their saved `value` and
+  `verdict` rebuild the next iteration's input. Each saved verdict is checked again: the type
+  check, then the stop rule. If the result differs from the saved `met`, or a non-terminal row
+  is `met`, restore is refused: `r cannot be restored: a saved iteration no longer matches its
+  stop rule. Start a new run.`
+- **Restore of a checkpointed Repeat.** A Repeat with a node checkpoint does not reach its
+  handler: `compile_workflow` returns `completed[r]` (the restore branch). That branch gets a
+  `repeat` case that runs before the output is returned, with the same check as above on
+  every saved iteration row (`run_state['loop_progress'][r]`, rows survive the node
+  checkpoint). It also confirms that the checkpoint matches the terminal iteration:
+  - the rows are `0 … n-1` with no gap, plus at most one `interrupted` row at index `n`;
+  - `summary.iterations = n`, and `summary.met` and `summary.stopped_by` match the re-evaluated
+    rows, `max_iterations` and `on_limit`;
+  - `text` equals the terminal row's `value`, and `feedback` its `verdict` (or `''` without a
+    checker).
+  Any mismatch refuses restore with the message above, so a downstream node never runs on a
+  changed verdict (review finding 4).
 - **The unit of work is the iteration.** A crash after the body and before the checker repeats
   that iteration's body. This is at most one iteration's calls. It is the same as a For-each
   item, and the same accepted limit as TA02 (a response lost before a durable save is paid
@@ -187,13 +274,19 @@ than once.
   the Repeat fails with `r: iteration <i> output is too large to save (limit 200000 bytes).`
   Ten iterations stay within the 2 MB that For-each allows for a results list.
 - **Budgets.** Each call is charged to the run-wide action budget and to the token admission
-  limit, as For-each items are. If a budget refuses the next iteration before any call, the
-  loop stops. If at least one iteration finished, the Repeat returns the last one, marked
-  incomplete (`stopped_by: budget`). If none finished, it fails with the budget error.
-- **Evidence.** A body that retrieves registers evidence with run-unique labels. Reused
-  iterations are added to `reused_owners` (`r:<i>`), so the Response checks their saved
-  sources, as for For-each items. The restore branch in `compile_workflow` that does this for
-  `for_each` is extended to `repeat`.
+  limit, as For-each items are. A refusal at any point follows "Incomplete iterations".
+- **Saved sources are checked before reuse, not at the Response.** Revision 1 relied on the
+  final Response check. That is too late: on resume, the next writer or checker receives the
+  saved draft before the Response runs. The shared pre-run check `kb_errors`
+  (`platform_validation.py`, called by the worker before compile and by resubmission) checks
+  a reused owner's saved sources, but it recognizes only For-each owners: `loops` is the set
+  of `for_each` nodes, so the owner `r:0` is skipped (review finding 1, confirmed in the
+  code). Part 1 adds `repeat` to that set. The owner `r:<i>` is then reused when `r` has a node
+  checkpoint or row `i` is saved, and a removed source refuses the run before any call:
+  `r:0: saved knowledge sources are unavailable or removed. Start a new run with current
+  evidence.` Reused iterations are still added to `reused_owners`, and the `compile_workflow`
+  restore branch that does this for `for_each` gets the same `repeat` case, so the Response
+  check stays as a second line.
 - **Cancellation.** In a parallel branch, a sibling's failure cancels the Repeat. The open
   iteration is not saved and reports its own spend, as `_run_item` does.
 - **Provenance.** `text` never carries a stronger label than the last body output.
@@ -227,6 +320,11 @@ fake provider, with exact scripted outputs.
 - V08 A back edge gives the new cycle message.
 - V09 A `check` edge on a For-each is refused.
 - V10 `bindable_outputs` offers exactly `r.text`, `r.feedback` and `r.summary` downstream.
+- V11 A checker without `output_schema`, and a checker with `until` that has no `field`:
+  refused with the exact message.
+- V12 Typed verdict: `eq pass true` with `pass: {"type":"string"}`, with `pass` not required,
+  and `gte score 8` with `score: {"type":"string"}`: refused. `pass: boolean` and
+  `score: integer` accepted. `empty` with a checker: refused.
 
 **Runtime (R)**
 
@@ -241,10 +339,16 @@ fake provider, with exact scripted outputs.
 - R06 A verdict that is not JSON fails at that iteration with the condition's message.
 - R07 A body failure, after its retries, fails the Repeat. No further iteration runs.
 - R08 The action budget is charged once for each call (`r:0:writer`, `r:0:judge`, ...).
-  Exhaustion before iteration 3 returns iteration 2, marked `stopped_by: budget`.
+  Exhaustion before iteration 3: with `on_limit: last`, iteration 2 is returned, marked
+  `stopped_by: budget`; with `on_limit: fail`, the Repeat fails with the budget error.
 - R09 The token admission limit refuses a call in the loop, as for a For-each item.
 - R10 Events: each nested event has `loop_node_id`, `item_index` and a distinct invocation ID.
-  One `loop_item` event for each finished iteration.
+  One `loop_item` event for each fully evaluated iteration. **Shared tool:** the writer and
+  the checker both call the same read tool on their first step. The two calls have the IDs
+  `r:0:writer:1:shared` and `r:0:judge:1:shared`, and each one's usage and settled outcome is
+  recorded under its own ID.
+- R10b For-each child IDs do not change: a For-each Agent body that calls a tool still gets
+  `<loop>:<i>:1:<tool>` (guards `child_base` against changing existing identities).
 - R11 Resume: iteration 0 is saved, the worker stops, the run resumes. Iteration 0 is not
   called again, and iteration 1 gets the saved `previous` and `feedback`.
 - R12 A saved iteration whose `met` no longer matches the rule: restore is refused with the
@@ -255,6 +359,37 @@ fake provider, with exact scripted outputs.
 - R15 A body Agent with a Retrieve tool: the citations of a reused iteration are checked at
   the Response.
 - R16 Contract 2: a Switch on `r.text` is refused.
+- R17 **Removed source, partial progress.** Iteration 0's writer retrieves source S; iteration
+  0 is saved; the worker stops; S is removed. On resume the run is refused by the pre-run
+  check with `r:0: saved knowledge sources are unavailable or removed. …`, and the fake
+  provider receives **no further call** (the next writer never gets the draft).
+- R18 **Removed source, checkpointed Repeat.** The same, with `r` checkpointed and a
+  downstream Agent not yet run: refused before the downstream Agent's call.
+- R19 **Budget between writer and checker.** The writer spends the last tokens; the checker
+  is refused at admission. Iteration 1 is saved as `interrupted` with `budget_halt: tokens`.
+  `on_limit: last` returns iteration 0's draft (`iterations = 1`, `stopped_by: budget`);
+  `on_limit: fail` fails with the token-budget error. With no fully evaluated iteration
+  (interruption in iteration 0), both fail with the budget error.
+- R20 **A truncated verdict is not judged.** The review's reproduction: a free-text Agent
+  stopped by the token limit succeeds with its abstention text and `truncated: true`, and a
+  `contains` rule matches that text. With a checker, V11 requires a schema, and a structured
+  Agent out of tokens fails typed instead (`TokenBudgetExhausted`), so the free-text case is a
+  Repeat without a checker: the body is a free-text Agent, `until` is `contains` on a phrase in
+  the abstention text, and iteration 1's body is stopped by the token limit. The rule is not
+  evaluated, and the outcome is the R19 budget outcome, never `met`.
+- R21 **Replay of an interrupted iteration.** After R19's interrupted row is saved, the worker
+  stops and the run resumes: no call is made, and the outcome is the same. Then the crash
+  case: the worker is stopped after the writer's spend is saved and before the interrupted
+  row; the resume reaches the same outcome.
+- R22 **String verdict.** A checker whose schema repair still returns `{"pass": "true"}` fails
+  with `r: iteration 0: the verdict field pass must be a JSON boolean.`
+- R23 **Non-budget incompleteness.** A body Agent that reaches its own `max_steps` fails the
+  Repeat with the exact incomplete-output message.
+- R24 **Changed verdict after the Repeat checkpoint.** `r` is checkpointed and the downstream
+  node has not run. The test changes (a) the terminal row's `verdict` so the rule no longer
+  holds, (b) a row's saved `met`, (c) the checkpoint's `text` so it differs from the terminal
+  row. Each resume is refused with the restore message, and the downstream node never runs
+  (no `running` event, no provider call).
 
 **Storage rows.** `sqlite-repeat-sigkill` and `postgres-repeat-sigkill`. A real worker process
 is killed during iteration 1. After the lease, a new worker repeats only iteration 1. The rows
@@ -276,6 +411,15 @@ are counted exactly, and each call is charged exactly once for each attempt that
 | M10 the checker is not charged to the action budget | R08 |
 | M11 reused iterations are not added to `reused_owners` | R15 |
 | M12 nested events lose `item_index` | R10 |
+| M13 `kb_errors` does not recognize Repeat owners (revision 1 behavior) | R17, R18 |
+| M14 the Repeat does not set `child_base` (shared owner as the child base) | R10 shared tool |
+| M15 `child_base` is applied to every caller | R10b |
+| M16 the stop rule runs before the completeness check | R20 |
+| M17 the interrupted iteration's draft is the fallback | R19 |
+| M18 the interrupted row is not saved (`budget_halt` dropped) | R21 |
+| M19 the verdict type check is removed | R22 |
+| M20 the cached-Repeat restore check is removed | R24 |
+| M21 the cached check compares `met` but not `text` with the terminal row | R24 (c) |
 
 **Gates.** The full backend suite at PYTHONHASHSEED 0–4 (PostgreSQL on a throwaway container),
 the storage rows, the frontend unit and browser suites (no editor change in Part 1, so they
@@ -315,17 +459,43 @@ Recommendation: deliver A6.1 first. Then decide whether published versions come 
   Revisit in Part 2 if authors need it.
 - **Saving the body result before the checker runs** (two rows per iteration). This saves at
   most one body call after a crash, but it gives a row two meanings. Rejected for Part 1.
-  See question 4.
+  See decision 4.
 
-## Review questions
+## Review of revision 1 (2026-11-09)
 
-1. **Order and split.** Repeat (A6.1) first, in three parts; subgraphs (A6.2) as a separate
-   design, possibly after published workflow versions. Agree?
-2. **`on_limit` default `fail`.** A loop that never met its rule fails unless the author
-   chooses `last`, which returns the last answer marked incomplete. Agree?
-3. **Limit 10 iterations.** This is enough for draft-and-check. A bigger limit is mostly
-   polling, which Part 1 does not support (there is no wait between iterations).
-4. **The unit of work is the iteration.** A crash between the body and the checker repeats
-   that iteration's body. Accept, as for a For-each item?
-5. **No wait between iterations.** Polling ("repeat until the job is ready") needs a timed wait
-   that does not hold a worker. Defer?
+Verdict: keep the Repeat design; revise the runtime contract before Part 1. The reviewer
+reproduced the baseline refusals and hosted CI on `1d97cb9` (run `42675794227`, 5/5). Each
+finding was checked against the code before it was applied.
+
+| # | Finding | Code confirming it | Applied in |
+|---|---|---|---|
+| 1 (P1) | A removed source is not caught before a saved draft is fed to the next Agent: `kb_errors` checks For-each owners only, and the Response check comes after the next call | `platform_validation.kb_errors`: `loops` holds `for_each` nodes only | Runtime "Saved sources are checked before reuse"; R17, R18; M13 |
+| 2 (P2) | The writer and the checker share child invocation IDs (`r:0:1:shared`) | `agent_runtime._execute_agent`: the depth-0 `identity_base` is the checkpoint owner | Runtime "Child invocations derive from the invocation"; R10, R10b; M14, M15 |
+| 3 (P2) | A budget between the writer and the checker is undefined; a free-text abstention can satisfy a `contains` rule; `true` and `"true"` compare equal | `agent_runtime.budget_abstention` (success with `truncated: true`); `conditions.as_text` | Model steps 3–4, "Typed verdict", "Incomplete iterations", Runtime "The stop reason is saved with the accounting"; V11, V12, R19–R23; M16–M19 |
+| 4 (P2) | A checkpointed Repeat bypasses the verdict recheck | `compile_workflow` restore branch returns `completed[node.id]` before the handler | Runtime "Restore of a checkpointed Repeat"; R24; M20, M21 |
+
+## Decisions (from the review)
+
+1. **Order and split: Repeat first.** Published, immutable workflow versions come before
+   subgraphs, and each child is pinned to a version. The first subgraph execution runs under
+   the parent's lease and budgets ([AWS Step Functions versions](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-state-machine-version.html)).
+2. **`on_limit` default `fail`**, with `last` as the explicit choice that returns the last
+   draft marked incomplete.
+   - **2a (new in revision 2, please confirm).** A budget stop follows `on_limit` too: under
+     `fail`, the Repeat fails with the budget error instead of returning an unmet draft.
+     Revision 1 returned the last draft under both settings, and the review's finding 3 kept
+     that fallback. It is changed because the fallback draft is by definition one that did
+     not meet the rule, and `fail` means that such a draft is never returned as the answer.
+3. **Limit 10, default 3.** The limit bounds iterations; Agent steps, tool calls and repairs
+   still use their existing budgets.
+4. **The iteration is the save unit.** A crash before the save can repeat the writer and be
+   charged again by the provider. The loop stays read-only, and the tests prove that saved
+   iterations are reused ([Temporal: activity idempotency](https://docs.temporal.io/activity-definition#idempotency)).
+5. **No wait between iterations.** A wait needs a saved wake-up time, so the worker can
+   release the run and claim it again later ([AWS Wait state](https://docs.aws.amazon.com/step-functions/latest/dg/state-wait.html)).
+   Deferred.
+
+## Review question for revision 2
+
+1. Decision 2a: a budget stop under `on_limit: fail` fails the Repeat. Agree, or keep the
+   revision 1 fallback for budget stops under both settings?
