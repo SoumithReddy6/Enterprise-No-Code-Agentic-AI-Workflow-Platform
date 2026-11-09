@@ -1,9 +1,9 @@
 # A6: bounded loops (Repeat), and the plan for subgraphs
 
-**Status:** Revision 4 (2026-11-09). Revisions 1 (`1d97cb9`), 2 (`84b6930`) and 3 (`cf35175`)
-were reviewed. Decision 2a and the durable halt row are kept. Revision 4 applies the three
-details from the third review (see "Review of revision 3"); they fit into the Part 1 tests
-and do not reopen the decisions. No implementation has started.
+**Status:** Revision 5 (2026-11-09). Revisions 1 (`1d97cb9`), 2 (`84b6930`), 3 (`cf35175`)
+and 4 (`4421fad`) were reviewed. The fourth review closed the three earlier findings and
+cleared Part 1 with one addition to R25 (see "Review of revision 4"), applied here. Decision
+2a is unchanged. No implementation has started.
 **Baseline:** `3b89a3e` (same tree as `main` `758f869`, after PR #9; main CI run
 `42527293067`, 5/5 green). A5.3 is complete.
 **Probe:** `evals/results/a6-probe-2026-11-09/`.
@@ -304,8 +304,19 @@ than once.
 - **The run verdict reads the Repeat summary.** `worker.run_truncation` reads `summary` only
   for `for_each` nodes; other nodes are read through `grounding` and `_truncation`. So a cached
   fallback without `_truncation` would look complete (confirmed in the code). Part 1 adds
-  `repeat` to the nodes whose `summary` is read, and a Repeat gives **exactly one cause**, of
-  kind `loop`, from its summary. Its `_truncation` is not read by `run_truncation`: today a
+  `repeat` to the nodes whose `summary` is read, and a Repeat gives **exactly one cause**:
+  - **A Repeat that succeeded** (its outputs have `summary`): one cause of kind `loop`, from
+    the summary. Its `_truncation` is not read.
+  - **A budget-refused Repeat recovered by `on_error`** (`continue` or `route`): the compiler's
+    recovery path returns only `{_truncation: budget_truncation(...)}`, with no `summary`
+    (`compile_workflow`, the `outcome.status == 'failed'` branch). The existing rule applies
+    unchanged: one cause of kind `budget`. Ignoring `_truncation` for every Repeat would make
+    this run look complete (review of revision 4). This is why the Repeat's budget failure
+    keeps its budget class: the recovery path sets `budget_exhausted` from it.
+  - A Repeat that failed for its limit and was recovered gives no cause, as any ordinary
+    recovered failure: the author chose that path.
+
+  Today a
   node whose outputs hold `_truncation` beside other outputs gets a second cause, labelled
   `tool` ("Tool returned capped results"), which would be wrong for a Repeat (the review fed
   the summarizer a loop result with both and got two causes). `_truncation` stays in the
@@ -503,7 +514,10 @@ fake provider, with exact scripted outputs.
   **exactly one** cause for `r`, of kind `loop`, with the exact reason (the cause count is
   asserted, so a second `tool` cause fails the test). On a checkpoint whose `summary` is
   intact but whose `_truncation` is removed, it still reports the run incomplete with the
-  same single cause.
+  same single cause. **Recovered budget failure:** a Repeat with `on_limit: fail` and
+  `on_error: continue` (and again with `route`) is refused by the budget; the run continues,
+  and `run_truncation` reports exactly one cause for `r`, of kind `budget`, with the budget
+  reason.
 - R26 **Cached budget fallback without its halt row.** A checkpointed `last` result with
   `stopped_by: budget`; the test deletes the interrupted row: restore is refused.
 
@@ -547,6 +561,7 @@ are counted exactly, and each call is charged exactly once for each attempt that
 | M30 the restore check compares the whole checkpoint, `_provenance` included | R24c |
 | M31 the restore check ignores keys outside the outcome fields | R24c (d) |
 | M32 `run_truncation` also reads a Repeat's `_truncation` (two causes) | R25 |
+| M33 `run_truncation` ignores `_truncation` for every Repeat (revision 4 text) | R25 recovered budget failure |
 
 **Gates.** The full backend suite at PYTHONHASHSEED 0–4 (PostgreSQL on a throwaway container),
 the storage rows, the frontend unit and browser suites (no editor change in Part 1, so they
@@ -646,4 +661,13 @@ against the code before it was applied.
 | 1 (P1) | When the rows already hold the final answer (crash after a terminal row, before the node checkpoint), the handler returns the saved draft with no fresh call, so neither point-of-use check runs | Revision 3 text: checks only before a fresh call and in the restore branch | Runtime "Saved sources are checked again…" (second use); removal timing; R17c; M29 |
 | 2 (P2) | Literal equality with `repeat_outcome()` rejects every valid checkpoint, because the compiler adds `_provenance` | `compile_workflow` restore branch reads `PROVENANCE_KEY` from saved outputs; the fresh path adds `provenance.checked(record)` | Runtime "One function derives the outcome"; R24c control and (d); M30, M31 |
 | 3 (P2) | A Repeat with a truncated summary and `_truncation` gets two causes, one labelled as a capped tool | `worker.run_truncation`: `_truncation` beside other outputs gives a `tool` cause; frontend `TruncationKind` has `loop` | Runtime "The run verdict reads the Repeat summary"; R25 exact cause count; M32 |
+
+## Review of revision 4 (2026-11-09)
+
+Verdict: revision 4 closes the three earlier findings; Part 1 can proceed with one addition
+to R25. Checked against the code before it was applied.
+
+| # | Finding | Code confirming it | Applied in |
+|---|---|---|---|
+| 1 (P2) | Under `on_error: continue` or `route`, a budget-refused node returns only `_truncation`, so "ignore `_truncation` for every Repeat" makes the run look complete | `compile_workflow` recovery branch: `value={TRUNCATION_KEY: budget_truncation(...)}` when `budget_exhausted`; `worker.run_truncation` gives `budget` when `_truncation` is the only output | Runtime "The run verdict reads the Repeat summary"; R25 recovered budget failure; M33 |
 
