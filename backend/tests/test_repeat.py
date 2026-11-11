@@ -1090,3 +1090,200 @@ def kb_downstream(kb_id):
     raw['nodes'] = [n if n['id'] != 'writer' else {'id': 'writer', 'type': 'query', 'config': {
         'knowledge_base_id': kb_id, 'mode': 'keyword', **MODEL, 'system': 'KEY:query'}} for n in raw['nodes']]
     return raw
+
+
+# --------------------------------------------------------------------------- review of 011a9e0
+# R17d: a fallback that returns a saved draft is checked again at the return.
+# R27: an answerability-guard abstention stops the Repeat and its decision travels on.
+# R28: the body's result is read from its declared result port, never defaulted to ''.
+
+GUARD = {'decision': 'abstain', 'abstention_source': 'answerability_guard'}
+
+
+def guard_abstains(monkeypatch):
+    """The local answerability reader abstains; returns the list of checked questions."""
+    from backend.app import answerability_guard
+    asked = []
+    async def check(question, passages, node_id=None):
+        asked.append(question)
+        return {'decision': 'abstain', 'status': 'scored', 'abstention_source': 'answerability_guard'}
+    monkeypatch.setattr(answerability_guard, 'check', check)
+    return asked
+
+
+def fixture_kb(sources=()):
+    async def platform(action, *args):
+        if action == 'kb_retrieve': return {'sources': list(sources), 'version': 'fixture'}
+        if action in ('record_vector_sources', 'verify_vector_sources'): return []
+        raise AssertionError(action)
+    return platform
+
+
+def guarded_retrieve(id='lookup'):
+    return {'id': id, 'type': 'retrieve', 'config': {'knowledge_base_id': 'fixture', 'answerability_guard': True}}
+
+
+def guard_summary(iterations=0):
+    return {'iterations': iterations, 'max_iterations': 3, 'met': False, 'stopped_by': 'guard',
+            'truncated': False, 'truncation_reason': '', 'answerability': GUARD}
+
+
+@pytest.mark.asyncio
+async def test_r17d_a_removal_after_the_halt_row_refuses_the_saved_fallback(tmp_path, monkeypatch, services):
+    monkeypatch.setenv('AGENT_RUN_BUDGET', '2')
+    store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+    script = kb_script(monkeypatch, [verdict(False)], [])
+    raw = kb_downstream(kb['id'])
+    for node in raw['nodes']:
+        if node['id'] == 'r': node['config']['on_limit'] = 'last'
+        if node['id'] == 'next': node.update(type='llm', inputs={'prompt': 'r.text'})
+    assert errors(raw) == []
+    original = crash_on(monkeypatch, store, row_saved(0))
+    id, first = await attempt(store, worker, raw, message='project codename')
+    assert set(rows(store, id)) == {0} and 'r' not in first['checkpoints'], first.get('error')
+    removed = []
+    def remove_after_halt(id_, owner, event, **kwargs):
+        saved = original(id_, owner, event, **kwargs)
+        if row_saved(1, 'interrupted')(event):
+            remove(services, kb, doc); removed.append(True)
+        return saved
+    monkeypatch.setattr(store, 'worker_event', remove_after_halt)
+    _, final_run = await attempt(store, worker, id=id)
+    assert removed and rows(store, id)[1]['budget_halt'] == 'action', 'the source went after the halt row committed'
+    assert final_run['status'] == 'failed' and f'r:0: {REMOVED_SOURCES}' in final_run['error']
+    assert script.count('next') == 0 and not node_events(final_run, 'next', 'running')
+
+
+@pytest.mark.asyncio
+async def test_r27a_an_upstream_abstention_stops_the_repeat_before_the_checker(monkeypatch):
+    from backend.app.agent_runtime import NO_EVIDENCE
+    guard_abstains(monkeypatch)
+    script = Script(monkeypatch, writer=['model-generated draft'], judge=[verdict(False), verdict(True)])
+    raw = document([
+        {**guarded_retrieve('retrieve'), 'inputs': {'query': 'input.message'}},
+        repeat(source='retrieve.context'), writer(), judge(),
+        {'id': 'out', 'type': 'response', 'inputs': {'text': 'r.text'}},
+    ], [('input', 'retrieve'), ('retrieve', 'r'), ('r', 'out'), loop('r', 'writer', 'body'), loop('r', 'judge', 'check')])
+    assert errors(raw) == []
+    values, exc, events = await run_mem(raw, platform=fixture_kb())
+    assert exc is None, exc
+    assert script.count('writer') == 0 and script.count('judge') == 0, 'no checker and no second writer'
+    refusal = values['r']['text']
+    assert refusal.startswith(NO_EVIDENCE) and values['out']['text'] == refusal and values['r']['feedback'] == ''
+    assert summary(values) == guard_summary()
+    assert items(events) == [{'index': 0, 'status': 'abstained', 'value': refusal}]
+    assert '_truncation' not in values['r']
+
+
+@pytest.mark.asyncio
+async def test_r27b_a_body_abstention_reaches_a_downstream_model_node(monkeypatch):
+    from backend.app.agent_runtime import NO_EVIDENCE
+    guard_abstains(monkeypatch)
+    script = Script(monkeypatch, next=['generated anyway'])
+    raw = document([
+        repeat(body='lookup', check='', until=NEVER), guarded_retrieve(),
+        {'id': 'next', 'type': 'llm', 'inputs': {'prompt': 'r.text'}, 'config': {**MODEL, 'system': 'KEY:next'}},
+        {'id': 'out', 'type': 'response', 'inputs': {'text': 'next.text'}},
+    ], [('input', 'r'), ('r', 'next'), ('next', 'out'), loop('r', 'lookup', 'body')])
+    assert errors(raw) == []
+    values, exc, events = await run_mem(raw, platform=fixture_kb())
+    assert exc is None, exc
+    assert script.count('next') == 0, 'the downstream model node honoured the carried decision'
+    assert values['next']['text'].startswith(NO_EVIDENCE)
+    assert json.loads(values['r']['text'])['answerability']['decision'] == 'abstain'
+    assert summary(values) == guard_summary()
+    assert items(events) == [{'index': 0, 'status': 'abstained', 'value': values['r']['text']}]
+
+
+@pytest.mark.asyncio
+async def test_r27c_a_checker_abstention_returns_the_refusal_not_the_unchecked_draft(monkeypatch):
+    from backend.app.agent_runtime import NO_EVIDENCE
+    guard_abstains(monkeypatch)
+    script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[call('lookup', 'q'), final(verdict(True))])
+    raw = standard(extra=[guarded_retrieve()], extra_edges=[tool_edge('lookup', 'judge')])
+    assert errors(raw) == []
+    values, exc, events = await run_mem(raw, platform=fixture_kb())
+    assert exc is None, exc
+    assert script.count('writer') == 1 and script.count('judge') == 1
+    refusal = values['r']['text']
+    assert refusal.startswith(NO_EVIDENCE) and 'draft 1' not in refusal
+    assert summary(values) == guard_summary()
+    assert items(events) == [{'index': 0, 'status': 'abstained', 'value': refusal}]
+
+
+def guarded_query_flow(kb_id):
+    raw = kb_flow(kb_id)
+    for node in raw['nodes']:
+        if node['id'] == 'writer': node['config']['answerability_guard'] = True
+    return raw
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('stop', ['row', 'checkpoint'])
+async def test_r27d_a_saved_guard_stop_is_reused_without_a_call(tmp_path, monkeypatch, services, stop):
+    from backend.app.agent_runtime import NO_EVIDENCE
+    store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+    asked = guard_abstains(monkeypatch)
+    script = Script(monkeypatch, query=[], judge=[])
+    crash_on(monkeypatch, store, row_saved(0) if stop == 'row' else checkpoint_of('r'))
+    id, first = await attempt(store, worker, guarded_query_flow(kb['id']), message='project codename')
+    assert first['status'] != 'success' and ('r' in first['checkpoints']) == (stop == 'checkpoint')
+    saved = rows(store, id)
+    assert set(saved) == {0} and saved[0]['status'] == 'abstained' and saved[0]['value'].startswith(NO_EVIDENCE)
+    crash_on(monkeypatch, store, lambda e: False)
+    _, final_run = await attempt(store, worker, id=id)
+    assert final_run['status'] == 'success', final_run.get('error')
+    assert final_run['output'] == saved[0]['value'] and len(asked) == 1 and not script.calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('change', [lambda e: {**e, 'met': False}, lambda e: {**e, 'value': 7},
+                                    lambda e: {**e, 'index': 1}])
+async def test_r27e_a_changed_guard_row_is_refused(tmp_path, monkeypatch, services, change):
+    store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+    guard_abstains(monkeypatch)
+    Script(monkeypatch, query=[], judge=[])
+    crash_on(monkeypatch, store, row_saved(0))
+    id, _ = await attempt(store, worker, guarded_query_flow(kb['id']), message='project codename')
+    edit_rows(store, id, lambda i, e: change(e))
+    crash_on(monkeypatch, store, lambda e: False)
+    _, final_run = await attempt(store, worker, id=id)
+    assert final_run['status'] == 'failed' and RESTORE in final_run['error']
+
+
+@pytest.mark.asyncio
+async def test_r28a_a_retrieve_body_result_is_its_context(tmp_path, monkeypatch, services):
+    store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+    raw = standard(body={'id': 'lookup', 'type': 'retrieve', 'config': {'knowledge_base_id': kb['id'], 'mode': 'keyword'}},
+                   check=None, until={'operator': 'contains', 'contains': 'Bluebird'})
+    assert errors(raw) == []
+    id, run = await attempt(store, worker, raw, message='project codename')
+    assert run['status'] == 'success', run.get('error')
+    row = rows(store, id)[0]
+    assert row['met'] is True and row['value'] == row['verdict']
+    assert json.loads(row['value'])['passages'][0]['document_id'] == doc['id']
+    assert run['output'] == row['value']
+
+
+@pytest.mark.asyncio
+async def test_r28b_a_body_without_its_result_port_fails_the_repeat(monkeypatch):
+    from backend.app.registry import REGISTRY
+    async def no_context(inputs, config, ctx):
+        return {'query': inputs['query'], 'sources': '[]'}
+    monkeypatch.setattr(REGISTRY['retrieve'], 'handler', no_context)
+    raw = standard(body={'id': 'lookup', 'type': 'retrieve', 'config': {'knowledge_base_id': 'fixture'}},
+                   check=None, until={'operator': 'empty'})
+    values, exc, events = await run_mem(raw, platform=fixture_kb())
+    assert exc is not None and "r: iteration 1: the body's context output is missing." in str(exc)
+    assert items(events) == []
+
+
+@pytest.mark.asyncio
+async def test_r27f_a_guard_row_over_200000_bytes_fails_and_nothing_is_saved(monkeypatch):
+    guard_abstains(monkeypatch)
+    raw = document([repeat(body='lookup', check='', until=NEVER), guarded_retrieve(),
+                    {'id': 'out', 'type': 'response', 'inputs': {'text': 'r.text'}}],
+                   [('input', 'r'), ('r', 'out'), loop('r', 'lookup', 'body')])
+    values, exc, events = await run_mem(raw, platform=fixture_kb(), message='q' * 200_001)
+    assert exc is not None and 'r: iteration 1 output is too large to save (limit 200000 bytes).' in str(exc), exc
+    assert items(events) == []

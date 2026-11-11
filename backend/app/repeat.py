@@ -5,7 +5,9 @@ For each, the body (and the optional checker) run inside this handler as attache
 and each iteration is one saved row in run_loop_items:
 
 * a fully evaluated iteration: {index, status 'success', value, verdict, met};
-* an iteration stopped by a run-wide budget: {index, status 'interrupted', budget_halt, calls}.
+* an iteration stopped by a run-wide budget: {index, status 'interrupted', budget_halt, calls};
+* an iteration stopped by an answerability-guard abstention: {index, status 'abstained', value},
+  where value is the refusal that the body or the checker returned.
 
 A resumed run reuses the saved rows and checks each one again. One function,
 repeat_outcome, derives the node's outputs from the rows, on the fresh path and when a
@@ -117,13 +119,17 @@ def judge(node_id, number, verdict, config):
 
 SUCCESS_KEYS = {'index', 'status', 'value', 'verdict', 'met'}
 HALT_KEYS = {'index', 'status', 'budget_halt', 'calls'}
+ABSTAIN_KEYS = {'index', 'status', 'value'}
+# The guard decision that a Repeat stopped by an abstention carries in its summary, so that a
+# downstream model node refuses too (answerability_guard.from_outputs reads it there).
+GUARD_DECISION = {'decision': 'abstain', 'abstention_source': 'answerability_guard'}
 
 
 def checked_rows(node_id, done, config):
     """The saved rows of an earlier attempt, in order, each checked again.
 
     Valid rows are 0 … n-1 fully evaluated with no gap, plus at most one interrupted row at
-    index n, within max_iterations. Each verdict is judged again (type check, then the stop
+    index n, within max_iterations; the last row may instead be a guard abstention. Each verdict is judged again (type check, then the stop
     rule); a result that differs from the saved `met`, or a `met` row that is not the last
     row, refuses the restore. A verdict type error keeps its own message.
     """
@@ -141,6 +147,10 @@ def checked_rows(node_id, done, config):
             calls = row.get('calls')
             if (set(row) != HALT_KEYS or not last or row.get('budget_halt') not in HALT_REASONS
                     or type(calls) is not int or not 0 <= calls <= (2 if config.check else 1)):
+                raise ValueError(restore_refused(node_id))
+            continue
+        if row.get('status') == 'abstained':
+            if set(row) != ABSTAIN_KEYS or not last or not isinstance(row['value'], str):
                 raise ValueError(restore_refused(node_id))
             continue
         if (row.get('status') != 'success' or set(row) != SUCCESS_KEYS or not isinstance(row['value'], str)
@@ -172,6 +182,7 @@ def repeat_outcome(node_id, rows, config):
 
     Raises the Repeat's error when the outcome is a failure: the limit under on_limit
     'fail', or a budget stop under 'fail' or with no fully evaluated iteration to return.
+    A guard abstention is a complete answer: the refusal, not an earlier draft.
     """
     from .iteration import HALT_REASONS
     from .execution_policy import TRUNCATION_KEY, truncation
@@ -180,6 +191,10 @@ def repeat_outcome(node_id, rows, config):
     last = evaluated[-1] if evaluated else None
     limit = config.max_iterations
     reason = ''
+    if rows and rows[-1]['status'] == 'abstained':
+        summary = {'iterations': len(evaluated), 'max_iterations': limit, 'met': False, 'stopped_by': 'guard',
+                   'truncated': False, 'truncation_reason': '', 'answerability': dict(GUARD_DECISION)}
+        return {'text': rows[-1]['value'], 'feedback': '', 'summary': json.dumps(summary)}
     if halt is not None:
         number, tail = halt['index'] + 1, HALT_REASONS[halt['budget_halt']]
         if config.on_limit == 'fail' or last is None:
@@ -261,6 +276,34 @@ def entry_bytes(entry):
     return len(json.dumps(entry, ensure_ascii=False).encode('utf-8'))
 
 
+# The port that holds an attached node's result. Every body type declares 'text' except
+# Retrieve, whose result is its evidence envelope in 'context'.
+RESULT_PORTS = {'retrieve': 'context'}
+
+
+def result_of(node_id, number, role, node, output):
+    """The result of the body or the checker, from its declared port. A missing port fails
+    the Repeat: an empty string would read as an empty draft and could meet the rule."""
+    port = RESULT_PORTS.get(node.type, 'text')
+    value = output.get(port) if isinstance(output, dict) else None
+    if not isinstance(value, str):
+        raise ValueError(f"{node_id}: iteration {number}: the {role}'s {port} output is missing.")
+    return value
+
+
+def guard_abstained(output):
+    """Whether this output is an answerability-guard abstention: a Retrieve or Query decision
+    (answerability_guard.from_outputs), or an Agent that honoured one (its grounding)."""
+    from .answerability_guard import from_outputs
+    decision = from_outputs(output)
+    if decision is not None and decision['decision'] == 'abstain':
+        return True
+    try:
+        return json.loads(output.get('grounding') or '{}').get('abstention_source') == 'answerability_guard'
+    except (TypeError, ValueError, AttributeError):
+        return False
+
+
 def budget_kind(output):
     """'tokens' or 'action' when a run-wide budget made this output incomplete, '' when it is
     complete, and None when it is incomplete for another reason (steps, a capped tool)."""
@@ -300,9 +343,10 @@ async def repeat_node(inputs, config, ctx):
     while True:
         outcome = repeat_outcome(node_id, rows, config)
         if outcome is not None:
-            # The rows may already hold the final answer (the worker stopped after the
-            # terminal row and before the node checkpoint): check before it is returned.
-            if restored and not verified:
+            # Check the restored sources again at the return, also when they were checked
+            # before this attempt's body ran: a source can be removed while the body runs, and
+            # a fallback ('last' after a budget stop) returns the restored draft itself.
+            if restored:
                 await verify_owners(ctx, restored)
             return outcome
         if restored and not verified:
@@ -314,7 +358,7 @@ async def repeat_node(inputs, config, ctx):
         text = source if previous is None else exact_json.dumps(
             {'input': source, 'previous': previous['value'], 'feedback': previous['verdict'] if config.check else ''}, compact=True)
         entry = await _iteration(ctx, config, body, checker, index, source, text, emit)
-        if entry['status'] == 'success' and entry_bytes(entry) > MAX_ENTRY_BYTES:
+        if entry['status'] != 'interrupted' and entry_bytes(entry) > MAX_ENTRY_BYTES:
             raise ValueError(f'{node_id}: iteration {index + 1} output is too large to save (limit {MAX_ENTRY_BYTES} bytes).')
         # Every budget stop is saved too, with no charge: the row commits with the accounting.
         record_progress(ctx, index, entry)
@@ -339,7 +383,11 @@ async def _iteration(ctx, config, body, checker, index, source, text, emit):
     if kind is None:
         from .iteration import body_truncation
         raise ValueError(f"{node_id}: iteration {number}: the body's output is incomplete ({body_truncation(answer)}).")
-    value = answer.get('text', '')
+    value = result_of(node_id, number, 'body', body, answer)
+    if guard_abstained(answer):
+        # The body honoured an abstention (its own retrieval's, or one in its input). The
+        # refusal is the answer: no checker reads it and no later body receives it.
+        return {'index': index, 'status': 'abstained', 'value': value}
     verdict = value
     if checker is not None:
         from . import exact_json
@@ -353,7 +401,10 @@ async def _iteration(ctx, config, body, checker, index, source, text, emit):
         if kind is None:
             from .iteration import body_truncation
             raise ValueError(f"{node_id}: iteration {number}: the checker's output is incomplete ({body_truncation(checked[1])}).")
-        verdict = checked[1].get('text', '')
+        verdict = result_of(node_id, number, 'checker', checker, checked[1])
+        if guard_abstained(checked[1]):
+            # The checker could not judge the draft; the unchecked draft is never returned.
+            return {'index': index, 'status': 'abstained', 'value': verdict}
     met = judge(node_id, number, verdict, config)
     return {'index': index, 'status': 'success', 'value': value, 'verdict': verdict, 'met': met}
 

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "N1",
+    "what": "the return check runs only when the sources were not checked before the body (011a9e0)",
+    "file": "backend/app/repeat.py",
+    "oracle": "r17d",
+    "killed": true,
+    "result": "1 failed, 76 deselected in 0.94s"
+  },
+  {
+    "id": "N2",
+    "what": "no source check at the return",
+    "file": "backend/app/repeat.py",
+    "oracle": "r17c or r17d",
+    "killed": true,
+    "result": "3 failed, 74 deselected in 1.09s"
+  },
+  {
+    "id": "N3",
+    "what": "the body abstention is not checked",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27a or r27b",
+    "killed": true,
+    "result": "2 failed, 75 deselected in 0.56s"
+  },
+  {
+    "id": "N4",
+    "what": "a Retrieve or Query decision is not read",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27b",
+    "killed": true,
+    "result": "1 failed, 76 deselected in 0.55s"
+  },
+  {
+    "id": "N5",
+    "what": "an Agent's honoured abstention is not read",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27a or r27c",
+    "killed": true,
+    "result": "2 failed, 75 deselected in 0.65s"
+  },
+  {
+    "id": "N6",
+    "what": "the checker abstention is not checked",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27c",
+    "killed": true,
+    "result": "1 failed, 76 deselected in 0.45s"
+  },
+  {
+    "id": "N7",
+    "what": "a checker abstention returns the unchecked draft",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27c",
+    "killed": true,
+    "result": "1 failed, 76 deselected in 0.45s"
+  },
+  {
+    "id": "N8",
+    "what": "the summary does not carry the decision",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27a or r27b",
+    "killed": true,
+    "result": "2 failed, 75 deselected in 0.50s"
+  },
+  {
+    "id": "N9",
+    "what": "from_outputs does not read a summary",
+    "file": "backend/app/answerability_guard.py",
+    "oracle": "r27b",
+    "killed": true,
+    "result": "1 failed, 76 deselected in 0.44s"
+  },
+  {
+    "id": "N10",
+    "what": "a saved guard row may carry other keys",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27e",
+    "killed": true,
+    "result": "1 failed, 2 passed, 74 deselected in 1.00s"
+  },
+  {
+    "id": "N11",
+    "what": "a saved guard row's value type is not checked",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27e",
+    "killed": true,
+    "result": "1 failed, 2 passed, 74 deselected in 0.95s"
+  },
+  {
+    "id": "N12",
+    "what": "a saved guard row is not accepted on restore",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27d",
+    "killed": true,
+    "result": "2 failed, 75 deselected in 0.83s"
+  },
+  {
+    "id": "N13",
+    "what": "the guard row is not size checked",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27f",
+    "killed": true,
+    "result": "1 failed, 76 deselected in 0.44s"
+  },
+  {
+    "id": "N14",
+    "what": "a Retrieve body is read from 'text'",
+    "file": "backend/app/repeat.py",
+    "oracle": "r28a or r28b",
+    "killed": true,
+    "result": "2 failed, 75 deselected in 0.63s"
+  },
+  {
+    "id": "N15",
+    "what": "a missing result port reads as '' (011a9e0)",
+    "file": "backend/app/repeat.py",
+    "oracle": "r28b",
+    "killed": true,
+    "result": "1 failed, 76 deselected in 0.44s"
+  }
+]

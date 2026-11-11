@@ -1,0 +1,16 @@
+## Frontend checks (A6.1 Part 1 review fixes; no frontend file changed)
+The node registry did not change (no port, config or node type was added), so
+frontend/tests/browser/request-nodes.json is unchanged; the backend suite checks it
+(test_request_examples.py::test_browser_registry_fixture_matches_the_actual_definitions).
+Run in the working tree's frontend/ (identical to 011a9e0).
+
+## npm test
+tests 118, pass 118, fail 0
+## typecheck (tsc --noEmit)
+exit 0
+## lint (oxlint)
+exit 0
+## build (vinext build)
+exit 0
+## browser (Chromium, playwright test)
+54 passed (59.8s)
