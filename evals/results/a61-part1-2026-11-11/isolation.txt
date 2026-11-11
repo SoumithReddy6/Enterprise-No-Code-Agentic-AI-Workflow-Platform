@@ -1,0 +1,23 @@
+# A6.1 Part 1 isolation copy: git archive c630aed + the 15 changed files, git init + one commit
+copy: <scratchpad>/a61-iso-fihc5evd
+commit: 87f52734487818d3cb3cb9c66b4e386d220a1552
+
+## Files copied (sha256; copy == working tree)
+08f3be0d6c4ddbd12824347f1d0f9c59e7c47a9fcee938d24ef4b80a8de32a7f README.md match
+e74c9754e7adad490d68b2b73043ab6b4d959707d313944bbb994a75655be001 backend/app/agent_runtime.py match
+1d804f9c61f9513fa37836ebe558105de00d42c0a97e6e50d9f50217da23557a backend/app/compiler.py match
+ce3c14d59324e0f303e841b9df05cea4dba9c1e30213fa6fb8a5fdb5c4ebcbcc backend/app/execution_policy.py match
+5e073aca82ff519d2ed0df8b15f4064ecdc003b54a7387811f28fb8513124a8c backend/app/platform_graph.py match
+b5b65ac6a53df0de6b310f5f3d0eafbf6d9af11da7b0c1233d694b3f9fd646de backend/app/platform_validation.py match
+48fd4a422ea4e2a2e58d5cc70cd570bcc05c515c96a139eb3edd0a8e3b53b2f3 backend/app/registry.py match
+50430c972ff660cc44f9564add17f22dc97f1ff810ab99c9fa328157ad143356 backend/app/repeat.py match
+a4ffa88934fbed6d54317c01454824db1ff36404604d49992762aa9cbf66ac28 backend/app/worker.py match
+f32bf6a2f7a1e2d8acf48a2aa42a52402b3c1a716049faf110c5fe4d5a2fb6d8 backend/tests/test_repeat.py match
+1551a83e7d547d51ee9e0d367b8feadfafb138cb33045934eec7771017f81fa1 backend/tests/test_token_budget_recovery.py match
+bc5c1f1f1f895756ba441e451886ed1b5f05e92b51f591046e8cb1e9475770b4 docs/operations.md match
+5ce993cabc7c3b0f660521e13ee267eff0d45b7c9336098ce74d66eeaa1e0be3 docs/platform-reference.md match
+8f763c046bb9e90059387863db72ffef742256d88568094e97c015d2c6ca6e0d frontend/tests/browser/request-nodes.json match
+a91cd6813ce2f6c9d566359ca26182a163329f566397e81403d3a798a62bd7cc scripts/check_milestone_storage.py match
+
+## Tracked files that differ from c630aed, outside the 15 (evals/ and docs/reviews/ excluded)
+none

@@ -478,7 +478,7 @@ Configuration can be supplied through a root `.env` file. See [.env.example](../
 
 | Implemented | Next engineering work | Later platform work |
 | --- | --- | --- |
-| Visual workflow editor, section-aware chunking, and durable write approvals | Subgraphs and bounded loops (A6) | Published workflow versions |
+| Visual workflow editor, section-aware chunking, and durable write approvals | Bounded loops: the Repeat node's editor support and deployed scenarios (A6.1 Parts 2–3; the backend is Part 1); subgraphs (A6.2) | Published workflow versions |
 | Local/cloud providers and opt-in local reranking | Writes and approvals inside parallel branches (A5.3b) | |
 | Agent roles and specialist delegation | Regex matching for conditions, with a ReDoS-safe engine | Webhooks and scheduled triggers |
 | Named, versioned knowledge bases | Remaining regulatory retrieval misses | Shared runtime state and per-tenant budgets |

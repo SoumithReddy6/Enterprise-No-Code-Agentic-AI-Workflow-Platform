@@ -298,6 +298,8 @@ def validate_template(template: str):
 from .agent_runtime import agent_node,tool_node
 from .iteration import for_each_node as for_each_handler
 register(NodeDefinition('for_each','For each','Control','Run one attached callable once per element of a list.',{'items':'array'},{'results':'array<object>','failed':'string','summary':'string'},ForEachConfig,for_each_handler))
+from .repeat import RepeatConfig,repeat_node
+register(NodeDefinition('repeat','Repeat until','Control','Run an attached body, and an optional checker, until a stop rule is met, at most a fixed number of times.',{'input':'string'},{'text':'string','feedback':'string','summary':'string'},RepeatConfig,repeat_node))
 register(NodeDefinition('agent','Agent node','Agent','Configure a role, attach tools and delegate to specialist agents.',{'input':'string'},{'text':'string','provider':'string','sources':'string','grounding':'string'},AgentConfig,agent_node))
 # Prompt template and Language model stay loadable for saved workflows and the LLM-free example, but off the palette.
 for legacy in ('prompt','llm'):REGISTRY[legacy].hidden=True

@@ -33,11 +33,16 @@ def run_truncation(workflow,values):
     from .execution_policy import TRUNCATION_KEY
     causes=[]
     loops={n.id for n in workflow.nodes if n.type=='for_each'}
+    repeats={n.id for n in workflow.nodes if n.type=='repeat'}
     for node_id,outputs in values.items():
         found=[]
-        if node_id in loops:found.append(('loop',json.loads(outputs.get('summary') or '{}'),'A loop did not run every item.'))
-        else:found.append(('agent',json.loads(outputs.get('grounding') or '{}'),'Agent work was incomplete.'))
-        if outputs.get(TRUNCATION_KEY):
+        # A Repeat that returned gives one cause, from its summary; its _truncation is kept for
+        # the restore check only. A Repeat recovered from a budget failure holds only
+        # _truncation and is read as any recovered node: one budget cause.
+        summarized=node_id in loops or (node_id in repeats and 'summary' in outputs)
+        if summarized:found.append(('loop',json.loads(outputs.get('summary') or '{}'),'A loop did not run every item.'))
+        elif node_id not in repeats:found.append(('agent',json.loads(outputs.get('grounding') or '{}'),'Agent work was incomplete.'))
+        if outputs.get(TRUNCATION_KEY) and not (node_id in repeats and summarized):
             found.append(('budget' if set(outputs)=={TRUNCATION_KEY} else 'tool',outputs[TRUNCATION_KEY],'A tool returned incomplete results.'))
         for kind,metadata,default in found:
             if metadata.get('truncated'):

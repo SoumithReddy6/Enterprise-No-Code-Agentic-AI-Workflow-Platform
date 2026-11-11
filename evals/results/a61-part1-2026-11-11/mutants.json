@@ -1,0 +1,266 @@
+[
+  {
+    "id": "M1",
+    "what": "the stop rule is ignored",
+    "file": "backend/app/repeat.py",
+    "oracle": "r01",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.49s"
+  },
+  {
+    "id": "M2",
+    "what": "max_iterations + 1 iterations",
+    "file": "backend/app/repeat.py",
+    "oracle": "r03",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.47s"
+  },
+  {
+    "id": "M3",
+    "what": "previous is the first draft",
+    "file": "backend/app/repeat.py",
+    "oracle": "r02",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.45s"
+  },
+  {
+    "id": "M4",
+    "what": "a malformed verdict counts as not met",
+    "file": "backend/app/repeat.py",
+    "oracle": "r06",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.45s"
+  },
+  {
+    "id": "M5",
+    "what": "on_limit last without truncation metadata",
+    "file": "backend/app/repeat.py",
+    "oracle": "r04",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.47s"
+  },
+  {
+    "id": "M6",
+    "what": "saved iterations run again on resume",
+    "file": "backend/app/repeat.py",
+    "oracle": "r11",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.65s"
+  },
+  {
+    "id": "M7",
+    "what": "the restored met is trusted",
+    "file": "backend/app/repeat.py",
+    "oracle": "r12",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.64s"
+  },
+  {
+    "id": "M8",
+    "what": "the value is shortened instead of refused",
+    "file": "backend/app/repeat.py",
+    "oracle": "r13",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.45s"
+  },
+  {
+    "id": "M9",
+    "what": "the write rule skips the checker's closure",
+    "file": "backend/app/compiler.py",
+    "oracle": "v04",
+    "killed": true,
+    "result": "1 failed, 2 passed, 62 deselected in 0.45s"
+  },
+  {
+    "id": "M10",
+    "what": "the body call is not charged to the action budget (reinterpreted)",
+    "file": "backend/app/repeat.py",
+    "oracle": "r08 and not r08b",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.46s"
+  },
+  {
+    "id": "M11",
+    "what": "reused iterations are not added to reused_owners",
+    "file": "backend/app/repeat.py",
+    "oracle": "r15",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.72s"
+  },
+  {
+    "id": "M12",
+    "what": "nested events lose item_index",
+    "file": "backend/app/repeat.py",
+    "oracle": "r10 and not r10b",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.48s"
+  },
+  {
+    "id": "M13",
+    "what": "kb_errors does not recognize Repeat owners",
+    "file": "backend/app/platform_validation.py",
+    "oracle": "r17 and not r17b and not r17c or r18 and not r18b",
+    "killed": true,
+    "result": "2 failed, 63 deselected in 0.91s"
+  },
+  {
+    "id": "M14",
+    "what": "the Repeat does not set child_base",
+    "file": "backend/app/repeat.py",
+    "oracle": "r10 and not r10b",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.49s"
+  },
+  {
+    "id": "M15",
+    "what": "child_base is applied to every caller",
+    "file": "backend/app/agent_runtime.py",
+    "oracle": "r10b",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.46s"
+  },
+  {
+    "id": "M16",
+    "what": "the stop rule runs before the completeness check",
+    "file": "backend/app/repeat.py",
+    "oracle": "r20",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.46s"
+  },
+  {
+    "id": "M17",
+    "what": "the interrupted iteration's draft is the fallback",
+    "file": "backend/app/repeat.py",
+    "oracle": "r19_a_budget",
+    "killed": true,
+    "result": "2 failed, 63 deselected in 0.52s"
+  },
+  {
+    "id": "M18",
+    "what": "the interrupted row is not saved",
+    "file": "backend/app/repeat.py",
+    "oracle": "r21a_replay_after",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.71s"
+  },
+  {
+    "id": "M19",
+    "what": "the Repeat's verdict type check is removed",
+    "file": "backend/app/repeat.py",
+    "oracle": "r22b",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.60s"
+  },
+  {
+    "id": "M20",
+    "what": "the cached-Repeat restore check is removed",
+    "file": "backend/app/compiler.py",
+    "oracle": "r24 and not r24c",
+    "killed": true,
+    "result": "3 failed, 62 deselected in 0.91s"
+  },
+  {
+    "id": "M21",
+    "what": "the cached check ignores text",
+    "file": "backend/app/repeat.py",
+    "oracle": "r24 and text",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.62s"
+  },
+  {
+    "id": "M22",
+    "what": "the handler's point-of-use source check is removed",
+    "file": "backend/app/repeat.py",
+    "oracle": "r17b",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.67s"
+  },
+  {
+    "id": "M23",
+    "what": "the restore branch's source check is removed",
+    "file": "backend/app/repeat.py",
+    "oracle": "r18b",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.70s"
+  },
+  {
+    "id": "M24",
+    "what": "no halt row when no call ran",
+    "file": "backend/app/repeat.py",
+    "oracle": "r19b or r21a_replay_of",
+    "killed": true,
+    "result": "2 failed, 63 deselected in 0.59s"
+  },
+  {
+    "id": "M25",
+    "what": "the restore equality ignores _truncation",
+    "file": "backend/app/repeat.py",
+    "oracle": "r25_a_cached",
+    "killed": true,
+    "result": "2 failed, 63 deselected in 0.76s"
+  },
+  {
+    "id": "M26",
+    "what": "run_truncation does not read the Repeat summary",
+    "file": "backend/app/worker.py",
+    "oracle": "r25_one_loop",
+    "killed": true,
+    "result": "2 failed, 63 deselected in 0.76s"
+  },
+  {
+    "id": "M27",
+    "what": "saving a calls:0 halt row charges an action",
+    "file": "backend/app/repeat.py",
+    "oracle": "r19b or r21a_replay_of",
+    "killed": true,
+    "result": "2 failed, 63 deselected in 0.59s"
+  },
+  {
+    "id": "M28",
+    "what": "the replay re-runs the last fully evaluated row",
+    "file": "backend/app/repeat.py",
+    "oracle": "r21b",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.62s"
+  },
+  {
+    "id": "M29",
+    "what": "the handler returns a terminal row's draft without the source check",
+    "file": "backend/app/repeat.py",
+    "oracle": "r17c",
+    "killed": true,
+    "result": "2 failed, 63 deselected in 0.86s"
+  },
+  {
+    "id": "M30",
+    "what": "the restore check compares the whole checkpoint",
+    "file": "backend/app/repeat.py",
+    "oracle": "r24c and not r24c_d",
+    "killed": true,
+    "result": "3 failed, 62 deselected in 0.88s"
+  },
+  {
+    "id": "M31",
+    "what": "the restore check ignores keys outside the outcome fields",
+    "file": "backend/app/repeat.py",
+    "oracle": "r24c_d",
+    "killed": true,
+    "result": "1 failed, 64 deselected in 0.62s"
+  },
+  {
+    "id": "M32",
+    "what": "run_truncation also reads a Repeat's _truncation",
+    "file": "backend/app/worker.py",
+    "oracle": "r25_one_loop",
+    "killed": true,
+    "result": "2 failed, 63 deselected in 0.77s"
+  },
+  {
+    "id": "M33",
+    "what": "run_truncation ignores _truncation for every Repeat",
+    "file": "backend/app/worker.py",
+    "oracle": "r25_a_recovered",
+    "killed": true,
+    "result": "2 failed, 63 deselected in 0.65s"
+  }
+]

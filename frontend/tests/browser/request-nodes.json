@@ -420,6 +420,161 @@
     "hidden": false
   },
   {
+    "type": "repeat",
+    "name": "Repeat until",
+    "version": 1,
+    "category": "Control",
+    "description": "Run an attached body, and an optional checker, until a stop rule is met, at most a fixed number of times.",
+    "inputs": {
+      "input": "string"
+    },
+    "optional_inputs": {},
+    "outputs": {
+      "text": "string",
+      "feedback": "string",
+      "summary": "string"
+    },
+    "branch_routes": [],
+    "configurable_routes": false,
+    "config_schema": {
+      "$defs": {
+        "ConditionConfig": {
+          "additionalProperties": false,
+          "properties": {
+            "operator": {
+              "default": "contains",
+              "description": "contains: text includes a phrase. eq / ne: equal or not equal. gt, gte, lt, lte: numeric comparison. in: equals one of several options. empty: nothing there.",
+              "enum": [
+                "contains",
+                "eq",
+                "ne",
+                "gt",
+                "gte",
+                "lt",
+                "lte",
+                "in",
+                "empty"
+              ],
+              "title": "Operator",
+              "type": "string"
+            },
+            "field": {
+              "default": "",
+              "description": "Optional. Read this key, or a dotted path such as order.amount, from a JSON object value - for example the output of an extraction agent.",
+              "maxLength": 520,
+              "title": "Field",
+              "type": "string"
+            },
+            "contains": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Contains"
+            },
+            "compare_to": {
+              "anyOf": [
+                {
+                  "maxLength": 1000,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Compare to"
+            },
+            "options": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 100,
+                  "minItems": 1,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "A JSON list, for example [\"high\", \"urgent\"].",
+              "title": "Options"
+            },
+            "compare_as": {
+              "default": "text",
+              "description": "For eq, ne and in. Ordering operators always compare numbers.",
+              "enum": [
+                "text",
+                "number"
+              ],
+              "title": "Compare as",
+              "type": "string"
+            },
+            "case_sensitive": {
+              "default": false,
+              "title": "Case Sensitive",
+              "type": "boolean"
+            }
+          },
+          "title": "ConditionConfig",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "default": "",
+          "maxLength": 64,
+          "title": "Body",
+          "type": "string"
+        },
+        "check": {
+          "default": "",
+          "maxLength": 64,
+          "title": "Check",
+          "type": "string"
+        },
+        "max_iterations": {
+          "default": 3,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Max Iterations",
+          "type": "integer"
+        },
+        "until": {
+          "$ref": "#/$defs/ConditionConfig"
+        },
+        "on_limit": {
+          "default": "fail",
+          "enum": [
+            "fail",
+            "last"
+          ],
+          "title": "On Limit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "until"
+      ],
+      "title": "RepeatConfig",
+      "type": "object"
+    },
+    "side_effects": [],
+    "hidden": false
+  },
+  {
     "type": "agent",
     "name": "Agent node",
     "version": 1,

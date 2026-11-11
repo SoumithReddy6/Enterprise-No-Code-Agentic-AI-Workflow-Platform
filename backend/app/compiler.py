@@ -134,8 +134,8 @@ def _validate_flow(workflow: Workflow) -> list[str]:
             if node.type in ('llm','agent','query','request_router','request_reader') and config.provider in ('openai','claude') and not config.credential_id:
                 errors.append(f'{node.id}: choose a credential for {config.provider}.')
         except ValidationError as exc:
-            if node.type in ('condition', 'calculate', 'switch'):
-                # Condition, Calculate and Switch settings hold no credentials, so their messages are
+            if node.type in ('condition', 'calculate', 'switch', 'repeat'):
+                # Condition, Calculate, Switch and Repeat settings hold no credentials, so their messages are
                 # shown as written: an invalid comparison or expression says what is wrong.
                 errors.extend(condition_config_error(node.id, error) for error in exc.errors())
             else:
@@ -199,7 +199,7 @@ def _validate_flow(workflow: Workflow) -> list[str]:
         for edge in outgoing[id]:
             degree[edge.target] -= 1
             if degree[edge.target] == 0: queue.append(edge.target); queue.sort()
-    if len(order) != len(nodes): errors.append('Workflow contains a cycle; loops are not supported yet.')
+    if len(order) != len(nodes): errors.append('Workflow contains a cycle; use a Repeat node for a bounded loop.')
     reachable = set()
     def visit(id):
         if id in reachable: return
@@ -236,8 +236,46 @@ def validate_workflow(workflow: Workflow) -> list[str]:
     if len({e.id for e in workflow.edges})!=len(workflow.edges):errors.append('Edge IDs must be unique.')
     errors += _validate_flow(flow)
     errors += branch_errors(workflow, flow, deps)
+    errors += repeat_errors(workflow, deps)
     errors += request_contract_errors(workflow, flow, deps)
     return errors
+
+
+def attachment_closure(roots, deps):
+    """The roots and every node they reach through attachments: tools, specialists, loop bodies."""
+    found, stack = [], list(roots)
+    while stack:
+        step = stack.pop()
+        if step not in found: found.append(step); stack += deps.get(step, [])
+    return found
+
+
+def repeat_errors(workflow, deps):
+    """A Repeat (A6.1). Nothing in its loop may change anything outside Relay, because each
+    iteration would send the write again; and a checker's stop rule must read a field that
+    the checker's schema requires with the type the rule compares."""
+    from .repeat import RepeatConfig, rule_type, schema_requires
+    full = {n.id: n for n in workflow.nodes}
+    errors = []
+    for node in workflow.nodes:
+        if node.type != 'repeat': continue
+        attached = [full[id] for id in attachment_closure(deps.get(node.id, []), deps) if id in full]
+        errors += [f'{n.id}: external writes belong after the Repeat.' for n in attached if is_write_node(n, REGISTRY.get(n.type))]
+        errors += [f'{n.id}: an Agent that writes memory cannot run inside a Repeat.'
+                   for n in attached if n.type == 'agent' and n.config.get('role') == 'memory']
+        try: config = RepeatConfig.model_validate(node.config)
+        except ValueError: continue  # Reported with the settings messages.
+        checker = full.get(config.check) if config.check else None
+        if checker is None or checker.type != 'agent': continue
+        kind = rule_type(config.until)
+        schema = checker.config.get('output_schema') if isinstance(checker.config, dict) else None
+        if kind is None:
+            errors.append(f"{node.id}: a checker's stop rule cannot use the empty operator.")
+        elif not schema or not config.until.field:
+            errors.append(f'{node.id}: a checker needs an output schema, and the stop rule must read one of its fields.')
+        elif not schema_requires(schema, config.until.field, kind):
+            errors.append(f"{node.id}: the stop rule reads {config.until.field}, which the checker's schema must require as {kind}.")
+    return list(dict.fromkeys(errors))
 
 
 BRANCH_CLOSED = 'a parallel branch can be entered only from its fork and left only to its Join.'
@@ -616,6 +654,12 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                         prefix=node.id+':'
                         run_state['reused_owners'].update(owner for owner in run_state['saved_dependencies']
                                                           if owner.startswith(prefix) and owner[len(prefix):].isdigit())
+                    if node.type=='repeat':
+                        # The saved rows are checked again, the checkpoint must equal what they
+                        # decide, and every iteration's saved sources are checked before the
+                        # outputs reach a downstream node.
+                        from .repeat import restored_outputs
+                        outputs=await restored_outputs(node_ctx,node,config,outputs)
                     outputs=await request_safety.finalize(node_ctx,node,inputs,outputs,config,cached=True)
                     evidence_from_outputs(run_state,outputs)  # Restored evidence keeps its original labels.
                     await emit_evidence_notice(run_state,emit,node.id)
