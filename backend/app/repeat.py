@@ -123,6 +123,8 @@ ABSTAIN_KEYS = {'index', 'status', 'value'}
 # The guard decision that a Repeat stopped by an abstention carries in its summary, so that a
 # downstream model node refuses too (answerability_guard.from_outputs reads it there).
 GUARD_DECISION = {'decision': 'abstain', 'abstention_source': 'answerability_guard'}
+# The node types that the compiler's upstream guard refuses (compiler guard_refusal).
+MODEL_TYPES = ('llm', 'agent', 'query')
 
 
 def checked_rows(node_id, done, config):
@@ -357,7 +359,14 @@ async def repeat_node(inputs, config, ctx):
         previous = rows[-1] if rows else None
         text = source if previous is None else exact_json.dumps(
             {'input': source, 'previous': previous['value'], 'feedback': previous['verdict'] if config.check else ''}, compact=True)
-        entry = await _iteration(ctx, config, body, checker, index, source, text, emit)
+        if ctx.upstream_abstained and (checker is not None or body.type in MODEL_TYPES):
+            # A guarded retrieval upstream abstained and this loop would call a model: it
+            # refuses before any call, as a standalone model node does, and the refusal is
+            # saved as the guard row so that a resume returns it without a call.
+            from .agent_runtime import immediate_abstention
+            entry = {'index': index, 'status': 'abstained', 'value': immediate_abstention(GUARD_DECISION)['text']}
+        else:
+            entry = await _iteration(ctx, config, body, checker, index, source, text, emit)
         if entry['status'] != 'interrupted' and entry_bytes(entry) > MAX_ENTRY_BYTES:
             raise ValueError(f'{node_id}: iteration {index + 1} output is too large to save (limit {MAX_ENTRY_BYTES} bytes).')
         # Every budget stop is saved too, with no charge: the row commits with the accounting.

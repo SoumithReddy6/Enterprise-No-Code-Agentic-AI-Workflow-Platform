@@ -1,0 +1,42 @@
+[
+  {
+    "id": "O1",
+    "what": "the compiler does not hand the upstream decision to the Repeat (936e6c8)",
+    "file": "backend/app/compiler.py",
+    "oracle": "r27g",
+    "killed": true,
+    "result": "1 failed, 81 deselected in 0.54s"
+  },
+  {
+    "id": "O2",
+    "what": "the handler ignores the upstream decision",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27g or r27h or r27j",
+    "killed": true,
+    "result": "4 failed, 78 deselected in 0.89s"
+  },
+  {
+    "id": "O3",
+    "what": "a checker does not count as a model the loop would call",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27h",
+    "killed": true,
+    "result": "1 failed, 81 deselected in 0.47s"
+  },
+  {
+    "id": "O4",
+    "what": "every Repeat refuses, also a tool body without a checker",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27i",
+    "killed": true,
+    "result": "1 failed, 81 deselected in 0.57s"
+  },
+  {
+    "id": "O5",
+    "what": "the upstream refusal is not saved as a row (the loop_item event persists it)",
+    "file": "backend/app/repeat.py",
+    "oracle": "r27j",
+    "killed": true,
+    "result": "2 failed, 80 deselected in 0.96s"
+  }
+]

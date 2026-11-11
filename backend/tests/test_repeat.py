@@ -1287,3 +1287,96 @@ async def test_r27f_a_guard_row_over_200000_bytes_fails_and_nothing_is_saved(mon
     values, exc, events = await run_mem(raw, platform=fixture_kb(), message='q' * 200_001)
     assert exc is not None and 'r: iteration 1 output is too large to save (limit 200000 bytes).' in str(exc), exc
     assert items(events) == []
+
+
+# --------------------------------------------------------------------------- recheck of 936e6c8
+# R27g-j: the compiler's upstream guard applies to the models a Repeat dispatches, also when
+# the Repeat input carries no evidence envelope (here Retrieve.query).
+
+def upstream_guarded(body=None, check='default', until=PASS):
+    body = body or writer()
+    checker = judge() if check == 'default' else check
+    nodes = [{**guarded_retrieve('retrieve'), 'inputs': {'query': 'input.message'}},
+             repeat(body['id'], checker['id'] if checker else '', until=until, source='retrieve.query'),
+             body, *([checker] if checker else []), {'id': 'out', 'type': 'response', 'inputs': {'text': 'r.text'}}]
+    edges = [('input', 'retrieve'), ('retrieve', 'r'), ('r', 'out'), loop('r', body['id'], 'body'),
+             *([loop('r', checker['id'], 'check')] if checker else [])]
+    return document(nodes, edges)
+
+
+def tools_and_kb(answer='record'):
+    tool_platform, calls = tools(answer)
+    kb = fixture_kb()
+    async def platform(action, *args):
+        return await (kb if action == 'kb_retrieve' else tool_platform)(action, *args)
+    return platform, calls
+
+
+@pytest.mark.asyncio
+async def test_r27g_an_upstream_abstention_without_an_envelope_stops_the_repeat_before_any_model(monkeypatch):
+    from backend.app.agent_runtime import NO_EVIDENCE
+    guard_abstains(monkeypatch)
+    script = Script(monkeypatch, writer=['model-generated draft'], judge=[verdict(True)], solo=['solo answer'])
+    raw = upstream_guarded()
+    assert errors(raw) == []
+    values, exc, events = await run_mem(raw, platform=fixture_kb())
+    assert exc is None, exc
+    assert script.count('writer') == 0 and script.count('judge') == 0
+    refusal = values['r']['text']
+    assert refusal.startswith(NO_EVIDENCE) and values['out']['text'] == refusal
+    assert summary(values) == guard_summary()
+    assert items(events) == [{'index': 0, 'status': 'abstained', 'value': refusal}]
+    assert not [e for e in events if e.get('loop_node_id') == 'r' and e.get('status') == 'running'], 'nothing was dispatched'
+    # Control: a standalone Agent with the same binding refuses the same way.
+    solo = document([{**guarded_retrieve('retrieve'), 'inputs': {'query': 'input.message'}},
+                     {'id': 'solo', 'type': 'agent', 'inputs': {'input': 'retrieve.query'}, 'config': {**MODEL, 'system': 'KEY:solo'}},
+                     {'id': 'out', 'type': 'response', 'inputs': {'text': 'solo.text'}}],
+                    [('input', 'retrieve'), ('retrieve', 'solo'), ('solo', 'out')])
+    alone, exc, _ = await run_mem(solo, platform=fixture_kb())
+    assert exc is None and script.count('solo') == 0 and alone['solo']['text'] == refusal
+
+
+@pytest.mark.asyncio
+async def test_r27h_a_tool_body_with_a_checker_runs_nothing_under_an_upstream_abstention(monkeypatch):
+    from backend.app.agent_runtime import NO_EVIDENCE
+    guard_abstains(monkeypatch)
+    script = Script(monkeypatch, judge=[verdict(True)])
+    platform, calls = tools_and_kb()
+    raw = upstream_guarded(body=jira())
+    assert errors(raw) == []
+    values, exc, events = await run_mem(raw, platform=platform)
+    assert exc is None, exc
+    assert calls == [] and script.count('judge') == 0, 'no tool call whose result no checker could read'
+    assert values['r']['text'].startswith(NO_EVIDENCE) and summary(values) == guard_summary()
+
+
+@pytest.mark.asyncio
+async def test_r27i_control_a_tool_body_without_a_checker_runs_as_a_standalone_tool(monkeypatch):
+    guard_abstains(monkeypatch)
+    platform, calls = tools_and_kb('record')
+    raw = upstream_guarded(body=jira(), check=None, until={'operator': 'contains', 'contains': 'record'})
+    assert errors(raw) == []
+    values, exc, events = await run_mem(raw, platform=platform)
+    assert exc is None, exc
+    assert calls == ['r:0:lookup'] and values['r']['text'] == 'record'
+    assert summary(values)['stopped_by'] == 'rule'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('stop', ['row', 'checkpoint'])
+async def test_r27j_the_upstream_guard_row_survives_resume(tmp_path, monkeypatch, services, stop):
+    from backend.app.agent_runtime import NO_EVIDENCE
+    store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+    asked = guard_abstains(monkeypatch)
+    script = Script(monkeypatch, writer=[], judge=[])
+    raw = upstream_guarded()
+    raw['nodes'][1]['config']['knowledge_base_id'] = kb['id']
+    crash_on(monkeypatch, store, row_saved(0) if stop == 'row' else checkpoint_of('r'))
+    id, first = await attempt(store, worker, raw, message='project codename')
+    assert first['status'] != 'success' and ('r' in first['checkpoints']) == (stop == 'checkpoint'), first.get('error')
+    saved = rows(store, id)
+    assert set(saved) == {0} and saved[0]['status'] == 'abstained' and saved[0]['value'].startswith(NO_EVIDENCE)
+    crash_on(monkeypatch, store, lambda e: False)
+    _, final_run = await attempt(store, worker, id=id)
+    assert final_run['status'] == 'success', final_run.get('error')
+    assert final_run['output'] == saved[0]['value'] and len(asked) == 1 and not script.calls

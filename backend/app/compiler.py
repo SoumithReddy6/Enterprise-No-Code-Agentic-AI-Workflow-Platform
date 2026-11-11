@@ -703,6 +703,10 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     from .agent_runtime import immediate_abstention
                     refusal=immediate_abstention({'decision':'abstain'})
                     return {'text':refusal['text'],'provider':'none'} if node.type=='llm' else refusal
+                if node.type=='repeat':
+                    # The Repeat dispatches its models itself, so the same upstream check is
+                    # handed to it; repeat.py refuses before any model call and saves the row.
+                    node_ctx=replace(node_ctx,upstream_abstained=any(guarded_dependency(ref.split('.')[0],set()) for ref in node.inputs.values()))
                 try:
                       outcome=await execute_with_policy(
                           invoke,identity,node.retry,run_state,emit,

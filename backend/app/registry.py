@@ -66,6 +66,9 @@ class Context:
     input_origins: object | None = None  # Eligible data for this invocation, not shared run evidence.
     input_label: str | None = None
     input_proofs: dict | None = None  # Runtime-created bindings, never model/handler metadata.
+    # Runtime-set by the compiler for a Repeat: a guarded retrieval upstream abstained, so the
+    # models the Repeat dispatches refuse as a standalone model node would.
+    upstream_abstained: bool = False
 
 # Ports named with this prefix would collide with run metadata carried in a node's graph
 # value (execution_policy.TRUNCATION_KEY), which must never be declared or bound.
