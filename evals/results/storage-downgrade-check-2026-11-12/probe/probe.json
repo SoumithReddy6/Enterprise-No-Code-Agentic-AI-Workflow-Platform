@@ -1,0 +1,36 @@
+{
+  "read": {
+    "prior_progress": 1,
+    "prior_counter": 3,
+    "after_roundtrip_progress": 0,
+    "after_roundtrip_accounting": null,
+    "status": "failed",
+    "error": "Saved token accounting is missing or malformed. No further model request was started. Saved results were kept.",
+    "item0_sent": 1,
+    "reads": 2,
+    "final_counter": null
+  },
+  "write": {
+    "prior_status": "awaiting_approval",
+    "prior_progress": 1,
+    "writes_before": 1,
+    "after_roundtrip_progress": 0,
+    "decisions": [
+      {
+        "key": "LAB-1",
+        "summary": "Ticket 1",
+        "status": null,
+        "assignee": null,
+        "updated": null,
+        "url": "http://scenario-provider.invalid:57487/browse/LAB-1"
+      },
+      200
+    ],
+    "status": "failed",
+    "error": "Saved token accounting is missing or malformed. No further model request was started. Saved results were kept.",
+    "writes": 1,
+    "bodies": [
+      "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:57487/browse/LAB-0\"}"
+    ]
+  }
+}

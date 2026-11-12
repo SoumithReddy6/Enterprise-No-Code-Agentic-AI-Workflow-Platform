@@ -309,12 +309,12 @@ the run resumes down a path nobody chose.
 **What goes wrong.** Hand-rolled `ALTER TABLE` code guesses at the current schema; an upgrade half-applies; a database from an older build is "migrated" into a shape nobody intended.
 
 **Design.**
-- Alembic owns the schema (revisions 0001–0005).
+- Alembic owns the schema (revisions 0001–0006).
 - Startup upgrades a recognised database to head and refuses an unrecognised schema with an actionable error rather than guessing.
 - Pre-Alembic databases are *adopted* only after structural verification, including databases that still contain retired tables.
 - Downgrades are tested, not promised to be lossless. A downgrade through 0004 refuses a database that holds typed reviews rather than turn a review into a write. For production, rollback means restoring a stopped-system backup.
 
-**Evidence.** PostgreSQL CI upgrades to head, downgrades to 0001 and upgrades back, then compares the result to the models. A populated run's loop results and accounting are compared before and after that round trip. A read-only copy of a real workspace database was upgraded with all 27 table row counts preserved.
+**Evidence.** PostgreSQL CI upgrades to head, downgrades to 0001 and upgrades back, then compares the result to the models. The PostgreSQL CI job (`populated-downgrade`) also puts three populated runs through the same round trip. Their loop item results and accounting are lost, as documented, but never silently: the finished run shows its loop results as unavailable, not as an empty success, and the two unfinished runs fail on resume without sending a request again. A read-only copy of a real workspace database was upgraded with all 27 table row counts preserved.
 
 ### 2.13 Knowledge indexes that break while you rebuild them
 

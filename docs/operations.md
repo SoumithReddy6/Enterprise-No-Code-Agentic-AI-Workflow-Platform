@@ -432,7 +432,10 @@ migrated database must be empty. That is what catches a table added to the model
 a revision, which happened twice before migrations existed.
 
 **Downgrades are tested, not promised to be lossless.** A revision that adds a table
-drops it on the way down, and the data with it. For production, restoring a backup and
+drops it on the way down, and the data with it. The loss is visible, not silent: after
+0003 is reversed and applied again, a finished loop shows its item results as unavailable,
+and an unfinished run fails on resume with the accounting refusal before it sends anything
+(the `populated-downgrade` milestone check). For production, restoring a backup and
 redeploying is usually safer than reversing a populated migration.
 
 Adoption compares against a **frozen snapshot of 0001**, not the live models

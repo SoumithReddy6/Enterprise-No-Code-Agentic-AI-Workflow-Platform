@@ -127,6 +127,7 @@ jobs:
           python -u -m scripts.check_milestone_storage --out evals/results/postgres-ci
           --checks postgres-migrations postgres-four-workers postgres-stale-lease postgres-sigkill-loop
           postgres-accounting-before-commit postgres-accounting-after-commit postgres-parallel-sigkill
+          populated-downgrade
       # The parallel accounting cases skip without this URL; each uses a temporary schema.
       - run: python -m pytest backend/tests/test_parallel_accounting.py -q -rs
         env:

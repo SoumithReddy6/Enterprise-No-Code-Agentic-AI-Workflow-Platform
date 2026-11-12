@@ -486,25 +486,60 @@ def storage_cost():
 
 
 def populated_downgrade(output):
-    # Downgrading an empty database is not proof that populated loop history survives.
+    """A downgrade is not lossless (docs/operations.md); it must not be silent either.
+
+    Revision 0003's downgrade drops run_loop_items and runs.accounting. Three populated runs
+    go through one downgrade to 0001 and back: a finished loop, a loop SIGKILLed after its
+    first item committed, and a write batch paused at its second approval after the first
+    write. The finished run must show its lost item results as unavailable, never as an
+    empty success. Each unfinished run must fail on resume with the accounting refusal and
+    send nothing again: no committed read is repeated and no write is sent twice.
+    """
     from alembic import command
+    from backend.app.accounting_state import INVALID
     with database('postgres') as url, deployed(url, output) as (lab, store):
-        start_worker(lab)
-        identifier = lab.submit(lab.batch('/read/downgrade', n=2, write=False))
-        before = lab.wait(identifier)
-        assert before['status'] == 'success'
-        for process in lab.processes:
+        def run(identifier): return store.run(identifier, lab.tenant)
+        def pending(identifier):
+            return next((a for a in lab.wait(identifier)['approvals'] if a['status'] == 'pending'), None)
+        worker = start_worker(lab)
+        finished = lab.submit(lab.batch('/read/downgrade', n=2, write=False))
+        before = lab.wait(finished)
+        assert before['status'] == 'success' and len(before['checkpoints']['each']['results']) == 2, before.get('error')
+        write_path = '/deliver/downgrade'
+        paused = lab.submit(lab.batch(write_path, n=3))
+        assert lab.decide(paused, pending(paused)).status_code == 200
+        wait_for(lambda: lab.provider.count(write_path) == 1 and run(paused)['status'] == 'awaiting_approval')
+        read_path = '/hold/downgrade'
+        killed = lab.submit(lab.batch(read_path, n=3, write=False))
+        wait_for(lambda: lab.provider.count(read_path) >= 2)
+        os.kill(worker.pid, signal.SIGKILL); worker.wait(timeout=10)
+        held = {name: run(identifier) for name, identifier in [('paused', paused), ('killed', killed)]}
+        assert len(held['killed']['loop_progress']['each']) == 1 and len(held['paused']['loop_progress']['each']) == 1
+        for process in lab.processes[1:]:  # processes[0] is the API; stop every worker.
             if process.poll() is None: process.terminate(); process.wait(timeout=10)
+        calls = len(lab.provider.calls)
         with store.engine.begin() as connection:
             command.downgrade(schema._config(connection), '0001_baseline')
             schema.upgrade(connection)
-        after = store.run(identifier, lab.tenant)
-        expected = before['checkpoints']['each']['results']
-        actual = after['checkpoints']['each']['results']
-        (output / 'comparison.json').write_text(json.dumps({'before_results': expected, 'after_results': actual, 'before_accounting': before['accounting'], 'after_accounting': after.get('accounting')}, indent=2))
-        assert actual == expected, 'Downgrade/re-upgrade lost persisted loop results'
-        assert after['accounting'] == before['accounting'], 'Downgrade/re-upgrade lost accounting'
-        return {'populated_history_preserved': True}
+            assert schema.current_revision(connection) == schema.head_revision()
+        after = run(finished)
+        results = after['checkpoints']['each']['results']
+        (output / 'finished.json').write_text(json.dumps({'before_results': before['checkpoints']['each']['results'], 'after_results': results,
+                                                          'before_accounting': before['accounting'], 'after_accounting': after.get('accounting')}, indent=2))
+        assert after['status'] == 'success' and after['output'] == before['output']
+        assert isinstance(results, dict) and results.get('unavailable') == 'Loop each cannot be restored: 2 of 2 stored item results are missing. Start a new run.', results
+        assert after.get('accounting') is None, 'Downgrade kept accounting; update the documented loss'
+        start_worker(lab)
+        assert lab.decide(paused, pending(paused)).status_code == 200
+        resumed = {name: lab.wait(identifier, timeout=60) for name, identifier in [('paused', paused), ('killed', killed)]}
+        (output / 'unfinished.json').write_text(json.dumps({name: {'status': value['status'], 'error': value.get('error')} for name, value in resumed.items()}, indent=2))
+        (output / 'receiver.json').write_text(json.dumps(lab.provider.calls, indent=2))
+        for name, value in resumed.items():
+            assert value['status'] == 'failed' and value.get('error') == INVALID, (name, value['status'], value.get('error'))
+        assert len(lab.provider.calls) == calls, 'A resumed run sent a request after the downgrade'
+        assert lab.provider.count(write_path) == 1 and lab.provider.count(read_path) == 2
+        return {'lossless': False, 'finished_results': 'unavailable marker, not an empty success', 'accounting_after': None,
+                'unfinished_runs_refused': 2, 'requests_after_downgrade': 0, 'writes_sent': 1}
 
 
 def copied_workspace():

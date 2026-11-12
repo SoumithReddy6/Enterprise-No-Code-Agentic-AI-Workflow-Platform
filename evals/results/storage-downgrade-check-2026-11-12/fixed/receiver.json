@@ -1,0 +1,42 @@
+[
+  {
+    "method": "GET",
+    "path": "/rest/api/3/search/jql",
+    "body": ""
+  },
+  {
+    "method": "GET",
+    "path": "/read/downgrade",
+    "body": "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:57721/browse/LAB-0\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/read/downgrade",
+    "body": "{\"key\":\"LAB-1\",\"summary\":\"Ticket 1\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:57721/browse/LAB-1\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/rest/api/3/search/jql",
+    "body": ""
+  },
+  {
+    "method": "POST",
+    "path": "/deliver/downgrade",
+    "body": "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:57721/browse/LAB-0\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/rest/api/3/search/jql",
+    "body": ""
+  },
+  {
+    "method": "GET",
+    "path": "/hold/downgrade",
+    "body": "{\"key\":\"LAB-0\",\"summary\":\"Ticket 0\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:57721/browse/LAB-0\"}"
+  },
+  {
+    "method": "GET",
+    "path": "/hold/downgrade",
+    "body": "{\"key\":\"LAB-1\",\"summary\":\"Ticket 1\",\"status\":null,\"assignee\":null,\"updated\":null,\"url\":\"http://scenario-provider.invalid:57721/browse/LAB-1\"}"
+  }
+]
