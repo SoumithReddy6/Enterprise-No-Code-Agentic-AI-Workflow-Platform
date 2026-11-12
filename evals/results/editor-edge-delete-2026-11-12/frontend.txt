@@ -1,0 +1,12 @@
+## npm test
+ℹ tests 118 ℹ pass 118 ℹ fail 0 
+## typecheck (tsc --noEmit)
+exit 0
+## lint (oxlint)
+exit 0
+## build (vinext build)
+exit 0
+## audit gate
+npm audit gate: passed, no high or critical advisories (reported: 4 moderate, 4 total)
+## browser (Chromium, playwright test)
+  60 passed (1.0m)

@@ -10,7 +10,7 @@ This README is about how the system is designed for those cases.
 | --- | --- |
 | **Status** | Working local platform, single workspace per account. Intended for loopback use until the deployment and identity work below lands. |
 | **Stack** | React + React Flow · FastAPI · LangGraph · SQLAlchemy on SQLite or PostgreSQL · Alembic · Ollama, OpenAI, Claude · FAISS, Elasticsearch, Pinecone · Docker sandbox |
-| **Verification** | 2,141 backend tests run under five hash seeds · 118 frontend unit tests + 54 Chromium tests · 27 deployed-process production scenarios · 17 live-model workflows · PostgreSQL conformance · five GitHub Actions jobs · a 53-question grounding gate with thresholds fixed before measurement |
+| **Verification** | 2,141 backend tests run under five hash seeds · 118 frontend unit tests + 60 Chromium tests · 27 deployed-process production scenarios · 17 live-model workflows · PostgreSQL conformance · five GitHub Actions jobs · a 53-question grounding gate with thresholds fixed before measurement |
 
 **Start here (five minutes).** [§2.3](#23-did-the-external-write-happen) shows how a write with an unknown outcome is never sent twice. [§2.6](#26-budgets-that-reset-on-resume-leak-through-nesting-or-lose-their-count) shows how token spend survives a crash at the exact commit. [§4](#4-evaluation-measured-including-what-failed) shows the grounding results, including the three approaches that failed.
 
@@ -424,7 +424,7 @@ These are substring and abstention heuristics, not proof of semantic correctness
 | Deployed processes | 27 scenarios against a real API process, real worker processes and an HTTP receiver: kill -9 mid-write and mid-fork, restarts between approvals, stale leases, SSRF, tenant isolation, parallel branches | `scripts/check_production_scenarios.py` |
 | Live models | 17 workflow shapes on real Ollama models and real Docker (last full run 2026-10-06) | same runner, `--live-models` |
 | PostgreSQL | migrations up/down/up with populated history, four concurrent workers, a stale lease, `SIGKILL` inside a loop and at the accounting commit | CI `postgres-conformance` |
-| Browser | 54 Chromium tests: layout, the condition and Switch editors, request routing, building a fork with real drags, invalid-JSON edits that must never run, and validation errors that name and open their node, against intercepted API fixtures (the fork fixtures are held to the real validator) | CI `browser-layout` |
+| Browser | 60 Chromium tests: layout, the condition and Switch editors, request routing, building a fork with real drags, Delete acting only on the last selection, invalid-JSON edits that must never run, and validation errors that name and open their node, against intercepted API fixtures (the fork fixtures are held to the real validator) | CI `browser-layout` |
 | Supply chain | `pip-audit` on a fresh environment; the fail-closed npm exception gate | CI |
 | Quality | the 53-question grounding gate | local (needs models and corpus) |
 

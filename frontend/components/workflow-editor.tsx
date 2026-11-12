@@ -396,6 +396,13 @@ function Editor() {
     window.addEventListener('beforeunload', fn);
     return () => window.removeEventListener('beforeunload', fn);
   }, [dirty]);
+  // One selection at a time. A node the editor selects (a click, a drop, an issue link)
+  // deselects every edge, and selecting an edge clears the node (onEdgesChange), so Delete
+  // removes only what the user selected last. Every node selection goes through here.
+  function select(id: string) {
+    setSelected(id);
+    if (id) setEdges((es) => (es.some((e) => e.selected) ? es.map((e) => (e.selected ? { ...e, selected: false } : e)) : es));
+  }
 
 
   // Located issues from the server; plain messages from an older server stay unlocated.
@@ -403,7 +410,7 @@ function Editor() {
     return issues ?? messages.map((message) => ({ node_id: null, message }));
   }
   function showNode(id: string) {
-    setSelected(id);
+    select(id);
     setInspectorOpen(true);
     void canvas.fitView({ nodes: [{ id }], duration: 300, maxZoom: 1.2 });
   }
@@ -429,7 +436,7 @@ function Editor() {
     setEdges(w.edges);
     setName(w.name);
     setDescription(w.description);
-    setSelected(
+    select(
       w.nodes.find((n) => n.type === 'agent')?.id || w.nodes[0]?.id || '',
     );
     setErrors([]);
@@ -523,7 +530,7 @@ function Editor() {
     if (first) draft = { ...draft, nodes: draft.nodes.map(n => ['agent', 'request_router', 'request_reader', 'llm', 'query'].includes(n.type) ? { ...n, config: modelConfig(n.config, first) } : n) };
     loadDocument(draft);
     if (template) setMessage(template.sample);
-    setSelected('reader');
+    select('reader');
   }
   async function load(id: string) {
     if (!discardAllowed()) return;
@@ -783,7 +790,7 @@ function Editor() {
       ...ns,
       { id, type: 'workflow', position: spec.position, data: { spec } },
     ]);
-    setSelected(id);
+    select(id);
     setInspectorOpen(true);
   }
   function onConnect(connection: Connection) {
@@ -1277,15 +1284,18 @@ function Editor() {
                 }}
                 onEdgesChange={(changes) => {
                   if (running) return;
+                  // Selecting an edge deselects the node the editor holds (renderedNodes
+                  // forces its `selected`), so Delete removes the edge, never that node.
+                  if (changes.some((c) => c.type === 'select' && c.selected)) select('');
                   if (changes.some((c) => c.type === 'remove')) snapshot();
                   setEdges((es) => applyEdgeChanges(changes, es));
                 }}
                 onNodeDragStart={() => snapshot()}
                 onNodeClick={(_, n) => {
-                  setSelected(n.id);
+                  select(n.id);
                   setInspectorOpen(true);
                 }}
-                onPaneClick={() => setSelected('')}
+                onPaneClick={() => select('')}
                 onConnect={onConnect}
                 nodesDraggable={!running}
                 nodesConnectable={!running}
@@ -1987,7 +1997,7 @@ function Editor() {
                               e.source !== selected && e.target !== selected,
                           ),
                         );
-                        setSelected('');
+                        select('');
                       }}
                     >
                       <Trash2 size={14} /> Delete node

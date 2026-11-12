@@ -181,7 +181,8 @@ test('B01 a fork with a Join is built from the palette after the Request reader'
   await expect(card(page, 'agent')).toContainText('tiny:latest');
   await settled(page);
   // The draft's Agent answers directly; replace that edge with two branches and a Join.
-  // Clear the node selection first: Delete also removes a node the editor still has selected.
+  // Clear the node selection first. Before the 2026-11-12 fix (edge-delete.spec.ts), Delete
+  // also removed a node the editor still had selected; this step is kept, not needed.
   await page.locator('.react-flow__pane').click({ position: { x: 20, y: 20 } });
   const above = (await card(page, 'agent').boundingBox())!;
   const below = (await card(page, 'response').boundingBox())!;
