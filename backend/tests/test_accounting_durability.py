@@ -33,8 +33,9 @@ LEGACY_WRITE = ('Past token usage cannot be verified for this older run. The uns
                 'sent by this attempt. Saved results were kept.')
 PENDING = ('Run accounting could not be saved; no further model request was started. Saved results were kept. '
            'Resume after storage recovers.')
+# Not 'Saved results were kept': after a schema downgrade the loop item results are gone too.
 INVALID = ('Saved token accounting is missing or malformed. No further model request was started. '
-           'Saved results were kept.')
+           'This run cannot continue; start a new run.')
 STALE = 'The accounting write was refused because it would lower tokens_spent.'
 REPLY = ('answer', 10, 5)
 

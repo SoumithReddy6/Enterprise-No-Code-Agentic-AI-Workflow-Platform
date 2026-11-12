@@ -503,7 +503,9 @@ continues spending rather than starting over.
   claims the run, before it is sent; reject or cancel the approval and start a new run.
   A run under the contract whose saved accounting is missing or malformed fails before
   any node runs (`Saved token accounting is missing or malformed. ...`). Relay never
-  assumes a zero baseline for these runs.
+  assumes a zero baseline for these runs. The run cannot continue: start a new run. The
+  message does not say saved results were kept, because after a schema downgrade the
+  loop item results are gone too.
 
 Remaining limits: a worker that dies after a provider response but before any durable
 save loses that call's tokens, and the resumed run pays for the call again; this is at

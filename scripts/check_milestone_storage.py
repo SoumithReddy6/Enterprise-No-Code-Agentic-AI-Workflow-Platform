@@ -536,6 +536,8 @@ def populated_downgrade(output):
         (output / 'receiver.json').write_text(json.dumps(lab.provider.calls, indent=2))
         for name, value in resumed.items():
             assert value['status'] == 'failed' and value.get('error') == INVALID, (name, value['status'], value.get('error'))
+            # The loop item results were dropped with run_loop_items; the refusal must not say otherwise.
+            assert 'were kept' not in value['error'] and 'start a new run' in value['error'], value['error']
         assert len(lab.provider.calls) == calls, 'A resumed run sent a request after the downgrade'
         assert lab.provider.count(write_path) == 1 and lab.provider.count(read_path) == 2
         return {'lossless': False, 'finished_results': 'unavailable marker, not an empty success', 'accounting_after': None,

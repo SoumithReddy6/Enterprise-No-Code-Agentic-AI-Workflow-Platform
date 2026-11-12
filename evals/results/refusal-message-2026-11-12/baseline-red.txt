@@ -1,0 +1,8 @@
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T20:30:34.637672+00:00","request_id":null,"run_id":"9a23fcd7fab5413a856d95aa000b385b","tenant":"local","event":"run.failure","error_type":"AccountingUnavailable"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T20:30:34.638796+00:00","request_id":null,"run_id":"9a23fcd7fab5413a856d95aa000b385b","tenant":"local","event":"run.finish","status":"failed","seconds":0.003}
+=========================== short test summary info ============================
+FAILED backend/tests/test_accounting_durability.py::test_t11_invalid_trusted_snapshot[missing]
+FAILED backend/tests/test_accounting_durability.py::test_t11_invalid_trusted_snapshot[True]
+FAILED backend/tests/test_accounting_durability.py::test_t11_invalid_trusted_snapshot[-1]
+FAILED backend/tests/test_accounting_durability.py::test_t11_invalid_trusted_snapshot[15]
+4 failed, 20 passed in 2.11s

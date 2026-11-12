@@ -19,8 +19,10 @@ LEGACY_APPROVED_WRITE=('Past token usage cannot be verified for this older run. 
                        'not sent by this attempt. Saved results were kept.')
 PENDING=('Run accounting could not be saved; no further model request was started. Saved results were kept. '
          'Resume after storage recovers.')
+# It does not say saved results were kept: after a schema downgrade (0003 drops
+# run_loop_items with runs.accounting) the loop item results are gone too.
 INVALID=('Saved token accounting is missing or malformed. No further model request was started. '
-         'Saved results were kept.')
+         'This run cannot continue; start a new run.')
 STALE='The accounting write was refused because it would lower tokens_spent.'
 PAUSE='Current accounting is unavailable; the approval pause could not be confirmed. Saved results were kept.'
 MISSING='This result was not saved because its token accounting was not supplied.'
