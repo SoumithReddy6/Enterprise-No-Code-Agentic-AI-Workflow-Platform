@@ -651,6 +651,11 @@ def compile_workflow(workflow: Workflow, credential_resolver=lambda _: '', emit=
                     validation=validate_cached(node,outputs)
                     if inspect.isawaitable(validation):await validation
                     if node.type=='for_each':
+                        from .iteration import check_restored_item
+                        body=next((n for n in full_workflow.nodes if n.id==config.body),None)
+                        if body is not None and isinstance(outputs.get('results'),list):
+                            for position,entry in enumerate(outputs['results']):
+                                check_restored_item(node.id,body,position,entry)
                         prefix=node.id+':'
                         run_state['reused_owners'].update(owner for owner in run_state['saved_dependencies']
                                                           if owner.startswith(prefix) and owner[len(prefix):].isdigit())

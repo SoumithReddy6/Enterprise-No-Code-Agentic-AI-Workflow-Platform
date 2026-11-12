@@ -1,0 +1,262 @@
+FFFFFF...                                                                [100%]
+=================================== FAILURES ===================================
+________________ test_f01_a_retrieve_body_result_is_its_context ________________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-457/test_f01_a_retrieve_body_resul0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x110699a70>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x110fd46e0>
+
+    @pytest.mark.asyncio
+    async def test_f01_a_retrieve_body_result_is_its_context(tmp_path, monkeypatch, services):
+        store, worker, doc, raw = await lab(tmp_path, monkeypatch, services)
+        _, done = await attempt(store, worker, raw)
+        assert done['status'] == 'success', done.get('error')
+        results = done['checkpoints']['each']['results']
+        assert [r['status'] for r in results] == ['success', 'success']
+        for item in results:
+>           envelope = json.loads(item['value'])
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_for_each_result_port.py:116: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py:352: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py:345: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <json.decoder.JSONDecoder object at 0x10aa4fa10>, s = '', idx = 0
+
+    def raw_decode(self, s, idx=0):
+        """Decode a JSON document from ``s`` (a ``str`` beginning with
+        a JSON document) and return a 2-tuple of the Python
+        representation and the index in ``s`` where the document ended.
+    
+        This can be used to decode a JSON document from a string that may
+        have extraneous data at the end.
+    
+        """
+        try:
+            obj, end = self.scan_once(s, idx)
+        except StopIteration as err:
+>           raise JSONDecodeError("Expecting value", s, err.value) from None
+E           json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/decoder.py:363: JSONDecodeError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.677559+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.737904+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.738677+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.061}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.744752+00:00","request_id":null,"run_id":"1ec63b1782254a32b10a6eefff9d7698","tenant":"local","event":"job.lease_acquired","worker_id":"4fe7d0f2245f4b66a1fc545ec9ecf90e"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.745197+00:00","request_id":null,"run_id":"1ec63b1782254a32b10a6eefff9d7698","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.783512+00:00","request_id":null,"run_id":"1ec63b1782254a32b10a6eefff9d7698","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":4}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.787955+00:00","request_id":null,"run_id":"1ec63b1782254a32b10a6eefff9d7698","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.796834+00:00","request_id":null,"run_id":"1ec63b1782254a32b10a6eefff9d7698","tenant":"local","event":"node.success","node_id":"lookup","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.798292+00:00","request_id":null,"run_id":"1ec63b1782254a32b10a6eefff9d7698","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.804021+00:00","request_id":null,"run_id":"1ec63b1782254a32b10a6eefff9d7698","tenant":"local","event":"node.success","node_id":"lookup","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.805161+00:00","request_id":null,"run_id":"1ec63b1782254a32b10a6eefff9d7698","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.806046+00:00","request_id":null,"run_id":"1ec63b1782254a32b10a6eefff9d7698","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.807210+00:00","request_id":null,"run_id":"1ec63b1782254a32b10a6eefff9d7698","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":false,"duration_ms":18}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.810152+00:00","request_id":null,"run_id":"1ec63b1782254a32b10a6eefff9d7698","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":2}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.811575+00:00","request_id":null,"run_id":"1ec63b1782254a32b10a6eefff9d7698","tenant":"local","event":"run.finish","status":"success","seconds":0.066}
+_________________ test_f02_the_item_label_is_the_context_label _________________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-457/test_f02_the_item_label_is_the0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1108c7890>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x1107cad50>
+
+    @pytest.mark.asyncio
+    async def test_f02_the_item_label_is_the_context_label(tmp_path, monkeypatch, services):
+        from backend.app import provenance
+        store, worker, doc, raw = await lab(tmp_path, monkeypatch, services, n=1)
+        _, done = await attempt(store, worker, raw)
+        assert done['status'] == 'success', done.get('error')
+        item = done['checkpoints']['each']['results'][0]
+        # Jira items are source data; the envelope quotes the item and source passages.
+>       assert item['_provenance']['ports']['text'] == provenance.SOURCE
+E       AssertionError: assert 'guessed' == 'source'
+E         
+E         - source
+E         + guessed
+
+backend/tests/test_for_each_result_port.py:129: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.902044+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.920612+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.921332+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.019}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.927252+00:00","request_id":null,"run_id":"a096032a0a0c407f8bb4a2f4772cfbc1","tenant":"local","event":"job.lease_acquired","worker_id":"d34c127e980f4e6593fef699ae7cf665"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.927598+00:00","request_id":null,"run_id":"a096032a0a0c407f8bb4a2f4772cfbc1","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.970617+00:00","request_id":null,"run_id":"a096032a0a0c407f8bb4a2f4772cfbc1","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.975247+00:00","request_id":null,"run_id":"a096032a0a0c407f8bb4a2f4772cfbc1","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.982951+00:00","request_id":null,"run_id":"a096032a0a0c407f8bb4a2f4772cfbc1","tenant":"local","event":"node.success","node_id":"lookup","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.984379+00:00","request_id":null,"run_id":"a096032a0a0c407f8bb4a2f4772cfbc1","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.985190+00:00","request_id":null,"run_id":"a096032a0a0c407f8bb4a2f4772cfbc1","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.986371+00:00","request_id":null,"run_id":"a096032a0a0c407f8bb4a2f4772cfbc1","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":false,"duration_ms":10}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.989890+00:00","request_id":null,"run_id":"a096032a0a0c407f8bb4a2f4772cfbc1","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":2}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:37.991379+00:00","request_id":null,"run_id":"a096032a0a0c407f8bb4a2f4772cfbc1","tenant":"local","event":"run.finish","status":"success","seconds":0.064}
+_______ test_f03_a_body_without_its_result_port_fails_its_item[continue] _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11147c050>
+policy = 'continue'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('policy', ['continue', 'stop'])
+    async def test_f03_a_body_without_its_result_port_fails_its_item(monkeypatch, policy):
+        from backend.app.registry import REGISTRY
+        async def no_context(inputs, config, ctx):
+            return {'query': inputs['query'], 'sources': '[]'}
+        monkeypatch.setattr(REGISTRY['retrieve'], 'handler', no_context)
+        async def resolver(action, *args):
+            if action == 'tool': return {'text': '{}', 'items': issues(2), 'truncated': False, 'warnings': []}
+            raise AssertionError(action)
+        raw = retrieve_loop('fixture')
+        raw['nodes'][2]['config']['on_item_error'] = policy
+        events = []
+        values = (await run(Workflow.model_validate(raw), resolver, events))['values']
+        results = values['each']['results']
+        expected = 2 if policy == 'continue' else 1
+>       assert [(r['status'], r['value'], r['error']) for r in results] == [('failed', '', MISSING)] * expected
+E       assert [('success', ...ess', '', '')] == [('failed', '...is missing.')]
+E         
+E         At index 0 diff: ('success', '', '') != ('failed', '', "lookup: the body's context output is missing.")
+E         Use -v to get more diff
+
+backend/tests/test_for_each_result_port.py:151: AssertionError
+_________ test_f03_a_body_without_its_result_port_fails_its_item[stop] _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x111744d50>
+policy = 'stop'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('policy', ['continue', 'stop'])
+    async def test_f03_a_body_without_its_result_port_fails_its_item(monkeypatch, policy):
+        from backend.app.registry import REGISTRY
+        async def no_context(inputs, config, ctx):
+            return {'query': inputs['query'], 'sources': '[]'}
+        monkeypatch.setattr(REGISTRY['retrieve'], 'handler', no_context)
+        async def resolver(action, *args):
+            if action == 'tool': return {'text': '{}', 'items': issues(2), 'truncated': False, 'warnings': []}
+            raise AssertionError(action)
+        raw = retrieve_loop('fixture')
+        raw['nodes'][2]['config']['on_item_error'] = policy
+        events = []
+        values = (await run(Workflow.model_validate(raw), resolver, events))['values']
+        results = values['each']['results']
+        expected = 2 if policy == 'continue' else 1
+>       assert [(r['status'], r['value'], r['error']) for r in results] == [('failed', '', MISSING)] * expected
+E       assert [('success', ...ess', '', '')] == [('failed', '...is missing.')]
+E         
+E         At index 0 diff: ('success', '', '') != ('failed', '', "lookup: the body's context output is missing.")
+E         Left contains one more item: ('success', '', '')
+E         Use -v to get more diff
+
+backend/tests/test_for_each_result_port.py:151: AssertionError
+________ test_f04_a_retrieve_item_saved_blank_is_refused_on_resume[row] ________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-457/test_f04_a_retrieve_item_saved0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11167c8c0>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x11148c3e0>
+saved = 'row'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('saved', ['row', 'checkpoint'])
+    async def test_f04_a_retrieve_item_saved_blank_is_refused_on_resume(tmp_path, monkeypatch, services, saved):
+        store, worker, doc, raw = await lab(tmp_path, monkeypatch, services)
+        crash_when(monkeypatch, store, item_saved(0) if saved == 'row' else each_checkpoint)
+        id, first = await attempt(store, worker, raw)
+        assert first['status'] != 'success'
+        assert ('each' in first['checkpoints']) == (saved == 'checkpoint')
+        # What an earlier Relay version saved for a Retrieve item.
+        edit_item_rows(store, id, blank_first)
+        crash_when(monkeypatch, store, lambda e: False)
+        _, final_run = await attempt(store, worker, id=id)
+>       assert final_run['status'] == 'failed' and LOST in final_run['error'], final_run.get('error')
+E       AssertionError: 
+E       assert ('success' == 'failed'
+E         
+E         - failed
+E         + success)
+
+backend/tests/test_for_each_result_port.py:171: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.108194+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.126007+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.126577+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.131357+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"job.lease_acquired","worker_id":"cc8ff864223e4ecfa5f905643a435ea3"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.131604+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.167207+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.170911+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.178491+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"node.success","node_id":"lookup","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.180828+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.181130+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.182173+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"run.finish","status":"failed","seconds":0.051}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.186725+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"job.lease_acquired","worker_id":"cc8ff864223e4ecfa5f905643a435ea3"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.186868+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"run.start","nodes":5,"resumed":true}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.253845+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.257215+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.264479+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"node.success","node_id":"lookup","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.265595+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.266473+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.267503+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":false,"duration_ms":9}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.270296+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":2}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.271631+00:00","request_id":null,"run_id":"1922775a55ce418890d3624946ffa1a7","tenant":"local","event":"run.finish","status":"success","seconds":0.085}
+____ test_f04_a_retrieve_item_saved_blank_is_refused_on_resume[checkpoint] _____
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-457/test_f04_a_retrieve_item_saved1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1117de970>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x1117c6470>
+saved = 'checkpoint'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('saved', ['row', 'checkpoint'])
+    async def test_f04_a_retrieve_item_saved_blank_is_refused_on_resume(tmp_path, monkeypatch, services, saved):
+        store, worker, doc, raw = await lab(tmp_path, monkeypatch, services)
+        crash_when(monkeypatch, store, item_saved(0) if saved == 'row' else each_checkpoint)
+        id, first = await attempt(store, worker, raw)
+        assert first['status'] != 'success'
+        assert ('each' in first['checkpoints']) == (saved == 'checkpoint')
+        # What an earlier Relay version saved for a Retrieve item.
+        edit_item_rows(store, id, blank_first)
+        crash_when(monkeypatch, store, lambda e: False)
+        _, final_run = await attempt(store, worker, id=id)
+>       assert final_run['status'] == 'failed' and LOST in final_run['error'], final_run.get('error')
+E       AssertionError: 
+E       assert ('success' == 'failed'
+E         
+E         - failed
+E         + success)
+
+backend/tests/test_for_each_result_port.py:171: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.321829+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.339203+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.339753+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.344682+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"job.lease_acquired","worker_id":"0b9ca4da4a384323bff9d585c014044e"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.344966+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.381806+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.385734+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.396002+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"node.success","node_id":"lookup","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.397267+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.402572+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"node.success","node_id":"lookup","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.403551+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.404318+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.406117+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.406391+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.407425+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"run.finish","status":"failed","seconds":0.062}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.411277+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"job.lease_acquired","worker_id":"0b9ca4da4a384323bff9d585c014044e"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.411425+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"run.start","nodes":5,"resumed":true}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.444188+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.446508+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.448839+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.451376+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-12T17:23:38.452567+00:00","request_id":null,"run_id":"e39b90c7893143aea72a4d1fe686c304","tenant":"local","event":"run.finish","status":"success","seconds":0.041}
+=========================== short test summary info ============================
+FAILED backend/tests/test_for_each_result_port.py::test_f01_a_retrieve_body_result_is_its_context
+FAILED backend/tests/test_for_each_result_port.py::test_f02_the_item_label_is_the_context_label
+FAILED backend/tests/test_for_each_result_port.py::test_f03_a_body_without_its_result_port_fails_its_item[continue]
+FAILED backend/tests/test_for_each_result_port.py::test_f03_a_body_without_its_result_port_fails_its_item[stop]
+FAILED backend/tests/test_for_each_result_port.py::test_f04_a_retrieve_item_saved_blank_is_refused_on_resume[row]
+FAILED backend/tests/test_for_each_result_port.py::test_f04_a_retrieve_item_saved_blank_is_refused_on_resume[checkpoint]
+6 failed, 3 passed in 1.86s

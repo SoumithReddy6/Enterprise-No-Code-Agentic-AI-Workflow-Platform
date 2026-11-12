@@ -388,6 +388,8 @@ A **Repeat** node runs an attached body until a stop rule is met, at most `max_i
 
 ## Loop result and event size bounds
 
+An item's `value` is the body's result port: `context` (the evidence envelope) for a Retrieve body, `text` for every other body type. Repeat reads the same port. A body that returns without that port fails its item (`lookup: the body's context output is missing.`), and `on_item_error` applies; it never reads as an empty success. A Retrieve item saved as `""` by an earlier Relay version, which read `text`, is refused on resume, from its item row or from the loop checkpoint: `each cannot be restored: item 1 was saved without its Retrieve result by an earlier Relay version. Start a new run.` A value dropped by the size contract below (`value_dropped: true`) is restored as before.
+
 A For each loop's `results` output has a stated contract, measured in serialized UTF-8 bytes of the whole list (brackets, separators and entry structure included):
 
 - **Retained values: 1,000,000 bytes.** Item values are kept in order while the list fits; the first value that does not fit, and every later value, is stored as `""` with `value_dropped: true`. Values are never cut part way and always form a prefix.

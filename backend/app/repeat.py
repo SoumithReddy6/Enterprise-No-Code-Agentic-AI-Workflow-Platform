@@ -278,15 +278,11 @@ def entry_bytes(entry):
     return len(json.dumps(entry, ensure_ascii=False).encode('utf-8'))
 
 
-# The port that holds an attached node's result. Every body type declares 'text' except
-# Retrieve, whose result is its evidence envelope in 'context'.
-RESULT_PORTS = {'retrieve': 'context'}
-
-
 def result_of(node_id, number, role, node, output):
     """The result of the body or the checker, from its declared port. A missing port fails
     the Repeat: an empty string would read as an empty draft and could meet the rule."""
-    port = RESULT_PORTS.get(node.type, 'text')
+    from .iteration import result_port
+    port = result_port(node.type)
     value = output.get(port) if isinstance(output, dict) else None
     if not isinstance(value, str):
         raise ValueError(f"{node_id}: iteration {number}: the {role}'s {port} output is missing.")
