@@ -1,0 +1,443 @@
+{
+ "workflow": {
+  "version": 1,
+  "contract": 1,
+  "name": "Repeat",
+  "nodes": [
+   {
+    "id": "input",
+    "type": "chat_input"
+   },
+   {
+    "id": "r",
+    "type": "repeat",
+    "inputs": {
+     "input": "input.message"
+    },
+    "config": {
+     "body": "writer",
+     "check": "judge",
+     "until": {
+      "operator": "eq",
+      "field": "pass",
+      "compare_to": "true"
+     }
+    }
+   },
+   {
+    "id": "writer",
+    "type": "agent",
+    "config": {
+     "provider": "ollama",
+     "model": "fixture",
+     "system": "KEY:writer"
+    }
+   },
+   {
+    "id": "judge",
+    "type": "agent",
+    "config": {
+     "provider": "ollama",
+     "model": "fixture",
+     "system": "KEY:judge",
+     "role": "critic",
+     "output_schema": {
+      "type": "object",
+      "required": [
+       "pass",
+       "feedback"
+      ],
+      "properties": {
+       "pass": {
+        "type": "boolean"
+       },
+       "feedback": {
+        "type": "string"
+       }
+      }
+     }
+    }
+   },
+   {
+    "id": "out",
+    "type": "response",
+    "inputs": {
+     "text": "r.text"
+    }
+   }
+  ],
+  "edges": [
+   {
+    "id": "e0",
+    "source": "input",
+    "target": "r"
+   },
+   {
+    "id": "e1",
+    "source": "r",
+    "target": "out"
+   },
+   {
+    "id": "e2",
+    "source": "r",
+    "target": "writer",
+    "kind": "loop",
+    "sourceHandle": "body",
+    "targetHandle": "input"
+   },
+   {
+    "id": "e3",
+    "source": "r",
+    "target": "judge",
+    "kind": "loop",
+    "sourceHandle": "check",
+    "targetHandle": "input"
+   }
+  ]
+ },
+ "events": [
+  {
+   "node_id": "input",
+   "status": "running",
+   "inputs": {},
+   "seq": 1,
+   "timestamp": "2026-11-13T00:00:00Z"
+  },
+  {
+   "node_id": "input",
+   "status": "success",
+   "outputs": {
+    "message": "go",
+    "_provenance": {
+     "v": 2,
+     "ports": {
+      "message": "source"
+     },
+     "eligible_ports": [
+      "message"
+     ]
+    }
+   },
+   "duration_ms": 0,
+   "seq": 2,
+   "timestamp": "2026-11-13T00:00:01Z"
+  },
+  {
+   "node_id": "r",
+   "status": "running",
+   "inputs": {
+    "input": "go"
+   },
+   "seq": 3,
+   "timestamp": "2026-11-13T00:00:02Z"
+  },
+  {
+   "node_id": "writer",
+   "invocation_id": "r:0:writer",
+   "parent_node_id": "r",
+   "item_index": 0,
+   "transient": true,
+   "status": "running",
+   "inputs": {
+    "input": "go"
+   },
+   "loop_node_id": "r",
+   "seq": 4,
+   "timestamp": "2026-11-13T00:00:03Z"
+  },
+  {
+   "node_id": "writer",
+   "invocation_id": "r:0:writer",
+   "parent_node_id": "r",
+   "item_index": 0,
+   "transient": true,
+   "status": "success",
+   "outputs": {
+    "text": "draft one",
+    "provider": "ollama",
+    "sources": "[]",
+    "grounding": "{}",
+    "_provenance": {
+     "v": 2,
+     "ports": {
+      "text": "guessed",
+      "provider": "source",
+      "sources": "source",
+      "grounding": "guessed"
+     }
+    }
+   },
+   "usage": {
+    "calls": 1,
+    "prompt_tokens": 1,
+    "completion_tokens": 0,
+    "by_model": [
+     {
+      "provider": "ollama",
+      "model": "fixture",
+      "calls": 1,
+      "prompt_tokens": 1,
+      "completion_tokens": 0
+     }
+    ]
+   },
+   "loop_node_id": "r",
+   "seq": 5,
+   "timestamp": "2026-11-13T00:00:04Z"
+  },
+  {
+   "node_id": "judge",
+   "invocation_id": "r:0:judge",
+   "parent_node_id": "r",
+   "item_index": 0,
+   "transient": true,
+   "status": "running",
+   "inputs": {
+    "input": "{\"input\":\"go\",\"answer\":\"draft one\"}"
+   },
+   "loop_node_id": "r",
+   "seq": 6,
+   "timestamp": "2026-11-13T00:00:05Z"
+  },
+  {
+   "node_id": "judge",
+   "invocation_id": "r:0:judge",
+   "parent_node_id": "r",
+   "item_index": 0,
+   "transient": true,
+   "status": "success",
+   "outputs": {
+    "text": "{\"pass\": false, \"feedback\": \"add the date\"}",
+    "provider": "ollama",
+    "sources": "[]",
+    "grounding": "{}",
+    "_provenance": {
+     "v": 2,
+     "ports": {
+      "text": "guessed",
+      "provider": "source",
+      "sources": "source",
+      "grounding": "guessed"
+     },
+     "fields": {
+      "text": {
+       "/pass": "guessed",
+       "/feedback": "guessed"
+      }
+     }
+    }
+   },
+   "usage": {
+    "calls": 1,
+    "prompt_tokens": 1,
+    "completion_tokens": 0,
+    "by_model": [
+     {
+      "provider": "ollama",
+      "model": "fixture",
+      "calls": 1,
+      "prompt_tokens": 1,
+      "completion_tokens": 0
+     }
+    ]
+   },
+   "loop_node_id": "r",
+   "seq": 7,
+   "timestamp": "2026-11-13T00:00:06Z"
+  },
+  {
+   "kind": "loop_item",
+   "status": "info",
+   "node_id": "r",
+   "item_index": 0,
+   "item_result": {
+    "index": 0,
+    "status": "success",
+    "value": "draft one",
+    "verdict": "{\"pass\": false, \"feedback\": \"add the date\"}",
+    "met": false
+   },
+   "transient": true,
+   "seq": 8,
+   "timestamp": "2026-11-13T00:00:07Z"
+  },
+  {
+   "node_id": "writer",
+   "invocation_id": "r:1:writer",
+   "parent_node_id": "r",
+   "item_index": 1,
+   "transient": true,
+   "status": "running",
+   "inputs": {
+    "input": "{\"input\":\"go\",\"previous\":\"draft one\",\"feedback\":\"{\\\"pass\\\": false, \\\"feedback\\\": \\\"add the date\\\"}\"}"
+   },
+   "loop_node_id": "r",
+   "seq": 9,
+   "timestamp": "2026-11-13T00:00:08Z"
+  },
+  {
+   "node_id": "writer",
+   "invocation_id": "r:1:writer",
+   "parent_node_id": "r",
+   "item_index": 1,
+   "transient": true,
+   "status": "success",
+   "outputs": {
+    "text": "draft two",
+    "provider": "ollama",
+    "sources": "[]",
+    "grounding": "{}",
+    "_provenance": {
+     "v": 2,
+     "ports": {
+      "text": "guessed",
+      "provider": "source",
+      "sources": "source",
+      "grounding": "guessed"
+     }
+    }
+   },
+   "usage": {
+    "calls": 1,
+    "prompt_tokens": 1,
+    "completion_tokens": 0,
+    "by_model": [
+     {
+      "provider": "ollama",
+      "model": "fixture",
+      "calls": 1,
+      "prompt_tokens": 1,
+      "completion_tokens": 0
+     }
+    ]
+   },
+   "loop_node_id": "r",
+   "seq": 10,
+   "timestamp": "2026-11-13T00:00:09Z"
+  },
+  {
+   "node_id": "judge",
+   "invocation_id": "r:1:judge",
+   "parent_node_id": "r",
+   "item_index": 1,
+   "transient": true,
+   "status": "running",
+   "inputs": {
+    "input": "{\"input\":\"go\",\"answer\":\"draft two\"}"
+   },
+   "loop_node_id": "r",
+   "seq": 11,
+   "timestamp": "2026-11-13T00:00:10Z"
+  },
+  {
+   "node_id": "judge",
+   "invocation_id": "r:1:judge",
+   "parent_node_id": "r",
+   "item_index": 1,
+   "transient": true,
+   "status": "success",
+   "outputs": {
+    "text": "{\"pass\": true, \"feedback\": \"ok\"}",
+    "provider": "ollama",
+    "sources": "[]",
+    "grounding": "{}",
+    "_provenance": {
+     "v": 2,
+     "ports": {
+      "text": "guessed",
+      "provider": "source",
+      "sources": "source",
+      "grounding": "guessed"
+     },
+     "fields": {
+      "text": {
+       "/pass": "guessed",
+       "/feedback": "guessed"
+      }
+     }
+    }
+   },
+   "usage": {
+    "calls": 1,
+    "prompt_tokens": 1,
+    "completion_tokens": 0,
+    "by_model": [
+     {
+      "provider": "ollama",
+      "model": "fixture",
+      "calls": 1,
+      "prompt_tokens": 1,
+      "completion_tokens": 0
+     }
+    ]
+   },
+   "loop_node_id": "r",
+   "seq": 12,
+   "timestamp": "2026-11-13T00:00:11Z"
+  },
+  {
+   "kind": "loop_item",
+   "status": "info",
+   "node_id": "r",
+   "item_index": 1,
+   "item_result": {
+    "index": 1,
+    "status": "success",
+    "value": "draft two",
+    "verdict": "{\"pass\": true, \"feedback\": \"ok\"}",
+    "met": true
+   },
+   "transient": true,
+   "seq": 13,
+   "timestamp": "2026-11-13T00:00:12Z"
+  },
+  {
+   "node_id": "r",
+   "status": "success",
+   "outputs": {
+    "text": "draft two",
+    "feedback": "{\"pass\": true, \"feedback\": \"ok\"}",
+    "summary": "{\"iterations\": 2, \"max_iterations\": 3, \"met\": true, \"stopped_by\": \"rule\", \"truncated\": false, \"truncation_reason\": \"\"}",
+    "_provenance": {
+     "v": 2,
+     "ports": {
+      "text": "guessed",
+      "feedback": "guessed",
+      "summary": "guessed"
+     }
+    }
+   },
+   "duration_ms": 2,
+   "seq": 14,
+   "timestamp": "2026-11-13T00:00:13Z"
+  },
+  {
+   "node_id": "out",
+   "status": "running",
+   "inputs": {
+    "text": "draft two"
+   },
+   "seq": 15,
+   "timestamp": "2026-11-13T00:00:14Z"
+  },
+  {
+   "node_id": "out",
+   "status": "success",
+   "outputs": {
+    "text": "draft two",
+    "sources": "[]",
+    "_provenance": {
+     "v": 2,
+     "ports": {
+      "text": "guessed",
+      "sources": "source"
+     }
+    }
+   },
+   "duration_ms": 0,
+   "seq": 16,
+   "timestamp": "2026-11-13T00:00:15Z"
+  }
+ ],
+ "summary": "{\"iterations\": 2, \"max_iterations\": 3, \"met\": true, \"stopped_by\": \"rule\", \"truncated\": false, \"truncation_reason\": \"\"}"
+}

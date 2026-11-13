@@ -1,0 +1,123 @@
+{
+ "palette_repeat": 0,
+ "palette_for_each": 0,
+ "palette_control": [
+  "Condition",
+  "Join",
+  "Calculate",
+  "Switch",
+  "Request reader"
+ ],
+ "repeat_card_text": "Draft until approved\n\nRun an attached body, and an optional checker, until a stop rule is met, at most a fixed number of times.\n\nrepeat\nReady",
+ "repeat_handles": [
+  "target:(none)",
+  "source:(none)"
+ ],
+ "edges_in_workflow": 4,
+ "edges_drawn": [
+  "e0",
+  "e1"
+ ],
+ "repeat_inspector": [
+  "INPUT BINDINGS\ninput\nChoose upstream output\nChat input \u2192 message",
+  "CONFIGURATION\nBody\nCheck\nMax Iterations\nuntil\nOn Limit\nfail\nlast",
+  "OUTPUTS\ntext\nstring\nfeedback\nstring\nsummary\nstring"
+ ],
+ "repeat_inspector_controls": [
+  "select:select-one:inputChoose upstream outputChat input \u2192 =input.message",
+  "textarea:textarea:Bodywriter=writer",
+  "input:text:Check=judge",
+  "input:number:Max Iterations=3",
+  "input:text:until=",
+  "select:select-one:On Limitfaillast=fail"
+ ],
+ "bindings_out": [
+  [
+   "Choose upstream output",
+   "Chat input \u2192 message",
+   "Draft until approved \u2192 text",
+   "Draft until approved \u2192 feedback",
+   "Draft until approved \u2192 summary"
+  ]
+ ],
+ "bindings_writer": [
+  [
+   "Choose upstream output"
+  ],
+  [
+   "Choose an enabled model",
+   "Ollama \u00b7 local \u00b7 fixture"
+  ],
+  [
+   "planner",
+   "reasoner",
+   "reflection",
+   "critic",
+   "router",
+   "memory",
+   "summarizer",
+   "extraction",
+   "classification"
+  ]
+ ],
+ "bindings_judge": [
+  [
+   "Choose upstream output"
+  ],
+  [
+   "Choose an enabled model",
+   "Ollama \u00b7 local \u00b7 fixture"
+  ],
+  [
+   "planner",
+   "reasoner",
+   "reflection",
+   "critic",
+   "router",
+   "memory",
+   "summarizer",
+   "extraction",
+   "classification"
+  ]
+ ],
+ "stage1_card_status": {
+  "r": "Info",
+  "writer": "Success",
+  "judge": "Success"
+ },
+ "final_card_status": {
+  "r": "Success",
+  "writer": "Success",
+  "judge": "Success",
+  "out": "Success"
+ },
+ "event_rows": [
+  "input\nrunning",
+  "input\nsuccess\n0 ms",
+  "r\nrunning",
+  "writer\nrunning",
+  "writer\nsuccess\n\u00b7 1+0 tok",
+  "judge\nrunning",
+  "judge\nsuccess\n\u00b7 1+0 tok",
+  "r\ninfo",
+  "writer\nrunning",
+  "writer\nsuccess\n\u00b7 1+0 tok",
+  "judge\nrunning",
+  "judge\nsuccess\n\u00b7 1+0 tok",
+  "r\ninfo",
+  "r\nsuccess\n2 ms",
+  "out\nrunning",
+  "out\nsuccess\n0 ms"
+ ],
+ "drag_repeat_to_judge": {
+  "before": 2,
+  "after": 3
+ },
+ "console": [
+  "React Flow: It seems like you are hiding the attribution. Please only do this when you are subscribed to React Flow Pro: https://reactflow.dev/remove-attr\n%cYou can ignore this warning if you are subscribed. font-style: italic;",
+  "[React Flow]: Couldn't create edge for source handle id: \"body\", edge id: e2. Help: https://reactflow.dev/error#008",
+  "[React Flow]: Couldn't create edge for source handle id: \"check\", edge id: e3. Help: https://reactflow.dev/error#008",
+  "[React Flow]: Couldn't create edge for source handle id: \"continue\", edge id: reader-agent. Help: https://reactflow.dev/error#008",
+  "[React Flow]: Couldn't create edge for source handle id: \"reply\", edge id: reader-readerReply. Help: https://reactflow.dev/error#008"
+ ]
+}
