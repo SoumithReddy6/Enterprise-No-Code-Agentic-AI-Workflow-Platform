@@ -32,3 +32,13 @@ Not probed (code reading): an imported For each draws its `body` edge the same w
 the card code is the same (no `body` handle for any type). A new Repeat from the palette
 would have no `until`, which `RepeatConfig` requires (no default), so Validate would refuse it
 with `invalid configuration`.
+
+## Design review check (rev 2, at `16c1f45`)
+
+`observed_check.py` and `observed_check.txt`: the review's finding R3, checked again. A Repeat
+`loop_item` passes through `storage.observed()` (the bounded copy that is stored and streamed,
+`PREVIEW_CHARS` 2,000). With an escape-heavy 6,000-character draft and a 3,000-character note,
+`item_result` becomes a string for both `met: true` and `met: false`, so `met` cannot be read.
+With a 3,800-character draft the object is kept and only the draft is shortened. The design
+(E7) shows "Verdict details are unavailable." in that case and never reads a missing `met` as
+false.
