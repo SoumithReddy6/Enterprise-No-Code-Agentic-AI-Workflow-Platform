@@ -1,0 +1,250 @@
+{
+ "M00": {
+  "change": "control: no change",
+  "oracles": [
+   {
+    "oracle": "unit:U01,U02,U03,U04,U05,U06,U07,U08",
+    "killed": false
+   },
+   {
+    "oracle": "browser:B01,B02,B03,B04,B05,B06,B07",
+    "killed": false
+   },
+   {
+    "oracle": "spec:switch.spec.ts",
+    "killed": false
+   }
+  ],
+  "killed": false
+ },
+ "M34": {
+  "change": "Repeat not in the palette",
+  "oracles": [
+   {
+    "oracle": "unit:U01",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B01",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M35": {
+  "change": "The Repeat card draws no check handle",
+  "oracles": [
+   {
+    "oracle": "browser:B02",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B01",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M36": {
+  "change": "connectionKind returns flow for the body handle",
+  "oracles": [
+   {
+    "oracle": "unit:U02",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B01",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M37": {
+  "change": "A loop connection does not set body",
+  "oracles": [
+   {
+    "oracle": "unit:U03",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B01",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M38": {
+  "change": "withoutLoopAttachment clears the setting when another target is removed",
+  "oracles": [
+   {
+    "oracle": "unit:U03",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M39": {
+  "change": "nodeStatuses keeps loop_item events",
+  "oracles": [
+   {
+    "oracle": "unit:U04",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B04",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M40": {
+  "change": "The iteration number is item_index (from 0)",
+  "oracles": [
+   {
+    "oracle": "unit:U05",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B04",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M41": {
+  "change": "The summary note reads limit as rule",
+  "oracles": [
+   {
+    "oracle": "unit:U05",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M42": {
+  "change": "incompleteRun ignores the node type",
+  "oracles": [
+   {
+    "oracle": "unit:U06",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M43": {
+  "change": "ConditionFields loses withConditionOperator (Switch too)",
+  "oracles": [
+   {
+    "oracle": "browser:B03",
+    "killed": true
+   },
+   {
+    "oracle": "spec:switch.spec.ts",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M44": {
+  "change": "A new Repeat gets no default until",
+  "oracles": [
+   {
+    "oracle": "browser:B01",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M45": {
+  "change": "canvasEdge keeps targetHandle 'input'",
+  "oracles": [
+   {
+    "oracle": "unit:U07",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B02",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M46": {
+  "change": "The flow source of a loop card has no id",
+  "oracles": [
+   {
+    "oracle": "browser:B02",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M47": {
+  "change": "Keyboard Delete keeps the separate node and edge handlers",
+  "oracles": [
+   {
+    "oracle": "browser:B03",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M48": {
+  "change": "The occupied-port refusal is removed (editor)",
+  "oracles": [
+   {
+    "oracle": "browser:B03",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M49": {
+  "change": "A missing met is read as false",
+  "oracles": [
+   {
+    "oracle": "unit:U05",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M50": {
+  "change": "unparsedJsonSettings ignores until",
+  "oracles": [
+   {
+    "oracle": "unit:U08",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B07",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M51": {
+  "change": "edgePort maps only an unnamed flow edge to flow (not output)",
+  "oracles": [
+   {
+    "oracle": "unit:U07",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B02",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M52": {
+  "change": "portInUse and removeElements read the raw sourceHandle",
+  "oracles": [
+   {
+    "oracle": "unit:U03",
+    "killed": true
+   }
+  ],
+  "killed": true
+ }
+}

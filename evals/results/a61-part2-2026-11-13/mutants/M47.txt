@@ -1,0 +1,88 @@
+M47: Keyboard Delete keeps the separate node and edge handlers
+
+$ npx playwright test tests/browser/repeat.spec.ts --reporter=line -g (B03) 
+exit 1
+
+Running 1 test using 1 worker
+
+[1/1] tests/browser/repeat.spec.ts:298:1 › B03 the inspector edits the stop rule; deleting the checker clears it in one undoable change
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  1) tests/browser/repeat.spec.ts:298:1 › B03 the inspector edits the stop rule; deleting the checker clears it in one undoable change 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: ""
+    Received: "judge"
+
+      313 |   const checked = async (check: string, edges: number) => {
+      314 |     saved = await validate(page, h);
+    > 315 |     expect(nodeOf(saved, 'r').config.check).toBe(check);
+          |                                             ^
+      316 |     expect(saved.edges.filter((e) => e.kind === 'loop' && e.sourceHandle === 'check')).toHaveLength(edges);
+      317 |   };
+      318 |   const undo = async () => {
+        at checked (/private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/mut/frontend/tests/browser/repeat.spec.ts:315:45)
+        at /private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/mut/frontend/tests/browser/repeat.spec.ts:328:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/repeat-B03-the-inspector-e-addd7-s-it-in-one-undoable-change/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/repeat-B03-the-inspector-e-addd7-s-it-in-one-undoable-change/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/repeat-B03-the-inspector-e-addd7-s-it-in-one-undoable-change/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/repeat-B03-the-inspector-e-addd7-s-it-in-one-undoable-change/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    tests/browser/repeat.spec.ts:298:1 › B03 the inspector edits the stop rule; deleting the checker clears it in one undoable change 
+
+nsole.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008

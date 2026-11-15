@@ -1,0 +1,205 @@
+M45: canvasEdge keeps targetHandle 'input'
+
+$ node --experimental-strip-types --test --test-name-pattern ^(U07)  tests/repeat.test.ts
+exit 1
+✖ U07 saved handles map to drawn ports for display only (5.066333ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 50.22425
+
+✖ failing tests:
+
+test at tests/repeat.test.ts:181:6
+✖ U07 saved handles map to drawn ports for display only (5.066333ms)
+  AssertionError [ERR_ASSERTION]: a drawn target
+  
+  'input' !== null
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/mut/frontend/tests/repeat.test.ts:203:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'input',
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+
+
+$ npx playwright test tests/browser/repeat.spec.ts --reporter=line -g (B02) 
+exit 1
+
+Running 1 test using 1 worker
+
+[1/1] tests/browser/repeat.spec.ts:266:1 › B02 imported loop connections are drawn at their ports and exported unchanged
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  1) tests/browser/repeat.spec.ts:266:1 › B02 imported loop connections are drawn at their ports and exported unchanged 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.react-flow__edge')
+    Expected: 4
+    Received: 2
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.react-flow__edge') with timeout 5000ms
+      - waiting for locator('.react-flow__edge')
+        14 × locator resolved to 2 elements
+           - unexpected value "2"
+
+
+      269 |   await importWorkflow(page, h, 'repeat');
+      270 |   const r = card(page, 'r');
+    > 271 |   await expect(page.locator('.react-flow__edge')).toHaveCount(4);
+          |                                                   ^
+      272 |   await expect(edge(page, 'e2').locator('.react-flow__edge-text')).toHaveText('body');
+      273 |   await expect(edge(page, 'e3').locator('.react-flow__edge-text')).toHaveText('check');
+      274 |   await attaches(page, 'e0', card(page, 'input').locator('.react-flow__handle-bottom.source'), target(r));
+        at /private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/mut/frontend/tests/browser/repeat.spec.ts:271:51
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/repeat-B02-imported-loop-c-b477c-orts-and-exported-unchanged/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/repeat-B02-imported-loop-c-b477c-orts-and-exported-unchanged/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/repeat-B02-imported-loop-c-b477c-orts-and-exported-unchanged/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/repeat-B02-imported-loop-c-b477c-orts-and-exported-unchanged/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    tests/browser/repeat.spec.ts:266:1 › B02 imported loop connections are drawn at their ports and exported unchanged 
+
+low.dev/error#008
+[WebServer] 8:59:31 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for target handle id: "input", edge id: e2. Help: https://reactflow.dev/error#008
+[WebServer] 8:59:31 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for target handle id: "input", edge id: e3. Help: https://reactflow.dev/error#008
+[WebServer] 8:59:31 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for target handle id: "input", edge id: e2. Help: https://reactflow.dev/error#008
+[WebServer] 8:59:31 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for target handle id: "input", edge id: e3. Help: https://reactflow.dev/error#008
+[WebServer] 8:59:31 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for target handle id: "input", edge id: e2. Help: https://reactflow.dev/error#008
+[WebServer] 8:59:31 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for target handle id: "input", edge id: e3. Help: https://reactflow.dev/error#008
+[WebServer] 8:59:31 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for target handle id: "input", edge id: e2. Help: https://reactflow.dev/error#008
+[WebServer] 8:59:31 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for target handle id: "input", edge id: e3. Help: https://reactflow.dev/error#008
+[WebServer] 8:59:31 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for target handle id: "input", edge id: e2. Help: https://reactflow.dev/error#008
+[WebServer] 8:59:31 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for target handle id: "input", edge id: e3. Help: https://reactflow.dev/error#008
+[WebServer] 8:59:31 PM [vite] (client) [console.warn] React Flow: It seems like you are hiding the attribution. Please only do this when you are subscribed to React Flow Pro: https://reactflow.dev/remove-attr
+[WebServer] You can ignore this warning if you are subscribed.

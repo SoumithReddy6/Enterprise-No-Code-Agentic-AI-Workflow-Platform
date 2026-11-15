@@ -1,0 +1,133 @@
+✖ U01 Repeat is offered in Control and starts with the stop rule pass eq true; For each stays out (7.284792ms)
+✖ U02 the body and check ports make loop connections; other uses of them are refused (0.434167ms)
+✖ U03 attaching sets the setting, an occupied port is reported, removal clears only its own setting (0.185792ms)
+✖ U04 card statuses come from node events only (0.593916ms)
+✖ U05 the execution log names iterations and explains each verdict and the stop (0.125833ms)
+✖ U06 an incomplete Repeat is labelled by its stop rule, with its recorded reason (0.604458ms)
+✖ U07 saved handles map to drawn ports for display only (0.144625ms)
+✖ U08 unfinished JSON in the stop rule blocks Validate and Run locally (0.376875ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 0
+ℹ fail 8
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 105.30925
+
+✖ failing tests:
+
+test at tests/repeat.test.ts:45:6
+✖ U01 Repeat is offered in Control and starts with the stop rule pass eq true; For each stays out (7.284792ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  null !== 'Control'
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/red-590ae89/frontend/tests/repeat.test.ts:47:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'Control',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/repeat.test.ts:56:6
+✖ U02 the body and check ports make loop connections; other uses of them are refused (0.434167ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  'flow' !== 'loop'
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/red-590ae89/frontend/tests/repeat.test.ts:58:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'flow',
+    expected: 'loop',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/repeat.test.ts:71:6
+✖ U03 attaching sets the setting, an occupied port is reported, removal clears only its own setting (0.185792ms)
+  TypeError: withLoopAttachment is not a function
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/red-590ae89/frontend/tests/repeat.test.ts:78:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at tests/repeat.test.ts:111:6
+✖ U04 card statuses come from node events only (0.593916ms)
+  TypeError: nodeStatuses is not a function
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/red-590ae89/frontend/tests/repeat.test.ts:115:20)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at tests/repeat.test.ts:125:6
+✖ U05 the execution log names iterations and explains each verdict and the stop (0.125833ms)
+  TypeError: eventTitle is not a function
+      at file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/red-590ae89/frontend/tests/repeat.test.ts:128:45
+      at Array.map (<anonymous>)
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/red-590ae89/frontend/tests/repeat.test.ts:128:34)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at tests/repeat.test.ts:165:6
+✖ U06 an incomplete Repeat is labelled by its stop rule, with its recorded reason (0.604458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      [
+        'r',
+  +     'Loop did not deliver every item',
+  -     'Repeat did not meet its stop rule',
+        'r reached 3 iterations without meeting its stop rule; the last answer is returned.'
+      ],
+      [
+        'each',
+        'Loop did not deliver every item',
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/red-590ae89/frontend/tests/repeat.test.ts:174:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ [ 'r', 'Loop did not deliver every item', 'r reached 3 iterations without meeting its stop rule; the last answer is returned.' ], [ 'each', 'Loop did not deliver every item', 'each accepted 1 of 3 items.' ], [ 'r', 'Skipped by the action budget', 'r did not run: budget.' ] ],
+    expected: [ [ 'r', 'Repeat did not meet its stop rule', 'r reached 3 iterations without meeting its stop rule; the last answer is returned.' ], [ 'each', 'Loop did not deliver every item', 'each accepted 1 of 3 items.' ], [ 'r', 'Skipped by the action budget', 'r did not run: budget.' ] ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests/repeat.test.ts:181:6
+✖ U07 saved handles map to drawn ports for display only (0.144625ms)
+  TypeError: edgePort is not a function
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/red-590ae89/frontend/tests/repeat.test.ts:200:18)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at tests/repeat.test.ts:212:6
+✖ U08 unfinished JSON in the stop rule blocks Validate and Run locally (0.376875ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   {
+  -     message: 'Stop rule Options is not valid JSON yet. Fix it before validating or running.',
+  -     node_id: 'r'
+  -   }
+  - ]
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/red-590ae89/frontend/tests/repeat.test.ts:218:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ { node_id: 'r', message: 'Stop rule Options is not valid JSON yet. Fix it before validating or running.' } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

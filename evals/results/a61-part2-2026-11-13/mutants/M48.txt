@@ -1,0 +1,95 @@
+M48: The occupied-port refusal is removed (editor)
+
+$ npx playwright test tests/browser/repeat.spec.ts --reporter=line -g (B03) 
+exit 1
+
+Running 1 test using 1 worker
+
+[1/1] tests/browser/repeat.spec.ts:298:1 › B03 the inspector edits the stop rule; deleting the checker clears it in one undoable change
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  1) tests/browser/repeat.spec.ts:298:1 › B03 the inspector edits the stop rule; deleting the checker clears it in one undoable change 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('The check port is already connected. Delete its connection first.')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('The check port is already connected. Delete its connection first.') with timeout 5000ms
+      - waiting for getByText('The check port is already connected. Delete its connection first.')
+
+
+      348 |   const edges = await page.locator('.react-flow__edge').count();
+      349 |   await port(card(page, 'r'), 'check').dragTo(target(card(page, other)));
+    > 350 |   await expect(page.getByText('The check port is already connected. Delete its connection first.')).toBeVisible();
+          |                                                                                                     ^
+      351 |   await expect(page.locator('.react-flow__edge')).toHaveCount(edges);
+      352 |   await checked('judge', 1);
+      353 |   expect(h.unexpected).toEqual([]);
+        at /private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/mut/frontend/tests/browser/repeat.spec.ts:350:101
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/repeat-B03-the-inspector-e-addd7-s-it-in-one-undoable-change/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/repeat-B03-the-inspector-e-addd7-s-it-in-one-undoable-change/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/repeat-B03-the-inspector-e-addd7-s-it-in-one-undoable-change/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/repeat-B03-the-inspector-e-addd7-s-it-in-one-undoable-change/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    tests/browser/repeat.spec.ts:298:1 › B03 the inspector edits the stop rule; deleting the checker clears it in one undoable change 
+
+ id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:57 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:57 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:57 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:57 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:57 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:57 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:57 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:57 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:57 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 9:01:58 PM [vite] (client) [console.warn] React Flow: It seems like you are hiding the attribution. Please only do this when you are subscribed to React Flow Pro: https://reactflow.dev/remove-attr
+[WebServer] You can ignore this warning if you are subscribed.

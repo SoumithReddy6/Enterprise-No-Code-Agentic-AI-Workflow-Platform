@@ -1,0 +1,43 @@
+M42: incompleteRun ignores the node type
+
+$ node --experimental-strip-types --test --test-name-pattern ^(U06)  tests/repeat.test.ts
+exit 1
+✖ U06 an incomplete Repeat is labelled by its stop rule, with its recorded reason (2.158209ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 48.974583
+
+✖ failing tests:
+
+test at tests/repeat.test.ts:165:6
+✖ U06 an incomplete Repeat is labelled by its stop rule, with its recorded reason (2.158209ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      [
+        'r',
+  +     'Loop did not deliver every item',
+  -     'Repeat did not meet its stop rule',
+        'r reached 3 iterations without meeting its stop rule; the last answer is returned.'
+      ],
+      [
+        'each',
+        'Loop did not deliver every item',
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/mut/frontend/tests/repeat.test.ts:174:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ [ 'r', 'Loop did not deliver every item', 'r reached 3 iterations without meeting its stop rule; the last answer is returned.' ], [ 'each', 'Loop did not deliver every item', 'each accepted 1 of 3 items.' ], [ 'r', 'Skipped by the action budget', 'r did not run: budget.' ] ],
+    expected: [ [ 'r', 'Repeat did not meet its stop rule', 'r reached 3 iterations without meeting its stop rule; the last answer is returned.' ], [ 'each', 'Loop did not deliver every item', 'each accepted 1 of 3 items.' ], [ 'r', 'Skipped by the action budget', 'r did not run: budget.' ] ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
