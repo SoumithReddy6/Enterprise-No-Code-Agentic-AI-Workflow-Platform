@@ -13,9 +13,9 @@ the recordings true. Regenerate after an intended change with RELAY_REGENERATE_F
   imports. `seq` and `timestamp` are added for the mock; they and `duration_ms` vary between
   runs and are not compared.
 * frontend/tests/browser/switch-port-names.json (K03, A6.1 Part 2 review finding 1): a Switch
-  whose case ids are the loop port names body, check, flow and output is valid, and its
-  normalized /api/validate response keeps every case id as its edge's source handle. Browser
-  test B08 builds and imports it.
+  whose case ids are the editor's port names body, check, flow, agents and output is valid, and
+  its normalized /api/validate response keeps every case id as its edge's source handle.
+  Browser test B08 builds and imports it.
 """
 import asyncio
 import copy
@@ -191,14 +191,15 @@ def test_k02_the_run_events_and_normalized_imports_are_real(tmp_path, monkeypatc
 
 # --------------------------------------------------------------------------- K03
 
-# Case ids that are also loop port names (body, check, flow) or the accepted name of a normal
-# card's bottom port (output). A Switch's routes are its case ids, so each must stay its edge's
-# source handle. `output` is listed last so that, if the editor drew it at the card's first
-# route, the line would start at another case's port.
-PORT_NAMED_CASES = (('body', 'billing'), ('check', 'technical'), ('flow', 'account'), ('output', 'other'))
+# Case ids that are also loop port names (body, check, flow), the Agent card's specialists port
+# (agents), or the accepted name of a normal card's bottom port (output). A Switch's routes are
+# its case ids, so each must stay its edge's source handle. `output` is listed last so that, if
+# the editor drew it at the card's first route, the line would start at another case's port.
+PORT_NAMED_CASES = (('body', 'billing'), ('check', 'technical'), ('flow', 'account'), ('agents', 'sales'),
+                    ('output', 'other'))
 SWITCH_LAYOUT = {'input': (300, 40), 'reader': (300, 200), 'replied': (700, 200), 'route': (300, 380),
-                 'out_body': (760, 860), 'out_check': (1010, 860), 'out_flow': (1260, 860), 'out_output': (1510, 860),
-                 'out_default': (1760, 860)}
+                 'out_body': (760, 860), 'out_check': (1010, 860), 'out_flow': (1260, 860), 'out_agents': (1510, 860),
+                 'out_output': (1760, 860), 'out_default': (2010, 860)}
 
 
 def switch_port_names(model):
@@ -210,7 +211,7 @@ def switch_port_names(model):
     return laid_out(workflow, SWITCH_LAYOUT)
 
 
-def test_k03_switch_case_ids_named_like_loop_ports_are_valid_and_keep_their_handles(tmp_path):
+def test_k03_switch_case_ids_named_like_editor_ports_are_valid_and_keep_their_handles(tmp_path):
     model = json.loads(ISSUES.read_text())['model']
     file = switch_port_names(model)
     with TestClient(lab(tmp_path, 'k03')) as client:

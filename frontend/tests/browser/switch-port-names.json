@@ -142,6 +142,15 @@
        }
       },
       {
+       "id": "agents",
+       "label": "Agents",
+       "when": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "sales"
+       }
+      },
+      {
        "id": "output",
        "label": "Output",
        "when": {
@@ -202,7 +211,7 @@
     }
    },
    {
-    "id": "out_output",
+    "id": "out_agents",
     "type": "response",
     "inputs": {
      "text": "input.message"
@@ -213,13 +222,24 @@
     }
    },
    {
-    "id": "out_default",
+    "id": "out_output",
     "type": "response",
     "inputs": {
      "text": "input.message"
     },
     "position": {
      "x": 1760,
+     "y": 860
+    }
+   },
+   {
+    "id": "out_default",
+    "type": "response",
+    "inputs": {
+     "text": "input.message"
+    },
+    "position": {
+     "x": 2010,
      "y": 860
     }
    }
@@ -259,6 +279,12 @@
     "source": "route",
     "target": "out_flow",
     "sourceHandle": "flow"
+   },
+   {
+    "id": "to_out_agents",
+    "source": "route",
+    "target": "out_agents",
+    "sourceHandle": "agents"
    },
    {
     "id": "to_out_output",
@@ -432,6 +458,15 @@
        }
       },
       {
+       "id": "agents",
+       "label": "Agents",
+       "when": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "sales"
+       }
+      },
+      {
        "id": "output",
        "label": "Output",
        "when": {
@@ -525,7 +560,7 @@
     }
    },
    {
-    "id": "out_output",
+    "id": "out_agents",
     "type": "response",
     "version": 1,
     "label": "",
@@ -544,12 +579,31 @@
     }
    },
    {
-    "id": "out_default",
+    "id": "out_output",
     "type": "response",
     "version": 1,
     "label": "",
     "position": {
      "x": 1760.0,
+     "y": 860.0
+    },
+    "inputs": {
+     "text": "input.message"
+    },
+    "config": {},
+    "on_error": "fail",
+    "retry": {
+     "attempts": 0,
+     "base_delay": 0.5
+    }
+   },
+   {
+    "id": "out_default",
+    "type": "response",
+    "version": 1,
+    "label": "",
+    "position": {
+     "x": 2010.0,
      "y": 860.0
     },
     "inputs": {
@@ -609,6 +663,14 @@
     "source": "route",
     "target": "out_flow",
     "sourceHandle": "flow",
+    "targetHandle": null,
+    "kind": "flow"
+   },
+   {
+    "id": "to_out_agents",
+    "source": "route",
+    "target": "out_agents",
+    "sourceHandle": "agents",
     "targetHandle": null,
     "kind": "flow"
    },

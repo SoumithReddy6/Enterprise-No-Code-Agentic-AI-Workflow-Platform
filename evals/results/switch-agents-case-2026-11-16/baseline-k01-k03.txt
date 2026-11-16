@@ -1,0 +1,18 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/bin/python
+rootdir: /private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/agents-base-05aca4a-8M0b
+plugins: asyncio-1.4.0, langsmith-0.12.2, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 3 items
+
+backend/tests/test_repeat_editor_contract.py::test_k01_the_editor_repeat_validates_and_broken_repeats_report_located_issues PASSED [ 33%]
+backend/tests/test_repeat_editor_contract.py::test_k02_the_run_events_and_normalized_imports_are_real PASSED [ 66%]
+backend/tests/test_repeat_editor_contract.py::test_k03_switch_case_ids_named_like_editor_ports_are_valid_and_keep_their_handles PASSED [100%]
+
+=============================== warnings summary ===============================
+../../../../../../../Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/lib/python3.14/site-packages/starlette/testclient.py:53
+  /Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================= 3 passed, 1 warning in 0.81s =========================

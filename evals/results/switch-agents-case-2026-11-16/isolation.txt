@@ -1,0 +1,19 @@
+Isolation copy: git archive 5ed24f8 + the 6 changed files below, in a fresh repository.
+Commits:
+  4f292ff isolation: 5ed24f8 + agents case fix
+  60659cd isolation: 5ed24f8
+Files that differ from 5ed24f8 (git diff --name-status of the isolation head against its first commit):
+  M	README.md
+  M	backend/tests/test_repeat_editor_contract.py
+  M	frontend/lib/workflow.ts
+  M	frontend/tests/browser/repeat.spec.ts
+  M	frontend/tests/browser/switch-port-names.json
+  M	frontend/tests/repeat.test.ts
+SHA-256 (first 16 hex) of each changed file, working tree vs isolation copy:
+  8cd4011b335be1c6 same-as-working-tree README.md
+  05976ac63f948e1f same-as-working-tree backend/tests/test_repeat_editor_contract.py
+  070bcffe7c665d96 same-as-working-tree frontend/lib/workflow.ts
+  89aaafc30ecde2d0 same-as-working-tree frontend/tests/browser/repeat.spec.ts
+  a4b7fdaa753f237f same-as-working-tree frontend/tests/browser/switch-port-names.json
+  a500c092808a10e6 same-as-working-tree frontend/tests/repeat.test.ts
+Other tracked files: the isolation head equals git archive 5ed24f8 apart from the files above.

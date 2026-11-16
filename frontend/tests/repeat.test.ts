@@ -224,10 +224,12 @@ void test('U08 unfinished JSON in the stop rule blocks Validate and Run locally'
 
 // Review of 7c4aa62, finding 1: the loop port names are ordinary route ids on other cards. A
 // Switch case may be named body, check, flow or output (backend K03), and its edge keeps it.
-void test('U09 Switch case ids named like loop ports connect, save and draw unchanged', async () => {
+// The same holds for agents, the Agent card's specialists port (open after that review).
+void test('U09 Switch case ids named like editor ports connect, save and draw unchanged', async () => {
   const { connectionKind, edgePort, canvasEdge, savedConnection } = await lib();
-  for (const id of ['body', 'check', 'flow', 'output']) {
+  for (const id of ['body', 'check', 'flow', 'agents', 'output']) {
     assert.equal(connectionKind('switch', 'response', id, null), 'flow', `${id} connects`);
+    assert.equal(connectionKind('switch', 'agent', id, null), 'flow', `${id} connects to an Agent`);
     assert.equal(savedConnection({ source: 'route', target: 'out', sourceHandle: id, targetHandle: null }, 'switch').sourceHandle, id, `${id} is saved`);
     const saved: WorkflowEdge = { id: `to_${id}`, source: 'route', target: 'out', sourceHandle: id, kind: 'flow' };
     assert.equal(edgePort(saved, 'switch'), id, `${id} occupies its own route`);
@@ -238,6 +240,9 @@ void test('U09 Switch case ids named like loop ports connect, save and draw unch
   assert.equal(connectionKind('for_each', 'agent', 'check', null), null);
   assert.equal(edgePort({ id: 'o', source: 'r', target: 'out', sourceHandle: 'output' }, 'repeat'), 'flow');
   assert.equal(edgePort({ id: 'o', source: 'a', target: 'out', sourceHandle: 'output' }, 'agent'), null);
+  // The Agent card keeps its specialists port: Agent to Agent only.
+  assert.equal(connectionKind('agent', 'agent', 'agents', null), 'agent');
+  assert.equal(connectionKind('agent', 'response', 'agents', null), null);
 });
 
 // Review of 7c4aa62, finding 2: only a real attachment setting is cleared or set: body on a

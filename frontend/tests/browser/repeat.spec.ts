@@ -432,28 +432,29 @@ test('B07 unfinished JSON in the stop rule stays visible and blocks Validate and
   expect(h.unexpected).toEqual([]);
 });
 
-test('B08 Switch cases named body, check, flow and output connect and draw at their own routes', async ({ page }) => {
+test('B08 Switch cases named body, check, flow, agents and output connect and draw at their own routes', async ({ page }) => {
   const h = harness();
   await editor(page, h);
   h.normalized = switchPorts.normalized;
   await importBroken(page, switchPorts.file);
   const route = card(page, 'route');
-  const cases = ['body', 'check', 'flow', 'output', 'default'];
+  const cases = ['body', 'check', 'flow', 'agents', 'output', 'default'];
   const routeEdges = (w: Workflow) => stable(w.edges.filter((e) => e.source === 'route'))
     .map(({ target, sourceHandle }) => `${sourceHandle}->${target}`).sort((a, b) => a.localeCompare(b));
   const expected = cases.map((id) => `${id}->out_${id}`).sort((a, b) => a.localeCompare(b));
-  // Imported: every line starts at its own case, `output` included (it is the fourth route,
+  // Imported: every line starts at its own case, `output` included (it is the fifth route,
   // so a line drawn at the card's first route would start at `body`).
   await expect(page.locator('.react-flow__edge')).toHaveCount(switchPorts.normalized.edges.length);
   for (const id of cases) await attaches(page, `to_out_${id}`, port(route, id), target(card(page, `out_${id}`)));
   expect(routeEdges(await exported(page))).toEqual(expected);
-  // Drawn: delete the body, check and flow lines, then drag each case to its response again.
-  for (const id of ['body', 'check', 'flow']) {
+  // Drawn: delete the body, check, flow and agents lines, then drag each case to its response again.
+  const redrawn = ['body', 'check', 'flow', 'agents'];
+  for (const id of redrawn) {
     await clickEdge(page, `to_out_${id}`, 0.9);
     await page.keyboard.press('Delete');
     await expect(edge(page, `to_out_${id}`)).toHaveCount(0);
   }
-  for (const id of ['body', 'check', 'flow']) await connect(page, port(route, id), target(card(page, `out_${id}`)));
+  for (const id of redrawn) await connect(page, port(route, id), target(card(page, `out_${id}`)));
   const saved = await validate(page, h);
   expect(routeEdges(saved)).toEqual(expected);
   expect(saved.edges.filter((e) => e.source === 'route').every((e) => (e.kind ?? 'flow') === 'flow')).toBe(true);

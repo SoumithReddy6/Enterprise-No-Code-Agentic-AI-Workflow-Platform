@@ -296,8 +296,10 @@ export function connectionKind(
         ['retrieve', 'query'].includes(sourceType))
       ? 'tool'
       : null;
-  if (sourceHandle === 'agents')
-    return sourceType === 'agent' && targetType === 'agent' ? 'agent' : null;
+  // The specialists port of an Agent card. On other cards `agents` is an ordinary route id (a
+  // Switch case may be named agents), so it connects as flow.
+  if (sourceType === 'agent' && sourceHandle === 'agents')
+    return targetType === 'agent' ? 'agent' : null;
   // The loop ports of a Repeat (body, check) and a For each (body). The target type is left
   // to Validate, which names the node and the rule. On other cards these names are ordinary
   // route ids (a Switch case may be named body, check or flow), so they connect as flow.
