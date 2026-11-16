@@ -1,13 +1,26 @@
 # A6.1 Part 3: deployed scenarios for Repeat
 
-**Status:** Revision 1 (2026-11-16), for design review. No row is written yet.
+**Status:** Revision 2 (2026-11-16), for design recheck. No row is written yet.
+Rev 1 is `007dac4`. The rev 1 review decided Q1 = B, Q2 = a third lab, Q3 = keep S29, and asked
+for two changes (attached writes in the rule; the S26b asserts while waiting) and one stronger
+S29 assert. "Changes from revision 1" lists them.
 **Baseline:** `8705b7f` (hosted CI run `43943065132`, 5/5 green). A6.1 Part 1 closed on
 `00281fb`, Part 2 on `05aca4a`.
 **Parent design:** `docs/superpowers/specs/2026-11-09-bounded-loops-design.md` (rev 5),
 "Scope": Part 3 is "deployed scenarios in the release gate".
 **Probe:** `evals/results/a61-part3-probe-2026-11-16/`.
-**Tier:** P2 if Q1 is decided as A (evidence only). P1 if Q1 is decided as B (one validation
-rule, below). Design review, then the rows and their mutants, then an implementation review.
+**Tier:** P1 (one validation rule, below). Design recheck, then the rule and the rows tests-first
+with their mutants, then an implementation review.
+
+## Changes from revision 1
+
+| # | Review item | Change in rev 2 |
+|---|---|---|
+| D1 | Q1 = B, with explicit `approval: true` | "Decision 1". The rule needs the literal `approval: true`: an unset approval is refused, because validation runs before a run exists, and the unset default depends on the run's authentication (`worker.py:175`) |
+| R1 | Writes attached to downstream steps | The rule covers each reachable step's attachment closure (`attachment_closure`, `compiler.py:244`): tools, tools behind specialists, For each bodies. On `8705b7f` no rule walks downstream of a Repeat at all, so `Repeat → Agent (POST attached) → Response` validates. New validation cases name the attached write; mutant G11 |
+| R2 | What S26b checks while it waits | S26b runs both fallbacks (the limit and the token budget). It asserts `checkpoints.r.summary` (stop reason, `met: false`), the exact pending payload and 0 deliveries. It asserts that the run-level `truncated` is absent while waiting and after the rejection: that flag is set only when a run succeeds (`run_truncation`, `worker.py:236`). `docs/operations.md` says where a reviewer finds the stop reason |
+| R3 | S29 proves checkpoint reuse | S29 asserts that the resumed `r` event is `success` with `cached: true` (`compiler.py:672`). Call counts alone also hold when the Repeat rebuilds its result from saved rows (`repeat.py:337`). Mutant G9 is now that rebuild |
+| R4 | The row count | 7 new rows, so the gate has 35 rows. Rev 1 said 34 |
 
 ## Outcome
 
@@ -18,12 +31,14 @@ checks what the receiver got, not only the run status:
 1. A writer and a checker loop until the checker accepts, the writer gets the feedback, and the
    write after the Repeat sends the accepted draft once.
 2. A Repeat that never meets its rule sends nothing (`on_limit: fail`).
-3. A write inside the loop is refused before any run exists.
-4. A run-wide budget that stops the checker sends no unchecked draft.
-5. A worker killed in an iteration resumes: saved iterations are not called again, and the write
+3. Under `on_limit: last`, a write after the Repeat cannot send without a person's approval, and
+   the reviewer can see that the draft did not meet the stop rule.
+4. A write inside the loop is refused before any run exists.
+5. A run-wide budget that stops the checker sends no unchecked draft.
+6. A worker killed in an iteration resumes: saved iterations are not called again, and the write
    is sent once.
-6. A write after the Repeat that needs approval shows the reviewer exactly the accepted draft,
-   and the approval resume does not call the models again.
+7. A write after the Repeat that needs approval shows the reviewer exactly the accepted draft,
+   and the approval resume reuses the Repeat's checkpoint.
 
 The gate policy (`docs/production-scenario-testing.md`, "Policy for each new phase") requires a
 business workflow, its negative and recovery counterparts, and cross-phase scenarios (budgets +
@@ -48,8 +63,7 @@ write after a crash, the exact draft in an approval.
 ### Probe (2026-11-16)
 
 `evals/results/a61-part3-probe-2026-11-16/` (the gate's `Lab` with a model fixture keyed by
-model name, clean `git archive 8705b7f`, `RELAY_RUN_TOKEN_LIMIT=100`). Every planned check holds
-today. One observation needs a decision (Q1):
+model name, clean `git archive 8705b7f`, `RELAY_RUN_TOKEN_LIMIT=100`):
 
 | Probe | Observed |
 |---|---|
@@ -62,38 +76,87 @@ today. One observation needs a decision (Q1):
 | P28 | SIGKILL with the writer's iteration-2 request held: at the kill, row 0 saved, no POST. After the real lease (30.2 s, claim 0.088 s after `lease_until`, another worker): writer 3 calls, checker 2, 60 tokens, one POST |
 | P29 | The write needs approval: the pending payload is the accepted draft; 0 POST before approval; after it one POST, and no further model call |
 
-## Q1 (decision needed): may a write send a draft that the checker did not accept?
+The rev 1 review added two facts on `8705b7f` (its own probes, separate API and worker):
 
-Under `on_limit: last`, a Repeat succeeds with the last answer when the rule was not met (limit)
-or when a budget stopped an iteration (the last fully evaluated answer). The run is marked
-`truncated`. A write after the Repeat then sends that answer at once (P26b, P27b). The checker
-is the reason to use a Repeat, so this is a way to send unaccepted text automatically. It is
-the documented contract (`docs/operations.md`, "The limit", "Budgets"), not a regression.
+- With approval on the write, the limit fallback offers draft 2 and the budget fallback offers
+  draft 1 (the last draft the checker evaluated). A rejection sends nothing in both. The
+  run-level `truncated` is absent while waiting and after the rejection.
+- `Repeat → Agent → Response` with an unapproved POST attached to the Agent validates. The POST
+  is not in the flow graph.
 
-| Option | Change | S26b asserts |
+## Decision 1 (Q1 = B): a write after an `on_limit: last` Repeat needs approval
+
+Under `on_limit: last`, a Repeat succeeds with an answer that did not meet its stop rule: the
+last answer at the limit, or the last checked answer after a budget stop. A write after it then
+sends that answer at once (P26b, P27b). The checker is the reason to use a Repeat, so this sends
+unaccepted text automatically. It is the documented contract (`docs/operations.md`, "The limit",
+"Budgets"), not a regression. The review chose B.
+
+**The rule.** For each Repeat with `on_limit: last`:
+
+1. Find the steps reachable from the Repeat through flow edges. Start at the Repeat's edges that
+   are not its `error` route. A step that only the error route reaches runs when the Repeat failed
+   and returned no answer.
+2. For each of those steps, add its attachment closure (`attachment_closure`): the tools of an
+   Agent, the tools behind its specialists, a For each body, and the attachments of those.
+3. Every write among them (`is_write_node`) must have the literal `approval: true`.
+
+**The message** (one per write, at Validate and at submission, 422, as the other write rules):
+
+```
+<write id>: a write after <repeat id> needs approval: true, because <repeat id> can return an answer that did not meet its stop rule (on_limit: last).
+```
+
+For a write attached to a later Agent, `<write id>` is the attached tool, so the message names
+the node that must change.
+
+**Why the literal `true`.** An unset approval is "on for authenticated writes": the worker reads
+`config.approval`, else the run's `approval_required`, which `POST /api/runs` sets from the
+authentication setting at run creation (`worker.py:175`, `main.py:159`). Validation has no run.
+An unset approval would therefore pass validation and send with no approval on a deployment
+without authentication. The rule asks for the setting that holds on every deployment.
+
+**Tradeoff (accepted by the review).** A draft that the checker accepted also waits for approval,
+because the workflow allows a fallback. The author who wants automatic sends uses
+`on_limit: fail`, the default. The review cites two platforms with the same two patterns: an
+explicit fail-on-limit setting for loops ([Azure Logic Apps](https://learn.microsoft.com/en-us/azure/logic-apps/logic-apps-control-flow-loops#until-loop-considerations))
+and a pause for a human decision before the execution continues
+([AWS Step Functions](https://docs.aws.amazon.com/step-functions/latest/dg/tutorial-human-approval.html)).
+
+**Not affected.** `on_limit: fail`; a Repeat with no write after it; a write before the Repeat;
+a write that only the Repeat's error route reaches. A Repeat with no checker and `on_limit: last`
+is covered: its answer also did not meet the rule. No runtime, storage or editor change: the
+editor shows the backend's message.
+
+**Existing workflows.** A workflow saved since Part 1 with this shape becomes invalid and says
+why. No current test or fixture has the shape: the `on_limit: last` cases in `test_repeat.py`
+have no write after the Repeat, and the recorded frontend fixtures (`repeat-issues.json`,
+`request-nodes.json`) use `on_limit: fail` or none. The full suite confirms this.
+
+**Where it goes.** `repeat_errors` (`compiler.py:253`) already has the deps and
+`attachment_closure`. It also needs the flow graph, so `validate_workflow` passes `flow`.
+
+**Validation cases** (`backend/tests/test_repeat.py`, V-series, tests first):
+
+| Case | Shape | Expected |
 |---|---|---|
-| **A. Keep the contract** | None (Part 3 stays evidence only) | The run is `truncated` with the limit reason, and the rejected draft is sent once. The gate then records the bypass as passing behavior |
-| **B. Require approval (recommended)** | One validation rule: a write that is reachable after a Repeat with `on_limit: last` must have `approval: true`. Message: `send: a write after r needs approval, because r can return an answer that did not meet its stop rule (on_limit: last).` Shown at Validate and at submission (422), as the other write rules | Refused without approval (no run, no request). With approval: the run waits, the payload is the rejected draft, a rejection sends nothing |
-| C. Runtime refusal | A write refuses an input from a truncated Repeat | Broader: the same question exists for a truncated For each batch (S09), so this belongs in its own design |
-
-**Why B.** It closes the bypass with the smallest change, in the pattern the platform already
-uses ("external writes belong after the Join / the Repeat"): a static rule, checked before any
-run, with no runtime or storage change. A person still decides whether an unaccepted draft is
-sent. `on_limit: fail` and Repeats with no write after them are not affected. A Repeat with no
-checker and `on_limit: last` is covered too: its answer also did not meet the rule.
-
-**Cost of B.** The rule walks the nodes reachable from each `on_limit: last` Repeat (the graph
-is acyclic, at most 100 nodes). A workflow saved since Part 1 with this shape becomes invalid
-and says why. Tests: one validation case per message path (a direct write, a write two nodes
-later, a write in a later fork branch is already refused by the branch rule, `approval: true`
-accepted, `on_limit: fail` accepted), the S26b row, and mutant G9. `docs/operations.md` "The
-limit" gets one sentence. The editor needs no change: it shows the backend's message.
+| V-A1 | `r (last) → send (approval false) → out` | Refused, names `send` |
+| V-A2 | Same, approval unset | Refused, names `send` |
+| V-A3 | `r (last) → agent → send → out` (a write two steps later) | Refused, names `send` |
+| V-A4 | `r (last) → agent → out`, POST `post` attached to `agent` as a tool | Refused, names `post` |
+| V-A5 | `r (last) → lead`, specialist `helper` with POST `post` attached | Refused, names `post` |
+| V-A6 | `r (last) → each (For each, body POST `post`) → out` | Refused, names `post` |
+| V-A7 | V-A1, V-A4, V-A5 and V-A6 with `approval: true` on each write | Valid |
+| V-A8 | V-A1 with `on_limit: fail` | Valid |
+| V-A9 | `send (approval false) → r (last) → out` (the write is before) | Valid |
+| V-A10 | `r (last, on_error route)`: error route → `send (approval false)` → `fallback`; normal → `out` | Valid |
+| V-A11 | V-A1 through `POST /api/runs` | 422 with the same message, no run |
 
 ## Design
 
-### Lab and fixture
+### Lab and fixture (Q2: a third lab)
 
-The rows run in a **new third lab** (Q2), as the Switch rows run in their own lab:
+The rows run in a **new third lab**, as the Switch rows run in their own lab:
 
 - the worker and API get `OLLAMA_BASE_URL` of a model fixture and `RELAY_RUN_TOKEN_LIMIT=100`;
 - the 28 existing rows keep their environment unchanged;
@@ -101,7 +164,8 @@ The rows run in a **new third lab** (Q2), as the Switch rows run in their own la
   `repeat_scenarios(lab, models)`; `check_production_scenarios.main` runs it after the Switch lab.
 
 **`LoopModels`** (an HTTP server for the worker's Ollama client), keyed by model name. Each row
-registers its own `<row>-writer` and `<row>-judge` models, so call counts are exact per row.
+(and each S26b variant) registers its own `<row>-writer` and `<row>-judge` models, so call
+counts are exact per row.
 
 | Setting | Meaning |
 |---|---|
@@ -118,6 +182,9 @@ input ─► r Repeat (body writer, check judge, until pass eq true, max 3) ─�
            │ body  ─► writer  Agent, model <row>-writer
            │ check ─► judge   Agent, model <row>-judge, role critic, output_schema {pass: boolean, feedback: string}
 ```
+
+`send` has `enable_writes: true` and an explicit `approval` (`false` unless the row says
+`true`), so no row depends on the authentication default.
 
 ### Rows
 
@@ -141,12 +208,34 @@ the checker rejects twice.
 Asserts: the run fails with exactly `r: the stop rule was not met after 2 iterations.`; writer 2,
 checker 2 (no third iteration); `send` has no event; the receiver got 0 POST.
 
-**S26b — An unaccepted reply under `on_limit: last`.** The same, with `on_limit: last`. The
-asserts depend on Q1 (see the table above). Under B: without approval, refused at validation and
-submission with the new message, no run, no request; with approval, the run waits, the pending
-payload is the rejected draft 2, the run is `truncated` with
-`r reached 2 iterations without meeting its stop rule; the last answer is returned.`, and a
-rejection ends the run with 0 POST.
+**S26b — An unaccepted reply under `on_limit: last` waits for a person.** One row, three parts.
+Each part has its own models and its own receiver path.
+
+1. **Refused without approval.** The S26a workflow with `on_limit: last` and `approval: false`.
+   `/api/validate` returns exactly the Decision 1 message for `send`; `POST /api/runs` returns
+   422 with the same text; the run count does not change; no model call; 0 POST.
+2. **The limit fallback.** `max_iterations: 2`, the checker rejects twice, `approval: true`.
+   - The run is `awaiting_approval`. Writer 2 calls, checker 2.
+   - `checkpoints.r.summary` is `{iterations: 2, max_iterations: 2, met: false, stopped_by:
+     limit, truncated: true, truncation_reason: "r reached 2 iterations without meeting its stop
+     rule; the last answer is returned."}`.
+   - The pending approval's payload body is exactly `{"input":"<draft 2>"}`. 0 POST.
+   - The run has no `truncated` key while it waits.
+   - Reject. The run is `cancelled` with `Approval rejected. No external request was sent.`;
+     0 POST; still no run-level `truncated`; `POST /resume` returns 409.
+3. **The budget fallback.** 40 tokens per call, limit 100, the checker rejects iteration 1,
+   `approval: true`.
+   - The run is `awaiting_approval`. Writer 2 calls, checker 1: draft 2 was never checked.
+   - `checkpoints.r.summary` has `iterations: 1`, `met: false`, `stopped_by: budget`,
+     `truncated: true`, and the exact budget reason (`r: the run budget stopped iteration 2
+     before it was checked; the answer from iteration 1 is returned. Run token budget exhausted;
+     raise RELAY_RUN_TOKEN_LIMIT.`).
+   - The pending payload body is exactly `{"input":"<draft 1>"}`: the last draft the checker
+     evaluated, not draft 2. 0 POST. No run-level `truncated` while it waits.
+   - Reject: as part 2.
+
+The summary values are the probe's and the review's observations on `8705b7f`. The implementation
+records them from the row, and the row asserts them exactly.
 
 **S26c — A write inside the loop is refused before any run.** The body is an HTTP POST.
 
@@ -182,33 +271,49 @@ Steps and asserts:
 Difference from `*-repeat-sigkill`: those rows run on SQLite and PostgreSQL with no write; S28
 checks the external write after the Repeat. Both stay.
 
-**S29 — The approval after a Repeat shows the accepted draft.** As S25, with `approval: true`
-on `send`.
+**S29 — The approval after a Repeat shows the accepted draft (Q3: kept).** As S25, with
+`approval: true` on `send`.
 
-Asserts: the run is `awaiting_approval`; the pending payload's body is exactly the accepted
-draft; 0 POST. After approval: the run succeeds, one POST with that draft, and writer and checker
-are still at 2 calls: the resume restored the Repeat's checkpoint and called no model.
+Asserts:
+- the run is `awaiting_approval`; the pending payload's body is exactly `{"input":"<draft 2>"}`;
+  0 POST;
+- after approval: the run succeeds, with one POST of that draft;
+- writer and checker are still at 2 calls;
+- the events after the approval include `r` `success` with `cached: true`: the resume used the
+  Repeat's checkpoint. The call counts alone also hold when the Repeat rebuilds its result from
+  its saved rows (`repeat.py:337`), so only this assert proves the checkpoint reuse.
 
 ### Docs
 
 - `docs/production-scenario-testing.md`: catalogue rows S25–S29, and a realism note: the Repeat
   rows use a model fixture, so they measure loop control, persistence and delivery, not a
   checker's judgment.
+- `docs/operations.md`, "The limit":
+  - the approval rule and its reason;
+  - where a reviewer finds the stop reason. The approval card shows the outgoing request only
+    (`approval-review.tsx:68`). In the run's execution log, the Repeat's `success` event has
+    `outputs.summary` with `met`, `stopped_by` and `truncation_reason`.
 - `README.md`: the roadmap marks A6.1 Part 3 done (A6.1 complete) and A6.2 next; the S-range in
-  §2 becomes S01–S29; the bounded-loop evidence names S25–S29; the counts.
-- `docs/platform-reference.md`: the roadmap row (line 481).
-- Under Q1 = B: `docs/operations.md`, "The limit": the approval rule.
+  §2 becomes S01–S29; the bounded-loop evidence names S25–S29; the approval rule in the Repeat
+  item; the counts.
+- `docs/platform-reference.md`: the roadmap row (line 481), and the Repeat validation rules.
 
 ## Tests and evidence plan
 
-**Baseline.** The new rows on a clean archive of `8705b7f` plus the gate changes only.
-Expected: S25, S26a, S26c, S27, S28, S29 pass (**control**: the behavior exists). Under Q1 = B,
-S26b fails on the baseline (the shape is accepted and the draft is sent), and its validation
-tests are red. This is recorded, not hidden.
+**Baseline.** The new tests on a clean archive of `8705b7f` plus the test and gate changes only.
+
+- Expected pass (**control**: the behavior exists): S25, S26a, S26c, S27, S28, S29, and the
+  valid cases V-A7 to V-A10.
+- Expected fail (**red**): S26b part 1 (the shape is accepted and the draft is sent), and V-A1 to
+  V-A6 and V-A11.
+- S26b parts 2 and 3 pass on the baseline: approval already holds the draft. The row as a whole
+  fails at part 1.
+
+This is recorded, not hidden.
 
 **Mutants.** Each mutant goes on a fresh scratch copy, with an M00 control (no change: every
-row passes) and a guard that stops the run if a planned row did not run. The planned row must
-fail, and every row's result is recorded:
+planned oracle passes) and a guard that stops the run if a planned oracle selected no test or
+row. The planned oracle must fail, and every oracle's result is recorded:
 
 | Id | Mutant (product code) | Planned oracle | Why it fails |
 |---|---|---|---|
@@ -220,43 +325,48 @@ fail, and every row's result is recorded:
 | G6 | An iteration stopped before its checker returns its unchecked draft as met | S27 | Draft 2 is sent |
 | G7 | Resume ignores saved rows | S28 | Writer 4 calls, checker 3 |
 | G8 | The replacement worker claims 25 s before the lease ends | S28 | The claim is earlier than `lease_until` |
-| G9 | A checkpointed Repeat runs again after the approval resume | S29 | Writer and checker are called again (the mutation point is confirmed in the implementation) |
-| G10 | (Q1 = B) The approval rule is removed | S26b | Validation accepts the write without approval |
+| G9 | The approval resume does not restore a Repeat's checkpoint; the Repeat rebuilds its result from its saved rows | S29 | No `cached: true` event for `r` (the call counts still hold) |
+| G10 | The approval rule is removed | S26b, V-A1 | Validation accepts the write without approval |
+| G11 | The rule walks flow steps only, not their attachments | V-A4, V-A5, V-A6 | The attached write is accepted |
+| G12 | The rule accepts an unset approval | V-A2 | The write with no approval setting is accepted |
+| G13 | The rule also walks the Repeat's error route | V-A10 | The valid error-route write is refused |
 
-If a mutant survives, the row is made stronger before review, and the change is recorded.
+If a mutant survives, the oracle is made stronger before review, and the change is recorded.
 
 **Gates.**
-- The deployed scenario gate: 34 of 34 rows (28 + 6, or 35 with S26b's two parts if the review
-  splits it), `source_files_changed` empty, **3 consecutive runs** (S28 depends on a kill and a
-  lease).
+- The deployed scenario gate: **35 of 35 rows** (28 + 7), `source_files_changed` empty,
+  **3 consecutive runs** (S28 depends on a kill and a lease).
 - The full backend suite at PYTHONHASHSEED 0–4 in an isolation copy, PostgreSQL cases on a
   throwaway container (55433). `test_scenario_gate.py` imports the gate script, so this is
-  required. Under Q1 = B, the frontend checks too (unit, typecheck, lint, build, browser): the
-  K01 fixtures are recorded from the real validator.
+  required.
+- The frontend checks (unit, typecheck, lint, build, all browser tests), because the validation
+  rules change. The recorded fixtures are regenerated from the real validator; no change is
+  expected, and a change is recorded.
 - Hosted CI 5 of 5 on the exact commit. Hosted CI does not run the scenario gate, so the gate
   evidence is local and recorded.
 - Evidence: `evals/results/a61-part3-<date>/` with the baseline, mutants, three gate reports and
   a README.
 
-**Cost.** S28 waits for the real lease, and the third lab boots once: the gate takes about 35 s
+**Cost.** S28 waits for the real lease, and the third lab boots once: the gate takes about 40 s
 longer (today about 100 s).
 
-## Review questions
+## Decisions (rev 1 review)
 
-1. **Q1** (above): A, B or C. Recommendation: B.
-2. **Q2: a third lab.** The Repeat rows need a model fixture and a token limit. Adding them to
-   the Switch lab would change that lab's environment (`RELAY_RUN_TOKEN_LIMIT`). Recommendation:
-   a new lab, as the Switch rows got one.
-3. **Q3: S29 (approvals + iteration).** The policy asks for this cross-phase case, and P29 shows
-   the resume calls no model. Recommendation: keep it.
+1. **Q1:** B, with the literal `approval: true` and attached writes included (Decision 1).
+2. **Q2:** a third lab. The Repeat rows need a model fixture and a token limit; the Switch lab
+   keeps its environment.
+3. **Q3:** keep S29, with the `cached: true` assert.
 
 ## Not claimed
 
 - A checker's judgment quality. The rows use a model fixture; live models are out of the gate.
+- The approval card does not show the Repeat's stop reason. Part 3 documents where to find it
+  (the execution log). Showing it on the card is a separate change.
 - PostgreSQL in the gate (the gate is SQLite; `postgres-repeat-sigkill` covers a Repeat crash
   on PostgreSQL).
 - The answerability-guard stop in the gate (it needs a knowledge base; R27a–j cover it in the
-  backend suite).
+  backend suite). A guard stop returns the refusal under either `on_limit`, not an earlier
+  draft (`repeat_outcome`), so the approval rule is not needed for it.
 - The same question for a truncated For each batch before a write (S09 shape). Not changed here.
 - Nested loops, writes or approvals inside a loop, a wait between iterations.
 
