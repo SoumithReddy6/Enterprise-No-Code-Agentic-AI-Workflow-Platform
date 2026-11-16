@@ -105,6 +105,7 @@ import {
   setInputBinding,
   canvasEdge,
   isLoopType,
+  loopPorts,
   newRepeatConfig,
   portInUse,
   removeElements,
@@ -227,7 +228,7 @@ function WorkflowCard({ id, data, selected }: NodeProps<CanvasNode>) {
       {isLoopType(spec.type) && (
         // The attachments: one row per port with its handle on the right edge, as Switch routes.
         <div className="switch-routes loop-ports" aria-label="Loop ports">
-          {(spec.type === 'repeat' ? ['body', 'check'] : ['body']).map((port) => (
+          {loopPorts(spec.type).map((port) => (
             <div className="switch-route" key={port}>
               <span className="port-label route">{port}</span>
               <Handle type="source" id={port} position={Position.Right} />
@@ -836,10 +837,10 @@ function Editor() {
     setInspectorOpen(true);
   }
   function onConnect(drawn: Connection) {
-    const connection = savedConnection(drawn);
-    const from = nodes.find((n) => n.id === connection.source)?.data.spec;
-    const target = nodes.find((n) => n.id === connection.target)?.data.spec;
+    const from = nodes.find((n) => n.id === drawn.source)?.data.spec;
+    const target = nodes.find((n) => n.id === drawn.target)?.data.spec;
     if (!from || !target || from.id === target.id) return;
+    const connection = savedConnection(drawn, from.type);
     const kind = connectionKind(
       from.type,
       target.type,

@@ -1,0 +1,21 @@
+Isolation copy: git archive 7c4aa62 + the 7 changed files below, in a fresh repository.
+Commits:
+  051b672 isolation: 7c4aa62 + review fix
+  381a293 isolation: 7c4aa62
+Files that differ from 7c4aa62 (git diff --name-status of the isolation head against its first commit):
+  M	README.md
+  M	backend/tests/test_repeat_editor_contract.py
+  M	frontend/components/workflow-editor.tsx
+  M	frontend/lib/workflow.ts
+  M	frontend/tests/browser/repeat.spec.ts
+  A	frontend/tests/browser/switch-port-names.json
+  M	frontend/tests/repeat.test.ts
+SHA-256 (first 16 hex) of each changed file, working tree vs isolation copy:
+  1416e831a44b479f same-as-working-tree README.md
+  e15e7930547c1b4e same-as-working-tree backend/tests/test_repeat_editor_contract.py
+  5da2d8d416b866ee same-as-working-tree frontend/components/workflow-editor.tsx
+  8919b9996c812363 same-as-working-tree frontend/lib/workflow.ts
+  3fcc3b688ba10701 same-as-working-tree frontend/tests/browser/repeat.spec.ts
+  a8d780840f53651f same-as-working-tree frontend/tests/repeat.test.ts
+  078369b809e8e387 same-as-working-tree frontend/tests/browser/switch-port-names.json
+Other tracked files: the isolation head equals git archive 7c4aa62 apart from the files above.

@@ -19,6 +19,12 @@ const recorded = JSON.parse(readFileSync(new URL('./repeat-run-events.json', imp
   imports: { name: 'repeat' | 'repeat_output' | 'for_each_legacy'; file: Workflow; normalized: Workflow }[];
 };
 const imported = (name: string) => recorded.imports.find((i) => i.name === name)!;
+// K03: a Switch whose case ids are the loop port names (body, check, flow) and `output`, and
+// its real normalized /api/validate response (review finding 1 of A6.1 Part 2).
+const switchPorts = JSON.parse(readFileSync(new URL('./switch-port-names.json', import.meta.url), 'utf8')) as {
+  file: Workflow;
+  normalized: Workflow;
+};
 
 type Harness = {
   validated: Workflow[];
@@ -423,5 +429,36 @@ test('B07 unfinished JSON in the stop rule stays visible and blocks Validate and
   await options.fill('["gold"]');
   const saved = await validate(page, h);
   expect((nodeOf(saved, 'r').config.until as { options: unknown }).options).toEqual(['gold']);
+  expect(h.unexpected).toEqual([]);
+});
+
+test('B08 Switch cases named body, check, flow and output connect and draw at their own routes', async ({ page }) => {
+  const h = harness();
+  await editor(page, h);
+  h.normalized = switchPorts.normalized;
+  await importBroken(page, switchPorts.file);
+  const route = card(page, 'route');
+  const cases = ['body', 'check', 'flow', 'output', 'default'];
+  const routeEdges = (w: Workflow) => stable(w.edges.filter((e) => e.source === 'route'))
+    .map(({ target, sourceHandle }) => `${sourceHandle}->${target}`).sort((a, b) => a.localeCompare(b));
+  const expected = cases.map((id) => `${id}->out_${id}`).sort((a, b) => a.localeCompare(b));
+  // Imported: every line starts at its own case, `output` included (it is the fourth route,
+  // so a line drawn at the card's first route would start at `body`).
+  await expect(page.locator('.react-flow__edge')).toHaveCount(switchPorts.normalized.edges.length);
+  for (const id of cases) await attaches(page, `to_out_${id}`, port(route, id), target(card(page, `out_${id}`)));
+  expect(routeEdges(await exported(page))).toEqual(expected);
+  // Drawn: delete the body, check and flow lines, then drag each case to its response again.
+  for (const id of ['body', 'check', 'flow']) {
+    await clickEdge(page, `to_out_${id}`, 0.9);
+    await page.keyboard.press('Delete');
+    await expect(edge(page, `to_out_${id}`)).toHaveCount(0);
+  }
+  for (const id of ['body', 'check', 'flow']) await connect(page, port(route, id), target(card(page, `out_${id}`)));
+  const saved = await validate(page, h);
+  expect(routeEdges(saved)).toEqual(expected);
+  expect(saved.edges.filter((e) => e.source === 'route').every((e) => (e.kind ?? 'flow') === 'flow')).toBe(true);
+  for (const e of saved.edges.filter((e) => e.source === 'route'))
+    await attaches(page, e.id, port(route, e.sourceHandle!), target(card(page, e.target)));
+  expect(h.warnings.filter((w) => saved.edges.some((e) => w.includes(`edge id: ${e.id}.`)))).toEqual([]);
   expect(h.unexpected).toEqual([]);
 });

@@ -1,0 +1,121 @@
+M53: connectionKind reads body and check as loop ports on every card
+
+$ node --experimental-strip-types --test --test-name-pattern ^(U09)  tests/repeat.test.ts
+exit 1
+✖ U09 Switch case ids named like loop ports connect, save and draw unchanged (5.735083ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 57.602083
+
+✖ failing tests:
+
+test at tests/repeat.test.ts:227:6
+✖ U09 Switch case ids named like loop ports connect, save and draw unchanged (5.735083ms)
+  AssertionError [ERR_ASSERTION]: body connects
+  
+  null !== 'flow'
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/a61r-mut-6kbZ/frontend/tests/repeat.test.ts:230:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'flow',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+
+
+$ npx playwright test tests/browser/repeat.spec.ts --reporter=line -g (B08) 
+exit 1
+
+Running 1 test using 1 worker
+
+[1/1] tests/browser/repeat.spec.ts:435:1 › B08 Switch cases named body, check, flow and output connect and draw at their own routes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  1) tests/browser/repeat.spec.ts:435:1 › B08 Switch cases named body, check, flow and output connect and draw at their own routes 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.react-flow__edge')
+    Expected: 6
+    Received: 5
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.react-flow__edge') with timeout 5000ms
+      - waiting for locator('.react-flow__edge')
+        14 × locator resolved to 5 elements
+           - unexpected value "5"
+
+
+      171 |   const before = await page.locator('.react-flow__edge').count();
+      172 |   await from.dragTo(to);
+    > 173 |   await expect(page.locator('.react-flow__edge')).toHaveCount(before + 1);
+          |                                                   ^
+      174 | }
+      175 |
+      176 | // A point on an edge's drawn path, in page coordinates (0 = start, 1 = end, 0.5 = middle).
+        at connect (/private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/a61r-mut-6kbZ/frontend/tests/browser/repeat.spec.ts:173:51)
+        at /private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/a61r-mut-6kbZ/frontend/tests/browser/repeat.spec.ts:456:47
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/repeat-B08-Switch-cases-na-dace0-nd-draw-at-their-own-routes/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/repeat-B08-Switch-cases-na-dace0-nd-draw-at-their-own-routes/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/repeat-B08-Switch-cases-na-dace0-nd-draw-at-their-own-routes/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/repeat-B08-Switch-cases-na-dace0-nd-draw-at-their-own-routes/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    tests/browser/repeat.spec.ts:435:1 › B08 Switch cases named body, check, flow and output connect and draw at their own routes 
+
+r-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:35 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:35 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:35 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:35 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:35 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:35 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:35 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:35 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:35 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:36 PM [vite] (client) [console.warn] React Flow: It seems like you are hiding the attribution. Please only do this when you are subscribed to React Flow Pro: https://reactflow.dev/remove-attr
+[WebServer] You can ignore this warning if you are subscribed.

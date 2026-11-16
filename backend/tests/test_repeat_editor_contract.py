@@ -12,6 +12,10 @@ the recordings true. Regenerate after an intended change with RELAY_REGENERATE_F
   and the normalized /api/validate responses for the three workflows browser test B02
   imports. `seq` and `timestamp` are added for the mock; they and `duration_ms` vary between
   runs and are not compared.
+* frontend/tests/browser/switch-port-names.json (K03, A6.1 Part 2 review finding 1): a Switch
+  whose case ids are the loop port names body, check, flow and output is valid, and its
+  normalized /api/validate response keeps every case id as its edge's source handle. Browser
+  test B08 builds and imports it.
 """
 import asyncio
 import copy
@@ -29,6 +33,7 @@ from backend.tests.test_repeat import Script, run_mem, standard, verdict
 BROWSER = Path(__file__).resolve().parents[2] / 'frontend/tests/browser'
 ISSUES = BROWSER / 'repeat-issues.json'
 EVENTS = BROWSER / 'repeat-run-events.json'
+SWITCH_PORTS = BROWSER / 'switch-port-names.json'
 VARIABLE = ('seq', 'timestamp', 'duration_ms')
 EDGE_FIELDS = ('id', 'source', 'target', 'kind', 'sourceHandle', 'targetHandle')
 
@@ -182,3 +187,39 @@ def test_k02_the_run_events_and_normalized_imports_are_real(tmp_path, monkeypatc
     assert [e['sourceHandle'] for e in normalized['repeat_output'] if (e['source'], e['target']) == ('r', 'out')] == ['output']
     assert [(e['kind'], e['sourceHandle']) for e in normalized['for_each_legacy'] if e['source'] == 'each'] == [
         ('flow', None), ('loop', None)]
+
+
+# --------------------------------------------------------------------------- K03
+
+# Case ids that are also loop port names (body, check, flow) or the accepted name of a normal
+# card's bottom port (output). A Switch's routes are its case ids, so each must stay its edge's
+# source handle. `output` is listed last so that, if the editor drew it at the card's first
+# route, the line would start at another case's port.
+PORT_NAMED_CASES = (('body', 'billing'), ('check', 'technical'), ('flow', 'account'), ('output', 'other'))
+SWITCH_LAYOUT = {'input': (300, 40), 'reader': (300, 200), 'replied': (700, 200), 'route': (300, 380),
+                 'out_body': (760, 860), 'out_check': (1010, 860), 'out_flow': (1260, 860), 'out_output': (1510, 860),
+                 'out_default': (1760, 860)}
+
+
+def switch_port_names(model):
+    from backend.tests.test_switch import case, flow
+    workflow = flow(cases=[case(id, value) for id, value in PORT_NAMED_CASES])
+    workflow['name'] = 'Switch cases named like loop ports'
+    reader = node(workflow, 'reader')
+    reader['config'] = {**reader['config'], 'provider': model['provider'], 'model': model['model']}
+    return laid_out(workflow, SWITCH_LAYOUT)
+
+
+def test_k03_switch_case_ids_named_like_loop_ports_are_valid_and_keep_their_handles(tmp_path):
+    model = json.loads(ISSUES.read_text())['model']
+    file = switch_port_names(model)
+    with TestClient(lab(tmp_path, 'k03')) as client:
+        assert client.post('/api/models', json={'provider': model['provider'], 'model': model['model']}).status_code == 201
+        body = client.post('/api/validate', json=file).json()
+    assert body['valid'], body['issues']
+    routes = {e['target']: e.get('sourceHandle') for e in body['workflow']['edges'] if e['source'] == 'route'}
+    assert routes == {f'out_{id}': id for id, _ in PORT_NAMED_CASES} | {'out_default': 'default'}
+    fresh = {'model': model, 'file': file, 'normalized': body['workflow']}
+    if regenerate():
+        SWITCH_PORTS.write_text(json.dumps(fresh, indent=1, ensure_ascii=False) + '\n')
+    assert json.loads(SWITCH_PORTS.read_text()) == fresh

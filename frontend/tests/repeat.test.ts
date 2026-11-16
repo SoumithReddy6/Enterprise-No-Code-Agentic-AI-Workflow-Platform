@@ -20,7 +20,7 @@ type Lib = {
   connectionKind: (s: string, t: string, sh?: string | null, th?: string | null) => WorkflowEdge['kind'] | null;
   edgePort: (edge: WorkflowEdge, sourceType: string) => string | null;
   canvasEdge: (edge: WorkflowEdge, sourceType: string) => WorkflowEdge;
-  savedConnection: <T extends { sourceHandle?: string | null; targetHandle?: string | null }>(c: T) => T;
+  savedConnection: <T extends { sourceHandle?: string | null; targetHandle?: string | null }>(c: T, sourceType: string) => T;
   portInUse: (graph: Graph, source: string, port: string) => boolean;
   withLoopAttachment: (graph: Graph, edge: WorkflowEdge) => Graph;
   removeElements: (graph: Graph, nodeIds: string[], edgeIds: string[]) => Graph;
@@ -61,7 +61,7 @@ void test('U02 the body and check ports make loop connections; other uses of the
   assert.equal(connectionKind('repeat', 'response', 'flow', null), 'flow');
   assert.equal(connectionKind('for_each', 'response', 'flow', null), 'flow');
   assert.equal(connectionKind('for_each', 'agent', 'check', null), null);
-  assert.equal(connectionKind('agent', 'agent', 'body', null), null);
+  // On other cards these names are ordinary route ids (a Switch case may be named body): U09.
   assert.equal(connectionKind('repeat', 'response', null, null), 'flow');
   // Unchanged: tools and specialists.
   assert.equal(connectionKind('tool_jira', 'agent', null, 'tools'), 'tool');
@@ -204,9 +204,10 @@ void test('U07 saved handles map to drawn ports for display only', async () => {
     assert.deepEqual([drawn.id, drawn.source, drawn.target, drawn.kind], [edge.id, edge.source, edge.target, edge.kind]);
     assert.deepEqual(edge, before, `${edge.id} is not changed`);
   }
-  assert.equal(savedConnection({ source: 'r', target: 'out', sourceHandle: 'flow', targetHandle: null }).sourceHandle, null);
-  assert.equal(savedConnection({ source: 'r', target: 'w', sourceHandle: 'body', targetHandle: null }).sourceHandle, 'body');
-  assert.equal(savedConnection({ source: 'reader', target: 'r', sourceHandle: 'continue', targetHandle: null }).sourceHandle, 'continue');
+  assert.equal(savedConnection({ source: 'r', target: 'out', sourceHandle: 'flow', targetHandle: null }, 'repeat').sourceHandle, null);
+  assert.equal(savedConnection({ source: 'each', target: 'out', sourceHandle: 'flow', targetHandle: null }, 'for_each').sourceHandle, null);
+  assert.equal(savedConnection({ source: 'r', target: 'w', sourceHandle: 'body', targetHandle: null }, 'repeat').sourceHandle, 'body');
+  assert.equal(savedConnection({ source: 'reader', target: 'r', sourceHandle: 'continue', targetHandle: null }, 'request_reader').sourceHandle, 'continue');
 });
 
 void test('U08 unfinished JSON in the stop rule blocks Validate and Run locally', async () => {
@@ -219,4 +220,49 @@ void test('U08 unfinished JSON in the stop rule blocks Validate and Run locally'
     { node_id: 'r', message: 'Stop rule Options is not valid JSON yet. Fix it before validating or running.' },
   ]);
   assert.deepEqual(unparsedJsonSettings(workflow(undefined), catalog), []);
+});
+
+// Review of 7c4aa62, finding 1: the loop port names are ordinary route ids on other cards. A
+// Switch case may be named body, check, flow or output (backend K03), and its edge keeps it.
+void test('U09 Switch case ids named like loop ports connect, save and draw unchanged', async () => {
+  const { connectionKind, edgePort, canvasEdge, savedConnection } = await lib();
+  for (const id of ['body', 'check', 'flow', 'output']) {
+    assert.equal(connectionKind('switch', 'response', id, null), 'flow', `${id} connects`);
+    assert.equal(savedConnection({ source: 'route', target: 'out', sourceHandle: id, targetHandle: null }, 'switch').sourceHandle, id, `${id} is saved`);
+    const saved: WorkflowEdge = { id: `to_${id}`, source: 'route', target: 'out', sourceHandle: id, kind: 'flow' };
+    assert.equal(edgePort(saved, 'switch'), id, `${id} occupies its own route`);
+    assert.equal(canvasEdge(saved, 'switch').sourceHandle, id, `${id} is drawn at its own route`);
+  }
+  // The loop cards keep their mapping.
+  assert.equal(connectionKind('repeat', 'agent', 'body', null), 'loop');
+  assert.equal(connectionKind('for_each', 'agent', 'check', null), null);
+  assert.equal(edgePort({ id: 'o', source: 'r', target: 'out', sourceHandle: 'output' }, 'repeat'), 'flow');
+  assert.equal(edgePort({ id: 'o', source: 'a', target: 'out', sourceHandle: 'output' }, 'agent'), null);
+});
+
+// Review of 7c4aa62, finding 2: only a real attachment setting is cleared or set: body on a
+// For each, body or check on a Repeat. A malformed loop edge names some other setting.
+void test('U10 removing or adding a malformed loop edge leaves the other settings unchanged', async () => {
+  const { removeElements, withLoopAttachment } = await lib();
+  const settings = { body: 'writer', check: '', max_iterations: 3, on_limit: 'last', until: { operator: 'eq', field: 'pass', compare_to: 'true' } };
+  const graph: Graph = {
+    nodes: [node('r', 'repeat', settings), node('writer', 'agent'), node('last', 'agent')],
+    edges: [loop('b', 'r', 'writer', 'body'), loop('m', 'r', 'last', 'on_limit')],
+  };
+  const removed = removeElements(graph, [], ['m']);
+  assert.deepEqual(removed.edges.map((e) => e.id), ['b']);
+  assert.deepEqual(config(removed, 'r'), settings, 'on_limit stays "last"');
+  assert.deepEqual(config(removeElements(graph, ['last'], []), 'r'), settings, 'removing the node keeps on_limit');
+  assert.equal(config(removeElements(graph, [], ['b']), 'r').body, '', 'a real attachment is still cleared');
+  // For each has no check setting: a loop edge named check clears nothing.
+  const each: Graph = {
+    nodes: [node('each', 'for_each', { body: 'summarize', check: 'judge' }), node('summarize', 'agent'), node('judge', 'agent')],
+    edges: [loop('d', 'each', 'summarize', 'body'), loop('x', 'each', 'judge', 'check')],
+  };
+  assert.deepEqual(config(removeElements(each, [], ['x']), 'each'), { body: 'summarize', check: 'judge' });
+  assert.equal(config(removeElements(each, [], ['d']), 'each').body, '');
+  // Attaching follows the same rule: a malformed port sets nothing, and the edge is still added.
+  const added = withLoopAttachment({ ...graph, edges: [] }, loop('n', 'r', 'last', 'max_iterations'));
+  assert.deepEqual(config(added, 'r'), settings);
+  assert.deepEqual(added.edges.map((e) => e.id), ['n']);
 });
