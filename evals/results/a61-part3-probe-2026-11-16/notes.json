@@ -1,0 +1,488 @@
+{
+ "P25": {
+  "valid": true,
+  "errors": [],
+  "status": "success",
+  "error": "",
+  "truncated": false,
+  "truncation": "",
+  "rows": {
+   "0": {
+    "index": 0,
+    "status": "success",
+    "value": "Draft 1: your refund is on its way.",
+    "verdict": "{\"pass\": false, \"feedback\": \"add the refund number\"}",
+    "met": false
+   },
+   "1": {
+    "index": 1,
+    "status": "success",
+    "value": "Draft 2: refund R-42 is on its way.",
+    "verdict": "{\"pass\": true, \"feedback\": \"good\"}",
+    "met": true
+   }
+  },
+  "summary": {
+   "iterations": 2,
+   "max_iterations": 3,
+   "met": true,
+   "stopped_by": "rule",
+   "truncated": false,
+   "truncation_reason": ""
+  },
+  "output": "Draft 2: refund R-42 is on its way.",
+  "tokens_spent": 60,
+  "action_budget": {
+   "remaining": 39,
+   "counter": 1,
+   "ceiling": 40,
+   "charged": [
+    "send#0"
+   ]
+  },
+  "r_events": [
+   "running",
+   "success"
+  ],
+  "loop_item_events": 2,
+  "send_events": [
+   "running",
+   "success"
+  ],
+  "approvals": [],
+  "posts": [
+   "{\"input\":\"Draft 2: refund R-42 is on its way.\"}"
+  ],
+  "calls": {
+   "writer": 2,
+   "judge": 2
+  },
+  "second_writer_user_message": "{\"input\":\"Customer case\",\"previous\":\"Draft 1: your refund is on its way.\",\"feedback\":\"{\\\"pass\\\": false, \\\"feedback\\\": \\\"add the refund number\\\"}\"}"
+ },
+ "P26a": {
+  "status": "failed",
+  "error": "r: the stop rule was not met after 2 iterations.",
+  "truncated": null,
+  "truncation": null,
+  "rows": {
+   "0": {
+    "index": 0,
+    "status": "success",
+    "value": "Draft 1",
+    "verdict": "{\"pass\": false, \"feedback\": \"too vague\"}",
+    "met": false
+   },
+   "1": {
+    "index": 1,
+    "status": "success",
+    "value": "Draft 2",
+    "verdict": "{\"pass\": false, \"feedback\": \"still vague\"}",
+    "met": false
+   }
+  },
+  "summary": null,
+  "output": "",
+  "tokens_spent": 60,
+  "action_budget": {
+   "remaining": 40,
+   "counter": 0,
+   "ceiling": 40
+  },
+  "r_events": [
+   "running",
+   "failed"
+  ],
+  "loop_item_events": 2,
+  "send_events": [],
+  "approvals": [],
+  "posts": [],
+  "calls": {
+   "writer": 2,
+   "judge": 2
+  }
+ },
+ "P26b": {
+  "status": "success",
+  "error": "",
+  "truncated": true,
+  "truncation": "r reached 2 iterations without meeting its stop rule; the last answer is returned.",
+  "rows": {
+   "0": {
+    "index": 0,
+    "status": "success",
+    "value": "Draft 1",
+    "verdict": "{\"pass\": false, \"feedback\": \"too vague\"}",
+    "met": false
+   },
+   "1": {
+    "index": 1,
+    "status": "success",
+    "value": "Draft 2",
+    "verdict": "{\"pass\": false, \"feedback\": \"still vague\"}",
+    "met": false
+   }
+  },
+  "summary": {
+   "iterations": 2,
+   "max_iterations": 2,
+   "met": false,
+   "stopped_by": "limit",
+   "truncated": true,
+   "truncation_reason": "r reached 2 iterations without meeting its stop rule; the last answer is returned."
+  },
+  "output": "Draft 2",
+  "tokens_spent": 60,
+  "action_budget": {
+   "remaining": 39,
+   "counter": 1,
+   "ceiling": 40,
+   "charged": [
+    "send#0"
+   ]
+  },
+  "r_events": [
+   "running",
+   "success"
+  ],
+  "loop_item_events": 2,
+  "send_events": [
+   "running",
+   "success"
+  ],
+  "approvals": [],
+  "posts": [
+   "{\"input\":\"Draft 2\"}"
+  ],
+  "calls": {
+   "writer": 2,
+   "judge": 2
+  }
+ },
+ "P26c": {
+  "valid": false,
+  "errors": [
+   "writer: external writes belong after the Repeat."
+  ],
+  "submission": 422,
+  "detail": [
+   "writer: external writes belong after the Repeat."
+  ],
+  "runs_created": 0,
+  "posts": [],
+  "calls": {
+   "judge": 0
+  }
+ },
+ "P27a": {
+  "status": "failed",
+  "error": "r: the run budget stopped iteration 2 before it was checked. Run token budget exhausted; raise RELAY_RUN_TOKEN_LIMIT.",
+  "truncated": null,
+  "truncation": null,
+  "rows": {
+   "0": {
+    "index": 0,
+    "status": "success",
+    "value": "Draft 1",
+    "verdict": "{\"pass\": false, \"feedback\": \"add the date\"}",
+    "met": false
+   },
+   "1": {
+    "index": 1,
+    "status": "interrupted",
+    "budget_halt": "tokens",
+    "calls": 1
+   }
+  },
+  "summary": null,
+  "output": "",
+  "tokens_spent": 120,
+  "action_budget": {
+   "remaining": 40,
+   "counter": 0,
+   "ceiling": 40
+  },
+  "r_events": [
+   "running",
+   "failed"
+  ],
+  "loop_item_events": 2,
+  "send_events": [],
+  "approvals": [],
+  "posts": [],
+  "calls": {
+   "writer": 2,
+   "judge": 1
+  }
+ },
+ "P27b": {
+  "status": "success",
+  "error": "",
+  "truncated": true,
+  "truncation": "r: the run budget stopped iteration 2 before it was checked; the answer from iteration 1 is returned. Run token budget exhausted; raise RELAY_RUN_TOKEN_LIMIT.",
+  "rows": {
+   "0": {
+    "index": 0,
+    "status": "success",
+    "value": "Draft 1",
+    "verdict": "{\"pass\": false, \"feedback\": \"add the date\"}",
+    "met": false
+   },
+   "1": {
+    "index": 1,
+    "status": "interrupted",
+    "budget_halt": "tokens",
+    "calls": 1
+   }
+  },
+  "summary": {
+   "iterations": 1,
+   "max_iterations": 3,
+   "met": false,
+   "stopped_by": "budget",
+   "truncated": true,
+   "truncation_reason": "r: the run budget stopped iteration 2 before it was checked; the answer from iteration 1 is returned. Run token budget exhausted; raise RELAY_RUN_TOKEN_LIMIT."
+  },
+  "output": "Draft 1",
+  "tokens_spent": 120,
+  "action_budget": {
+   "remaining": 39,
+   "counter": 1,
+   "ceiling": 40,
+   "charged": [
+    "send#0"
+   ]
+  },
+  "r_events": [
+   "running",
+   "success"
+  ],
+  "loop_item_events": 2,
+  "send_events": [
+   "running",
+   "success"
+  ],
+  "approvals": [],
+  "posts": [
+   "{\"input\":\"Draft 1\"}"
+  ],
+  "calls": {
+   "writer": 2,
+   "judge": 1
+  }
+ },
+ "P29": {
+  "waiting": {
+   "status": "awaiting_approval",
+   "error": "",
+   "truncated": null,
+   "truncation": null,
+   "rows": {
+    "0": {
+     "index": 0,
+     "status": "success",
+     "value": "Draft 1",
+     "verdict": "{\"pass\": false, \"feedback\": \"add the refund number\"}",
+     "met": false
+    },
+    "1": {
+     "index": 1,
+     "status": "success",
+     "value": "Draft 2: refund R-42.",
+     "verdict": "{\"pass\": true, \"feedback\": \"good\"}",
+     "met": true
+    }
+   },
+   "summary": {
+    "iterations": 2,
+    "max_iterations": 3,
+    "met": true,
+    "stopped_by": "rule",
+    "truncated": false,
+    "truncation_reason": ""
+   },
+   "output": "",
+   "tokens_spent": 60,
+   "action_budget": {
+    "remaining": 39,
+    "counter": 1,
+    "ceiling": 40,
+    "charged": [
+     "send#0"
+    ],
+    "deferred": [
+     "send#0"
+    ]
+   },
+   "r_events": [
+    "running",
+    "success"
+   ],
+   "loop_item_events": 2,
+   "send_events": [
+    "running",
+    "paused",
+    "awaiting_approval"
+   ],
+   "approvals": [
+    {
+     "status": "pending",
+     "body": {
+      "input": "Draft 2: refund R-42."
+     }
+    }
+   ]
+  },
+  "posts_before_approval": 0,
+  "status": "success",
+  "error": "",
+  "truncated": false,
+  "truncation": "",
+  "rows": {
+   "0": {
+    "index": 0,
+    "status": "success",
+    "value": "Draft 1",
+    "verdict": "{\"pass\": false, \"feedback\": \"add the refund number\"}",
+    "met": false
+   },
+   "1": {
+    "index": 1,
+    "status": "success",
+    "value": "Draft 2: refund R-42.",
+    "verdict": "{\"pass\": true, \"feedback\": \"good\"}",
+    "met": true
+   }
+  },
+  "summary": {
+   "iterations": 2,
+   "max_iterations": 3,
+   "met": true,
+   "stopped_by": "rule",
+   "truncated": false,
+   "truncation_reason": ""
+  },
+  "output": "Draft 2: refund R-42.",
+  "tokens_spent": 60,
+  "action_budget": {
+   "remaining": 39,
+   "counter": 1,
+   "ceiling": 40,
+   "charged": [
+    "send#0"
+   ],
+   "deferred": []
+  },
+  "r_events": [
+   "running",
+   "success",
+   "success"
+  ],
+  "loop_item_events": 2,
+  "send_events": [
+   "running",
+   "paused",
+   "awaiting_approval",
+   "approved",
+   "running",
+   "completed",
+   "success"
+  ],
+  "approvals": [
+   {
+    "status": "completed",
+    "body": {
+     "input": "Draft 2: refund R-42."
+    }
+   }
+  ],
+  "posts": [
+   "{\"input\":\"Draft 2: refund R-42.\"}"
+  ],
+  "calls": {
+   "writer": 2,
+   "judge": 2
+  }
+ },
+ "P28": {
+  "at_kill": {
+   "rows": {
+    "0": {
+     "index": 0,
+     "status": "success",
+     "value": "Draft 1",
+     "verdict": "{\"pass\": false, \"feedback\": \"add the date\"}",
+     "met": false
+    }
+   },
+   "r_checkpoint": false,
+   "posts": [],
+   "tokens_spent": 30,
+   "job": [
+    "running",
+    true
+   ]
+  },
+  "status": "success",
+  "error": "",
+  "truncated": false,
+  "truncation": "",
+  "rows": {
+   "0": {
+    "index": 0,
+    "status": "success",
+    "value": "Draft 1",
+    "verdict": "{\"pass\": false, \"feedback\": \"add the date\"}",
+    "met": false
+   },
+   "1": {
+    "index": 1,
+    "status": "success",
+    "value": "Draft 2",
+    "verdict": "{\"pass\": true, \"feedback\": \"good\"}",
+    "met": true
+   }
+  },
+  "summary": {
+   "iterations": 2,
+   "max_iterations": 3,
+   "met": true,
+   "stopped_by": "rule",
+   "truncated": false,
+   "truncation_reason": ""
+  },
+  "output": "Draft 2",
+  "tokens_spent": 60,
+  "action_budget": {
+   "remaining": 39,
+   "counter": 1,
+   "ceiling": 40,
+   "charged": [
+    "send#0"
+   ]
+  },
+  "r_events": [
+   "running",
+   "running",
+   "success"
+  ],
+  "loop_item_events": 2,
+  "send_events": [
+   "running",
+   "success"
+  ],
+  "approvals": [],
+  "posts": [
+   "{\"input\":\"Draft 2\"}"
+  ],
+  "calls": {
+   "writer": 3,
+   "judge": 2
+  },
+  "resumed_after_seconds": 30.2,
+  "claims": [
+   true,
+   false
+  ],
+  "claimed_after_lease_end_seconds": 0.088
+ }
+}
