@@ -345,9 +345,10 @@ gate (`--all`), the PostgreSQL checks in `ci.yml:126-130`, and a mutant set with
 ### W06 — Database-clock leases and a lighter heartbeat (closes C1, C2; part of C4)
 
 - **Design.** On PostgreSQL the claim, the fence and the heartbeat use the database clock:
-  `lease_until = clock_timestamp() + interval`, and the fence compares with `clock_timestamp()` in
-  SQL. `lease_until` becomes `timestamptz` (migration). SQLite keeps `time.time()`, and the
-  documents say that SQLite is one host only. The heartbeat interval becomes lease/3 with ±10%
+  the lease is set and compared in SQL with the database's epoch
+  (`extract(epoch from clock_timestamp())`). `lease_until` stays a float column, so there is no
+  type migration. SQLite uses its own SQL clock, and the documents say that SQLite is one host
+  only. Spec: `docs/specs/concurrency.md`. The heartbeat interval becomes lease/3 with ±10%
   jitter, in one statement: `UPDATE ... SET lease_until = ... WHERE <fence> RETURNING
   cancel_requested`. That removes the separate cancel read (`storage.py:698-701`) and the second
   update (`storage.py:696`). Cancel latency rises to at most lease/3; to keep cancel fast, the
@@ -433,11 +434,13 @@ gate (`--all`), the PostgreSQL checks in `ci.yml:126-130`, and a mutant set with
   (1) *double write*: `mark_write` inserts the row and still writes the JSON `write_nodes` list;
   `settle_write` and `approvals.begin`/`complete` update both, each in the same single commit as
   today; resume refuses when **either** store says unsettled. (2) *read the table only*, JSON still
-  written. (3) *stop writing JSON*. A run that started before release 1 has markers only in JSON;
-  release 3 is allowed only when no unfinished run has a JSON-only marker (a startup check refuses
-  otherwise). Spec: `docs/specs/d3-write-intent-table.md`.
+  written. (3) *stop writing JSON*. The migration copies each existing JSON marker
+  into the table as `marked` (an exact copy, not a guess). Release 3 is allowed only when no run
+  has a JSON-only marker (a startup check refuses otherwise). Spec:
+  `docs/specs/d3-write-intent-table.md`.
 - **Rejected.** One-step cutover (a crash between old and new code can lose a marker); a backfill
-  that guesses the state of old markers (an old marker stays in JSON until its run ends).
+  that guesses whether an old marker settled (the copy keeps every marker as `marked`, and the
+  existing `_write_settled` rule still decides).
 - **Invariants.** I2 (marker row committed before the send), I3 (settle and result are one
   commit), I7 (an unsettled write blocks resume). A disagreement between the two stores refuses
   resume; it never picks one.
@@ -445,7 +448,9 @@ gate (`--all`), the PostgreSQL checks in `ci.yml:126-130`, and a mutant set with
   PostgreSQL checks `postgres-sigkill-loop`, `postgres-parallel-sigkill`,
   `postgres-repeat-sigkill`, `postgres-accounting-before-commit`,
   `postgres-accounting-after-commit`, `postgres-stale-lease`. The SQLite twins of the SIGKILL
-  checks. Full suite under seeds 0–4.
+  checks.
+- 2026-11-17: aligned W06 and W24 with the specs in `docs/specs/` (float epoch on the database
+  clock; exact copy of existing markers). Defects found by the hunt are in `docs/defects.md`. Full suite under seeds 0–4.
 - **Acceptance.** New tests, written first: delete the JSON marker by hand → resume still refused
   because of the row; delete the row by hand → resume still refused because of JSON (release 1);
   kill between marker commit and send → the row is `marked` and resume is refused; settle → row is
@@ -1012,3 +1017,5 @@ Changelog:
   `FORCE ROW LEVEL SECURITY`, tests connect as the application role. (c) The write-intent marker
   move is its own item W24, never combined, gated by S03, S04, S16, S24 and the PostgreSQL SIGKILL
   checks.
+- 2026-11-17: aligned W06 and W24 with the specs in `docs/specs/` (float epoch on the database
+  clock; exact copy of existing markers). Defects found by the hunt are in `docs/defects.md`.
