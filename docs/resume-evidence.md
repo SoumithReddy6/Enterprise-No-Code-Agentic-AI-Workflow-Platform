@@ -136,7 +136,27 @@ numbers of values under their value caps.
    - Done means: the 53-question gate (and the new held-out set from item 2) runs on one hosted model, with model ids and settings recorded.
    - Measure: gate metrics as counts, plus tokens and cost for each question from `run_tokens` rows. This needs API keys and paid calls, so it needs your approval first.
 
+## 7. Load baseline (2026-11-16, source `24e659c`)
+
+Verified numbers, with their conditions. Evidence: `evals/results/load-baseline-2026-11-16/README.md`.
+One laptop (Apple M5, 10 CPUs) ran everything, so these are relative numbers for later
+comparisons on the same machine, **not capacity claims**. Do not put them in a resume bullet
+without the conditions.
+
+| Claim | Value | Conditions |
+|---|---|---|
+| Drain throughput, 3-node workflow | 2,455 runs/min (median of 3; 2,411–2,488) | PostgreSQL 17 in a container, 4 worker processes × 4 slots, model stub at 0 ms, 600 queued runs |
+| Drain throughput, 20-node workflow | 641 runs/min (median of 3; 589–700) | the same, 200 queued runs |
+| Database cost of a run | about 10.5 commits (3 nodes), 48 commits (20 nodes) | PostgreSQL, 1 worker, database-wide counters |
+| Scaling from 4 to 16 worker processes | no gain for the 3-node workflow (2,455 → 2,112 runs/min) | cause not determined; the machine had more processes than CPUs |
+| Correctness under this load | every run ended `success`; 0 re-claims; model calls equal to runs | all 48 cells |
+
+Draft bullet (use only with the after-numbers of W06 and W07 beside it):
+
+- **Load baseline:** Built a deployed-process load harness for a leased SQL job queue; measured 2,455 runs/min at 4 workers on PostgreSQL 17 and found no gain at 16 workers, then [measured value] after [change].
+
 ## Changelog
 
 - 2026-11-16: File created at `7c4aa62`. Six draft claims checked; numbers for claims 2, 3, 5 and 6 reproduced or re-checked. Claim 5 moved to an alternate bullet; claims 3, 4 and 6 reworded. Re-ran the deployed gate (33 of 33), 539 targeted backend tests and the storage probe on `bc62b0b`, `11f8773` and HEAD. The PostgreSQL checks and the live grounding run were not re-run (CI and saved evidence used).
 - 2026-11-16: Corrected the `test_repeat.py` count (82 collected, not 66) and the `worker_event` line (`storage.py:703`), found while writing `docs/status-report.md`.
+- 2026-11-16: Added §7, the load baseline. Recorded in `docs/defects.md` that bullet 3 ("external-write safety") has an open Critical defect, DEF-01: an Agent's settled write can be sent again on resume. Do not use bullet 3 for Agent tools until DEF-01 is fixed.
