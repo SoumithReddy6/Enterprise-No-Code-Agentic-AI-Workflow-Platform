@@ -1008,6 +1008,9 @@ storage and latency), S9 (prompt injection), E3 and E5 (judge validity, agent-ta
 | Item | Status |
 |---|---|
 | W01–W24 | Not started. Implementation starts only on "implement <phase>" |
+| DEF-01 … DEF-09 | Open. Found by the defect hunt (`docs/defects.md`); each has a strict xfail test in `backend/tests/defects/` |
+
+Handoff cards, in the order to do them: `docs/tasks/README.md`. Specs: `docs/specs/`.
 
 Changelog:
 

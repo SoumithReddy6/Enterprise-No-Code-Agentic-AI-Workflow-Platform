@@ -73,16 +73,20 @@ answers again, and nothing makes it do so.
 on, the shifted step finds no approval (`worker.py:177`, by invocation), so a second approval is
 requested for a request that was already sent; a person who approves it sends it twice.
 
-**Suggested fix.** Do both:
+**Suggested fix.** Save the Agent's position in the **same commit** that settles a write, and
+continue from it on resume. The approval pause already does this: it stores a frame for each
+Agent on the call path (`agent_runtime.py:408`; `approvals.py:92`), and a resumed Agent replays
+the saved step with the saved action and invocation, without asking the model
+(`agent_runtime.py:304-306,329,346`). Do the same at `settle_write`: each Agent registers its
+frame before it calls a target; the worker passes the open frames to `settle_write`, which writes
+them into `agent_frames` beside the result (`storage.py:826-846`). Then a resumed Agent replays
+the step of its last settled write, gets the stored result (`worker.py:198-199`), and continues
+with the transcript that shows the write as done. The model is never asked again for a step
+before a settled write. Design and steps: `docs/tasks/01-DEF-01-02-agent-write-resume.md`.
 
-1. Save the Agent's transcript and step in the **same commit** that settles a write (extend
-   `settle_write` to store the frame, as `approvals.pause` does at `approvals.py:92`), and restore
-   it on resume as the pause path does (`agent_runtime.py:304-306`). Then a resumed Agent
-   continues after its last settled write and never asks the model for an earlier step again.
-2. As a second barrier, store a SHA-256 digest of the prepared payload with each
-   `run_action_results` row and keep a per-owner set of settled payload digests. A write whose
-   payload digest is already settled under the same checkpoint owner is not sent; it stops the run
-   with a named reason.
+A model that asks for the same write again **after** it saw the result is a different thing: it
+is a new action, and Relay cannot tell it from an intended second write. The test's model
+therefore gives its final answer when its transcript shows the write as done.
 
 **Test.** `backend/tests/defects/test_def01_def02_agent_write_resume.py::test_def01_a_settled_agent_write_is_not_sent_again_when_its_step_moves`
 

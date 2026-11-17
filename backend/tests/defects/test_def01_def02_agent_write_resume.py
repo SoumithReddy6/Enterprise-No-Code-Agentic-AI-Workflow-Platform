@@ -44,10 +44,20 @@ async def first_attempt(client, monkeypatch):
 @pytest.mark.asyncio
 async def test_def01_a_settled_agent_write_is_not_sent_again_when_its_step_moves(client, monkeypatch):
     store, worker, run_id, sent = await first_attempt(client, monkeypatch)
-    # On resume the model first gives an empty input (a tool_error that only advances the
-    # step), then the same write X. X is now at step 2: invocation 'agent:2:post'.
-    script_model(monkeypatch, [call('post', ''), call('post', X), final('done')])
+    # The resumed model is faithful: when its transcript shows the write as done, it gives
+    # the final answer. When the transcript is empty again (the Agent started at step 0), it
+    # does the task again, and this time an empty input comes first (a tool_error that only
+    # advances the step), so the same write X is at step 2: invocation 'agent:2:post'.
+    from backend.app import registry
+    restart = iter([call('post', ''), call('post', X), final('done')])
+
+    async def model(inputs, config, ctx):
+        if '"tool_result": "accepted"' in inputs['prompt']:
+            return {'text': final('done'), 'provider': 'demo'}
+        return {'text': next(restart), 'provider': 'demo'}
+    monkeypatch.setattr(registry, 'llm_node', model)
     await worker.execute(store.claim_next(worker.owner))
+    assert store.run(run_id)['status'] == 'success'
     assert sent == [X], f'DEF-01: the receiver got the same write {len(sent)} times: {sent}'
 
 
