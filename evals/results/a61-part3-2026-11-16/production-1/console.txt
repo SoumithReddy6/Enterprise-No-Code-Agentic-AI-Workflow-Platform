@@ -1,0 +1,39 @@
+S01 passed: Ticket batch: approve each exact payload
+S02 passed: Reject customer reply batch without sending
+S03 passed: Uncertain delivery cannot continue
+S04 passed: Uncertain delivery cannot route onward
+S05 passed: Worker restart between batch approvals
+S15 passed: Abrupt crash after a durable write item
+S16 passed: Kill worker after receiver accepts a write
+S06 passed: Transient vendor read retries
+S07 passed: Loop body retries actually apply
+S08 passed: Invalid recovery binding rejected before execution
+S09 passed: Incomplete batch visible at run level
+S10 passed: SSRF denied outside fixture boundary
+S11 passed: Closed registration and anonymous denial
+{"timestamp":"2026-11-17T00:17:07.172094+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-17T00:17:07.227609+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"current","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-17T00:17:07.228558+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.056}
+S12 passed: Tenant isolation through authenticated HTTP
+S13 passed: Two tabs cannot overwrite silently
+S14 passed: Changed destination invalidates reviewed write
+S17 passed: Typed condition routes an external write by amount
+S18 passed: Invalid comparison rejected before execution
+S19 passed: Uncomparable value fails the run and takes no branch
+S22 passed: Fork: branches run together, the Join waits for both, one write is sent
+S23a passed: A failed branch cancels its held sibling; nothing after the Join is sent
+S23b passed: A write inside a branch is refused before any run
+S24 passed: A worker killed in a fork resumes without repeating finished work
+S20 passed: Switch routes a checked support category to exactly one receiver
+S21a passed: A forged saved route is refused before any send
+S21b passed: Routing on an unchecked HTTP value or in contract 1 is refused
+S21c passed: A case named "approved" cannot bypass a required approval
+S25 passed: A support reply is drafted, checked and sent once
+S26a passed: A reply that never meets the rule is not sent
+S26b passed: An unaccepted reply under on_limit last waits for a person
+S26c passed: A write inside the loop is refused before any run
+S27 passed: A token budget that stops the checker sends no unchecked draft
+S28 passed: A worker killed in an iteration resumes without repeating saved iterations
+S29 passed: The approval after a Repeat shows the accepted draft
+M01 passed: Mixed approval modes inside one loop agent
+Report: /private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/p3-iso.obZp/gate-1/report.json

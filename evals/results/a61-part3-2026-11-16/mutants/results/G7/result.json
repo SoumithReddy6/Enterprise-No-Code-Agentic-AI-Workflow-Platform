@@ -1,0 +1,23 @@
+{
+ "id": "G7",
+ "file": "backend/app/repeat.py",
+ "planned": [
+  "S28"
+ ],
+ "results": {
+  "S25": "passed",
+  "S26a": "passed",
+  "S26b": "passed",
+  "S26c": "passed",
+  "S27": "passed",
+  "S28": "failed",
+  "S29": "passed"
+ },
+ "errors": {
+  "S28": "AssertionError: {'0': {'index': 0, 'status': 'success', 'value': 'Draft 2', 'verdict': '{\"pass\": true, \"feedback\": \"good\"}', 'met': True}}"
+ },
+ "failed": [
+  "S28"
+ ],
+ "killed": true
+}

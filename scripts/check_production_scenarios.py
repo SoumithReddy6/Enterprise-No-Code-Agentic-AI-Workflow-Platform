@@ -400,6 +400,22 @@ def main():
             (switch_output/'provider-requests.json').write_text(json.dumps(lab.provider.calls,indent=2))
         except Exception as exc:rows.append({'id':'SWITCH-LAB','phase':'infrastructure','status':'failed','error':repr(exc)})
         finally:lab.close();fixture.close()
+    # A6.1 Part 3 Repeat scenarios need writer and checker models and a run token limit, so
+    # they run in a third lab; the two labs above keep their environment unchanged.
+    from scripts.scenarios.repeat_loops import TOKEN_LIMIT,LoopModels,models_for_lab,repeat_scenarios
+    with tempfile.TemporaryDirectory(prefix='relay-repeat-lab-') as temp:
+        models=LoopModels();repeat_output=output/'repeat';repeat_output.mkdir(exist_ok=True)
+        lab=Lab(temp,repeat_output);lab.env['OLLAMA_BASE_URL']=models.url;lab.env['RELAY_RUN_TOKEN_LIMIT']=str(TOKEN_LIMIT)
+        try:
+            lab.boot()
+            for model in models_for_lab():
+                r=lab.client.post('/api/models',json={'provider':'ollama','model':model});assert r.status_code==201,r.text
+            for id,phase,name,fn in repeat_scenarios(lab,models):record(id,phase,name,fn)
+            histories=[lab.client.get('/api/runs/'+item['id']).json() for item in lab.client.get('/api/runs').json()]
+            (repeat_output/'runs.json').write_text(json.dumps(histories,indent=2))
+            (repeat_output/'provider-requests.json').write_text(json.dumps(lab.provider.calls,indent=2))
+        except Exception as exc:rows.append({'id':'REPEAT-LAB','phase':'infrastructure','status':'failed','error':repr(exc)})
+        finally:lab.close();models.close()
     def command(name,cmd):
         with open(output/(name+'.log'),'w') as log:r=subprocess.run(cmd,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT)
         assert r.returncode==0,f'{name} exited {r.returncode}; see {name}.log'

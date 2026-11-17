@@ -1,0 +1,25 @@
+{
+ "id": "G6",
+ "file": "backend/app/repeat.py",
+ "planned": [
+  "S27"
+ ],
+ "results": {
+  "S25": "passed",
+  "S26a": "passed",
+  "S26b": "failed",
+  "S26c": "passed",
+  "S27": "failed",
+  "S28": "passed",
+  "S29": "passed"
+ },
+ "errors": {
+  "S26b": "AssertionError: {'iterations': 2, 'max_iterations': 3, 'met': True, 'stopped_by': 'rule', 'truncated': False, 'truncation_reason': ''}",
+  "S27": "AssertionError: ('success', '')"
+ },
+ "failed": [
+  "S26b",
+  "S27"
+ ],
+ "killed": true
+}

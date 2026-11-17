@@ -1,0 +1,23 @@
+{
+ "id": "G4",
+ "file": "backend/app/repeat.py",
+ "planned": [
+  "S26a"
+ ],
+ "results": {
+  "S25": "passed",
+  "S26a": "failed",
+  "S26b": "passed",
+  "S26c": "passed",
+  "S27": "passed",
+  "S28": "passed",
+  "S29": "passed"
+ },
+ "errors": {
+  "S26a": "AssertionError: ('success', '')"
+ },
+ "failed": [
+  "S26a"
+ ],
+ "killed": true
+}

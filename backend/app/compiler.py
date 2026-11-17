@@ -236,7 +236,7 @@ def validate_workflow(workflow: Workflow) -> list[str]:
     if len({e.id for e in workflow.edges})!=len(workflow.edges):errors.append('Edge IDs must be unique.')
     errors += _validate_flow(flow)
     errors += branch_errors(workflow, flow, deps)
-    errors += repeat_errors(workflow, deps)
+    errors += repeat_errors(workflow, deps, flow)
     errors += request_contract_errors(workflow, flow, deps)
     return errors
 
@@ -250,10 +250,28 @@ def attachment_closure(roots, deps):
     return found
 
 
-def repeat_errors(workflow, deps):
+def after_repeat(repeat_id, flow):
+    """The flow steps that can run after a Repeat returned an answer: everything reachable from
+    its edges, except its own error route (there it failed and returned none). A later step's
+    error route stays in: its handler can bind the Repeat's text. Imported drafts can contain
+    cycles, so the walk keeps a visited set."""
+    outgoing = {}
+    for edge in flow.edges: outgoing.setdefault(edge.source, []).append(edge.target)
+    found, stack = set(), [e.target for e in flow.edges if e.source == repeat_id and e.sourceHandle != 'error']
+    while stack:
+        step = stack.pop()
+        if step in found or step == repeat_id: continue
+        found.add(step); stack += outgoing.get(step, [])
+    return sorted(found)
+
+
+def repeat_errors(workflow, deps, flow):
     """A Repeat (A6.1). Nothing in its loop may change anything outside Relay, because each
     iteration would send the write again; and a checker's stop rule must read a field that
-    the checker's schema requires with the type the rule compares."""
+    the checker's schema requires with the type the rule compares. Under on_limit 'last' the
+    Repeat can return an answer that did not meet its stop rule, so every write after it, a
+    flow step or attached to one, needs the literal approval: true (A6.1 Part 3). Unset is
+    refused: its default is decided per run from authentication, and validation has no run."""
     from .repeat import RepeatConfig, rule_type, schema_requires
     full = {n.id: n for n in workflow.nodes}
     errors = []
@@ -265,6 +283,12 @@ def repeat_errors(workflow, deps):
                    for n in attached if n.type == 'agent' and n.config.get('role') == 'memory']
         try: config = RepeatConfig.model_validate(node.config)
         except ValueError: continue  # Reported with the settings messages.
+        if config.on_limit == 'last':
+            later = [full[id] for id in attachment_closure(after_repeat(node.id, flow), deps) if id in full]
+            errors += [f'{n.id}: a write after {node.id} needs approval: true, because {node.id} can return an answer '
+                       'that did not meet its stop rule (on_limit: last).'
+                       for n in sorted(later, key=lambda n: n.id)
+                       if is_write_node(n, REGISTRY.get(n.type)) and n.config.get('approval') is not True]
         checker = full.get(config.check) if config.check else None
         if checker is None or checker.type != 'agent': continue
         kind = rule_type(config.until)

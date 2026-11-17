@@ -1,0 +1,168 @@
+{
+ "M00": {
+  "control_passes": true,
+  "planned": [],
+  "failed": []
+ },
+ "G1": {
+  "killed": true,
+  "planned": [
+   "S25"
+  ],
+  "failed": [
+   "S25"
+  ]
+ },
+ "G2": {
+  "killed": true,
+  "planned": [
+   "S25"
+  ],
+  "failed": [
+   "S25",
+   "S26a",
+   "S26b",
+   "S27",
+   "S28",
+   "S29"
+  ]
+ },
+ "G3": {
+  "killed": true,
+  "planned": [
+   "S25",
+   "S26a"
+  ],
+  "failed": [
+   "S25",
+   "S26a",
+   "S26b",
+   "S27",
+   "S28",
+   "S29"
+  ]
+ },
+ "G4": {
+  "killed": true,
+  "planned": [
+   "S26a"
+  ],
+  "failed": [
+   "S26a"
+  ]
+ },
+ "G5": {
+  "killed": true,
+  "planned": [
+   "S26c"
+  ],
+  "failed": [
+   "S26c"
+  ]
+ },
+ "G6": {
+  "killed": true,
+  "planned": [
+   "S27"
+  ],
+  "failed": [
+   "S26b",
+   "S27"
+  ]
+ },
+ "G7": {
+  "killed": true,
+  "planned": [
+   "S28"
+  ],
+  "failed": [
+   "S28"
+  ]
+ },
+ "G8": {
+  "killed": true,
+  "planned": [
+   "S28"
+  ],
+  "failed": [
+   "S28"
+  ]
+ },
+ "G9": {
+  "killed": true,
+  "planned": [
+   "S29"
+  ],
+  "failed": [
+   "S29"
+  ]
+ },
+ "G10": {
+  "killed": true,
+  "planned": [
+   "S26b",
+   "test_va1_"
+  ],
+  "failed": [
+   "S26b",
+   "test_va11_submission_is_refused_with_the_same_message_and_creates_no_run",
+   "test_va12_a_write_on_a_later_steps_error_route_is_refused",
+   "test_va13_an_imported_draft_with_a_cycle_after_the_repeat_terminates",
+   "test_va1_a_direct_write_with_approval_false_is_refused",
+   "test_va2_a_direct_write_with_approval_unset_is_refused",
+   "test_va3_a_write_two_steps_later_is_refused",
+   "test_va4_a_write_attached_to_a_later_agent_is_refused_and_named",
+   "test_va5_a_write_behind_a_specialist_of_a_later_agent_is_refused_and_named",
+   "test_va6_a_write_in_a_later_for_each_body_is_refused_and_named"
+  ]
+ },
+ "G11": {
+  "killed": true,
+  "planned": [
+   "test_va4_",
+   "test_va5_",
+   "test_va6_"
+  ],
+  "failed": [
+   "test_va4_a_write_attached_to_a_later_agent_is_refused_and_named",
+   "test_va5_a_write_behind_a_specialist_of_a_later_agent_is_refused_and_named",
+   "test_va6_a_write_in_a_later_for_each_body_is_refused_and_named"
+  ]
+ },
+ "G12": {
+  "killed": true,
+  "planned": [
+   "test_va2_"
+  ],
+  "failed": [
+   "test_va2_a_direct_write_with_approval_unset_is_refused"
+  ]
+ },
+ "G13": {
+  "killed": true,
+  "planned": [
+   "test_va10_"
+  ],
+  "failed": [
+   "test_va10_a_write_only_on_the_repeats_own_error_route_needs_no_approval"
+  ]
+ },
+ "G14": {
+  "killed": true,
+  "planned": [
+   "test_va12_"
+  ],
+  "failed": [
+   "test_va12_a_write_on_a_later_steps_error_route_is_refused"
+  ]
+ },
+ "G15": {
+  "killed": true,
+  "planned": [
+   "test_va13_"
+  ],
+  "failed": [
+   "test_va13_an_imported_draft_with_a_cycle_after_the_repeat_terminates"
+  ]
+ }
+}

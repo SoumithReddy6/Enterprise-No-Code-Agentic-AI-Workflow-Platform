@@ -1,0 +1,38 @@
+[
+ {
+  "id": "S25",
+  "status": "passed",
+  "seconds": 0.6
+ },
+ {
+  "id": "S26a",
+  "status": "passed",
+  "seconds": 0.1
+ },
+ {
+  "id": "S26b",
+  "status": "failed",
+  "error": "AssertionError: {'valid': True, 'errors': [], 'warnings': [], 'issues': [], 'warning_issues': [], 'workflow': {'version': 1, 'contract': 1, 'name': 'Repeat s26b-refused', 'description': '', 'nodes': [{'id': 'input', 'type': 'chat_input', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {}, 'config': {}, 'on_error': 'fail', 'retry': {'attempts': 0, 'base_delay': 0.5}}, {'id': 'r', 'type': 'repeat', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {'input': 'input.message'}, 'config': {'body': 'writer', 'check': 'judge', 'max_iterations': 2, 'on_limit'",
+  "seconds": 0.0
+ },
+ {
+  "id": "S26c",
+  "status": "passed",
+  "seconds": 0.0
+ },
+ {
+  "id": "S27",
+  "status": "passed",
+  "seconds": 0.1
+ },
+ {
+  "id": "S28",
+  "status": "passed",
+  "seconds": 30.3
+ },
+ {
+  "id": "S29",
+  "status": "passed",
+  "seconds": 0.3
+ }
+]

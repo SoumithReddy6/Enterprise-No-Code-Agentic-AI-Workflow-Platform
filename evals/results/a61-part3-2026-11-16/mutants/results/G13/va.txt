@@ -1,0 +1,46 @@
+..........F..                                                            [100%]
+=================================== FAILURES ===================================
+___ test_va10_a_write_only_on_the_repeats_own_error_route_needs_no_approval ____
+
+    def test_va10_a_write_only_on_the_repeats_own_error_route_needs_no_approval():
+        # There the Repeat failed and returned no answer.
+        raw = flow([out(), post('send', 'input.message'), out('send.text', 'fallback')],
+                   [('input', 'r'), ('r', 'out'), ('r', 'send', 'error'), ('send', 'fallback')], on_error='route')
+>       assert errors(raw) == []
+E       AssertionError: assert ['send: a wri...imit: last).'] == []
+E         
+E         Left contains one more item: 'send: a write after r needs approval: true, because r can return an answer that did not meet its stop rule (on_limit: last).'
+E         Use -v to get more diff
+
+backend/tests/test_repeat_write_approval.py:134: AssertionError
+=============================== warnings summary ===============================
+../../../../../../../../Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/lib/python3.14/site-packages/starlette/testclient.py:53
+  /Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+___ test_va11_submission_is_refused_with_the_same_message_and_creates_no_run ___
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:23:59.048091+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:23:59.104194+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:23:59.105128+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.057}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:23:59.161799+00:00","request_id":"913373a0446f49a7a654f4913fa1c787","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/validate","status":200,"duration_ms":3.126}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:23:59.163458+00:00","request_id":"788acc7da5d94832b9d2323870239dae","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/runs","status":422,"duration_ms":1.35}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:23:59.164605+00:00","request_id":"8eb3c5229e424894aecc95151a2b6813","run_id":null,"tenant":"local","event":"http.request","method":"GET","path":"/api/runs","status":200,"duration_ms":0.915}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:23:59.166199+00:00","request_id":"29f2c34022f74865920a081ff550af7d","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/validate","status":200,"duration_ms":1.347}
+=========================== short test summary info ============================
+PASSED backend/tests/test_repeat_write_approval.py::test_va1_a_direct_write_with_approval_false_is_refused
+PASSED backend/tests/test_repeat_write_approval.py::test_va2_a_direct_write_with_approval_unset_is_refused
+PASSED backend/tests/test_repeat_write_approval.py::test_va3_a_write_two_steps_later_is_refused
+PASSED backend/tests/test_repeat_write_approval.py::test_va4_a_write_attached_to_a_later_agent_is_refused_and_named
+PASSED backend/tests/test_repeat_write_approval.py::test_va5_a_write_behind_a_specialist_of_a_later_agent_is_refused_and_named
+PASSED backend/tests/test_repeat_write_approval.py::test_va6_a_write_in_a_later_for_each_body_is_refused_and_named
+PASSED backend/tests/test_repeat_write_approval.py::test_va12_a_write_on_a_later_steps_error_route_is_refused
+PASSED backend/tests/test_repeat_write_approval.py::test_va7_the_same_writes_with_approval_true_are_valid
+PASSED backend/tests/test_repeat_write_approval.py::test_va8_on_limit_fail_needs_no_approval
+PASSED backend/tests/test_repeat_write_approval.py::test_va9_a_write_before_the_repeat_needs_no_approval
+PASSED backend/tests/test_repeat_write_approval.py::test_va13_an_imported_draft_with_a_cycle_after_the_repeat_terminates
+PASSED backend/tests/test_repeat_write_approval.py::test_va11_submission_is_refused_with_the_same_message_and_creates_no_run
+FAILED backend/tests/test_repeat_write_approval.py::test_va10_a_write_only_on_the_repeats_own_error_route_needs_no_approval
+1 failed, 12 passed, 1 warning in 0.56s

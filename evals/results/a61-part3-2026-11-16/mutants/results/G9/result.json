@@ -1,0 +1,23 @@
+{
+ "id": "G9",
+ "file": "backend/app/compiler.py",
+ "planned": [
+  "S29"
+ ],
+ "results": {
+  "S25": "passed",
+  "S26a": "passed",
+  "S26b": "passed",
+  "S26c": "passed",
+  "S27": "passed",
+  "S28": "passed",
+  "S29": "failed"
+ },
+ "errors": {
+  "S29": "AssertionError: [{'node_id': 'r', 'status': 'running', 'inputs': {'input': 'Customer case'}, 'seq': 21, 'timestamp': '2026-11-17T00:24:26.752383+00:00'}, {'node_id': 'r', 'status': 'success', 'outputs': {'text': 'Draft 2: refund R-42.', 'feedback': '{\"pass\": true, \"feedback\": \"good\"}', 'summary': '{\"iterations\": 2, \"max_iterations\": 3, \"met\": true, \"stopped_by\": \"rule\", \"truncated\": false, \"truncation_reason\": \"\"}', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'feedback': 'guessed', 'summary': 'guessed'}}}, 'duration_ms': 1, 'seq': 22, 'timestamp': '2026-11-17T00:24:26.753327+00:00'}]"
+ },
+ "failed": [
+  "S29"
+ ],
+ "killed": true
+}

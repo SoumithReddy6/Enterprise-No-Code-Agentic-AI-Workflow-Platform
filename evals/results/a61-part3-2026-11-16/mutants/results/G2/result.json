@@ -1,0 +1,33 @@
+{
+ "id": "G2",
+ "file": "backend/app/repeat.py",
+ "planned": [
+  "S25"
+ ],
+ "results": {
+  "S25": "failed",
+  "S26a": "failed",
+  "S26b": "failed",
+  "S26c": "passed",
+  "S27": "failed",
+  "S28": "failed",
+  "S29": "failed"
+ },
+ "errors": {
+  "S25": "AssertionError: r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.",
+  "S26a": "AssertionError: ('failed', 'r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.')",
+  "S26b": "AssertionError: ('failed', 'r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.')",
+  "S27": "AssertionError: ('failed', 'r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.')",
+  "S28": "AssertionError: the writer never opened iteration 2",
+  "S29": "AssertionError: ('failed', 'r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.')"
+ },
+ "failed": [
+  "S25",
+  "S26a",
+  "S26b",
+  "S27",
+  "S28",
+  "S29"
+ ],
+ "killed": true
+}

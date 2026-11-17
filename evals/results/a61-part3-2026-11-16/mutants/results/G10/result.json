@@ -1,0 +1,46 @@
+{
+ "id": "G10",
+ "file": "backend/app/compiler.py",
+ "planned": [
+  "S26b",
+  "test_va1_"
+ ],
+ "results": {
+  "test_va7_the_same_writes_with_approval_true_are_valid": "passed",
+  "test_va8_on_limit_fail_needs_no_approval": "passed",
+  "test_va9_a_write_before_the_repeat_needs_no_approval": "passed",
+  "test_va10_a_write_only_on_the_repeats_own_error_route_needs_no_approval": "passed",
+  "test_va1_a_direct_write_with_approval_false_is_refused": "failed",
+  "test_va2_a_direct_write_with_approval_unset_is_refused": "failed",
+  "test_va3_a_write_two_steps_later_is_refused": "failed",
+  "test_va4_a_write_attached_to_a_later_agent_is_refused_and_named": "failed",
+  "test_va5_a_write_behind_a_specialist_of_a_later_agent_is_refused_and_named": "failed",
+  "test_va6_a_write_in_a_later_for_each_body_is_refused_and_named": "failed",
+  "test_va12_a_write_on_a_later_steps_error_route_is_refused": "failed",
+  "test_va13_an_imported_draft_with_a_cycle_after_the_repeat_terminates": "failed",
+  "test_va11_submission_is_refused_with_the_same_message_and_creates_no_run": "failed",
+  "S25": "passed",
+  "S26a": "passed",
+  "S26b": "failed",
+  "S26c": "passed",
+  "S27": "passed",
+  "S28": "passed",
+  "S29": "passed"
+ },
+ "errors": {
+  "S26b": "AssertionError: {'valid': True, 'errors': [], 'warnings': [], 'issues': [], 'warning_issues': [], 'workflow': {'version': 1, 'contract': 1, 'name': 'Repeat s26b-refused', 'description': '', 'nodes': [{'id': 'input', 'type': 'chat_input', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {}, 'config': {}, 'on_error': 'fail', 'retry': {'attempts': 0, 'base_delay': 0.5}}, {'id': 'r', 'type': 'repeat', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {'input': 'input.message'}, 'config': {'body': 'writer', 'check': 'judge', 'max_iterations': 2, 'on_limit'"
+ },
+ "failed": [
+  "S26b",
+  "test_va11_submission_is_refused_with_the_same_message_and_creates_no_run",
+  "test_va12_a_write_on_a_later_steps_error_route_is_refused",
+  "test_va13_an_imported_draft_with_a_cycle_after_the_repeat_terminates",
+  "test_va1_a_direct_write_with_approval_false_is_refused",
+  "test_va2_a_direct_write_with_approval_unset_is_refused",
+  "test_va3_a_write_two_steps_later_is_refused",
+  "test_va4_a_write_attached_to_a_later_agent_is_refused_and_named",
+  "test_va5_a_write_behind_a_specialist_of_a_later_agent_is_refused_and_named",
+  "test_va6_a_write_in_a_later_for_each_body_is_refused_and_named"
+ ],
+ "killed": true
+}

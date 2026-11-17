@@ -1,6 +1,6 @@
 # A6.1 Part 3: deployed scenarios for Repeat
 
-**Status:** Revision 2 (2026-11-16), for design recheck. No row is written yet.
+**Status:** Revision 2 (2026-11-16), approved for implementation, with three details ("Recheck details").
 Rev 1 is `007dac4`. The rev 1 review decided Q1 = B, Q2 = a third lab, Q3 = keep S29, and asked
 for two changes (attached writes in the rule; the S26b asserts while waiting) and one stronger
 S29 assert. "Changes from revision 1" lists them.
@@ -11,6 +11,14 @@ S29 assert. "Changes from revision 1" lists them.
 **Probe:** `evals/results/a61-part3-probe-2026-11-16/`.
 **Tier:** P1 (one validation rule, below). Design recheck, then the rule and the rows tests-first
 with their mutants, then an implementation review.
+
+## Recheck details (rev 2 approval)
+
+| # | Detail | Where it is applied |
+|---|---|---|
+| I1 | G7 fails on the saved iteration, not on the call counts. A resume that ignores the saved rows also makes 3 writer and 2 checker calls, 60 tokens and one POST of draft 2, but it overwrites row 0 and counts one iteration | S28 keeps the exact row comparison and asserts `iterations: 2`; G7's expected failure is updated |
+| I2 | V-A6 needs a valid list input: `Repeat.text` is a string, which For each refuses before the approval rule matters | V-A6 reads `tickets.items` from an upstream Jira read, so only the approval rule refuses it |
+| I3 | Only the Repeat's own error edge is exempt: a later step's error handler can bind `r.text`. Imported drafts can contain cycles | The walk skips only the Repeat's own `error` edges and keeps a visited set. New cases V-A12 (a write on a later step's error route is refused) and V-A13 (a cycle after the Repeat terminates); mutants G14 and G15 |
 
 ## Changes from revision 1
 
@@ -95,8 +103,9 @@ unaccepted text automatically. It is the documented contract (`docs/operations.m
 **The rule.** For each Repeat with `on_limit: last`:
 
 1. Find the steps reachable from the Repeat through flow edges. Start at the Repeat's edges that
-   are not its `error` route. A step that only the error route reaches runs when the Repeat failed
-   and returned no answer.
+   are not its own `error` route. A step that only that route reaches runs when the Repeat failed
+   and returned no answer. After the first step every edge is followed, also a later step's
+   `error` route, because its handler can bind `r.text`. The walk keeps a visited set.
 2. For each of those steps, add its attachment closure (`attachment_closure`): the tools of an
    Agent, the tools behind its specialists, a For each body, and the attachments of those.
 3. Every write among them (`is_write_node`) must have the literal `approval: true`.
@@ -136,7 +145,7 @@ have no write after the Repeat, and the recorded frontend fixtures (`repeat-issu
 **Where it goes.** `repeat_errors` (`compiler.py:253`) already has the deps and
 `attachment_closure`. It also needs the flow graph, so `validate_workflow` passes `flow`.
 
-**Validation cases** (`backend/tests/test_repeat.py`, V-series, tests first):
+**Validation cases** (`backend/tests/test_repeat_write_approval.py`, which uses the builders of `test_repeat.py`; tests first):
 
 | Case | Shape | Expected |
 |---|---|---|
@@ -145,12 +154,14 @@ have no write after the Repeat, and the recorded frontend fixtures (`repeat-issu
 | V-A3 | `r (last) → agent → send → out` (a write two steps later) | Refused, names `send` |
 | V-A4 | `r (last) → agent → out`, POST `post` attached to `agent` as a tool | Refused, names `post` |
 | V-A5 | `r (last) → lead`, specialist `helper` with POST `post` attached | Refused, names `post` |
-| V-A6 | `r (last) → each (For each, body POST `post`) → out` | Refused, names `post` |
+| V-A6 | `tickets (Jira read) → r (last) → each (For each over tickets.items, body POST `post`) → out` | Refused, names `post` |
 | V-A7 | V-A1, V-A4, V-A5 and V-A6 with `approval: true` on each write | Valid |
 | V-A8 | V-A1 with `on_limit: fail` | Valid |
 | V-A9 | `send (approval false) → r (last) → out` (the write is before) | Valid |
 | V-A10 | `r (last, on_error route)`: error route → `send (approval false)` → `fallback`; normal → `out` | Valid |
-| V-A11 | V-A1 through `POST /api/runs` | 422 with the same message, no run |
+| V-A11 | V-A1 through `/api/validate` and `POST /api/runs` | The message at Validate, 422 with the same message, no run; with `approval: true` the message is gone (the API adds workspace checks, so the list is not compared exactly) |
+| V-A12 | `r (last) → agent (on_error route)`: the agent's error route → `send (binding r.text, approval false)` → `fallback` | Refused, names `send` |
+| V-A13 | `r (last) → a → b → a` (a cycle) `→ send` | Validation finishes (a thread with a 10 s limit) with the cycle error and the approval message |
 
 ## Design
 
@@ -323,13 +334,15 @@ row. The planned oracle must fail, and every oracle's result is recorded:
 | G4 | `on_limit: fail` behaves as `last` | S26a | The run succeeds and the rejected draft is sent |
 | G5 | The write rule ignores the Repeat's closure | S26c | Validation accepts; submission creates a run |
 | G6 | An iteration stopped before its checker returns its unchecked draft as met | S27 | Draft 2 is sent |
-| G7 | Resume ignores saved rows | S28 | Writer 4 calls, checker 3 |
+| G7 | Resume ignores saved rows | S28 | Row 0 is overwritten and the summary counts one iteration (the call counts, tokens and POST are the same as without the mutant, I1) |
 | G8 | The replacement worker claims 25 s before the lease ends | S28 | The claim is earlier than `lease_until` |
 | G9 | The approval resume does not restore a Repeat's checkpoint; the Repeat rebuilds its result from its saved rows | S29 | No `cached: true` event for `r` (the call counts still hold) |
 | G10 | The approval rule is removed | S26b, V-A1 | Validation accepts the write without approval |
 | G11 | The rule walks flow steps only, not their attachments | V-A4, V-A5, V-A6 | The attached write is accepted |
 | G12 | The rule accepts an unset approval | V-A2 | The write with no approval setting is accepted |
 | G13 | The rule also walks the Repeat's error route | V-A10 | The valid error-route write is refused |
+| G14 | The rule skips every error edge, not only the Repeat's own | V-A12 | The write on the later step's error route is accepted |
+| G15 | The walk has no visited set | V-A13 | Validation does not finish |
 
 If a mutant survives, the oracle is made stronger before review, and the change is recorded.
 

@@ -1,0 +1,43 @@
+[
+ {
+  "id": "S25",
+  "status": "failed",
+  "error": "AssertionError: {'writer': 1, 'judge': 1}",
+  "seconds": 0.7
+ },
+ {
+  "id": "S26a",
+  "status": "failed",
+  "error": "AssertionError: ('success', '')",
+  "seconds": 0.1
+ },
+ {
+  "id": "S26b",
+  "status": "failed",
+  "error": "AssertionError: {'iterations': 1, 'max_iterations': 2, 'met': True, 'stopped_by': 'rule', 'truncated': False, 'truncation_reason': ''}",
+  "seconds": 0.1
+ },
+ {
+  "id": "S26c",
+  "status": "passed",
+  "seconds": 0.0
+ },
+ {
+  "id": "S27",
+  "status": "failed",
+  "error": "AssertionError: ('success', '')",
+  "seconds": 0.1
+ },
+ {
+  "id": "S28",
+  "status": "failed",
+  "error": "AssertionError: the writer never opened iteration 2",
+  "seconds": 30.0
+ },
+ {
+  "id": "S29",
+  "status": "failed",
+  "error": "AssertionError: [{'id': 'd2ae507d6a7d4859a9298f9b1f11fd2a', 'run_id': '5741ec190e6141cc949669e575ce2924', 'node_id': 'send', 'checkpoint_owner': 'send', 'kind': 'write', 'payload': {'transport': 'http', 'method': 'POST', 'url': 'http://scenario-provider.invalid:61938/deliver/s29', 'body': {'input': 'Draft 1'}}, 'digest': 'f78cef4764af68414c86c6336b20076d5c1a6e422b86b72bf989cfa960d1f252', 'status': 'pending', 'created_at': 1794874998.682652, 'expires_at': 1794961398.682652, 'payload_json': '{\\n  \"body\": {\\n    \"input\": \"Draft 1\"\\n  },\\n  \"method\": \"POST\",\\n  \"transport\": \"http\",\\n  \"url\": \"http",
+  "seconds": 0.2
+ }
+]

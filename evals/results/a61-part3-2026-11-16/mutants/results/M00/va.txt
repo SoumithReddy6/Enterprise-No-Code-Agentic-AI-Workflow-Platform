@@ -1,0 +1,32 @@
+.............                                                            [100%]
+=============================== warnings summary ===============================
+../../../../../../../../Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/lib/python3.14/site-packages/starlette/testclient.py:53
+  /Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+___ test_va11_submission_is_refused_with_the_same_message_and_creates_no_run ___
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:22:47.195369+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:22:47.252679+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:22:47.253503+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.058}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:22:47.311389+00:00","request_id":"052c2a736f744ce6a6a11461a4ef8f20","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/validate","status":200,"duration_ms":3.36}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:22:47.313299+00:00","request_id":"67ad815d6882415bb3df946fb3488c96","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/runs","status":422,"duration_ms":1.558}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:22:47.314512+00:00","request_id":"592926ab3e7f4bcaaf28f7460d9d1f9a","run_id":null,"tenant":"local","event":"http.request","method":"GET","path":"/api/runs","status":200,"duration_ms":0.94}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-17T00:22:47.316184+00:00","request_id":"8c04292ab35a4bbe8d2562b69f0fd6a3","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/validate","status":200,"duration_ms":1.415}
+=========================== short test summary info ============================
+PASSED backend/tests/test_repeat_write_approval.py::test_va1_a_direct_write_with_approval_false_is_refused
+PASSED backend/tests/test_repeat_write_approval.py::test_va2_a_direct_write_with_approval_unset_is_refused
+PASSED backend/tests/test_repeat_write_approval.py::test_va3_a_write_two_steps_later_is_refused
+PASSED backend/tests/test_repeat_write_approval.py::test_va4_a_write_attached_to_a_later_agent_is_refused_and_named
+PASSED backend/tests/test_repeat_write_approval.py::test_va5_a_write_behind_a_specialist_of_a_later_agent_is_refused_and_named
+PASSED backend/tests/test_repeat_write_approval.py::test_va6_a_write_in_a_later_for_each_body_is_refused_and_named
+PASSED backend/tests/test_repeat_write_approval.py::test_va12_a_write_on_a_later_steps_error_route_is_refused
+PASSED backend/tests/test_repeat_write_approval.py::test_va7_the_same_writes_with_approval_true_are_valid
+PASSED backend/tests/test_repeat_write_approval.py::test_va8_on_limit_fail_needs_no_approval
+PASSED backend/tests/test_repeat_write_approval.py::test_va9_a_write_before_the_repeat_needs_no_approval
+PASSED backend/tests/test_repeat_write_approval.py::test_va10_a_write_only_on_the_repeats_own_error_route_needs_no_approval
+PASSED backend/tests/test_repeat_write_approval.py::test_va13_an_imported_draft_with_a_cycle_after_the_repeat_terminates
+PASSED backend/tests/test_repeat_write_approval.py::test_va11_submission_is_refused_with_the_same_message_and_creates_no_run
+13 passed, 1 warning in 0.58s
