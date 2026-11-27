@@ -1,0 +1,58 @@
+[
+  {
+    "id": "P1",
+    "what": "a Retrieve body is read from 'text'",
+    "file": "backend/app/iteration.py",
+    "oracle": "f01 or f02",
+    "killed": true,
+    "result": "2 failed, 7 deselected in 0.99s"
+  },
+  {
+    "id": "P2",
+    "what": "a missing result port reads as '' with status success (00281fb)",
+    "file": "backend/app/iteration.py",
+    "oracle": "f03",
+    "killed": true,
+    "result": "2 failed, 7 deselected in 0.49s"
+  },
+  {
+    "id": "P3",
+    "what": "the item label is read from 'text'",
+    "file": "backend/app/iteration.py",
+    "oracle": "f02",
+    "killed": true,
+    "result": "1 failed, 8 deselected in 0.62s"
+  },
+  {
+    "id": "P4",
+    "what": "a saved item row is not checked on resume",
+    "file": "backend/app/iteration.py",
+    "oracle": "f04",
+    "killed": true,
+    "result": "1 failed, 1 passed, 7 deselected in 1.09s"
+  },
+  {
+    "id": "P5",
+    "what": "a loop checkpoint is not checked on restore",
+    "file": "backend/app/compiler.py",
+    "oracle": "f04",
+    "killed": true,
+    "result": "1 failed, 1 passed, 7 deselected in 0.99s"
+  },
+  {
+    "id": "P6",
+    "what": "a dropped value counts as a lost result",
+    "file": "backend/app/iteration.py",
+    "oracle": "f05",
+    "killed": true,
+    "result": "2 failed, 7 deselected in 0.82s"
+  },
+  {
+    "id": "P7",
+    "what": "an empty text result counts as a lost result",
+    "file": "backend/app/iteration.py",
+    "oracle": "f06",
+    "killed": true,
+    "result": "1 failed, 8 deselected in 0.59s"
+  }
+]

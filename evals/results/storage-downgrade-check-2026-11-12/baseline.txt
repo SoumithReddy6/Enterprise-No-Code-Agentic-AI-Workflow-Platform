@@ -1,0 +1,1 @@
+{"name": "populated-downgrade", "passed": false, "error": "AssertionError: Downgrade/re-upgrade lost persisted loop results", "seconds": 2.417}

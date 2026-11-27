@@ -1,0 +1,695 @@
+{
+ "model": {
+  "id": "model-tiny",
+  "provider": "ollama",
+  "model": "tiny:latest",
+  "credential_id": "",
+  "enabled": true
+ },
+ "file": {
+  "name": "Switch cases named like loop ports",
+  "contract": 2,
+  "nodes": [
+   {
+    "id": "input",
+    "type": "chat_input",
+    "position": {
+     "x": 300,
+     "y": 40
+    }
+   },
+   {
+    "id": "reader",
+    "type": "request_reader",
+    "version": 1,
+    "label": "Request reader",
+    "position": {
+     "x": 300,
+     "y": 200
+    },
+    "inputs": {
+     "message": "input.message"
+    },
+    "config": {
+     "purpose": "Draft support tickets with a summary and a category of billing, technical or account. General unrelated questions are outside this workflow.",
+     "accepted_requests": [
+      "Support problems with a summary and a category."
+     ],
+     "excluded_requests": [
+      "Unrelated questions and greetings without a request."
+     ],
+     "examples": [
+      "{\"summary\":\"Invoice download is broken\",\"category\":\"billing\"}"
+     ],
+     "prepared_replies": [
+      {
+       "message": "hello",
+       "reply": "Hello! Send your request and I will check whether this workflow can help."
+      },
+      {
+       "message": "hello!",
+       "reply": "Hello! Send your request and I will check whether this workflow can help."
+      }
+     ],
+     "expected_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+       "summary": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "category": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "summary",
+       "category"
+      ]
+     },
+     "required_fields": [
+      "/summary",
+      "/category"
+     ],
+     "required_any": [],
+     "field_rules": [
+      {
+       "field": "/summary",
+       "kind": "source_field",
+       "source_pointer": "/summary"
+      },
+      {
+       "field": "/category",
+       "kind": "source_field",
+       "source_pointer": "/category"
+      },
+      {
+       "field": "/category",
+       "kind": "enum",
+       "allowed_values": [
+        "billing",
+        "technical",
+        "account"
+       ]
+      }
+     ],
+     "cross_checks": [],
+     "provider": "ollama",
+     "model": "tiny:latest",
+     "credential_id": "",
+     "max_tokens": 2048
+    }
+   },
+   {
+    "id": "route",
+    "type": "switch",
+    "inputs": {
+     "value": "reader.text"
+    },
+    "config": {
+     "cases": [
+      {
+       "id": "body",
+       "label": "Body",
+       "when": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "billing"
+       }
+      },
+      {
+       "id": "check",
+       "label": "Check",
+       "when": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "technical"
+       }
+      },
+      {
+       "id": "flow",
+       "label": "Flow",
+       "when": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "account"
+       }
+      },
+      {
+       "id": "agents",
+       "label": "Agents",
+       "when": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "sales"
+       }
+      },
+      {
+       "id": "output",
+       "label": "Output",
+       "when": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "other"
+       }
+      }
+     ]
+    },
+    "position": {
+     "x": 300,
+     "y": 380
+    }
+   },
+   {
+    "id": "replied",
+    "type": "response",
+    "inputs": {
+     "text": "reader.reply"
+    },
+    "position": {
+     "x": 700,
+     "y": 200
+    }
+   },
+   {
+    "id": "out_body",
+    "type": "response",
+    "inputs": {
+     "text": "input.message"
+    },
+    "position": {
+     "x": 760,
+     "y": 860
+    }
+   },
+   {
+    "id": "out_check",
+    "type": "response",
+    "inputs": {
+     "text": "input.message"
+    },
+    "position": {
+     "x": 1010,
+     "y": 860
+    }
+   },
+   {
+    "id": "out_flow",
+    "type": "response",
+    "inputs": {
+     "text": "input.message"
+    },
+    "position": {
+     "x": 1260,
+     "y": 860
+    }
+   },
+   {
+    "id": "out_agents",
+    "type": "response",
+    "inputs": {
+     "text": "input.message"
+    },
+    "position": {
+     "x": 1510,
+     "y": 860
+    }
+   },
+   {
+    "id": "out_output",
+    "type": "response",
+    "inputs": {
+     "text": "input.message"
+    },
+    "position": {
+     "x": 1760,
+     "y": 860
+    }
+   },
+   {
+    "id": "out_default",
+    "type": "response",
+    "inputs": {
+     "text": "input.message"
+    },
+    "position": {
+     "x": 2010,
+     "y": 860
+    }
+   }
+  ],
+  "edges": [
+   {
+    "id": "a",
+    "source": "input",
+    "target": "reader"
+   },
+   {
+    "id": "r",
+    "source": "reader",
+    "target": "replied",
+    "sourceHandle": "reply"
+   },
+   {
+    "id": "c0",
+    "source": "reader",
+    "target": "route",
+    "sourceHandle": "continue"
+   },
+   {
+    "id": "to_out_body",
+    "source": "route",
+    "target": "out_body",
+    "sourceHandle": "body"
+   },
+   {
+    "id": "to_out_check",
+    "source": "route",
+    "target": "out_check",
+    "sourceHandle": "check"
+   },
+   {
+    "id": "to_out_flow",
+    "source": "route",
+    "target": "out_flow",
+    "sourceHandle": "flow"
+   },
+   {
+    "id": "to_out_agents",
+    "source": "route",
+    "target": "out_agents",
+    "sourceHandle": "agents"
+   },
+   {
+    "id": "to_out_output",
+    "source": "route",
+    "target": "out_output",
+    "sourceHandle": "output"
+   },
+   {
+    "id": "to_out_default",
+    "source": "route",
+    "target": "out_default",
+    "sourceHandle": "default"
+   }
+  ]
+ },
+ "normalized": {
+  "version": 1,
+  "contract": 2,
+  "name": "Switch cases named like loop ports",
+  "description": "",
+  "nodes": [
+   {
+    "id": "input",
+    "type": "chat_input",
+    "version": 1,
+    "label": "",
+    "position": {
+     "x": 300.0,
+     "y": 40.0
+    },
+    "inputs": {},
+    "config": {},
+    "on_error": "fail",
+    "retry": {
+     "attempts": 0,
+     "base_delay": 0.5
+    }
+   },
+   {
+    "id": "reader",
+    "type": "request_reader",
+    "version": 1,
+    "label": "Request reader",
+    "position": {
+     "x": 300.0,
+     "y": 200.0
+    },
+    "inputs": {
+     "message": "input.message"
+    },
+    "config": {
+     "purpose": "Draft support tickets with a summary and a category of billing, technical or account. General unrelated questions are outside this workflow.",
+     "accepted_requests": [
+      "Support problems with a summary and a category."
+     ],
+     "excluded_requests": [
+      "Unrelated questions and greetings without a request."
+     ],
+     "examples": [
+      "{\"summary\":\"Invoice download is broken\",\"category\":\"billing\"}"
+     ],
+     "prepared_replies": [
+      {
+       "message": "hello",
+       "reply": "Hello! Send your request and I will check whether this workflow can help."
+      },
+      {
+       "message": "hello!",
+       "reply": "Hello! Send your request and I will check whether this workflow can help."
+      }
+     ],
+     "expected_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+       "summary": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "category": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "summary",
+       "category"
+      ]
+     },
+     "required_fields": [
+      "/summary",
+      "/category"
+     ],
+     "required_any": [],
+     "field_rules": [
+      {
+       "field": "/summary",
+       "kind": "source_field",
+       "source_pointer": "/summary"
+      },
+      {
+       "field": "/category",
+       "kind": "source_field",
+       "source_pointer": "/category"
+      },
+      {
+       "field": "/category",
+       "kind": "enum",
+       "allowed_values": [
+        "billing",
+        "technical",
+        "account"
+       ]
+      }
+     ],
+     "cross_checks": [],
+     "provider": "ollama",
+     "model": "tiny:latest",
+     "credential_id": "",
+     "max_tokens": 2048
+    },
+    "on_error": "fail",
+    "retry": {
+     "attempts": 0,
+     "base_delay": 0.5
+    }
+   },
+   {
+    "id": "route",
+    "type": "switch",
+    "version": 1,
+    "label": "",
+    "position": {
+     "x": 300.0,
+     "y": 380.0
+    },
+    "inputs": {
+     "value": "reader.text"
+    },
+    "config": {
+     "cases": [
+      {
+       "id": "body",
+       "label": "Body",
+       "when": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "billing"
+       }
+      },
+      {
+       "id": "check",
+       "label": "Check",
+       "when": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "technical"
+       }
+      },
+      {
+       "id": "flow",
+       "label": "Flow",
+       "when": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "account"
+       }
+      },
+      {
+       "id": "agents",
+       "label": "Agents",
+       "when": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "sales"
+       }
+      },
+      {
+       "id": "output",
+       "label": "Output",
+       "when": {
+        "field": "category",
+        "operator": "eq",
+        "compare_to": "other"
+       }
+      }
+     ]
+    },
+    "on_error": "fail",
+    "retry": {
+     "attempts": 0,
+     "base_delay": 0.5
+    }
+   },
+   {
+    "id": "replied",
+    "type": "response",
+    "version": 1,
+    "label": "",
+    "position": {
+     "x": 700.0,
+     "y": 200.0
+    },
+    "inputs": {
+     "text": "reader.reply"
+    },
+    "config": {},
+    "on_error": "fail",
+    "retry": {
+     "attempts": 0,
+     "base_delay": 0.5
+    }
+   },
+   {
+    "id": "out_body",
+    "type": "response",
+    "version": 1,
+    "label": "",
+    "position": {
+     "x": 760.0,
+     "y": 860.0
+    },
+    "inputs": {
+     "text": "input.message"
+    },
+    "config": {},
+    "on_error": "fail",
+    "retry": {
+     "attempts": 0,
+     "base_delay": 0.5
+    }
+   },
+   {
+    "id": "out_check",
+    "type": "response",
+    "version": 1,
+    "label": "",
+    "position": {
+     "x": 1010.0,
+     "y": 860.0
+    },
+    "inputs": {
+     "text": "input.message"
+    },
+    "config": {},
+    "on_error": "fail",
+    "retry": {
+     "attempts": 0,
+     "base_delay": 0.5
+    }
+   },
+   {
+    "id": "out_flow",
+    "type": "response",
+    "version": 1,
+    "label": "",
+    "position": {
+     "x": 1260.0,
+     "y": 860.0
+    },
+    "inputs": {
+     "text": "input.message"
+    },
+    "config": {},
+    "on_error": "fail",
+    "retry": {
+     "attempts": 0,
+     "base_delay": 0.5
+    }
+   },
+   {
+    "id": "out_agents",
+    "type": "response",
+    "version": 1,
+    "label": "",
+    "position": {
+     "x": 1510.0,
+     "y": 860.0
+    },
+    "inputs": {
+     "text": "input.message"
+    },
+    "config": {},
+    "on_error": "fail",
+    "retry": {
+     "attempts": 0,
+     "base_delay": 0.5
+    }
+   },
+   {
+    "id": "out_output",
+    "type": "response",
+    "version": 1,
+    "label": "",
+    "position": {
+     "x": 1760.0,
+     "y": 860.0
+    },
+    "inputs": {
+     "text": "input.message"
+    },
+    "config": {},
+    "on_error": "fail",
+    "retry": {
+     "attempts": 0,
+     "base_delay": 0.5
+    }
+   },
+   {
+    "id": "out_default",
+    "type": "response",
+    "version": 1,
+    "label": "",
+    "position": {
+     "x": 2010.0,
+     "y": 860.0
+    },
+    "inputs": {
+     "text": "input.message"
+    },
+    "config": {},
+    "on_error": "fail",
+    "retry": {
+     "attempts": 0,
+     "base_delay": 0.5
+    }
+   }
+  ],
+  "edges": [
+   {
+    "id": "a",
+    "source": "input",
+    "target": "reader",
+    "sourceHandle": null,
+    "targetHandle": null,
+    "kind": "flow"
+   },
+   {
+    "id": "r",
+    "source": "reader",
+    "target": "replied",
+    "sourceHandle": "reply",
+    "targetHandle": null,
+    "kind": "flow"
+   },
+   {
+    "id": "c0",
+    "source": "reader",
+    "target": "route",
+    "sourceHandle": "continue",
+    "targetHandle": null,
+    "kind": "flow"
+   },
+   {
+    "id": "to_out_body",
+    "source": "route",
+    "target": "out_body",
+    "sourceHandle": "body",
+    "targetHandle": null,
+    "kind": "flow"
+   },
+   {
+    "id": "to_out_check",
+    "source": "route",
+    "target": "out_check",
+    "sourceHandle": "check",
+    "targetHandle": null,
+    "kind": "flow"
+   },
+   {
+    "id": "to_out_flow",
+    "source": "route",
+    "target": "out_flow",
+    "sourceHandle": "flow",
+    "targetHandle": null,
+    "kind": "flow"
+   },
+   {
+    "id": "to_out_agents",
+    "source": "route",
+    "target": "out_agents",
+    "sourceHandle": "agents",
+    "targetHandle": null,
+    "kind": "flow"
+   },
+   {
+    "id": "to_out_output",
+    "source": "route",
+    "target": "out_output",
+    "sourceHandle": "output",
+    "targetHandle": null,
+    "kind": "flow"
+   },
+   {
+    "id": "to_out_default",
+    "source": "route",
+    "target": "out_default",
+    "sourceHandle": "default",
+    "targetHandle": null,
+    "kind": "flow"
+   }
+  ]
+ }
+}

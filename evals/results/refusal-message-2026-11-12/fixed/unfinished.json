@@ -1,0 +1,10 @@
+{
+  "paused": {
+    "status": "failed",
+    "error": "Saved token accounting is missing or malformed. No further model request was started. This run cannot continue; start a new run."
+  },
+  "killed": {
+    "status": "failed",
+    "error": "Saved token accounting is missing or malformed. No further model request was started. This run cannot continue; start a new run."
+  }
+}

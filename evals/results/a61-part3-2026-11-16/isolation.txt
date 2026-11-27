@@ -1,0 +1,13 @@
+Isolation copy: git archive b1c2bb5 + the changed files below, committed as 921cedc.
+Every tracked file not listed equals b1c2bb5. sha256 of each changed file, working tree vs isolation copy:
+README.md 57217d00530d01ff 128a5b16b02bc189 DIFFERS
+backend/app/compiler.py d6fb8e0b1df32c51 d6fb8e0b1df32c51 equal
+docs/operations.md 5a386f64c1a8f516 5a386f64c1a8f516 equal
+docs/platform-reference.md cfa48f0af73e4527 cfa48f0af73e4527 equal
+docs/production-scenario-testing.md 14122ba3baf7acd1 14122ba3baf7acd1 equal
+docs/superpowers/specs/2026-11-16-bounded-loops-scenarios-design.md 73ce620a946be40e 73ce620a946be40e equal
+scripts/check_production_scenarios.py 98e449f64147d5a5 98e449f64147d5a5 equal
+backend/tests/test_repeat_write_approval.py dbdd4200b920b516 dbdd4200b920b516 equal
+scripts/scenarios/repeat_loops.py 8f40c2a8e6ee0993 8f40c2a8e6ee0993 equal
+Tracked files in the isolation copy vs b1c2bb5: added ['backend/tests/test_repeat_write_approval.py', 'scripts/scenarios/repeat_loops.py']; removed []; changed ['README.md', 'backend/app/compiler.py', 'docs/operations.md', 'docs/platform-reference.md', 'docs/production-scenario-testing.md', 'docs/superpowers/specs/2026-11-16-bounded-loops-scenarios-design.md', 'scripts/check_production_scenarios.py'].
+README.md differs from the isolation copy only in the three counts updated after the gates (2,157 backend tests, 34 deployed scenarios); no code or test file differs.

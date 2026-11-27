@@ -320,6 +320,8 @@ test('invalid JSON in a case rule stops Validate and Run locally and names the c
   await options.fill('["urgent"]');
   const saved = await validate(page, validated);
   expect((routeNode(saved).config.cases as { when: { options: unknown } }[])[0].when.options).toEqual(['urgent']);
+  // A6.1 Part 2 moved the rule fields into ConditionFields: the eq operand is dropped for `in`.
+  expect((routeNode(saved).config.cases as { when: unknown }[])[0].when).toEqual({ field: 'category', operator: 'in', options: ['urgent'] });
   expect(unexpected).toEqual([]);
 });
 

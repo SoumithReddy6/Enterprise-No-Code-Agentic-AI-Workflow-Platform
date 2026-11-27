@@ -1,0 +1,43 @@
+[
+ {
+  "id": "S25",
+  "status": "failed",
+  "error": "AssertionError: r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.",
+  "seconds": 0.7
+ },
+ {
+  "id": "S26a",
+  "status": "failed",
+  "error": "AssertionError: ('failed', 'r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.')",
+  "seconds": 0.1
+ },
+ {
+  "id": "S26b",
+  "status": "failed",
+  "error": "AssertionError: ('failed', 'r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.')",
+  "seconds": 0.1
+ },
+ {
+  "id": "S26c",
+  "status": "passed",
+  "seconds": 0.0
+ },
+ {
+  "id": "S27",
+  "status": "failed",
+  "error": "AssertionError: ('failed', 'r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.')",
+  "seconds": 0.1
+ },
+ {
+  "id": "S28",
+  "status": "failed",
+  "error": "AssertionError: the writer never opened iteration 2",
+  "seconds": 30.0
+ },
+ {
+  "id": "S29",
+  "status": "failed",
+  "error": "AssertionError: ('failed', 'r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.')",
+  "seconds": 0.2
+ }
+]

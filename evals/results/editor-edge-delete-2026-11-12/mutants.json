@@ -1,0 +1,30 @@
+[
+  {
+    "id": "Q1",
+    "what": "an edge selection keeps the editor node selection (the original bug)",
+    "oracle": "D01|D02",
+    "killed": true,
+    "result": "Error: expect(locator).not.toHaveClass(expected) failed; 3 failed"
+  },
+  {
+    "id": "Q2",
+    "what": "the node selection is cleared only when an edge is removed",
+    "oracle": "D01|D02",
+    "killed": true,
+    "result": "Error: expect(locator).not.toHaveClass(expected) failed; 3 failed"
+  },
+  {
+    "id": "Q3",
+    "what": "a node the editor selects keeps the edge selection",
+    "oracle": "D05",
+    "killed": true,
+    "result": "Error: expect(locator).toHaveCount(expected) failed; 1 failed"
+  },
+  {
+    "id": "Q4",
+    "what": "the palette drop selects the node without the helper",
+    "oracle": "D05",
+    "killed": true,
+    "result": "Error: expect(locator).toHaveCount(expected) failed; 1 failed"
+  }
+]

@@ -1,0 +1,435 @@
+.................................................................FFFFFFF [ 93%]
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+______ test_r17d_a_removal_after_the_halt_row_refuses_the_saved_fallback _______
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-417/test_r17d_a_removal_after_the_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x111238d00>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x1115c4440>
+
+    @pytest.mark.asyncio
+    async def test_r17d_a_removal_after_the_halt_row_refuses_the_saved_fallback(tmp_path, monkeypatch, services):
+        monkeypatch.setenv('AGENT_RUN_BUDGET', '2')
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        script = kb_script(monkeypatch, [verdict(False)], [])
+        raw = kb_downstream(kb['id'])
+        for node in raw['nodes']:
+            if node['id'] == 'r': node['config']['on_limit'] = 'last'
+            if node['id'] == 'next': node.update(type='llm', inputs={'prompt': 'r.text'})
+        assert errors(raw) == []
+        original = crash_on(monkeypatch, store, row_saved(0))
+        id, first = await attempt(store, worker, raw, message='project codename')
+        assert set(rows(store, id)) == {0} and 'r' not in first['checkpoints'], first.get('error')
+        removed = []
+        def remove_after_halt(id_, owner, event, **kwargs):
+            saved = original(id_, owner, event, **kwargs)
+            if row_saved(1, 'interrupted')(event):
+                remove(services, kb, doc); removed.append(True)
+            return saved
+        monkeypatch.setattr(store, 'worker_event', remove_after_halt)
+        _, final_run = await attempt(store, worker, id=id)
+        assert removed and rows(store, id)[1]['budget_halt'] == 'action', 'the source went after the halt row committed'
+>       assert final_run['status'] == 'failed' and f'r:0: {REMOVED_SOURCES}' in final_run['error']
+E       AssertionError: assert ('failed' == 'failed'
+E         
+E           failed and 'r:0: saved knowledge sources are unavailable or removed. Start a new run with current evidence.' in 'out: a knowledge source behind this answer is unavailable or was removed. No answer was published. Start a new run with current evidence.')
+
+backend/tests/test_repeat.py:1153: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:43.913954+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:43.932450+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:43.933066+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.019}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:43.939018+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"job.lease_acquired","worker_id":"51f531aeffbe4d41b7b077a6f9544b80"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:43.939316+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:43.979937+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":8}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:43.988928+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"model.usage","node_id":"writer","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":10,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:43.992005+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":0}}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:43.994754+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"model.usage","node_id":"judge","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":1,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:43.996819+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"node.success","node_id":"judge","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":1,"completion_tokens":0}}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:43.999110+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"node.cancelled","node_id":"r","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:43.999409+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.000811+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"run.finish","status":"failed","seconds":0.061}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.005614+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"job.lease_acquired","worker_id":"51f531aeffbe4d41b7b077a6f9544b80"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.005781+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"run.start","nodes":6,"resumed":true}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.044122+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.053561+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"model.usage","node_id":"writer","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":10,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.057119+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":0}}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.060480+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"node.warning","node_id":"judge","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.061603+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"node.success","node_id":"judge","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.063513+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"node.info","node_id":"r","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.064517+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"node.success","node_id":"r","transient":false,"cached":false,"duration_ms":19}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.066616+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"model.usage","node_id":"next","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":1,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.069111+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"node.success","node_id":"next","transient":false,"cached":false,"duration_ms":3,"usage":{"calls":1,"prompt_tokens":1,"completion_tokens":0}}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.071370+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"kb.management.failure","service":"management","action":"verify","error_type":"KeyError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.072524+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"node.failed","node_id":"out","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.072785+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"run.failure","error_type":"UnsafeExecutionError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.073856+00:00","request_id":null,"run_id":"9a3c5a5d71474c268d6d59b88782f783","tenant":"local","event":"run.finish","status":"failed","seconds":0.068}
+_____ test_r27a_an_upstream_abstention_stops_the_repeat_before_the_checker _____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11148c050>
+
+    @pytest.mark.asyncio
+    async def test_r27a_an_upstream_abstention_stops_the_repeat_before_the_checker(monkeypatch):
+        from backend.app.agent_runtime import NO_EVIDENCE
+        guard_abstains(monkeypatch)
+        script = Script(monkeypatch, writer=['model-generated draft'], judge=[verdict(False), verdict(True)])
+        raw = document([
+            {**guarded_retrieve('retrieve'), 'inputs': {'query': 'input.message'}},
+            repeat(source='retrieve.context'), writer(), judge(),
+            {'id': 'out', 'type': 'response', 'inputs': {'text': 'r.text'}},
+        ], [('input', 'retrieve'), ('retrieve', 'r'), ('r', 'out'), loop('r', 'writer', 'body'), loop('r', 'judge', 'check')])
+        assert errors(raw) == []
+        values, exc, events = await run_mem(raw, platform=fixture_kb())
+        assert exc is None, exc
+>       assert script.count('writer') == 0 and script.count('judge') == 0, 'no checker and no second writer'
+E       AssertionError: no checker and no second writer
+E       assert (1 == 0)
+E        +  where 1 = count('writer')
+E        +    where count = <test_repeat.Script object at 0x1115a51f0>.count
+
+backend/tests/test_repeat.py:1170: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.159702+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"judge","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":1,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.159942+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"writer","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":1,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.160594+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"judge","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":1,"completion_tokens":0}
+_________ test_r27b_a_body_abstention_reaches_a_downstream_model_node __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11148dd30>
+
+    @pytest.mark.asyncio
+    async def test_r27b_a_body_abstention_reaches_a_downstream_model_node(monkeypatch):
+        from backend.app.agent_runtime import NO_EVIDENCE
+        guard_abstains(monkeypatch)
+        script = Script(monkeypatch, next=['generated anyway'])
+        raw = document([
+            repeat(body='lookup', check='', until=NEVER), guarded_retrieve(),
+            {'id': 'next', 'type': 'llm', 'inputs': {'prompt': 'r.text'}, 'config': {**MODEL, 'system': 'KEY:next'}},
+            {'id': 'out', 'type': 'response', 'inputs': {'text': 'next.text'}},
+        ], [('input', 'r'), ('r', 'next'), ('next', 'out'), loop('r', 'lookup', 'body')])
+        assert errors(raw) == []
+        values, exc, events = await run_mem(raw, platform=fixture_kb())
+>       assert exc is None, exc
+E       AssertionError: ValueError('r: the stop rule was not met after 3 iterations.')
+E       assert ValueError('r: the stop rule was not met after 3 iterations.') is None
+
+backend/tests/test_repeat.py:1190: AssertionError
+__ test_r27c_a_checker_abstention_returns_the_refusal_not_the_unchecked_draft __
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11148d080>
+
+    @pytest.mark.asyncio
+    async def test_r27c_a_checker_abstention_returns_the_refusal_not_the_unchecked_draft(monkeypatch):
+        from backend.app.agent_runtime import NO_EVIDENCE
+        guard_abstains(monkeypatch)
+        script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[call('lookup', 'q'), final(verdict(True))])
+        raw = standard(extra=[guarded_retrieve()], extra_edges=[tool_edge('lookup', 'judge')])
+        assert errors(raw) == []
+        values, exc, events = await run_mem(raw, platform=fixture_kb())
+>       assert exc is None, exc
+E       AssertionError: ValueError('r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.')
+E       assert ValueError('r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.') is None
+
+backend/tests/test_repeat.py:1206: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.245892+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"writer","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":1,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.246683+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"judge","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":1,"completion_tokens":0}
+__________ test_r27d_a_saved_guard_stop_is_reused_without_a_call[row] __________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-417/test_r27d_a_saved_guard_stop_i0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11179e6d0>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x11179dcc0>
+stop = 'row'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('stop', ['row', 'checkpoint'])
+    async def test_r27d_a_saved_guard_stop_is_reused_without_a_call(tmp_path, monkeypatch, services, stop):
+        from backend.app.agent_runtime import NO_EVIDENCE
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        asked = guard_abstains(monkeypatch)
+        script = Script(monkeypatch, query=[], judge=[])
+        crash_on(monkeypatch, store, row_saved(0) if stop == 'row' else checkpoint_of('r'))
+        id, first = await attempt(store, worker, guarded_query_flow(kb['id']), message='project codename')
+        assert first['status'] != 'success' and ('r' in first['checkpoints']) == (stop == 'checkpoint')
+        saved = rows(store, id)
+>       assert set(saved) == {0} and saved[0]['status'] == 'abstained' and saved[0]['value'].startswith(NO_EVIDENCE)
+E       assert (set() == {0}
+E         
+E         Extra items in the right set:
+E         0
+E         Use -v to get more diff)
+
+backend/tests/test_repeat.py:1232: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.321496+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.342341+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.343151+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.022}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.348867+00:00","request_id":null,"run_id":"f77f7bdd6af1418f9d23ce33720d6492","tenant":"local","event":"job.lease_acquired","worker_id":"dbd6dfc5bd614a62840caa62a26204ba"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.349189+00:00","request_id":null,"run_id":"f77f7bdd6af1418f9d23ce33720d6492","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.505344+00:00","request_id":null,"run_id":"f77f7bdd6af1418f9d23ce33720d6492","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.512500+00:00","request_id":null,"run_id":"f77f7bdd6af1418f9d23ce33720d6492","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.514501+00:00","request_id":null,"run_id":"f77f7bdd6af1418f9d23ce33720d6492","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.517838+00:00","request_id":null,"run_id":"f77f7bdd6af1418f9d23ce33720d6492","tenant":"local","event":"node.failed","node_id":"judge","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.518980+00:00","request_id":null,"run_id":"f77f7bdd6af1418f9d23ce33720d6492","tenant":"local","event":"node.failed","node_id":"r","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.519301+00:00","request_id":null,"run_id":"f77f7bdd6af1418f9d23ce33720d6492","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.520774+00:00","request_id":null,"run_id":"f77f7bdd6af1418f9d23ce33720d6492","tenant":"local","event":"run.finish","status":"failed","seconds":0.172}
+______ test_r27d_a_saved_guard_stop_is_reused_without_a_call[checkpoint] _______
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-417/test_r27d_a_saved_guard_stop_i1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1116d1550>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x1116d0910>
+stop = 'checkpoint'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('stop', ['row', 'checkpoint'])
+    async def test_r27d_a_saved_guard_stop_is_reused_without_a_call(tmp_path, monkeypatch, services, stop):
+        from backend.app.agent_runtime import NO_EVIDENCE
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        asked = guard_abstains(monkeypatch)
+        script = Script(monkeypatch, query=[], judge=[])
+        crash_on(monkeypatch, store, row_saved(0) if stop == 'row' else checkpoint_of('r'))
+        id, first = await attempt(store, worker, guarded_query_flow(kb['id']), message='project codename')
+>       assert first['status'] != 'success' and ('r' in first['checkpoints']) == (stop == 'checkpoint')
+E       AssertionError: assert ('failed' != 'success' and ('r' in {'input': {'message': 'project codename', '_provenance': {'v': 2, 'ports': {'message': 'source'}, 'eligible_ports': ['message']}}}) == ('checkpoint' == 'checkpoint'
+E         
+E           checkpoint))
+
+backend/tests/test_repeat.py:1230: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.591976+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.615034+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.615788+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.024}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.621762+00:00","request_id":null,"run_id":"de5f820c31724d228385e842ef89eed1","tenant":"local","event":"job.lease_acquired","worker_id":"dc41fc5865ba47f19129a9b2a21efb03"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.622201+00:00","request_id":null,"run_id":"de5f820c31724d228385e842ef89eed1","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.654506+00:00","request_id":null,"run_id":"de5f820c31724d228385e842ef89eed1","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.663303+00:00","request_id":null,"run_id":"de5f820c31724d228385e842ef89eed1","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.665436+00:00","request_id":null,"run_id":"de5f820c31724d228385e842ef89eed1","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.669083+00:00","request_id":null,"run_id":"de5f820c31724d228385e842ef89eed1","tenant":"local","event":"node.failed","node_id":"judge","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.670042+00:00","request_id":null,"run_id":"de5f820c31724d228385e842ef89eed1","tenant":"local","event":"node.failed","node_id":"r","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.670318+00:00","request_id":null,"run_id":"de5f820c31724d228385e842ef89eed1","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.671803+00:00","request_id":null,"run_id":"de5f820c31724d228385e842ef89eed1","tenant":"local","event":"run.finish","status":"failed","seconds":0.05}
+_____________ test_r27e_a_changed_guard_row_is_refused[<lambda>0] ______________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-417/test_r27e_a_changed_guard_row_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1116d0280>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x1116d16a0>
+change = <function <lambda> at 0x10ee10ca0>
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('change', [lambda e: {**e, 'met': False}, lambda e: {**e, 'value': 7},
+                                        lambda e: {**e, 'index': 1}])
+    async def test_r27e_a_changed_guard_row_is_refused(tmp_path, monkeypatch, services, change):
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        guard_abstains(monkeypatch)
+        Script(monkeypatch, query=[], judge=[])
+        crash_on(monkeypatch, store, row_saved(0))
+        id, _ = await attempt(store, worker, guarded_query_flow(kb['id']), message='project codename')
+        edit_rows(store, id, lambda i, e: change(e))
+        crash_on(monkeypatch, store, lambda e: False)
+        _, final_run = await attempt(store, worker, id=id)
+>       assert final_run['status'] == 'failed' and RESTORE in final_run['error']
+E       AssertionError: assert ('failed' == 'failed'
+E         
+E           failed and 'r cannot be restored: a saved iteration no longer matches its stop rule. Start a new run.' in 'r: iteration 1: Iteration call failed.')
+
+backend/tests/test_repeat.py:1251: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.745587+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.765446+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.766079+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.02}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.771601+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"job.lease_acquired","worker_id":"6d031be843704d6ab7a3ca9652dbbfc3"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.771938+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.804630+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":5}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.812300+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.814313+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.817895+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"node.failed","node_id":"judge","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.818808+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"node.failed","node_id":"r","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.819154+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.820425+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"run.finish","status":"failed","seconds":0.048}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.824301+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"job.lease_acquired","worker_id":"6d031be843704d6ab7a3ca9652dbbfc3"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.824436+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"run.start","nodes":5,"resumed":true}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.850049+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.865682+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.869265+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.876669+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"node.failed","node_id":"judge","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.879400+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"node.failed","node_id":"r","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.879913+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:44.882796+00:00","request_id":null,"run_id":"a77bec17fc674627b269df687ee8ff72","tenant":"local","event":"run.finish","status":"failed","seconds":0.058}
+_____________ test_r27e_a_changed_guard_row_is_refused[<lambda>1] ______________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-417/test_r27e_a_changed_guard_row_1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x110facbb0>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x110fae0b0>
+change = <function <lambda> at 0x10ee10d50>
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('change', [lambda e: {**e, 'met': False}, lambda e: {**e, 'value': 7},
+                                        lambda e: {**e, 'index': 1}])
+    async def test_r27e_a_changed_guard_row_is_refused(tmp_path, monkeypatch, services, change):
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        guard_abstains(monkeypatch)
+        Script(monkeypatch, query=[], judge=[])
+        crash_on(monkeypatch, store, row_saved(0))
+        id, _ = await attempt(store, worker, guarded_query_flow(kb['id']), message='project codename')
+        edit_rows(store, id, lambda i, e: change(e))
+        crash_on(monkeypatch, store, lambda e: False)
+        _, final_run = await attempt(store, worker, id=id)
+>       assert final_run['status'] == 'failed' and RESTORE in final_run['error']
+E       AssertionError: assert ('failed' == 'failed'
+E         
+E           failed and 'r cannot be restored: a saved iteration no longer matches its stop rule. Start a new run.' in 'r: iteration 1: Iteration call failed.')
+
+backend/tests/test_repeat.py:1251: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.015395+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.053588+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.055225+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.04}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.065435+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"job.lease_acquired","worker_id":"684fe1b93b8e48fdad7acb14642eae8e"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.066033+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.127946+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":7}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.143217+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.146120+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.150381+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"node.failed","node_id":"judge","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.151330+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"node.failed","node_id":"r","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.151620+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.153098+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"run.finish","status":"failed","seconds":0.087}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.157204+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"job.lease_acquired","worker_id":"684fe1b93b8e48fdad7acb14642eae8e"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.157329+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"run.start","nodes":5,"resumed":true}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.183392+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.190529+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.191958+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.195292+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"node.failed","node_id":"judge","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.196126+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"node.failed","node_id":"r","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.196398+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.197321+00:00","request_id":null,"run_id":"7c3b0354647f4c79983fae784c3f57b8","tenant":"local","event":"run.finish","status":"failed","seconds":0.04}
+_____________ test_r27e_a_changed_guard_row_is_refused[<lambda>2] ______________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-417/test_r27e_a_changed_guard_row_2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x110df3b60>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x110a0c910>
+change = <function <lambda> at 0x10ee10e00>
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('change', [lambda e: {**e, 'met': False}, lambda e: {**e, 'value': 7},
+                                        lambda e: {**e, 'index': 1}])
+    async def test_r27e_a_changed_guard_row_is_refused(tmp_path, monkeypatch, services, change):
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        guard_abstains(monkeypatch)
+        Script(monkeypatch, query=[], judge=[])
+        crash_on(monkeypatch, store, row_saved(0))
+        id, _ = await attempt(store, worker, guarded_query_flow(kb['id']), message='project codename')
+        edit_rows(store, id, lambda i, e: change(e))
+        crash_on(monkeypatch, store, lambda e: False)
+        _, final_run = await attempt(store, worker, id=id)
+>       assert final_run['status'] == 'failed' and RESTORE in final_run['error']
+E       AssertionError: assert ('failed' == 'failed'
+E         
+E           failed and 'r cannot be restored: a saved iteration no longer matches its stop rule. Start a new run.' in 'r: iteration 1: Iteration call failed.')
+
+backend/tests/test_repeat.py:1251: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.262685+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.280270+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.280847+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.285376+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"job.lease_acquired","worker_id":"7e18efaa890a410ba7aa75de6da033ac"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.285702+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.315561+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":4}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.322208+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.323933+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.327078+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"node.failed","node_id":"judge","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.327868+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"node.failed","node_id":"r","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.328155+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.329290+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"run.finish","status":"failed","seconds":0.044}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.333034+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"job.lease_acquired","worker_id":"7e18efaa890a410ba7aa75de6da033ac"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.333171+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"run.start","nodes":5,"resumed":true}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.357543+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.362986+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.364364+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"node.success","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.367327+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"node.failed","node_id":"judge","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.368333+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"node.failed","node_id":"r","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.368615+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.369540+00:00","request_id":null,"run_id":"9494fac70fdc483598b377cff0da96a9","tenant":"local","event":"run.finish","status":"failed","seconds":0.036}
+_______________ test_r28a_a_retrieve_body_result_is_its_context ________________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-417/test_r28a_a_retrieve_body_resu0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x110a0d710>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x110a0da90>
+
+    @pytest.mark.asyncio
+    async def test_r28a_a_retrieve_body_result_is_its_context(tmp_path, monkeypatch, services):
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        raw = standard(body={'id': 'lookup', 'type': 'retrieve', 'config': {'knowledge_base_id': kb['id'], 'mode': 'keyword'}},
+                       check=None, until={'operator': 'contains', 'contains': 'Bluebird'})
+        assert errors(raw) == []
+        id, run = await attempt(store, worker, raw, message='project codename')
+>       assert run['status'] == 'success', run.get('error')
+E       AssertionError: r: the stop rule was not met after 3 iterations.
+E       assert 'failed' == 'success'
+E         
+E         - success
+E         + failed
+
+backend/tests/test_repeat.py:1261: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.433928+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.451556+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.452228+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.457758+00:00","request_id":null,"run_id":"c092c5b44d494c05978eca5b6bac33c5","tenant":"local","event":"job.lease_acquired","worker_id":"8160639472b9438aa95da12d3732f416"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.458026+00:00","request_id":null,"run_id":"c092c5b44d494c05978eca5b6bac33c5","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.487644+00:00","request_id":null,"run_id":"c092c5b44d494c05978eca5b6bac33c5","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":7}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.495238+00:00","request_id":null,"run_id":"c092c5b44d494c05978eca5b6bac33c5","tenant":"local","event":"node.success","node_id":"lookup","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.496481+00:00","request_id":null,"run_id":"c092c5b44d494c05978eca5b6bac33c5","tenant":"local","event":"node.info","node_id":"r","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.501511+00:00","request_id":null,"run_id":"c092c5b44d494c05978eca5b6bac33c5","tenant":"local","event":"node.success","node_id":"lookup","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.502586+00:00","request_id":null,"run_id":"c092c5b44d494c05978eca5b6bac33c5","tenant":"local","event":"node.info","node_id":"r","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.507728+00:00","request_id":null,"run_id":"c092c5b44d494c05978eca5b6bac33c5","tenant":"local","event":"node.success","node_id":"lookup","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.508702+00:00","request_id":null,"run_id":"c092c5b44d494c05978eca5b6bac33c5","tenant":"local","event":"node.info","node_id":"r","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.509547+00:00","request_id":null,"run_id":"c092c5b44d494c05978eca5b6bac33c5","tenant":"local","event":"node.failed","node_id":"r","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.509823+00:00","request_id":null,"run_id":"c092c5b44d494c05978eca5b6bac33c5","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T21:45:45.511008+00:00","request_id":null,"run_id":"c092c5b44d494c05978eca5b6bac33c5","tenant":"local","event":"run.finish","status":"failed","seconds":0.053}
+__________ test_r28b_a_body_without_its_result_port_fails_the_repeat ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11104d630>
+
+    @pytest.mark.asyncio
+    async def test_r28b_a_body_without_its_result_port_fails_the_repeat(monkeypatch):
+        from backend.app.registry import REGISTRY
+        async def no_context(inputs, config, ctx):
+            return {'query': inputs['query'], 'sources': '[]'}
+        monkeypatch.setattr(REGISTRY['retrieve'], 'handler', no_context)
+        raw = standard(body={'id': 'lookup', 'type': 'retrieve', 'config': {'knowledge_base_id': 'fixture'}},
+                       check=None, until={'operator': 'empty'})
+        values, exc, events = await run_mem(raw, platform=fixture_kb())
+>       assert exc is not None and "r: iteration 1: the body's context output is missing." in str(exc)
+E       assert (None is not None)
+
+backend/tests/test_repeat.py:1277: AssertionError
+______ test_r27f_a_guard_row_over_200000_bytes_fails_and_nothing_is_saved ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11104f850>
+
+    @pytest.mark.asyncio
+    async def test_r27f_a_guard_row_over_200000_bytes_fails_and_nothing_is_saved(monkeypatch):
+        guard_abstains(monkeypatch)
+        raw = document([repeat(body='lookup', check='', until=NEVER), guarded_retrieve(),
+                        {'id': 'out', 'type': 'response', 'inputs': {'text': 'r.text'}}],
+                       [('input', 'r'), ('r', 'out'), loop('r', 'lookup', 'body')])
+        values, exc, events = await run_mem(raw, platform=fixture_kb(), message='q' * 200_001)
+>       assert exc is not None and 'r: iteration 1 output is too large to save (limit 200000 bytes).' in str(exc), exc
+E       AssertionError: ValueError('r: the stop rule was not met after 3 iterations.')
+E       assert (ValueError('r: the stop rule was not met after 3 iterations.') is not None and 'r: iteration 1 output is too large to save (limit 200000 bytes).' in 'r: the stop rule was not met after 3 iterations.')
+E        +  where 'r: the stop rule was not met after 3 iterations.' = str(ValueError('r: the stop rule was not met after 3 iterations.'))
+
+backend/tests/test_repeat.py:1288: AssertionError
+=========================== short test summary info ============================
+FAILED backend/tests/test_repeat.py::test_r17d_a_removal_after_the_halt_row_refuses_the_saved_fallback
+FAILED backend/tests/test_repeat.py::test_r27a_an_upstream_abstention_stops_the_repeat_before_the_checker
+FAILED backend/tests/test_repeat.py::test_r27b_a_body_abstention_reaches_a_downstream_model_node
+FAILED backend/tests/test_repeat.py::test_r27c_a_checker_abstention_returns_the_refusal_not_the_unchecked_draft
+FAILED backend/tests/test_repeat.py::test_r27d_a_saved_guard_stop_is_reused_without_a_call[row]
+FAILED backend/tests/test_repeat.py::test_r27d_a_saved_guard_stop_is_reused_without_a_call[checkpoint]
+FAILED backend/tests/test_repeat.py::test_r27e_a_changed_guard_row_is_refused[<lambda>0]
+FAILED backend/tests/test_repeat.py::test_r27e_a_changed_guard_row_is_refused[<lambda>1]
+FAILED backend/tests/test_repeat.py::test_r27e_a_changed_guard_row_is_refused[<lambda>2]
+FAILED backend/tests/test_repeat.py::test_r28a_a_retrieve_body_result_is_its_context
+FAILED backend/tests/test_repeat.py::test_r28b_a_body_without_its_result_port_fails_the_repeat
+FAILED backend/tests/test_repeat.py::test_r27f_a_guard_row_over_200000_bytes_fails_and_nothing_is_saved
+12 failed, 65 passed in 6.97s

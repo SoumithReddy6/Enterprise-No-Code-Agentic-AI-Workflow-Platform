@@ -32,17 +32,19 @@ docker compose up -d postgres
 .venv/bin/python -u -m scripts.check_milestone_storage
 ```
 
-The full diagnostic also probes a **lossless populated downgrade**, a capability Relay
-does not promise. That probe currently returns failure: revision 0003 drops item rows
-and accounting on downgrade. It is retained as an explicit diagnostic, not a required
-CI check or a reason to reinterpret an empty-schema migration pass as data preservation.
-Production rollback must restore a consistent database/key backup. To run only the
-supported conformance checks locally:
+The full diagnostic and the CI job also run a **populated downgrade**. Relay does not
+promise a lossless downgrade: revision 0003 drops loop item rows and run accounting on
+the way down. The check proves that this loss is visible. Three runs (a finished loop, a loop
+killed after its first item, and a write batch paused at its second approval) go to
+0001 and back. The finished run must show its loop results as unavailable, never as an
+empty success. Each unfinished run must fail on resume with the accounting refusal, with
+no request sent again. Production rollback must still restore a consistent database/key
+backup. To run only the supported conformance checks locally:
 
 ```bash
 .venv/bin/python -u -m scripts.check_milestone_storage \
   --checks postgres-migrations postgres-four-workers postgres-stale-lease \
-  postgres-sigkill-loop storage-cost copied-workspace
+  postgres-sigkill-loop storage-cost copied-workspace populated-downgrade
 ```
 
 The storage probe reports SQL parameter bytes, not physical disk/WAL consumption. A

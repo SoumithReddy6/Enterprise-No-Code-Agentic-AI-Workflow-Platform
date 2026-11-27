@@ -40,11 +40,13 @@ async def check(question,passages,node_id=None):
     return decision
 
 def from_outputs(outputs):
-    """Only retrieval/query outputs identify actual reader decisions, not agents."""
+    """Only retrieval/query outputs identify actual reader decisions, not agents. A Repeat
+    that an abstention stopped carries the decision in its summary (repeat.GUARD_DECISION)."""
     import json
     try:
         raw=json.loads(outputs.get('context','{}'))
         value=raw.get('answerability')
         if value is None:value=json.loads(outputs.get('grounding','{}')).get('retrieval_answerability')
+        if value is None:value=json.loads(outputs.get('summary','{}')).get('answerability')
         return value if isinstance(value,dict) and value.get('decision') in ('allow','abstain','skip') else None
     except (ValueError,TypeError,AttributeError):return None

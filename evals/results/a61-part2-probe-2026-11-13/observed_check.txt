@@ -1,0 +1,7 @@
+PREVIEW_CHARS 2000
+{"draft_chars": 600, "met": true, "item_result_type": "dict", "met_readable": true, "preview_of": null}
+{"draft_chars": 600, "met": false, "item_result_type": "dict", "met_readable": true, "preview_of": null}
+{"draft_chars": 3800, "met": true, "item_result_type": "dict", "met_readable": true, "preview_of": ["item_result.value.text"]}
+{"draft_chars": 3800, "met": false, "item_result_type": "dict", "met_readable": true, "preview_of": ["item_result.value.text"]}
+{"draft_chars": 6000, "met": true, "item_result_type": "str", "met_readable": false, "preview_of": ["item_result.value.text", "item_result.verdict.notes", "item_result"]}
+{"draft_chars": 6000, "met": false, "item_result_type": "str", "met_readable": false, "preview_of": ["item_result.value.text", "item_result.verdict.notes", "item_result"]}

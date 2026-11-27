@@ -2411,3 +2411,17 @@ input[type='file']::file-selector-button {
   white-space: nowrap;
   font-size: 10px;
 }
+
+/* A Repeat or For each: Body and Checker follow the connections, so they are read-only lines. */
+.readonly-setting {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.readonly-setting output {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  text-align: right;
+}

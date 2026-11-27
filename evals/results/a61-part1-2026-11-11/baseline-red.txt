@@ -1,0 +1,1900 @@
+FFFFFFFFFFFFFFFFFFFFFFFFF.FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF        [100%]
+=================================== FAILURES ===================================
+_ test_v01_a_repeat_with_an_agent_body_and_checker_validates_and_its_outputs_bind _
+
+    def test_v01_a_repeat_with_an_agent_body_and_checker_validates_and_its_outputs_bind():
+        raw = standard(out='r.text')
+        raw['nodes'].insert(-1, {'id': 'note', 'type': 'prompt', 'inputs': {'message': 'r.feedback'}, 'config': {'template': '{message}'}})
+        raw['edges'] = [e for e in raw['edges'] if not (e['source'] == 'r' and e['target'] == 'out')]
+        raw['edges'] += [{'id': 'x1', 'source': 'r', 'target': 'note'}, {'id': 'x2', 'source': 'note', 'target': 'out'}]
+        raw['nodes'][-1]['inputs'] = {'text': 'r.summary'}
+>       assert errors(raw) == []
+E       AssertionError: assert ['Loop connec...stream node.'] == []
+E         
+E         Left contains 6 more items, first extra item: 'Loop connections must start at a For each node.'
+E         Use -v to get more diff
+
+backend/tests/test_repeat.py:208: AssertionError
+__________ test_v02_the_body_must_be_exactly_one_matching_attachment ___________
+
+    def test_v02_the_body_must_be_exactly_one_matching_attachment():
+        none = standard(); none['edges'] = [e for e in none['edges'] if e.get('sourceHandle') != 'body']
+        none['nodes'] = [n for n in none['nodes'] if n['id'] != 'writer']
+>       has(errors(none), NEEDS_BODY)
+
+backend/tests/test_repeat.py:215: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['Loop connections must start at a For each node.', 'Loop connections must leave the body port.', 'Unknown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+text = 'r: Repeat needs exactly one attached body.'
+
+    def has(messages, text):
+>       assert any(text in m for m in messages), f'expected {text!r} in {messages}'
+E       AssertionError: expected 'r: Repeat needs exactly one attached body.' in ['Loop connections must start at a For each node.', 'Loop connections must leave the body port.', 'Unknown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+E       assert False
+E        +  where False = any(<generator object has.<locals>.<genexpr> at 0x10d9b60a0>)
+
+backend/tests/test_repeat.py:128: AssertionError
+___________ test_v03_the_checker_is_at_most_one_agent_and_must_match ___________
+
+    def test_v03_the_checker_is_at_most_one_agent_and_must_match():
+        tool_checker = standard(check=jira('judge'))
+>       has(errors(tool_checker), CHECKER)
+
+backend/tests/test_repeat.py:224: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connectio...nown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+text = 'r: a Repeat has at most one checker, and it must be an Agent.'
+
+    def has(messages, text):
+>       assert any(text in m for m in messages), f'expected {text!r} in {messages}'
+E       AssertionError: expected 'r: a Repeat has at most one checker, and it must be an Agent.' in ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connections must leave the body port.', 'Unknown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+E       assert False
+E        +  where False = any(<generator object has.<locals>.<genexpr> at 0x10d9b66c0>)
+
+backend/tests/test_repeat.py:128: AssertionError
+__________ test_v04_a_write_anywhere_in_the_closure_is_refused[body] ___________
+
+where = 'body'
+
+    @pytest.mark.parametrize('where', ['body', 'checker', 'body tool'])
+    def test_v04_a_write_anywhere_in_the_closure_is_refused(where):
+        if where == 'body':
+            raw = standard(body=write_tool('send'), check=None, until={'operator': 'contains', 'contains': 'ok'})
+            culprit = 'send'
+        elif where == 'checker':
+            raw = standard(extra=[write_tool('mail')], extra_edges=[tool_edge('mail', 'judge')]); culprit = 'mail'
+        else:
+            raw = standard(extra=[write_tool('mail')], extra_edges=[tool_edge('mail', 'writer')]); culprit = 'mail'
+>       has(errors(raw), f'{culprit}: {WRITES}')
+
+backend/tests/test_repeat.py:243: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['Loop connections must start at a For each node.', 'Unknown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+text = 'send: external writes belong after the Repeat.'
+
+    def has(messages, text):
+>       assert any(text in m for m in messages), f'expected {text!r} in {messages}'
+E       AssertionError: expected 'send: external writes belong after the Repeat.' in ['Loop connections must start at a For each node.', 'Unknown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+E       assert False
+E        +  where False = any(<generator object has.<locals>.<genexpr> at 0x10dd1d9a0>)
+
+backend/tests/test_repeat.py:128: AssertionError
+_________ test_v04_a_write_anywhere_in_the_closure_is_refused[checker] _________
+
+where = 'checker'
+
+    @pytest.mark.parametrize('where', ['body', 'checker', 'body tool'])
+    def test_v04_a_write_anywhere_in_the_closure_is_refused(where):
+        if where == 'body':
+            raw = standard(body=write_tool('send'), check=None, until={'operator': 'contains', 'contains': 'ok'})
+            culprit = 'send'
+        elif where == 'checker':
+            raw = standard(extra=[write_tool('mail')], extra_edges=[tool_edge('mail', 'judge')]); culprit = 'mail'
+        else:
+            raw = standard(extra=[write_tool('mail')], extra_edges=[tool_edge('mail', 'writer')]); culprit = 'mail'
+>       has(errors(raw), f'{culprit}: {WRITES}')
+
+backend/tests/test_repeat.py:243: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connectio...nown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+text = 'mail: external writes belong after the Repeat.'
+
+    def has(messages, text):
+>       assert any(text in m for m in messages), f'expected {text!r} in {messages}'
+E       AssertionError: expected 'mail: external writes belong after the Repeat.' in ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connections must leave the body port.', 'Unknown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+E       assert False
+E        +  where False = any(<generator object has.<locals>.<genexpr> at 0x10dd1ef80>)
+
+backend/tests/test_repeat.py:128: AssertionError
+________ test_v04_a_write_anywhere_in_the_closure_is_refused[body tool] ________
+
+where = 'body tool'
+
+    @pytest.mark.parametrize('where', ['body', 'checker', 'body tool'])
+    def test_v04_a_write_anywhere_in_the_closure_is_refused(where):
+        if where == 'body':
+            raw = standard(body=write_tool('send'), check=None, until={'operator': 'contains', 'contains': 'ok'})
+            culprit = 'send'
+        elif where == 'checker':
+            raw = standard(extra=[write_tool('mail')], extra_edges=[tool_edge('mail', 'judge')]); culprit = 'mail'
+        else:
+            raw = standard(extra=[write_tool('mail')], extra_edges=[tool_edge('mail', 'writer')]); culprit = 'mail'
+>       has(errors(raw), f'{culprit}: {WRITES}')
+
+backend/tests/test_repeat.py:243: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connectio...nown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+text = 'mail: external writes belong after the Repeat.'
+
+    def has(messages, text):
+>       assert any(text in m for m in messages), f'expected {text!r} in {messages}'
+E       AssertionError: expected 'mail: external writes belong after the Repeat.' in ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connections must leave the body port.', 'Unknown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+E       assert False
+E        +  where False = any(<generator object has.<locals>.<genexpr> at 0x10dd1d700>)
+
+backend/tests/test_repeat.py:128: AssertionError
+______________ test_v05_a_memory_agent_in_the_closure_is_refused _______________
+
+    def test_v05_a_memory_agent_in_the_closure_is_refused():
+>       has(errors(standard(body=writer(role='memory'))), f'writer: {MEMORY}')
+
+backend/tests/test_repeat.py:247: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connectio...nown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+text = 'writer: an Agent that writes memory cannot run inside a Repeat.'
+
+    def has(messages, text):
+>       assert any(text in m for m in messages), f'expected {text!r} in {messages}'
+E       AssertionError: expected 'writer: an Agent that writes memory cannot run inside a Repeat.' in ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connections must leave the body port.', 'Unknown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+E       assert False
+E        +  where False = any(<generator object has.<locals>.<genexpr> at 0x10dd1e0a0>)
+
+backend/tests/test_repeat.py:128: AssertionError
+_____________ test_v06_nesting_is_refused_in_all_three_directions ______________
+
+    def test_v06_nesting_is_refused_in_all_three_directions():
+        # Repeat inside For each.
+        raw = standard()
+        raw['nodes'] += [{'id': 'tickets', 'type': 'tool_jira', 'inputs': {'input': 'input.message'},
+                          'config': {'connection_id': 'c1', 'operation': 'search', 'jql': 'x'}},
+                         {'id': 'each', 'type': 'for_each', 'inputs': {'items': 'tickets.items'}, 'config': {'body': 'r'}}]
+        raw['edges'] = [e for e in raw['edges'] if not (e['source'] == 'input' and e['target'] == 'r') and not (e['source'] == 'r' and e['target'] == 'out')]
+        raw['edges'] += [{'id': 'n1', 'source': 'input', 'target': 'tickets'}, {'id': 'n2', 'source': 'tickets', 'target': 'each'},
+                         {'id': 'n3', 'source': 'each', 'target': 'out'}, {'id': 'n4', **loop('each', 'r', 'body')}]
+        next(n for n in raw['nodes'] if n['id'] == 'out')['inputs'] = {'text': 'input.message'}
+        next(n for n in raw['nodes'] if n['id'] == 'r')['inputs'] = {}
+>       has(errors(raw), NESTED)
+
+backend/tests/test_repeat.py:264: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connections must leave the body port.', 'A loop body must be a tool, retrieval or Agent node.', 'Unknown node type: repeat.']
+text = 'Nested loops are not supported yet.'
+
+    def has(messages, text):
+>       assert any(text in m for m in messages), f'expected {text!r} in {messages}'
+E       AssertionError: expected 'Nested loops are not supported yet.' in ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connections must leave the body port.', 'A loop body must be a tool, retrieval or Agent node.', 'Unknown node type: repeat.']
+E       assert False
+E        +  where False = any(<generator object has.<locals>.<genexpr> at 0x10dada6c0>)
+
+backend/tests/test_repeat.py:128: AssertionError
+______________ test_v07_settings_are_checked_and_shown_as_written ______________
+
+    def test_v07_settings_are_checked_and_shown_as_written():
+>       has(errors(standard(max_iterations=0)), 'r: max_iterations: Input should be greater than or equal to 1')
+
+backend/tests/test_repeat.py:278: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connectio...nown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+text = 'r: max_iterations: Input should be greater than or equal to 1'
+
+    def has(messages, text):
+>       assert any(text in m for m in messages), f'expected {text!r} in {messages}'
+E       AssertionError: expected 'r: max_iterations: Input should be greater than or equal to 1' in ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connections must leave the body port.', 'Unknown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+E       assert False
+E        +  where False = any(<generator object has.<locals>.<genexpr> at 0x10da5a260>)
+
+backend/tests/test_repeat.py:128: AssertionError
+__________________ test_v08_a_back_edge_names_the_repeat_node __________________
+
+    def test_v08_a_back_edge_names_the_repeat_node():
+        raw = document([{'id': 'a', 'type': 'prompt', 'inputs': {'message': 'input.message'}, 'config': {'template': '{message}'}},
+                        {'id': 'b', 'type': 'prompt', 'inputs': {'message': 'a.text'}, 'config': {'template': '{message}'}},
+                        {'id': 'out', 'type': 'response', 'inputs': {'text': 'b.text'}}],
+                       [('input', 'a'), ('a', 'b'), ('b', 'a'), ('b', 'out')])
+>       has(errors(raw), CYCLE)
+
+backend/tests/test_repeat.py:290: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['Workflow contains a cycle; loops are not supported yet.', 'a: a parallel branch can be entered only from its fork an...s Join.', 'out: parallel branches cannot stop, route, decide or fork.', 'b: Branches from b must all end at one Join.']
+text = 'Workflow contains a cycle; use a Repeat node for a bounded loop.'
+
+    def has(messages, text):
+>       assert any(text in m for m in messages), f'expected {text!r} in {messages}'
+E       AssertionError: expected 'Workflow contains a cycle; use a Repeat node for a bounded loop.' in ['Workflow contains a cycle; loops are not supported yet.', 'a: a parallel branch can be entered only from its fork and left only to its Join.', 'out: parallel branches cannot stop, route, decide or fork.', 'b: Branches from b must all end at one Join.']
+E       assert False
+E        +  where False = any(<generator object has.<locals>.<genexpr> at 0x10d9b60a0>)
+
+backend/tests/test_repeat.py:128: AssertionError
+_ test_v09_a_check_edge_on_a_for_each_and_a_loop_edge_from_another_node_are_refused _
+
+    def test_v09_a_check_edge_on_a_for_each_and_a_loop_edge_from_another_node_are_refused():
+        raw = document([{'id': 'tickets', 'type': 'tool_jira', 'inputs': {'input': 'input.message'},
+                         'config': {'connection_id': 'c1', 'operation': 'search', 'jql': 'x'}},
+                        {'id': 'each', 'type': 'for_each', 'inputs': {'items': 'tickets.items'}, 'config': {'body': 'work'}},
+                        {'id': 'work', 'type': 'tool_python', 'config': {'code': 'print(1)', 'description': 'x'}},
+                        {'id': 'out', 'type': 'response', 'inputs': {'text': 'input.message'}}],
+                       [('input', 'tickets'), ('tickets', 'each'), ('each', 'out'), loop('each', 'work', 'check')])
+        has(errors(raw), BODY_PORT)
+        raw = standard(extra=[{'id': 'p', 'type': 'prompt', 'config': {'template': '{message}'}}], extra_edges=[loop('p', 'writer', 'body')])
+>       has(errors(raw), LOOP_START)
+
+backend/tests/test_repeat.py:302: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connectio...rt at a For each node.', 'p: node is unconnected or unreachable from the workflow.', 'Unknown node type: repeat.', ...]
+text = 'Loop connections must start at a For each or Repeat node.'
+
+    def has(messages, text):
+>       assert any(text in m for m in messages), f'expected {text!r} in {messages}'
+E       AssertionError: expected 'Loop connections must start at a For each or Repeat node.' in ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connections must leave the body port.', 'Loop connections must start at a For each node.', 'p: node is unconnected or unreachable from the workflow.', 'Unknown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+E       assert False
+E        +  where False = any(<generator object has.<locals>.<genexpr> at 0x10d9b7bc0>)
+
+backend/tests/test_repeat.py:128: AssertionError
+_____ test_v10_downstream_nodes_may_bind_exactly_the_three_repeat_outputs ______
+
+    def test_v10_downstream_nodes_may_bind_exactly_the_three_repeat_outputs():
+        refs = bindable_outputs(Workflow.model_validate(standard()))['out']
+>       assert [ref for ref in refs if ref.startswith('r.')] == ['r.text', 'r.feedback', 'r.summary']
+E       AssertionError: assert [] == ['r.text', 'r..., 'r.summary']
+E         
+E         Right contains 3 more items, first extra item: 'r.text'
+E         Use -v to get more diff
+
+backend/tests/test_repeat.py:307: AssertionError
+______________ test_v11_a_checker_needs_a_schema_and_a_field_rule ______________
+
+    def test_v11_a_checker_needs_a_schema_and_a_field_rule():
+>       has(errors(standard(check=judge(output_schema={}))), SCHEMA_NEEDED)
+
+backend/tests/test_repeat.py:311: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connectio...nown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+text = 'r: a checker needs an output schema, and the stop rule must read one of its fields.'
+
+    def has(messages, text):
+>       assert any(text in m for m in messages), f'expected {text!r} in {messages}'
+E       AssertionError: expected 'r: a checker needs an output schema, and the stop rule must read one of its fields.' in ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connections must leave the body port.', 'Unknown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+E       assert False
+E        +  where False = any(<generator object has.<locals>.<genexpr> at 0x10dd1e5e0>)
+
+backend/tests/test_repeat.py:128: AssertionError
+_______ test_v12_the_rule_field_must_be_required_with_the_matching_type ________
+
+    def test_v12_the_rule_field_must_be_required_with_the_matching_type():
+        string_pass = {**VERDICT, 'properties': {**VERDICT['properties'], 'pass': {'type': 'string'}}}
+>       has(errors(standard(check=judge(output_schema=string_pass))), typed_rule('pass', 'boolean'))
+
+backend/tests/test_repeat.py:317: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+messages = ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connectio...nown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+text = "r: the stop rule reads pass, which the checker's schema must require as boolean."
+
+    def has(messages, text):
+>       assert any(text in m for m in messages), f'expected {text!r} in {messages}'
+E       AssertionError: expected "r: the stop rule reads pass, which the checker's schema must require as boolean." in ['Loop connections must start at a For each node.', 'Loop connections must start at a For each node.', 'Loop connections must leave the body port.', 'Unknown node type: repeat.', 'out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.']
+E       assert False
+E        +  where False = any(<generator object has.<locals>.<genexpr> at 0x10dd1fae0>)
+
+backend/tests/test_repeat.py:128: AssertionError
+__________________ test_r01_the_rule_is_met_at_iteration_two ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dd48f70>
+
+    @pytest.mark.asyncio
+    async def test_r01_the_rule_is_met_at_iteration_two(monkeypatch):
+        script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True, 'good')])
+        values, exc, events = await run_mem(standard())
+>       assert exc is None, exc
+E       AssertionError: ValueError('Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop con...nknown node type: repeat.
+E         out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.')
+E       assert ValueError('Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop con...nknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.') is None
+
+backend/tests/test_repeat.py:335: AssertionError
+___________ test_r02_iteration_inputs_are_the_specified_compact_json ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dd371b0>
+
+    @pytest.mark.asyncio
+    async def test_r02_iteration_inputs_are_the_specified_compact_json(monkeypatch):
+        first = verdict(False, 'shorter')
+        script = Script(monkeypatch, writer=['draft 1', 'draft 2', 'draft 3'], judge=[first, verdict(False, 'warmer'), verdict(True)])
+        values, exc, _ = await run_mem(standard(), message='Write a reply')
+>       assert exc is None, exc
+E       AssertionError: ValueError('Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop con...nknown node type: repeat.
+E         out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.')
+E       assert ValueError('Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop con...nknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.') is None
+
+backend/tests/test_repeat.py:348: AssertionError
+_ test_r03_the_limit_fails_by_default_and_on_error_route_takes_the_error_branch _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dd32840>
+
+    @pytest.mark.asyncio
+    async def test_r03_the_limit_fails_by_default_and_on_error_route_takes_the_error_branch(monkeypatch):
+        Script(monkeypatch, writer=['a', 'b', 'c'], judge=[verdict(False)] * 3)
+        _, exc, _ = await run_mem(standard())
+>       assert str(exc) == 'r: the stop rule was not met after 3 iterations.'
+E       AssertionError: assert 'Loop connect...pstream node.' == 'r: the stop ...3 iterations.'
+E         
+E         - r: the stop rule was not met after 3 iterations.
+E         + Loop connections must start at a For each node.
+E         + Loop connections must start at a For each node.
+E         + Loop connections must leave the body port.
+E         + Unknown node type: repeat.
+E         + out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.
+
+backend/tests/test_repeat.py:367: AssertionError
+_______ test_r04_on_limit_last_returns_the_last_draft_marked_incomplete ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dcde450>
+
+    @pytest.mark.asyncio
+    async def test_r04_on_limit_last_returns_the_last_draft_marked_incomplete(monkeypatch):
+        from backend.app.worker import run_truncation
+        Script(monkeypatch, writer=['a', 'b'], judge=[verdict(False, 'f1'), verdict(False, 'f2')])
+        raw = standard(max_iterations=2, on_limit='last')
+        values, exc, _ = await run_mem(raw)
+>       assert exc is None, exc
+E       AssertionError: ValueError('Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop con...nknown node type: repeat.
+E         out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.')
+E       assert ValueError('Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop con...nknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.') is None
+
+backend/tests/test_repeat.py:379: AssertionError
+__________ test_r05_without_a_checker_the_rule_reads_the_body_output ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ddbfa10>
+
+    @pytest.mark.asyncio
+    async def test_r05_without_a_checker_the_rule_reads_the_body_output(monkeypatch):
+        script = Script(monkeypatch, writer=['not yet', 'DONE: reply'])
+        values, exc, _ = await run_mem(standard(check=None, until={'operator': 'contains', 'contains': 'DONE'}))
+>       assert exc is None, exc
+E       AssertionError: ValueError('Loop connections must start at a For each node.
+E         Unknown node type: repeat.
+E         out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.')
+E       assert ValueError('Loop connections must start at a For each node.\nUnknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.') is None
+
+backend/tests/test_repeat.py:393: AssertionError
+_________ test_r06_a_verdict_that_is_not_json_fails_at_that_iteration __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ddbf380>
+
+    @pytest.mark.asyncio
+    async def test_r06_a_verdict_that_is_not_json_fails_at_that_iteration(monkeypatch):
+        script = Script(monkeypatch, writer=['plain text'])
+        _, exc, events = await run_mem(standard(check=None))
+>       assert str(exc) == 'r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.'
+E       AssertionError: assert 'Loop connect...pstream node.' == 'r: iteration...as no fields.'
+E         
+E         - r: iteration 1: Condition field pass: the value is not JSON, so it has no fields.
+E         + Loop connections must start at a For each node.
+E         + Unknown node type: repeat.
+E         + out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.
+
+backend/tests/test_repeat.py:402: AssertionError
+______ test_r07_a_body_failure_fails_the_repeat_and_nothing_further_runs _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ddbf700>
+
+    @pytest.mark.asyncio
+    async def test_r07_a_body_failure_fails_the_repeat_and_nothing_further_runs(monkeypatch):
+        script = Script(monkeypatch, writer=[ValueError('provider down')])
+        _, exc, events = await run_mem(standard())
+>       assert str(exc).startswith('r: iteration 1: ') and script.count('judge') == 0 and script.count('writer') == 1
+E       AssertionError: assert (False)
+E        +  where False = <built-in method startswith of str object at 0x10da62890>('r: iteration 1: ')
+E        +    where <built-in method startswith of str object at 0x10da62890> = 'Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop connections mu...Unknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.'.startswith
+E        +      where 'Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop connections mu...Unknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.' = str(ValueError('Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop con...nknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.'))
+
+backend/tests/test_repeat.py:410: AssertionError
+_ test_r08_each_tool_call_is_charged_once_and_the_action_budget_stops_the_loop _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ddbfcb0>
+
+    @pytest.mark.asyncio
+    async def test_r08_each_tool_call_is_charged_once_and_the_action_budget_stops_the_loop(monkeypatch):
+        monkeypatch.setenv('AGENT_RUN_BUDGET', '2')
+        for on_limit in ('last', 'fail'):
+            platform, calls = tools('found')
+            sink = {}
+            values, exc, events = await run_mem(standard(body=jira(), check=None, until=NEVER, on_limit=on_limit), platform, sink=sink)
+>           assert calls == ['r:0:lookup', 'r:1:lookup']
+E           AssertionError: assert [] == ['r:0:lookup', 'r:1:lookup']
+E             
+E             Right contains 2 more items, first extra item: 'r:0:lookup'
+E             Use -v to get more diff
+
+backend/tests/test_repeat.py:421: AssertionError
+________ test_r08b_a_checker_stopped_by_the_action_budget_is_not_judged ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ddbcbb0>
+
+    @pytest.mark.asyncio
+    async def test_r08b_a_checker_stopped_by_the_action_budget_is_not_judged(monkeypatch):
+        """With no action left, an Agent checker makes no model call and returns an abstention
+        marked truncated (kind action). The iteration is interrupted, never judged."""
+        monkeypatch.setenv('AGENT_RUN_BUDGET', '2')
+        script = Script(monkeypatch, judge=[verdict(False, 'f1')])
+        platform, calls = tools('found')
+        sink = {}
+        values, exc, events = await run_mem(standard(body=jira(), on_limit='last'), platform, sink=sink)
+>       assert exc is None, exc
+E       AssertionError: ValueError('Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop con...nknown node type: repeat.
+E         out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.')
+E       assert ValueError('Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop con...nknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.') is None
+
+backend/tests/test_repeat.py:441: AssertionError
+_______ test_r09_the_token_limit_refuses_the_next_writer_without_a_call ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ddbfa80>
+
+    @pytest.mark.asyncio
+    async def test_r09_the_token_limit_refuses_the_next_writer_without_a_call(monkeypatch):
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+        script = Script(monkeypatch, writer=[('draft 1', 5)], judge=[(verdict(False), 5)])
+        values, exc, events = await run_mem(standard(on_limit='last'))
+>       assert exc is None, exc
+E       AssertionError: ValueError('Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop con...nknown node type: repeat.
+E         out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.')
+E       assert ValueError('Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop con...nknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.') is None
+
+backend/tests/test_repeat.py:453: AssertionError
+_ test_r10_nested_events_carry_the_iteration_and_shared_tools_get_separate_ids _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ddbf770>
+
+    @pytest.mark.asyncio
+    async def test_r10_nested_events_carry_the_iteration_and_shared_tools_get_separate_ids(monkeypatch):
+        Script(monkeypatch, writer=[call('lookup'), final('draft')], judge=[call('lookup'), final(verdict(True))])
+        platform, calls = tools('record')
+        raw = standard(extra=[jira()], extra_edges=[tool_edge('lookup', 'writer'), tool_edge('lookup', 'judge')])
+        values, exc, events = await run_mem(raw, platform)
+>       assert exc is None, exc
+E       AssertionError: ValueError('Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop con...nknown node type: repeat.
+E         out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.')
+E       assert ValueError('Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop con...nknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.') is None
+
+backend/tests/test_repeat.py:465: AssertionError
+________ test_r13_an_entry_over_200000_bytes_fails_and_nothing_is_saved ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ddbcfa0>
+
+    @pytest.mark.asyncio
+    async def test_r13_an_entry_over_200000_bytes_fails_and_nothing_is_saved(monkeypatch):
+        Script(monkeypatch, writer=['x' * 200_001])
+        _, exc, events = await run_mem(standard(check=None, until={'operator': 'contains', 'contains': 'x'}))
+>       assert str(exc) == 'r: iteration 1 output is too large to save (limit 200000 bytes).'
+E       AssertionError: assert 'Loop connect...pstream node.' == 'r: iteration...00000 bytes).'
+E         
+E         - r: iteration 1 output is too large to save (limit 200000 bytes).
+E         + Loop connections must start at a For each node.
+E         + Unknown node type: repeat.
+E         + out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.
+
+backend/tests/test_repeat.py:501: AssertionError
+_______________ test_r14a_a_repeat_runs_inside_a_parallel_branch _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ddbc1a0>
+
+    @pytest.mark.asyncio
+    async def test_r14a_a_repeat_runs_inside_a_parallel_branch(monkeypatch):
+        Script(monkeypatch, writer=['draft'], judge=[verdict(True)], b1=['side'])
+        raw = branch_flow()
+>       assert errors(raw) == []
+E       AssertionError: assert ['Loop connec...stream node.'] == []
+E         
+E         Left contains 5 more items, first extra item: 'Loop connections must start at a For each node.'
+E         Use -v to get more diff
+
+backend/tests/test_repeat.py:509: AssertionError
+_ test_r14b_a_failed_sibling_cancels_the_repeat_and_the_open_iteration_is_not_saved _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dd80980>
+
+    @pytest.mark.asyncio
+    async def test_r14b_a_failed_sibling_cancels_the_repeat_and_the_open_iteration_is_not_saved(monkeypatch):
+        started = asyncio.Event()
+        async def hold(prompt):
+            started.set(); await asyncio.sleep(30); return 'never'
+        async def fail_after_start(prompt):
+            await asyncio.wait_for(started.wait(), 10); return ValueError('b1 failed')
+        Script(monkeypatch, writer=[hold], b1=[fail_after_start])
+        _, exc, events = await run_mem(branch_flow())
+>       assert exc is not None and 'b1 failed' in str(exc)
+E       AssertionError: assert (ValueError('Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop con...nknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.') is not None and 'b1 failed' in 'Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop connections mu...Unknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.')
+E        +  where 'Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop connections mu...Unknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.' = str(ValueError('Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop con...nknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.'))
+
+backend/tests/test_repeat.py:524: AssertionError
+___________ test_r16_contract_2_refuses_a_switch_on_the_repeat_text ____________
+
+    def test_r16_contract_2_refuses_a_switch_on_the_repeat_text():
+>       from backend.tests.test_switch import flow
+
+backend/tests/test_repeat.py:540: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+<frozen importlib._bootstrap>:1371: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1342: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:938: in _load_unlocked
+    ???
+/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/lib/python3.14/site-packages/_pytest/assertion/rewrite.py:188: in exec_module
+    exec(co, module.__dict__)
+backend/tests/test_switch.py:19: in <module>
+    SUPPORT = json.loads((ROOT / 'examples/request-admission/support.json').read_text())
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/baseline-iPGf/examples/request-admission/support.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/baseline-iPGf/examples/request-admission/support.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+___________ test_r19_a_budget_stop_between_writer_and_checker[last] ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10eda9d30>
+on_limit = 'last'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('on_limit', ['last', 'fail'])
+    async def test_r19_a_budget_stop_between_writer_and_checker(monkeypatch, on_limit):
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+        script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)])
+        values, exc, events = await run_mem(standard(on_limit=on_limit))
+>       assert script.count('judge') == 1, 'the second checker must not reach the provider'
+E       AssertionError: the second checker must not reach the provider
+E       assert 0 == 1
+E        +  where 0 = count('judge')
+E        +    where count = <test_repeat.Script object at 0x10dd275f0>.count
+
+backend/tests/test_repeat.py:555: AssertionError
+___________ test_r19_a_budget_stop_between_writer_and_checker[fail] ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10eda9c50>
+on_limit = 'fail'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('on_limit', ['last', 'fail'])
+    async def test_r19_a_budget_stop_between_writer_and_checker(monkeypatch, on_limit):
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+        script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)])
+        values, exc, events = await run_mem(standard(on_limit=on_limit))
+>       assert script.count('judge') == 1, 'the second checker must not reach the provider'
+E       AssertionError: the second checker must not reach the provider
+E       assert 0 == 1
+E        +  where 0 = count('judge')
+E        +    where count = <test_repeat.Script object at 0x10de5c4d0>.count
+
+backend/tests/test_repeat.py:555: AssertionError
+_____ test_r19_with_no_fully_evaluated_iteration_both_settings_fail[last] ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10de02190>
+on_limit = 'last'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('on_limit', ['last', 'fail'])
+    async def test_r19_with_no_fully_evaluated_iteration_both_settings_fail(monkeypatch, on_limit):
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+        Script(monkeypatch, writer=[('draft 1', 10)])
+        _, exc, events = await run_mem(standard(on_limit=on_limit))
+>       assert str(exc) == budget_fail(1)
+E       AssertionError: assert 'Loop connect...pstream node.' == 'r: the run b..._TOKEN_LIMIT.'
+E         
+E         - r: the run budget stopped iteration 1 before it was checked. Run token budget exhausted; raise RELAY_RUN_TOKEN_LIMIT.
+E         + Loop connections must start at a For each node.
+E         + Loop connections must start at a For each node.
+E         + Loop connections must leave the body port.
+E         + Unknown node type: repeat.
+E         + out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.
+
+backend/tests/test_repeat.py:572: AssertionError
+_____ test_r19_with_no_fully_evaluated_iteration_both_settings_fail[fail] ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dd80e50>
+on_limit = 'fail'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('on_limit', ['last', 'fail'])
+    async def test_r19_with_no_fully_evaluated_iteration_both_settings_fail(monkeypatch, on_limit):
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+        Script(monkeypatch, writer=[('draft 1', 10)])
+        _, exc, events = await run_mem(standard(on_limit=on_limit))
+>       assert str(exc) == budget_fail(1)
+E       AssertionError: assert 'Loop connect...pstream node.' == 'r: the run b..._TOKEN_LIMIT.'
+E         
+E         - r: the run budget stopped iteration 1 before it was checked. Run token budget exhausted; raise RELAY_RUN_TOKEN_LIMIT.
+E         + Loop connections must start at a For each node.
+E         + Loop connections must start at a For each node.
+E         + Loop connections must leave the body port.
+E         + Unknown node type: repeat.
+E         + out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.
+
+backend/tests/test_repeat.py:572: AssertionError
+______ test_r19b_a_budget_stop_before_any_call_is_saved_without_a_charge _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dd80d70>
+
+    @pytest.mark.asyncio
+    async def test_r19b_a_budget_stop_before_any_call_is_saved_without_a_charge(monkeypatch):
+        monkeypatch.setenv('AGENT_RUN_BUDGET', '1')
+        platform, calls = tools('found')
+        sink = {}
+        values, exc, events = await run_mem(standard(body=jira(), check=None, until=NEVER, on_limit='last'), platform, sink=sink)
+>       assert exc is None, exc
+E       AssertionError: ValueError('Loop connections must start at a For each node.
+E         Unknown node type: repeat.
+E         out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.')
+E       assert ValueError('Loop connections must start at a For each node.\nUnknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.') is None
+
+backend/tests/test_repeat.py:582: AssertionError
+_________________ test_r20_a_truncated_verdict_is_never_judged _________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10de02f20>
+
+    @pytest.mark.asyncio
+    async def test_r20_a_truncated_verdict_is_never_judged(monkeypatch):
+        """A free-text Agent out of tokens succeeds with an abstention marked truncated; a
+        contains rule on that text would match it."""
+        from backend.app.agent_runtime import NO_EVIDENCE
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+        script = Script(monkeypatch, writer=[('first draft', 10)])
+        phrase = NO_EVIDENCE.split('.')[0]
+        values, exc, events = await run_mem(standard(check=None, until={'operator': 'contains', 'contains': phrase}, on_limit='last'))
+>       assert exc is None, exc
+E       AssertionError: ValueError('Loop connections must start at a For each node.
+E         Unknown node type: repeat.
+E         out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.')
+E       assert ValueError('Loop connections must start at a For each node.\nUnknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.') is None
+
+backend/tests/test_repeat.py:597: AssertionError
+____ test_r22a_the_agent_rejects_a_string_verdict_before_the_repeat_sees_it ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10de01fd0>
+
+    @pytest.mark.asyncio
+    async def test_r22a_the_agent_rejects_a_string_verdict_before_the_repeat_sees_it(monkeypatch):
+        wrong = json.dumps({'pass': 'true', 'feedback': 'x'})
+        Script(monkeypatch, writer=['draft'], judge=[wrong, wrong])
+        _, exc, _ = await run_mem(standard())
+>       assert str(exc).startswith('r: iteration 1: Agent output did not match the required structure')
+E       AssertionError: assert False
+E        +  where False = <built-in method startswith of str object at 0x10dd55920>('r: iteration 1: Agent output did not match the required structure')
+E        +    where <built-in method startswith of str object at 0x10dd55920> = 'Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop connections mu...Unknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.'.startswith
+E        +      where 'Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop connections mu...Unknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.' = str(ValueError('Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop con...nknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.'))
+
+backend/tests/test_repeat.py:609: AssertionError
+________ test_r23_a_body_stopped_by_its_own_step_limit_fails_the_repeat ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10dd81390>
+
+    @pytest.mark.asyncio
+    async def test_r23_a_body_stopped_by_its_own_step_limit_fails_the_repeat(monkeypatch):
+        Script(monkeypatch, writer=[call('lookup')])
+        platform, _ = tools('record')
+        raw = standard(body=writer(max_steps=1), extra=[jira()], extra_edges=[tool_edge('lookup', 'writer')])
+        _, exc, _ = await run_mem(raw, platform)
+>       assert str(exc).startswith("r: iteration 1: the body's output is incomplete (Agent step budget exhausted")
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x10dd557f0>("r: iteration 1: the body's output is incomplete (Agent step budget exhausted")
+E        +    where <built-in method startswith of str object at 0x10dd557f0> = 'Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop connections mu...Unknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.'.startswith
+E        +      where 'Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop connections mu...Unknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.' = str(ValueError('Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop con...nknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.'))
+
+backend/tests/test_repeat.py:618: AssertionError
+______________ test_r11_a_resumed_repeat_reuses_saved_iterations _______________
+
+lab = (<backend.app.storage.Store object at 0x10d8fe270>, <backend.app.worker.Worker object at 0x10f2b06e0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f0d6900>
+
+    @pytest.mark.asyncio
+    async def test_r11_a_resumed_repeat_reuses_saved_iterations(lab, monkeypatch):
+        store, worker = lab
+        script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False, 'tighter'), verdict(True)])
+        crash_on(monkeypatch, store, row_saved(0))
+        id, first = await attempt(store, worker, standard())
+>       assert first['status'] != 'success' and set(rows(store, id)) == {0}
+E       AssertionError: assert ('failed' != 'success' and set() == {0}
+E         
+E         Extra items in the right set:
+E         0
+E         Use -v to get more diff)
+
+backend/tests/test_repeat.py:721: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.351900+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.440962+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.442070+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.09}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.449698+00:00","request_id":null,"run_id":"97421edb6aed43ecaa5c6404fc4370d8","tenant":"local","event":"job.lease_acquired","worker_id":"04ab5f61acc54cda882aa310a4994337"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.450064+00:00","request_id":null,"run_id":"97421edb6aed43ecaa5c6404fc4370d8","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.453396+00:00","request_id":null,"run_id":"97421edb6aed43ecaa5c6404fc4370d8","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.454721+00:00","request_id":null,"run_id":"97421edb6aed43ecaa5c6404fc4370d8","tenant":"local","event":"run.finish","status":"failed","seconds":0.005}
+______ test_r12_a_saved_iteration_whose_met_no_longer_matches_is_refused _______
+
+lab = (<backend.app.storage.Store object at 0x10f2ab4d0>, <backend.app.worker.Worker object at 0x10f612d50>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f269e10>
+
+    @pytest.mark.asyncio
+    async def test_r12_a_saved_iteration_whose_met_no_longer_matches_is_refused(lab, monkeypatch):
+        store, worker = lab
+        script = Script(monkeypatch, writer=['draft 1'], judge=[verdict(False)])
+        crash_on(monkeypatch, store, row_saved(0))
+        id, _ = await attempt(store, worker, standard())
+        edit_rows(store, id, lambda i, entry: {**entry, 'met': True})
+        crash_on(monkeypatch, store, lambda e: False)
+        _, final_run = await attempt(store, worker, id=id)
+>       assert final_run['status'] == 'failed' and RESTORE in final_run['error']
+E       AssertionError: assert ('failed' == 'failed'
+E         
+E           failed and 'r cannot be restored: a saved iteration no longer matches its stop rule. Start a new run.' in 'Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop connections mu...Unknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.')
+
+backend/tests/test_repeat.py:740: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.470063+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.487782+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.488480+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.494511+00:00","request_id":null,"run_id":"119ec6c9e36e42dcaef71b33c43a76ea","tenant":"local","event":"job.lease_acquired","worker_id":"9863f3f4f4d34d549803a72ff3579ba9"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.494783+00:00","request_id":null,"run_id":"119ec6c9e36e42dcaef71b33c43a76ea","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.498043+00:00","request_id":null,"run_id":"119ec6c9e36e42dcaef71b33c43a76ea","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.499275+00:00","request_id":null,"run_id":"119ec6c9e36e42dcaef71b33c43a76ea","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.541128+00:00","request_id":null,"run_id":"119ec6c9e36e42dcaef71b33c43a76ea","tenant":"local","event":"job.lease_acquired","worker_id":"9863f3f4f4d34d549803a72ff3579ba9"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.541284+00:00","request_id":null,"run_id":"119ec6c9e36e42dcaef71b33c43a76ea","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.543677+00:00","request_id":null,"run_id":"119ec6c9e36e42dcaef71b33c43a76ea","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.544664+00:00","request_id":null,"run_id":"119ec6c9e36e42dcaef71b33c43a76ea","tenant":"local","event":"run.finish","status":"failed","seconds":0.003}
+_____________ test_r21a_replay_after_the_halt_row_commits_is_exact _____________
+
+lab = (<backend.app.storage.Store object at 0x10f611450>, <backend.app.worker.Worker object at 0x10dec5f90>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f60e2e0>
+
+    @pytest.mark.asyncio
+    async def test_r21a_replay_after_the_halt_row_commits_is_exact(lab, monkeypatch):
+        store, worker = lab
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+        monkeypatch.setenv('AGENT_RUN_BUDGET', '5')
+        script = Script(monkeypatch, judge=[(verdict(False), 10)])
+        raw = standard(body=jira(connection=connection(store)), on_limit='last')
+        crash_on(monkeypatch, store, row_saved(1, 'interrupted'))
+        id, first = await attempt(store, worker, raw)
+        assert first['status'] != 'success'
+>       saved = rows(store, id)[1]
+                ^^^^^^^^^^^^^^^^^^
+E       KeyError: 1
+
+backend/tests/test_repeat.py:754: KeyError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.558609+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.576014+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.576665+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.593245+00:00","request_id":null,"run_id":"1d56e267e278429eb88ecc9a0779801e","tenant":"local","event":"job.lease_acquired","worker_id":"73e102b55adc4f1ea78372c55d2d87db"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.593553+00:00","request_id":null,"run_id":"1d56e267e278429eb88ecc9a0779801e","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.597240+00:00","request_id":null,"run_id":"1d56e267e278429eb88ecc9a0779801e","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.598618+00:00","request_id":null,"run_id":"1d56e267e278429eb88ecc9a0779801e","tenant":"local","event":"run.finish","status":"failed","seconds":0.005}
+_________________ test_r21a_replay_of_a_halt_row_with_no_calls _________________
+
+lab = (<backend.app.storage.Store object at 0x10f093bb0>, <backend.app.worker.Worker object at 0x10f202190>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f219160>
+
+    @pytest.mark.asyncio
+    async def test_r21a_replay_of_a_halt_row_with_no_calls(lab, monkeypatch):
+        store, worker = lab
+        monkeypatch.setenv('AGENT_RUN_BUDGET', '1')
+        raw = standard(body=jira(connection=connection(store)), check=None, until=NEVER, on_limit='last')
+        crash_on(monkeypatch, store, row_saved(1, 'interrupted'))
+        id, _ = await attempt(store, worker, raw)
+>       assert rows(store, id)[1] == {'index': 1, 'status': 'interrupted', 'budget_halt': 'action', 'calls': 0}
+               ^^^^^^^^^^^^^^^^^^
+E       KeyError: 1
+
+backend/tests/test_repeat.py:772: KeyError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.613075+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.632036+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.632753+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.02}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.638876+00:00","request_id":null,"run_id":"ca46fceb7fee45f496bf522376c22ae7","tenant":"local","event":"job.lease_acquired","worker_id":"d2cc5ffef7fa414ca939a5cc76af899b"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.639180+00:00","request_id":null,"run_id":"ca46fceb7fee45f496bf522376c22ae7","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.641148+00:00","request_id":null,"run_id":"ca46fceb7fee45f496bf522376c22ae7","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.642362+00:00","request_id":null,"run_id":"ca46fceb7fee45f496bf522376c22ae7","tenant":"local","event":"run.finish","status":"failed","seconds":0.003}
+___ test_r21b_replay_before_the_halt_row_commits_keeps_drafts_and_paid_usage ___
+
+lab = (<backend.app.storage.Store object at 0x10f202650>, <backend.app.worker.Worker object at 0x10f395f30>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f33c210>
+
+    @pytest.mark.asyncio
+    async def test_r21b_replay_before_the_halt_row_commits_keeps_drafts_and_paid_usage(lab, monkeypatch):
+        """The review's reproduction: a read uses the last action, then the checker is refused
+        for tokens; the attempt stops before the halt row commits. The replay may stop for
+        actions instead; the test does not assert the kind."""
+        store, worker = lab
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+        monkeypatch.setenv('AGENT_RUN_BUDGET', '2')
+        script = Script(monkeypatch, judge=[(verdict(False), 10)])
+        raw = standard(body=jira(connection=connection(store)), on_limit='last')
+        crash_on(monkeypatch, store, row_saved(1, 'interrupted'), before=True)
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and set(rows(store, id)) == {0}
+E       AssertionError: assert ('failed' != 'success' and set() == {0}
+E         
+E         Extra items in the right set:
+E         0
+E         Use -v to get more diff)
+
+backend/tests/test_repeat.py:794: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.658193+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.675822+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.676373+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.683058+00:00","request_id":null,"run_id":"f4e65ac0d7774afea62521e6e70bb877","tenant":"local","event":"job.lease_acquired","worker_id":"285a79f9916d446fb06fcbcc1b0946a0"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.683379+00:00","request_id":null,"run_id":"f4e65ac0d7774afea62521e6e70bb877","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.686881+00:00","request_id":null,"run_id":"f4e65ac0d7774afea62521e6e70bb877","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.688176+00:00","request_id":null,"run_id":"f4e65ac0d7774afea62521e6e70bb877","tenant":"local","event":"run.finish","status":"failed","seconds":0.005}
+_________ test_r22b_a_restored_string_verdict_is_refused_by_the_repeat _________
+
+lab = (<backend.app.storage.Store object at 0x10f39be30>, <backend.app.worker.Worker object at 0x10f8abd10>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f8d4980>
+
+    @pytest.mark.asyncio
+    async def test_r22b_a_restored_string_verdict_is_refused_by_the_repeat(lab, monkeypatch):
+        store, worker = lab
+        script = Script(monkeypatch, writer=['draft 1'], judge=[verdict(False)])
+        crash_on(monkeypatch, store, row_saved(0))
+        id, _ = await attempt(store, worker, standard())
+        edit_rows(store, id, lambda i, entry: {**entry, 'verdict': json.dumps({'pass': 'true', 'feedback': 'x'}), 'met': True})
+        crash_on(monkeypatch, store, lambda e: False)
+        _, final_run = await attempt(store, worker, id=id)
+        assert final_run['status'] == 'failed', 'the text comparison alone would accept "true"'
+>       assert 'r: iteration 1: the verdict field pass must be a JSON boolean.' in final_run['error']
+E       AssertionError: assert 'r: iteration 1: the verdict field pass must be a JSON boolean.' in 'Loop connections must start at a For each node.\nLoop connections must start at a For each node.\nLoop connections mu...Unknown node type: repeat.\nout: invalid binding text = r.text; use a declared output from a guaranteed upstream node.'
+
+backend/tests/test_repeat.py:819: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.702266+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.721137+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.721861+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.02}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.726696+00:00","request_id":null,"run_id":"5e3810da422444a192cab3cd1840d5c7","tenant":"local","event":"job.lease_acquired","worker_id":"24aabdda64464e9a835468ddf2181474"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.726994+00:00","request_id":null,"run_id":"5e3810da422444a192cab3cd1840d5c7","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.730280+00:00","request_id":null,"run_id":"5e3810da422444a192cab3cd1840d5c7","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.731553+00:00","request_id":null,"run_id":"5e3810da422444a192cab3cd1840d5c7","tenant":"local","event":"run.finish","status":"failed","seconds":0.005}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.735447+00:00","request_id":null,"run_id":"5e3810da422444a192cab3cd1840d5c7","tenant":"local","event":"job.lease_acquired","worker_id":"24aabdda64464e9a835468ddf2181474"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.735608+00:00","request_id":null,"run_id":"5e3810da422444a192cab3cd1840d5c7","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.737995+00:00","request_id":null,"run_id":"5e3810da422444a192cab3cd1840d5c7","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.739034+00:00","request_id":null,"run_id":"5e3810da422444a192cab3cd1840d5c7","tenant":"local","event":"run.finish","status":"failed","seconds":0.003}
+_ test_r24_a_changed_checkpoint_or_row_is_refused_and_downstream_never_runs[verdict] _
+
+lab = (<backend.app.storage.Store object at 0x10f7cb570>, <backend.app.worker.Worker object at 0x10f6eebe0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f8d4130>
+change = 'verdict'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('change', ['verdict', 'met', 'text'])
+    async def test_r24_a_changed_checkpoint_or_row_is_refused_and_downstream_never_runs(lab, monkeypatch, change):
+>       store, worker, id, script = await checkpointed(lab, monkeypatch, 'met')
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_repeat.py:849: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+lab = (<backend.app.storage.Store object at 0x10f7cb570>, <backend.app.worker.Worker object at 0x10f6eebe0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f8d4130>
+shape = 'met'
+
+    async def checkpointed(lab, monkeypatch, shape):
+        """Run until r's node checkpoint; shape: met, limit (last) or budget (last)."""
+        store, worker = lab
+        if shape == 'met':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True)], next=['done'])
+            raw = downstream_flow()
+        elif shape == 'limit':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(False)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(max_iterations=2, on_limit='last')
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+            script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(on_limit='last')
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and 'r' in first['checkpoints'], first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         next: invalid binding input = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('failed' != 'success' and 'r' in {})
+
+backend/tests/test_repeat.py:838: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.752957+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.770188+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.770884+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.775892+00:00","request_id":null,"run_id":"7c8dfc23979b4e5a8a9b5f997668109c","tenant":"local","event":"job.lease_acquired","worker_id":"b973a5b3b67a4fb5a2b951f411e1d007"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.776176+00:00","request_id":null,"run_id":"7c8dfc23979b4e5a8a9b5f997668109c","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.779210+00:00","request_id":null,"run_id":"7c8dfc23979b4e5a8a9b5f997668109c","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.780607+00:00","request_id":null,"run_id":"7c8dfc23979b4e5a8a9b5f997668109c","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+_ test_r24_a_changed_checkpoint_or_row_is_refused_and_downstream_never_runs[met] _
+
+lab = (<backend.app.storage.Store object at 0x10f6ec050>, <backend.app.worker.Worker object at 0x10f69ae00>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f6d6200>
+change = 'met'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('change', ['verdict', 'met', 'text'])
+    async def test_r24_a_changed_checkpoint_or_row_is_refused_and_downstream_never_runs(lab, monkeypatch, change):
+>       store, worker, id, script = await checkpointed(lab, monkeypatch, 'met')
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_repeat.py:849: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+lab = (<backend.app.storage.Store object at 0x10f6ec050>, <backend.app.worker.Worker object at 0x10f69ae00>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f6d6200>
+shape = 'met'
+
+    async def checkpointed(lab, monkeypatch, shape):
+        """Run until r's node checkpoint; shape: met, limit (last) or budget (last)."""
+        store, worker = lab
+        if shape == 'met':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True)], next=['done'])
+            raw = downstream_flow()
+        elif shape == 'limit':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(False)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(max_iterations=2, on_limit='last')
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+            script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(on_limit='last')
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and 'r' in first['checkpoints'], first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         next: invalid binding input = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('failed' != 'success' and 'r' in {})
+
+backend/tests/test_repeat.py:838: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.800362+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.819631+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.820315+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.02}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.825318+00:00","request_id":null,"run_id":"c27c32596d47426d99939ab43b81c4e0","tenant":"local","event":"job.lease_acquired","worker_id":"87c581a19c9b436781e532b496e4981d"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.825603+00:00","request_id":null,"run_id":"c27c32596d47426d99939ab43b81c4e0","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.828679+00:00","request_id":null,"run_id":"c27c32596d47426d99939ab43b81c4e0","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.830010+00:00","request_id":null,"run_id":"c27c32596d47426d99939ab43b81c4e0","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+_ test_r24_a_changed_checkpoint_or_row_is_refused_and_downstream_never_runs[text] _
+
+lab = (<backend.app.storage.Store object at 0x10f381b50>, <backend.app.worker.Worker object at 0x10fa5c150>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f7743d0>
+change = 'text'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('change', ['verdict', 'met', 'text'])
+    async def test_r24_a_changed_checkpoint_or_row_is_refused_and_downstream_never_runs(lab, monkeypatch, change):
+>       store, worker, id, script = await checkpointed(lab, monkeypatch, 'met')
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_repeat.py:849: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+lab = (<backend.app.storage.Store object at 0x10f381b50>, <backend.app.worker.Worker object at 0x10fa5c150>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10f7743d0>
+shape = 'met'
+
+    async def checkpointed(lab, monkeypatch, shape):
+        """Run until r's node checkpoint; shape: met, limit (last) or budget (last)."""
+        store, worker = lab
+        if shape == 'met':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True)], next=['done'])
+            raw = downstream_flow()
+        elif shape == 'limit':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(False)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(max_iterations=2, on_limit='last')
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+            script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(on_limit='last')
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and 'r' in first['checkpoints'], first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         next: invalid binding input = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('failed' != 'success' and 'r' in {})
+
+backend/tests/test_repeat.py:838: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.849418+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.867989+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.868569+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.019}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.873575+00:00","request_id":null,"run_id":"5ed24adcdc1c477b99e951572b0ba4df","tenant":"local","event":"job.lease_acquired","worker_id":"efcf635c208442e5a5196f7d7806170b"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.873850+00:00","request_id":null,"run_id":"5ed24adcdc1c477b99e951572b0ba4df","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.876878+00:00","request_id":null,"run_id":"5ed24adcdc1c477b99e951572b0ba4df","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.878294+00:00","request_id":null,"run_id":"5ed24adcdc1c477b99e951572b0ba4df","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+____________ test_r24c_control_an_untouched_checkpoint_resumes[met] ____________
+
+lab = (<backend.app.storage.Store object at 0x10f382c50>, <backend.app.worker.Worker object at 0x10b321450>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fa31780>
+shape = 'met'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', ['met', 'limit', 'budget'])
+    async def test_r24c_control_an_untouched_checkpoint_resumes(lab, monkeypatch, shape):
+>       store, worker, id, script = await checkpointed(lab, monkeypatch, shape)
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_repeat.py:861: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+lab = (<backend.app.storage.Store object at 0x10f382c50>, <backend.app.worker.Worker object at 0x10b321450>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fa31780>
+shape = 'met'
+
+    async def checkpointed(lab, monkeypatch, shape):
+        """Run until r's node checkpoint; shape: met, limit (last) or budget (last)."""
+        store, worker = lab
+        if shape == 'met':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True)], next=['done'])
+            raw = downstream_flow()
+        elif shape == 'limit':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(False)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(max_iterations=2, on_limit='last')
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+            script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(on_limit='last')
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and 'r' in first['checkpoints'], first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         next: invalid binding input = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('failed' != 'success' and 'r' in {})
+
+backend/tests/test_repeat.py:838: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.898289+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.917271+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.917847+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.02}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.923165+00:00","request_id":null,"run_id":"46444bf711134fbe9a5dff03e8822e82","tenant":"local","event":"job.lease_acquired","worker_id":"51393cdb9ace4e25abbb1a87d0dedd67"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.923446+00:00","request_id":null,"run_id":"46444bf711134fbe9a5dff03e8822e82","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.926355+00:00","request_id":null,"run_id":"46444bf711134fbe9a5dff03e8822e82","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.927477+00:00","request_id":null,"run_id":"46444bf711134fbe9a5dff03e8822e82","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+___________ test_r24c_control_an_untouched_checkpoint_resumes[limit] ___________
+
+lab = (<backend.app.storage.Store object at 0x10f642c60>, <backend.app.worker.Worker object at 0x10f9a08c0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fa5baf0>
+shape = 'limit'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', ['met', 'limit', 'budget'])
+    async def test_r24c_control_an_untouched_checkpoint_resumes(lab, monkeypatch, shape):
+>       store, worker, id, script = await checkpointed(lab, monkeypatch, shape)
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_repeat.py:861: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+lab = (<backend.app.storage.Store object at 0x10f642c60>, <backend.app.worker.Worker object at 0x10f9a08c0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fa5baf0>
+shape = 'limit'
+
+    async def checkpointed(lab, monkeypatch, shape):
+        """Run until r's node checkpoint; shape: met, limit (last) or budget (last)."""
+        store, worker = lab
+        if shape == 'met':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True)], next=['done'])
+            raw = downstream_flow()
+        elif shape == 'limit':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(False)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(max_iterations=2, on_limit='last')
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+            script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(on_limit='last')
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and 'r' in first['checkpoints'], first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         next: invalid binding input = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('failed' != 'success' and 'r' in {})
+
+backend/tests/test_repeat.py:838: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.946919+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.964351+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.965063+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.970023+00:00","request_id":null,"run_id":"60c60be8324b4743af1c8d99c1b4c397","tenant":"local","event":"job.lease_acquired","worker_id":"8702843346cc44f9b8e65e8614222bd3"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.970542+00:00","request_id":null,"run_id":"60c60be8324b4743af1c8d99c1b4c397","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.973522+00:00","request_id":null,"run_id":"60c60be8324b4743af1c8d99c1b4c397","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.974832+00:00","request_id":null,"run_id":"60c60be8324b4743af1c8d99c1b4c397","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+__________ test_r24c_control_an_untouched_checkpoint_resumes[budget] ___________
+
+lab = (<backend.app.storage.Store object at 0x10f9a3890>, <backend.app.worker.Worker object at 0x10f9a1a90>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fc6da20>
+shape = 'budget'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', ['met', 'limit', 'budget'])
+    async def test_r24c_control_an_untouched_checkpoint_resumes(lab, monkeypatch, shape):
+>       store, worker, id, script = await checkpointed(lab, monkeypatch, shape)
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_repeat.py:861: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+lab = (<backend.app.storage.Store object at 0x10f9a3890>, <backend.app.worker.Worker object at 0x10f9a1a90>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fc6da20>
+shape = 'budget'
+
+    async def checkpointed(lab, monkeypatch, shape):
+        """Run until r's node checkpoint; shape: met, limit (last) or budget (last)."""
+        store, worker = lab
+        if shape == 'met':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True)], next=['done'])
+            raw = downstream_flow()
+        elif shape == 'limit':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(False)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(max_iterations=2, on_limit='last')
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+            script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(on_limit='last')
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and 'r' in first['checkpoints'], first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         next: invalid binding input = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('failed' != 'success' and 'r' in {})
+
+backend/tests/test_repeat.py:838: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.995982+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.016661+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.017288+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.021}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.022856+00:00","request_id":null,"run_id":"1f176d4b42f04912a2c488dc64dc334f","tenant":"local","event":"job.lease_acquired","worker_id":"dfe0d0f0a74544a6abb02c567c1758cf"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.023185+00:00","request_id":null,"run_id":"1f176d4b42f04912a2c488dc64dc334f","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.026221+00:00","request_id":null,"run_id":"1f176d4b42f04912a2c488dc64dc334f","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.027409+00:00","request_id":null,"run_id":"1f176d4b42f04912a2c488dc64dc334f","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+___________ test_r24c_d_a_checkpoint_with_an_unknown_key_is_refused ____________
+
+lab = (<backend.app.storage.Store object at 0x10f9a7230>, <backend.app.worker.Worker object at 0x10fb774d0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fc6cec0>
+
+    @pytest.mark.asyncio
+    async def test_r24c_d_a_checkpoint_with_an_unknown_key_is_refused(lab, monkeypatch):
+>       store, worker, id, script = await checkpointed(lab, monkeypatch, 'met')
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_repeat.py:873: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+lab = (<backend.app.storage.Store object at 0x10f9a7230>, <backend.app.worker.Worker object at 0x10fb774d0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fc6cec0>
+shape = 'met'
+
+    async def checkpointed(lab, monkeypatch, shape):
+        """Run until r's node checkpoint; shape: met, limit (last) or budget (last)."""
+        store, worker = lab
+        if shape == 'met':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True)], next=['done'])
+            raw = downstream_flow()
+        elif shape == 'limit':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(False)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(max_iterations=2, on_limit='last')
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+            script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(on_limit='last')
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and 'r' in first['checkpoints'], first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         next: invalid binding input = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('failed' != 'success' and 'r' in {})
+
+backend/tests/test_repeat.py:838: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.048725+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.066144+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.066723+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.071583+00:00","request_id":null,"run_id":"ade33a7014424a8988dee871695ac70f","tenant":"local","event":"job.lease_acquired","worker_id":"8d762e363e3b4f1984d2b8f7d112139f"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.071911+00:00","request_id":null,"run_id":"ade33a7014424a8988dee871695ac70f","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.074793+00:00","request_id":null,"run_id":"ade33a7014424a8988dee871695ac70f","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.075994+00:00","request_id":null,"run_id":"ade33a7014424a8988dee871695ac70f","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+___ test_r25_a_cached_fallback_without_its_truncation_key_is_refused[limit] ____
+
+lab = (<backend.app.storage.Store object at 0x10fb742f0>, <backend.app.worker.Worker object at 0x10f8b8050>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fc8e740>
+shape = 'limit'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', ['limit', 'budget'])
+    async def test_r25_a_cached_fallback_without_its_truncation_key_is_refused(lab, monkeypatch, shape):
+>       store, worker, id, script = await checkpointed(lab, monkeypatch, shape)
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_repeat.py:882: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+lab = (<backend.app.storage.Store object at 0x10fb742f0>, <backend.app.worker.Worker object at 0x10f8b8050>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fc8e740>
+shape = 'limit'
+
+    async def checkpointed(lab, monkeypatch, shape):
+        """Run until r's node checkpoint; shape: met, limit (last) or budget (last)."""
+        store, worker = lab
+        if shape == 'met':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True)], next=['done'])
+            raw = downstream_flow()
+        elif shape == 'limit':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(False)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(max_iterations=2, on_limit='last')
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+            script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(on_limit='last')
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and 'r' in first['checkpoints'], first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         next: invalid binding input = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('failed' != 'success' and 'r' in {})
+
+backend/tests/test_repeat.py:838: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.095736+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.114359+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.114994+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.019}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.119856+00:00","request_id":null,"run_id":"60d819064e684934ba5e59f1cc8189e9","tenant":"local","event":"job.lease_acquired","worker_id":"693e0285d0f54b148f185631b9ace4d3"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.120133+00:00","request_id":null,"run_id":"60d819064e684934ba5e59f1cc8189e9","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.124064+00:00","request_id":null,"run_id":"60d819064e684934ba5e59f1cc8189e9","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.125611+00:00","request_id":null,"run_id":"60d819064e684934ba5e59f1cc8189e9","tenant":"local","event":"run.finish","status":"failed","seconds":0.005}
+___ test_r25_a_cached_fallback_without_its_truncation_key_is_refused[budget] ___
+
+lab = (<backend.app.storage.Store object at 0x10fcafee0>, <backend.app.worker.Worker object at 0x1100597e0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fb60d70>
+shape = 'budget'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', ['limit', 'budget'])
+    async def test_r25_a_cached_fallback_without_its_truncation_key_is_refused(lab, monkeypatch, shape):
+>       store, worker, id, script = await checkpointed(lab, monkeypatch, shape)
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_repeat.py:882: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+lab = (<backend.app.storage.Store object at 0x10fcafee0>, <backend.app.worker.Worker object at 0x1100597e0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fb60d70>
+shape = 'budget'
+
+    async def checkpointed(lab, monkeypatch, shape):
+        """Run until r's node checkpoint; shape: met, limit (last) or budget (last)."""
+        store, worker = lab
+        if shape == 'met':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True)], next=['done'])
+            raw = downstream_flow()
+        elif shape == 'limit':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(False)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(max_iterations=2, on_limit='last')
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+            script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(on_limit='last')
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and 'r' in first['checkpoints'], first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         next: invalid binding input = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('failed' != 'success' and 'r' in {})
+
+backend/tests/test_repeat.py:838: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.150538+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.176600+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.178251+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.028}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.187750+00:00","request_id":null,"run_id":"919f826bc99c4583ab34366cd21c7ac6","tenant":"local","event":"job.lease_acquired","worker_id":"2b49e6fb580648fe84a30f45c50603ea"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.188107+00:00","request_id":null,"run_id":"919f826bc99c4583ab34366cd21c7ac6","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.191818+00:00","request_id":null,"run_id":"919f826bc99c4583ab34366cd21c7ac6","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.196845+00:00","request_id":null,"run_id":"919f826bc99c4583ab34366cd21c7ac6","tenant":"local","event":"run.finish","status":"failed","seconds":0.009}
+__________________ test_r25_one_loop_cause_per_repeat[limit] ___________________
+
+lab = (<backend.app.storage.Store object at 0x10fd25a90>, <backend.app.worker.Worker object at 0x10fd24dd0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x110105e10>
+shape = 'limit'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', ['limit', 'budget'])
+    async def test_r25_one_loop_cause_per_repeat(lab, monkeypatch, shape):
+        from backend.app.worker import run_truncation
+>       store, worker, id, _ = await checkpointed(lab, monkeypatch, shape)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_repeat.py:892: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+lab = (<backend.app.storage.Store object at 0x10fd25a90>, <backend.app.worker.Worker object at 0x10fd24dd0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x110105e10>
+shape = 'limit'
+
+    async def checkpointed(lab, monkeypatch, shape):
+        """Run until r's node checkpoint; shape: met, limit (last) or budget (last)."""
+        store, worker = lab
+        if shape == 'met':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True)], next=['done'])
+            raw = downstream_flow()
+        elif shape == 'limit':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(False)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(max_iterations=2, on_limit='last')
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+            script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(on_limit='last')
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and 'r' in first['checkpoints'], first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         next: invalid binding input = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('failed' != 'success' and 'r' in {})
+
+backend/tests/test_repeat.py:838: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.221906+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.243788+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.244486+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.023}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.250831+00:00","request_id":null,"run_id":"6d1e26aa1c5c462b856e1c7e232a9f71","tenant":"local","event":"job.lease_acquired","worker_id":"8c437afcba724c6e98de92564b1458ad"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.251125+00:00","request_id":null,"run_id":"6d1e26aa1c5c462b856e1c7e232a9f71","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.254626+00:00","request_id":null,"run_id":"6d1e26aa1c5c462b856e1c7e232a9f71","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.256024+00:00","request_id":null,"run_id":"6d1e26aa1c5c462b856e1c7e232a9f71","tenant":"local","event":"run.finish","status":"failed","seconds":0.005}
+__________________ test_r25_one_loop_cause_per_repeat[budget] __________________
+
+lab = (<backend.app.storage.Store object at 0x10fd26450>, <backend.app.worker.Worker object at 0x10fa571d0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1101074d0>
+shape = 'budget'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('shape', ['limit', 'budget'])
+    async def test_r25_one_loop_cause_per_repeat(lab, monkeypatch, shape):
+        from backend.app.worker import run_truncation
+>       store, worker, id, _ = await checkpointed(lab, monkeypatch, shape)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_repeat.py:892: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+lab = (<backend.app.storage.Store object at 0x10fd26450>, <backend.app.worker.Worker object at 0x10fa571d0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1101074d0>
+shape = 'budget'
+
+    async def checkpointed(lab, monkeypatch, shape):
+        """Run until r's node checkpoint; shape: met, limit (last) or budget (last)."""
+        store, worker = lab
+        if shape == 'met':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True)], next=['done'])
+            raw = downstream_flow()
+        elif shape == 'limit':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(False)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(max_iterations=2, on_limit='last')
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+            script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(on_limit='last')
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and 'r' in first['checkpoints'], first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         next: invalid binding input = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('failed' != 'success' and 'r' in {})
+
+backend/tests/test_repeat.py:838: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.276544+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.294504+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.295068+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.019}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.300620+00:00","request_id":null,"run_id":"699b5260f5dd4cfaaaf9d85661c8e31e","tenant":"local","event":"job.lease_acquired","worker_id":"25e5844b4b424caa863229437766721d"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.300909+00:00","request_id":null,"run_id":"699b5260f5dd4cfaaaf9d85661c8e31e","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.303772+00:00","request_id":null,"run_id":"699b5260f5dd4cfaaaf9d85661c8e31e","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.305236+00:00","request_id":null,"run_id":"699b5260f5dd4cfaaaf9d85661c8e31e","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+_____ test_r25_a_recovered_budget_failure_keeps_one_budget_cause[continue] _____
+
+lab = (<backend.app.storage.Store object at 0x10ffdbd80>, <backend.app.worker.Worker object at 0x10ffa81b0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fef5e10>
+policy = 'continue'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('policy', ['continue', 'route'])
+    async def test_r25_a_recovered_budget_failure_keeps_one_budget_cause(lab, monkeypatch, policy):
+        store, worker = lab
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+        Script(monkeypatch, writer=[('draft 1', 10)])
+        raw = standard(out='input.message', on_error=policy)
+        _, final_run = await attempt(store, worker, raw)
+>       assert final_run['status'] == 'success', final_run.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E       assert 'failed' == 'success'
+E         
+E         - success
+E         + failed
+
+backend/tests/test_repeat.py:911: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.327280+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.346970+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.347706+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.02}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.352909+00:00","request_id":null,"run_id":"73ede9c8f0244d61b887046e0259b510","tenant":"local","event":"job.lease_acquired","worker_id":"39517ecb220b41e0aabd48edb3b5f328"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.353231+00:00","request_id":null,"run_id":"73ede9c8f0244d61b887046e0259b510","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.357453+00:00","request_id":null,"run_id":"73ede9c8f0244d61b887046e0259b510","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.358746+00:00","request_id":null,"run_id":"73ede9c8f0244d61b887046e0259b510","tenant":"local","event":"run.finish","status":"failed","seconds":0.006}
+______ test_r25_a_recovered_budget_failure_keeps_one_budget_cause[route] _______
+
+lab = (<backend.app.storage.Store object at 0x10ffc8310>, <backend.app.worker.Worker object at 0x110178ec0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fef5550>
+policy = 'route'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('policy', ['continue', 'route'])
+    async def test_r25_a_recovered_budget_failure_keeps_one_budget_cause(lab, monkeypatch, policy):
+        store, worker = lab
+        monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+        Script(monkeypatch, writer=[('draft 1', 10)])
+        raw = standard(out='input.message', on_error=policy)
+        _, final_run = await attempt(store, worker, raw)
+>       assert final_run['status'] == 'success', final_run.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E       assert 'failed' == 'success'
+E         
+E         - success
+E         + failed
+
+backend/tests/test_repeat.py:911: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.374008+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.392506+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.393122+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.019}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.398326+00:00","request_id":null,"run_id":"86c194e4daa2450ebffb26dec2028478","tenant":"local","event":"job.lease_acquired","worker_id":"1cf42b50e1614827868bf9bbcb768801"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.398614+00:00","request_id":null,"run_id":"86c194e4daa2450ebffb26dec2028478","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.401412+00:00","request_id":null,"run_id":"86c194e4daa2450ebffb26dec2028478","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.402616+00:00","request_id":null,"run_id":"86c194e4daa2450ebffb26dec2028478","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+______ test_r26_a_cached_budget_fallback_without_its_halt_row_is_refused _______
+
+lab = (<backend.app.storage.Store object at 0x110167930>, <backend.app.worker.Worker object at 0x11021d310>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x110150ec0>
+
+    @pytest.mark.asyncio
+    async def test_r26_a_cached_budget_fallback_without_its_halt_row_is_refused(lab, monkeypatch):
+>       store, worker, id, script = await checkpointed(lab, monkeypatch, 'budget')
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_repeat.py:919: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+lab = (<backend.app.storage.Store object at 0x110167930>, <backend.app.worker.Worker object at 0x11021d310>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x110150ec0>
+shape = 'budget'
+
+    async def checkpointed(lab, monkeypatch, shape):
+        """Run until r's node checkpoint; shape: met, limit (last) or budget (last)."""
+        store, worker = lab
+        if shape == 'met':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(True)], next=['done'])
+            raw = downstream_flow()
+        elif shape == 'limit':
+            script = Script(monkeypatch, writer=['draft 1', 'draft 2'], judge=[verdict(False), verdict(False)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(max_iterations=2, on_limit='last')
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '10')
+            script = Script(monkeypatch, writer=[('draft 1', 1), ('draft 2', 8)], judge=[(verdict(False), 1)], next=['done'])
+            raw = downstream_flow(); next(n for n in raw['nodes'] if n['id'] == 'r')['config'].update(on_limit='last')
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw)
+>       assert first['status'] != 'success' and 'r' in first['checkpoints'], first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         next: invalid binding input = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('failed' != 'success' and 'r' in {})
+
+backend/tests/test_repeat.py:838: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.417640+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.437154+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.437740+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.02}
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.442953+00:00","request_id":null,"run_id":"af25fc6aa2be4adb866e706118a9e429","tenant":"local","event":"job.lease_acquired","worker_id":"39ef18b753c24e418df4bf9a1cc7128f"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.443217+00:00","request_id":null,"run_id":"af25fc6aa2be4adb866e706118a9e429","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.446413+00:00","request_id":null,"run_id":"af25fc6aa2be4adb866e706118a9e429","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.447808+00:00","request_id":null,"run_id":"af25fc6aa2be4adb866e706118a9e429","tenant":"local","event":"run.finish","status":"failed","seconds":0.005}
+____________ test_r15_reused_iterations_are_checked_at_the_response ____________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-381/test_r15_reused_iterations_are0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ffa0fa0>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x1102268f0>
+
+    @pytest.mark.asyncio
+    async def test_r15_reused_iterations_are_checked_at_the_response(tmp_path, monkeypatch, services):
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        cited = []
+        kb_script(monkeypatch, [verdict(False), verdict(True)], cited)
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, kb_flow(kb['id']), message='project codename')
+>       assert 'r' in first['checkpoints'] and {'r:0', 'r:1'} <= set(first['vector_dependencies'])
+E       AssertionError: assert ('r' in {})
+
+backend/tests/test_repeat.py:985: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.521380+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.539396+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.540123+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.019}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.544800+00:00","request_id":null,"run_id":"da6c5449cc0d4be18bce110b0a0bbac2","tenant":"local","event":"job.lease_acquired","worker_id":"2084d4878c314dc7818fa7ec7a047cfd"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.545121+00:00","request_id":null,"run_id":"da6c5449cc0d4be18bce110b0a0bbac2","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.551239+00:00","request_id":null,"run_id":"da6c5449cc0d4be18bce110b0a0bbac2","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.552550+00:00","request_id":null,"run_id":"da6c5449cc0d4be18bce110b0a0bbac2","tenant":"local","event":"run.finish","status":"failed","seconds":0.007}
+_______ test_r17_a_source_removed_before_resume_refuses_before_any_call ________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-381/test_r17_a_source_removed_befo0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11024f620>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x1106484d0>
+
+    @pytest.mark.asyncio
+    async def test_r17_a_source_removed_before_resume_refuses_before_any_call(tmp_path, monkeypatch, services):
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        script = kb_script(monkeypatch, [verdict(False), verdict(True)], [])
+        crash_on(monkeypatch, store, row_saved(0))
+        id, first = await attempt(store, worker, kb_flow(kb['id']), message='project codename')
+>       assert 'r:0' in first['vector_dependencies']
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'vector_dependencies'
+
+backend/tests/test_repeat.py:1009: KeyError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.630369+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.662596+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.663492+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.033}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.669508+00:00","request_id":null,"run_id":"66df86a0ad574d2098b55c9f0a34d1f9","tenant":"local","event":"job.lease_acquired","worker_id":"583ab612edcb4c4a8af70a2370a2e35f"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.669822+00:00","request_id":null,"run_id":"66df86a0ad574d2098b55c9f0a34d1f9","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.675538+00:00","request_id":null,"run_id":"66df86a0ad574d2098b55c9f0a34d1f9","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.677129+00:00","request_id":null,"run_id":"66df86a0ad574d2098b55c9f0a34d1f9","tenant":"local","event":"run.finish","status":"failed","seconds":0.007}
+_____ test_r17b_a_late_removal_with_partial_progress_stops_the_next_writer _____
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-381/test_r17b_a_late_removal_with_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1102f9390>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x1102f9550>
+
+    @pytest.mark.asyncio
+    async def test_r17b_a_late_removal_with_partial_progress_stops_the_next_writer(tmp_path, monkeypatch, services):
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        script = kb_script(monkeypatch, [verdict(False), verdict(True)], [])
+        crash_on(monkeypatch, store, row_saved(0))
+        id, _ = await attempt(store, worker, kb_flow(kb['id']), message='project codename')
+        calls = len(script.calls)
+        crash_on(monkeypatch, store, lambda e: False)
+        state = remove_after_check(monkeypatch, services, kb, doc, 'input')
+        _, final_run = await attempt(store, worker, id=id)
+>       assert state['done'], 'the removal happened after the pre-run and upstream checks'
+E       AssertionError: the removal happened after the pre-run and upstream checks
+E       assert False
+
+backend/tests/test_repeat.py:1029: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.762782+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.785262+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.786271+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.023}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.873109+00:00","request_id":null,"run_id":"3a002d4ac32541dea43f00a679b5c9b9","tenant":"local","event":"job.lease_acquired","worker_id":"96d87644e3774001a7f7c6e65b2749b3"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.873523+00:00","request_id":null,"run_id":"3a002d4ac32541dea43f00a679b5c9b9","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.877835+00:00","request_id":null,"run_id":"3a002d4ac32541dea43f00a679b5c9b9","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.879756+00:00","request_id":null,"run_id":"3a002d4ac32541dea43f00a679b5c9b9","tenant":"local","event":"run.finish","status":"failed","seconds":0.006}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.883675+00:00","request_id":null,"run_id":"3a002d4ac32541dea43f00a679b5c9b9","tenant":"local","event":"job.lease_acquired","worker_id":"96d87644e3774001a7f7c6e65b2749b3"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.883840+00:00","request_id":null,"run_id":"3a002d4ac32541dea43f00a679b5c9b9","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.886599+00:00","request_id":null,"run_id":"3a002d4ac32541dea43f00a679b5c9b9","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.887982+00:00","request_id":null,"run_id":"3a002d4ac32541dea43f00a679b5c9b9","tenant":"local","event":"run.finish","status":"failed","seconds":0.004}
+______ test_r17c_a_late_removal_when_the_rows_hold_the_final_answer[met] _______
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-381/test_r17c_a_late_removal_when_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1101e7770>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x1102519d0>
+terminal = 'met'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('terminal', ['met', 'halt'])
+    async def test_r17c_a_late_removal_when_the_rows_hold_the_final_answer(tmp_path, monkeypatch, services, terminal):
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        if terminal == 'met':
+            script = kb_script(monkeypatch, [(verdict(False), 1), (verdict(True), 1)], [])
+            raw = kb_flow(kb['id'])
+            crash_on(monkeypatch, store, row_saved(1))
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '21')
+            script = kb_script(monkeypatch, [(verdict(False), 1)], [])
+            raw = kb_flow(kb['id'], on_limit='last')
+            crash_on(monkeypatch, store, row_saved(1, 'interrupted'))
+        id, first = await attempt(store, worker, raw, message='project codename')
+>       assert 'r' not in first['checkpoints'] and set(rows(store, id)) == {0, 1}, first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('r' not in {} and set() == {0, 1}
+E         
+E         Extra items in the right set:
+E         0
+E         1
+E         Use -v to get more diff)
+
+backend/tests/test_repeat.py:1048: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.957842+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.979869+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.980785+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.023}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.986854+00:00","request_id":null,"run_id":"7a1f68b6e8af4143b296d78a4cddc92c","tenant":"local","event":"job.lease_acquired","worker_id":"f536085612bb4acbbdc415d57070e3fa"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.987253+00:00","request_id":null,"run_id":"7a1f68b6e8af4143b296d78a4cddc92c","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.991247+00:00","request_id":null,"run_id":"7a1f68b6e8af4143b296d78a4cddc92c","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:09.992701+00:00","request_id":null,"run_id":"7a1f68b6e8af4143b296d78a4cddc92c","tenant":"local","event":"run.finish","status":"failed","seconds":0.005}
+______ test_r17c_a_late_removal_when_the_rows_hold_the_final_answer[halt] ______
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-381/test_r17c_a_late_removal_when_1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1101e6820>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10ff96210>
+terminal = 'halt'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('terminal', ['met', 'halt'])
+    async def test_r17c_a_late_removal_when_the_rows_hold_the_final_answer(tmp_path, monkeypatch, services, terminal):
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        if terminal == 'met':
+            script = kb_script(monkeypatch, [(verdict(False), 1), (verdict(True), 1)], [])
+            raw = kb_flow(kb['id'])
+            crash_on(monkeypatch, store, row_saved(1))
+        else:
+            monkeypatch.setenv('RELAY_RUN_TOKEN_LIMIT', '21')
+            script = kb_script(monkeypatch, [(verdict(False), 1)], [])
+            raw = kb_flow(kb['id'], on_limit='last')
+            crash_on(monkeypatch, store, row_saved(1, 'interrupted'))
+        id, first = await attempt(store, worker, raw, message='project codename')
+>       assert 'r' not in first['checkpoints'] and set(rows(store, id)) == {0, 1}, first.get('error')
+E       AssertionError: Loop connections must start at a For each node.
+E         Loop connections must start at a For each node.
+E         Loop connections must leave the body port.
+E         Unknown node type: repeat.
+E         out: invalid binding text = r.text; use a declared output from a guaranteed upstream node.
+E       assert ('r' not in {} and set() == {0, 1}
+E         
+E         Extra items in the right set:
+E         0
+E         1
+E         Use -v to get more diff)
+
+backend/tests/test_repeat.py:1048: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.072006+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.094639+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.095452+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.023}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.100800+00:00","request_id":null,"run_id":"0de28a3a787143998aa549325f10cdb9","tenant":"local","event":"job.lease_acquired","worker_id":"4c3f70b9f6d04b9ea5a0d462dab95e81"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.101177+00:00","request_id":null,"run_id":"0de28a3a787143998aa549325f10cdb9","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.106714+00:00","request_id":null,"run_id":"0de28a3a787143998aa549325f10cdb9","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.108184+00:00","request_id":null,"run_id":"0de28a3a787143998aa549325f10cdb9","tenant":"local","event":"run.finish","status":"failed","seconds":0.007}
+____ test_r18_a_source_removed_before_resume_refuses_a_checkpointed_repeat _____
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-381/test_r18_a_source_removed_befo0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ff262e0>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x1101a19d0>
+
+    @pytest.mark.asyncio
+    async def test_r18_a_source_removed_before_resume_refuses_a_checkpointed_repeat(tmp_path, monkeypatch, services):
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        script = kb_script(monkeypatch, [verdict(False), verdict(True)], [])
+        raw = kb_downstream(kb['id'])
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw, message='project codename')
+>       assert 'r' in first['checkpoints']
+E       AssertionError: assert 'r' in {}
+
+backend/tests/test_repeat.py:1065: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.181382+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.203492+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.204276+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.023}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.209468+00:00","request_id":null,"run_id":"7dc6520ef1084929870d4799f77336f6","tenant":"local","event":"job.lease_acquired","worker_id":"f9be40a67ab74b248319b242e5c07f4a"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.209826+00:00","request_id":null,"run_id":"7dc6520ef1084929870d4799f77336f6","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.214227+00:00","request_id":null,"run_id":"7dc6520ef1084929870d4799f77336f6","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.215565+00:00","request_id":null,"run_id":"7dc6520ef1084929870d4799f77336f6","tenant":"local","event":"run.finish","status":"failed","seconds":0.006}
+____________ test_r18b_a_late_removal_refuses_in_the_restore_branch ____________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-381/test_r18b_a_late_removal_refus0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10fef5160>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x10fd3d130>
+
+    @pytest.mark.asyncio
+    async def test_r18b_a_late_removal_refuses_in_the_restore_branch(tmp_path, monkeypatch, services):
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        script = kb_script(monkeypatch, [verdict(False), verdict(True)], [])
+        crash_on(monkeypatch, store, checkpoint_of('r'))
+        id, _ = await attempt(store, worker, kb_downstream(kb['id']), message='project codename')
+        crash_on(monkeypatch, store, lambda e: False)
+        state = remove_after_check(monkeypatch, services, kb, doc, 'r')
+        _, final_run = await attempt(store, worker, id=id)
+>       assert state['done'], "the removal came after the worker's cached-step check for r"
+E       AssertionError: the removal came after the worker's cached-step check for r
+E       assert False
+
+backend/tests/test_repeat.py:1083: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.288286+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.316293+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.317087+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.029}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.323662+00:00","request_id":null,"run_id":"854d550556064f2fa752365eceec6945","tenant":"local","event":"job.lease_acquired","worker_id":"6f6c9afbf3ef4032bb689852e69aa562"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.324113+00:00","request_id":null,"run_id":"854d550556064f2fa752365eceec6945","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.329547+00:00","request_id":null,"run_id":"854d550556064f2fa752365eceec6945","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.331139+00:00","request_id":null,"run_id":"854d550556064f2fa752365eceec6945","tenant":"local","event":"run.finish","status":"failed","seconds":0.007}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.335192+00:00","request_id":null,"run_id":"854d550556064f2fa752365eceec6945","tenant":"local","event":"job.lease_acquired","worker_id":"6f6c9afbf3ef4032bb689852e69aa562"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.335372+00:00","request_id":null,"run_id":"854d550556064f2fa752365eceec6945","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.340420+00:00","request_id":null,"run_id":"854d550556064f2fa752365eceec6945","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:10.341970+00:00","request_id":null,"run_id":"854d550556064f2fa752365eceec6945","tenant":"local","event":"run.finish","status":"failed","seconds":0.007}
+==================================== PASSES ====================================
+__________________ test_r10b_for_each_child_ids_do_not_change __________________
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.136239+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"item","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":1,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T19:51:08.136391+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"item","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":1,"completion_tokens":0}
+=========================== short test summary info ============================
+PASSED backend/tests/test_repeat.py::test_r10b_for_each_child_ids_do_not_change
+FAILED backend/tests/test_repeat.py::test_v01_a_repeat_with_an_agent_body_and_checker_validates_and_its_outputs_bind
+FAILED backend/tests/test_repeat.py::test_v02_the_body_must_be_exactly_one_matching_attachment
+FAILED backend/tests/test_repeat.py::test_v03_the_checker_is_at_most_one_agent_and_must_match
+FAILED backend/tests/test_repeat.py::test_v04_a_write_anywhere_in_the_closure_is_refused[body]
+FAILED backend/tests/test_repeat.py::test_v04_a_write_anywhere_in_the_closure_is_refused[checker]
+FAILED backend/tests/test_repeat.py::test_v04_a_write_anywhere_in_the_closure_is_refused[body tool]
+FAILED backend/tests/test_repeat.py::test_v05_a_memory_agent_in_the_closure_is_refused
+FAILED backend/tests/test_repeat.py::test_v06_nesting_is_refused_in_all_three_directions
+FAILED backend/tests/test_repeat.py::test_v07_settings_are_checked_and_shown_as_written
+FAILED backend/tests/test_repeat.py::test_v08_a_back_edge_names_the_repeat_node
+FAILED backend/tests/test_repeat.py::test_v09_a_check_edge_on_a_for_each_and_a_loop_edge_from_another_node_are_refused
+FAILED backend/tests/test_repeat.py::test_v10_downstream_nodes_may_bind_exactly_the_three_repeat_outputs
+FAILED backend/tests/test_repeat.py::test_v11_a_checker_needs_a_schema_and_a_field_rule
+FAILED backend/tests/test_repeat.py::test_v12_the_rule_field_must_be_required_with_the_matching_type
+FAILED backend/tests/test_repeat.py::test_r01_the_rule_is_met_at_iteration_two
+FAILED backend/tests/test_repeat.py::test_r02_iteration_inputs_are_the_specified_compact_json
+FAILED backend/tests/test_repeat.py::test_r03_the_limit_fails_by_default_and_on_error_route_takes_the_error_branch
+FAILED backend/tests/test_repeat.py::test_r04_on_limit_last_returns_the_last_draft_marked_incomplete
+FAILED backend/tests/test_repeat.py::test_r05_without_a_checker_the_rule_reads_the_body_output
+FAILED backend/tests/test_repeat.py::test_r06_a_verdict_that_is_not_json_fails_at_that_iteration
+FAILED backend/tests/test_repeat.py::test_r07_a_body_failure_fails_the_repeat_and_nothing_further_runs
+FAILED backend/tests/test_repeat.py::test_r08_each_tool_call_is_charged_once_and_the_action_budget_stops_the_loop
+FAILED backend/tests/test_repeat.py::test_r08b_a_checker_stopped_by_the_action_budget_is_not_judged
+FAILED backend/tests/test_repeat.py::test_r09_the_token_limit_refuses_the_next_writer_without_a_call
+FAILED backend/tests/test_repeat.py::test_r10_nested_events_carry_the_iteration_and_shared_tools_get_separate_ids
+FAILED backend/tests/test_repeat.py::test_r13_an_entry_over_200000_bytes_fails_and_nothing_is_saved
+FAILED backend/tests/test_repeat.py::test_r14a_a_repeat_runs_inside_a_parallel_branch
+FAILED backend/tests/test_repeat.py::test_r14b_a_failed_sibling_cancels_the_repeat_and_the_open_iteration_is_not_saved
+FAILED backend/tests/test_repeat.py::test_r16_contract_2_refuses_a_switch_on_the_repeat_text
+FAILED backend/tests/test_repeat.py::test_r19_a_budget_stop_between_writer_and_checker[last]
+FAILED backend/tests/test_repeat.py::test_r19_a_budget_stop_between_writer_and_checker[fail]
+FAILED backend/tests/test_repeat.py::test_r19_with_no_fully_evaluated_iteration_both_settings_fail[last]
+FAILED backend/tests/test_repeat.py::test_r19_with_no_fully_evaluated_iteration_both_settings_fail[fail]
+FAILED backend/tests/test_repeat.py::test_r19b_a_budget_stop_before_any_call_is_saved_without_a_charge
+FAILED backend/tests/test_repeat.py::test_r20_a_truncated_verdict_is_never_judged
+FAILED backend/tests/test_repeat.py::test_r22a_the_agent_rejects_a_string_verdict_before_the_repeat_sees_it
+FAILED backend/tests/test_repeat.py::test_r23_a_body_stopped_by_its_own_step_limit_fails_the_repeat
+FAILED backend/tests/test_repeat.py::test_r11_a_resumed_repeat_reuses_saved_iterations
+FAILED backend/tests/test_repeat.py::test_r12_a_saved_iteration_whose_met_no_longer_matches_is_refused
+FAILED backend/tests/test_repeat.py::test_r21a_replay_after_the_halt_row_commits_is_exact
+FAILED backend/tests/test_repeat.py::test_r21a_replay_of_a_halt_row_with_no_calls
+FAILED backend/tests/test_repeat.py::test_r21b_replay_before_the_halt_row_commits_keeps_drafts_and_paid_usage
+FAILED backend/tests/test_repeat.py::test_r22b_a_restored_string_verdict_is_refused_by_the_repeat
+FAILED backend/tests/test_repeat.py::test_r24_a_changed_checkpoint_or_row_is_refused_and_downstream_never_runs[verdict]
+FAILED backend/tests/test_repeat.py::test_r24_a_changed_checkpoint_or_row_is_refused_and_downstream_never_runs[met]
+FAILED backend/tests/test_repeat.py::test_r24_a_changed_checkpoint_or_row_is_refused_and_downstream_never_runs[text]
+FAILED backend/tests/test_repeat.py::test_r24c_control_an_untouched_checkpoint_resumes[met]
+FAILED backend/tests/test_repeat.py::test_r24c_control_an_untouched_checkpoint_resumes[limit]
+FAILED backend/tests/test_repeat.py::test_r24c_control_an_untouched_checkpoint_resumes[budget]
+FAILED backend/tests/test_repeat.py::test_r24c_d_a_checkpoint_with_an_unknown_key_is_refused
+FAILED backend/tests/test_repeat.py::test_r25_a_cached_fallback_without_its_truncation_key_is_refused[limit]
+FAILED backend/tests/test_repeat.py::test_r25_a_cached_fallback_without_its_truncation_key_is_refused[budget]
+FAILED backend/tests/test_repeat.py::test_r25_one_loop_cause_per_repeat[limit]
+FAILED backend/tests/test_repeat.py::test_r25_one_loop_cause_per_repeat[budget]
+FAILED backend/tests/test_repeat.py::test_r25_a_recovered_budget_failure_keeps_one_budget_cause[continue]
+FAILED backend/tests/test_repeat.py::test_r25_a_recovered_budget_failure_keeps_one_budget_cause[route]
+FAILED backend/tests/test_repeat.py::test_r26_a_cached_budget_fallback_without_its_halt_row_is_refused
+FAILED backend/tests/test_repeat.py::test_r15_reused_iterations_are_checked_at_the_response
+FAILED backend/tests/test_repeat.py::test_r17_a_source_removed_before_resume_refuses_before_any_call
+FAILED backend/tests/test_repeat.py::test_r17b_a_late_removal_with_partial_progress_stops_the_next_writer
+FAILED backend/tests/test_repeat.py::test_r17c_a_late_removal_when_the_rows_hold_the_final_answer[met]
+FAILED backend/tests/test_repeat.py::test_r17c_a_late_removal_when_the_rows_hold_the_final_answer[halt]
+FAILED backend/tests/test_repeat.py::test_r18_a_source_removed_before_resume_refuses_a_checkpointed_repeat
+FAILED backend/tests/test_repeat.py::test_r18b_a_late_removal_refuses_in_the_restore_branch
+64 failed, 1 passed in 3.20s

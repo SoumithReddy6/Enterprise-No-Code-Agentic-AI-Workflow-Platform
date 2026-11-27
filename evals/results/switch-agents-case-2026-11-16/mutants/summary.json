@@ -1,0 +1,54 @@
+{
+ "M00": {
+  "change": "control: no change",
+  "oracles": [
+   {
+    "oracle": "unit:U01,U02,U03,U04,U05,U06,U07,U08,U09,U10",
+    "killed": false
+   },
+   {
+    "oracle": "browser:B01,B02,B03,B04,B05,B06,B07,B08",
+    "killed": false
+   },
+   {
+    "oracle": "spec:switch.spec.ts",
+    "killed": false
+   }
+  ],
+  "killed": false
+ },
+ "A1": {
+  "change": "agents is the specialists port on every card (the code before the fix)",
+  "oracles": [
+   {
+    "oracle": "unit:U09",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B08",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "A2": {
+  "change": "The Agent card specialists port connects as flow",
+  "oracles": [
+   {
+    "oracle": "unit:U09",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "A3": {
+  "change": "The Agent card specialists port connects to any target",
+  "oracles": [
+   {
+    "oracle": "unit:U09",
+    "killed": true
+   }
+  ],
+  "killed": true
+ }
+}

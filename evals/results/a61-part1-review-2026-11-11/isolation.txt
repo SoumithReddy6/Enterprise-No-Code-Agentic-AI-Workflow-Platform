@@ -1,0 +1,13 @@
+# A6.1 Part 1 review-fix isolation copy: git archive 011a9e0 + the 5 changed files, git init + one commit
+copy: <scratchpad>/a61r-iso-7ja2gt_z
+commit: 8982e7954b2b912c8c926cec230d9e654a390feb
+
+## Files copied (sha256; copy == working tree)
+07c23c79057a64b31d3f3f77af13784298df767205a294c00f153675efaf594d README.md match
+813ceb838c7e99a3516eeff9f8552cb3638e82670928ecead965f59d834251d9 backend/app/answerability_guard.py match
+a038fcf8a51eab8363df745f21e311e491fb0729d8b2a815bc4990f1408bb0d5 backend/app/repeat.py match
+26edc9b5fe15c8fb8e5d1a2c47999c8ecae4addef973d2be0183918b40737a97 backend/tests/test_repeat.py match
+cb951e11ef903583afbb583ef8918c99198cbe8030c401556ee9e1f9e4e8e12a docs/operations.md match
+
+## Tracked files that differ from 011a9e0, outside the 5 (evals/ and docs/reviews/ excluded)
+none

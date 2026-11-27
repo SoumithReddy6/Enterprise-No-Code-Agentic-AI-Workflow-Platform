@@ -1,0 +1,14 @@
+# A6.1 Part 1 recheck-fix isolation copy: git archive 750adde + the 6 changed files, git init + one commit
+copy: <scratchpad>/a61c-iso-y6qj9t4d
+commit: ec1d48ef7198ffe6f1f1691fd87916dc34b19137
+
+## Files copied (sha256; copy == working tree)
+bb2a399036e0e6f279f332c90ab608e1b03fee90929ebf33ea5900a60fd25e8c README.md match
+0f00bc86775160218d2b2b86eb264ac5dddb5442a1f59019f779ca0e8a79f633 backend/app/compiler.py match
+b473b289ea9859992453687692a060d786d6b9535678de3d42864364604096be backend/app/registry.py match
+5b1b95abf2abdaf57ade03f1036e3f429d55daec3ab858e27c899d35266f4484 backend/app/repeat.py match
+9fcddfee21bf90778f9a9411d3eb4cdd9d8f7aee95e66efbb47d6f2033471e91 backend/tests/test_repeat.py match
+0b66c394615dbb1d52e66145db374d70d02dbc051256685b4512207620549a36 docs/operations.md match
+
+## Tracked files that differ from 750adde, outside the 6 (evals/ and docs/reviews/ excluded)
+none

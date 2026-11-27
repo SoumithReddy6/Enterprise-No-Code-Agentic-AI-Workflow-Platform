@@ -1,0 +1,23 @@
+{
+ "id": "G5",
+ "file": "backend/app/compiler.py",
+ "planned": [
+  "S26c"
+ ],
+ "results": {
+  "S25": "passed",
+  "S26a": "passed",
+  "S26b": "passed",
+  "S26c": "failed",
+  "S27": "passed",
+  "S28": "passed",
+  "S29": "passed"
+ },
+ "errors": {
+  "S26c": "AssertionError: {'valid': True, 'errors': [], 'warnings': [], 'issues': [], 'warning_issues': [], 'workflow': {'version': 1, 'contract': 1, 'name': 'Repeat s26c', 'description': '', 'nodes': [{'id': 'input', 'type': 'chat_input', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {}, 'config': {}, 'on_error': 'fail', 'retry': {'attempts': 0, 'base_delay': 0.5}}, {'id': 'r', 'type': 'repeat', 'version': 1, 'label': '', 'position': {'x': 0.0, 'y': 0.0}, 'inputs': {'input': 'input.message'}, 'config': {'body': 'writer', 'check': 'judge', 'max_iterations': 3, 'on_limit': 'fail'"
+ },
+ "failed": [
+  "S26c"
+ ],
+ "killed": true
+}

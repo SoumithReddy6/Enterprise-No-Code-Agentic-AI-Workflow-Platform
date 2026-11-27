@@ -1,0 +1,71 @@
+M59: For each also treats check as an attachment
+
+$ node --experimental-strip-types --test --test-name-pattern ^(U10)  tests/repeat.test.ts
+exit 1
+✖ U10 removing or adding a malformed loop edge leaves the other settings unchanged (6.271459ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 60.014375
+
+✖ failing tests:
+
+test at tests/repeat.test.ts:245:6
+✖ U10 removing or adding a malformed loop edge leaves the other settings unchanged (6.271459ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+      body: 'summarize',
+  +   check: ''
+  -   check: 'judge'
+    }
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/a61r-mut-6kbZ/frontend/tests/repeat.test.ts:262:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { body: 'summarize', check: '' },
+    expected: { body: 'summarize', check: 'judge' },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+
+
+$ node --experimental-strip-types --test --test-name-pattern ^(U02)  tests/repeat.test.ts
+exit 1
+✖ U02 the body and check ports make loop connections; other uses of them are refused (11.240458ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 90.892833
+
+✖ failing tests:
+
+test at tests/repeat.test.ts:56:6
+✖ U02 the body and check ports make loop connections; other uses of them are refused (11.240458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  'loop' !== null
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/a61r-mut-6kbZ/frontend/tests/repeat.test.ts:63:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'loop',
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+

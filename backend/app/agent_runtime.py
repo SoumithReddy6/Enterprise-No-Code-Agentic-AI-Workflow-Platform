@@ -265,7 +265,9 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
     # shifted identity misses its settled result and sends the write again.
     parent=getattr(ctx,'execution_identity',None)
     nested=bool(depth) and parent is not None
-    identity_base=parent.invocation_id if nested else checkpoint_owner
+    # A Repeat's body and checker share one checkpoint owner per iteration, so their root
+    # calls derive from their own invocation (child_base) instead; None everywhere else.
+    identity_base=parent.invocation_id if nested else (getattr(parent,'child_base',None) or checkpoint_owner)
     identity_join='>' if nested else ':'
     tools={e.source:nodes[e.source] for e in workflow.edges if e.kind=='tool' and e.target==node_id}
     specialists={e.target:nodes[e.target] for e in workflow.edges if e.kind=='agent' and e.source==node_id}
@@ -306,10 +308,11 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
         out_of_tokens=not replay and token_budget.exhausted(ctx.run)
         exhausted=not replay and (step>=config.max_steps or budget['remaining']<=0 or out_of_tokens)
         if exhausted:
-            if out_of_tokens:reason=token_budget.reason(ctx.run)
-            elif budget['remaining']<=0:reason=f"Run-wide agent action budget exhausted ({budget.get('ceiling',DEFAULT_RUN_BUDGET)} actions; raise AGENT_RUN_BUDGET)."
-            else:reason=f'Agent step budget exhausted ({config.max_steps} steps for this agent).'
-            truncations.append({'node_id':node_id,'reason':reason})
+            if out_of_tokens:reason,kind=token_budget.reason(ctx.run),'tokens'
+            elif budget['remaining']<=0:reason,kind=f"Run-wide agent action budget exhausted ({budget.get('ceiling',DEFAULT_RUN_BUDGET)} actions; raise AGENT_RUN_BUDGET).",'action'
+            else:reason,kind=f'Agent step budget exhausted ({config.max_steps} steps for this agent).','steps'
+            # kind says which limit stopped the work; a Repeat reads it, never the reason text.
+            truncations.append({'node_id':node_id,'reason':reason,'kind':kind})
             await emit({'kind':'agent_budget','node_id':node_id,'status':'warning','transient':True,'truncated':True,'reason':reason,'run_budget':budget.get('ceiling',DEFAULT_RUN_BUDGET),'actions_used':budget['counter'],'max_steps':config.max_steps,'tokens_used':token_budget.tokens_spent(ctx.run)})
             # Out of tokens, no further call is made (D1 = B). A structured agent promises
             # JSON downstream, so prose would break its contract: it fails typed instead,
@@ -379,18 +382,23 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
                 if outcome.usage:failure['usage']=outcome.usage
                 await emit(failure)
                 if target_node.type=='agent' and 'budget exhausted' in outcome.error.lower():
-                    truncations.append({'node_id':target,'reason':outcome.error})
+                    # A run-wide refusal keeps its kind; a specialist that stopped without
+                    # evidence reports no kind, so it counts as its own step limit.
+                    truncations.append({'node_id':target,'reason':outcome.error,'kind':outcome.budget_kind or 'steps'})
                 transcript.extend([{'agent_action':action},{'tool_error':outcome.error}])
                 continue
             output=outcome.outputs
             child_grounding=json.loads(output.get('grounding','{}'))
             if child_grounding.get('truncated'):
-                truncations.append({'node_id':target,'reason':child_grounding.get('truncation_reason','Specialist returned an incomplete answer.')})
+                child_records=child_grounding.get('truncations') or [{}]
+                child_kind=child_records[-1].get('kind') if isinstance(child_records[-1],dict) else None
+                truncations.append({'node_id':target,'reason':child_grounding.get('truncation_reason','Specialist returned an incomplete answer.'),
+                                    'kind':child_kind if child_kind in ('tokens','action','steps','tool') else 'steps'})
             from .execution_policy import TRUNCATION_KEY
             tool_cut=(output.get(TRUNCATION_KEY) or {})
             if tool_cut.get('truncated'):
                 # An answer built on an incomplete tool result is itself incomplete.
-                truncations.append({'node_id':target,'reason':tool_cut['truncation_reason']})
+                truncations.append({'node_id':target,'reason':tool_cut['truncation_reason'],'kind':'tool'})
                 child_grounding={**child_grounding,'truncated':True,'truncation_reason':tool_cut['truncation_reason']}
             success={**common,'status':'success','outputs':output,
                      **ctx.run.get('tool_output_metadata',{}).get(target,{})}
@@ -431,7 +439,7 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
             failure={**common,'status':'failed','error':message};usage=usage_for(ctx.run,identity)
             if usage:failure['usage']=usage
             await emit(failure)
-            if isinstance(exc,AgentBudgetExhausted):truncations.append({'node_id':target,'reason':message})
+            if isinstance(exc,AgentBudgetExhausted):truncations.append({'node_id':target,'reason':message,'kind':'steps'})
             if isinstance(exc,UncertainWriteError):raise
             if write_attempt:
                 raise UncertainWriteError('External write outcome is uncertain; reconciliation is required before trying again. Check the remote system.') from None
@@ -465,7 +473,7 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
         except token_budget.TokenBudgetExhausted as exc:
             # The last tokens went on an answer that needs repair. Same rule as at a step.
             if structured:raise
-            truncations.append({'node_id':node_id,'reason':str(exc)})
+            truncations.append({'node_id':node_id,'reason':str(exc),'kind':'tokens'})
             if not evidence:return exhausted_abstention(depth,str(exc),truncations)
             return await budget_abstention(ctx,str(exc),evidence,truncations,provider)
         if ctx.platform:await ctx.platform('verify_vector_sources',[{k:v for k,v in s.items() if k not in ('citation','cited')} for s in sources])

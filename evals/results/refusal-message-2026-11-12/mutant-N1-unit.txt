@@ -1,0 +1,6 @@
+=========================== short test summary info ============================
+FAILED backend/tests/test_accounting_durability.py::test_t11_invalid_trusted_snapshot[missing]
+FAILED backend/tests/test_accounting_durability.py::test_t11_invalid_trusted_snapshot[True]
+FAILED backend/tests/test_accounting_durability.py::test_t11_invalid_trusted_snapshot[-1]
+FAILED backend/tests/test_accounting_durability.py::test_t11_invalid_trusted_snapshot[15]
+4 failed, 20 passed in 2.15s

@@ -1,0 +1,771 @@
+{
+  "commit": "beab0b1029ce8cf31b8cfb28b4aff92a9d0fd9d3",
+  "source_commit": "24e659c23193746342d3a267186f095fa62927c3",
+  "dirty": false,
+  "started_at": "2026-11-17T02:36:31.214707+00:00",
+  "command": "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/scripts/load/run.py --db sqlite,postgres --workers 1,4,16 --workflow w20 --latency-ms 0 --runs 200 --repeats 3 --timeout 300 --out evals/results/load-baseline-2026-11-16/w20-0ms",
+  "machine": {
+    "platform": "macOS-26.3.1-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "cpu_count": 10,
+    "memory_gb": 16,
+    "python": "3.14.6"
+  },
+  "database": {
+    "sqlite": "3.53.3",
+    "postgres": "17.11",
+    "postgres_settings": {
+      "max_connections": 500,
+      "container": "postgres:17-alpine, defaults"
+    }
+  },
+  "relay_settings": {
+    "slots_per_worker": 4,
+    "lease_seconds": 30,
+    "heartbeat_seconds": 0.2,
+    "idle_poll_seconds": 0.1,
+    "run_timeout_seconds": 120
+  },
+  "mode": "closed-queue drain: all runs are queued before the workers start",
+  "cells": [
+    {
+      "database": "sqlite",
+      "workers": 1,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 1,
+      "submit_seconds": 0.35,
+      "worker_start_to_first_claim_seconds": 0.56,
+      "completed": 200,
+      "drain_seconds": 42.505729,
+      "runs_per_min": 282.3,
+      "queue_wait": {
+        "p50": 22.978863,
+        "p95": 40.663699,
+        "p99": 42.50884
+      },
+      "claim_to_finish": {
+        "p50": 0.639719,
+        "p95": 1.251918,
+        "p99": 1.732437
+      },
+      "engine_overhead": {
+        "p50": 0.639719,
+        "p95": 1.251918,
+        "p99": 1.732437
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": null,
+      "rollbacks_per_run": null,
+      "rows_inserted_per_run": null,
+      "rows_updated_per_run": null,
+      "harness_queries": 46,
+      "flags": []
+    },
+    {
+      "database": "sqlite",
+      "workers": 1,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 2,
+      "submit_seconds": 0.33,
+      "worker_start_to_first_claim_seconds": 0.47,
+      "completed": 200,
+      "drain_seconds": 45.979585,
+      "runs_per_min": 261.0,
+      "queue_wait": {
+        "p50": 25.505809,
+        "p95": 44.109621,
+        "p99": 45.831595
+      },
+      "claim_to_finish": {
+        "p50": 0.693304,
+        "p95": 1.615037,
+        "p99": 3.138646
+      },
+      "engine_overhead": {
+        "p50": 0.693304,
+        "p95": 1.615037,
+        "p99": 3.138646
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": null,
+      "rollbacks_per_run": null,
+      "rows_inserted_per_run": null,
+      "rows_updated_per_run": null,
+      "harness_queries": 50,
+      "flags": []
+    },
+    {
+      "database": "sqlite",
+      "workers": 1,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 3,
+      "submit_seconds": 0.32,
+      "worker_start_to_first_claim_seconds": 0.48,
+      "completed": 200,
+      "drain_seconds": 42.95899,
+      "runs_per_min": 279.3,
+      "queue_wait": {
+        "p50": 22.914904,
+        "p95": 40.619088,
+        "p99": 42.469019
+      },
+      "claim_to_finish": {
+        "p50": 0.720707,
+        "p95": 1.202404,
+        "p99": 1.576807
+      },
+      "engine_overhead": {
+        "p50": 0.720707,
+        "p95": 1.202404,
+        "p99": 1.576807
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": null,
+      "rollbacks_per_run": null,
+      "rows_inserted_per_run": null,
+      "rows_updated_per_run": null,
+      "harness_queries": 47,
+      "flags": []
+    },
+    {
+      "database": "sqlite",
+      "workers": 4,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 1,
+      "submit_seconds": 0.35,
+      "worker_start_to_first_claim_seconds": 0.58,
+      "completed": 200,
+      "drain_seconds": 25.934649,
+      "runs_per_min": 462.7,
+      "queue_wait": {
+        "p50": 12.299294,
+        "p95": 24.067602,
+        "p99": 25.461686
+      },
+      "claim_to_finish": {
+        "p50": 1.661181,
+        "p95": 3.630735,
+        "p99": 5.07689
+      },
+      "engine_overhead": {
+        "p50": 1.661181,
+        "p95": 3.630735,
+        "p99": 5.07689
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": null,
+      "rollbacks_per_run": null,
+      "rows_inserted_per_run": null,
+      "rows_updated_per_run": null,
+      "harness_queries": 30,
+      "flags": []
+    },
+    {
+      "database": "sqlite",
+      "workers": 4,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 2,
+      "submit_seconds": 0.33,
+      "worker_start_to_first_claim_seconds": 0.87,
+      "completed": 200,
+      "drain_seconds": 27.792304,
+      "runs_per_min": 431.8,
+      "queue_wait": {
+        "p50": 15.12261,
+        "p95": 26.981253,
+        "p99": 27.534001
+      },
+      "claim_to_finish": {
+        "p50": 1.62413,
+        "p95": 4.159379,
+        "p99": 4.970401
+      },
+      "engine_overhead": {
+        "p50": 1.62413,
+        "p95": 4.159379,
+        "p99": 4.970401
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": null,
+      "rollbacks_per_run": null,
+      "rows_inserted_per_run": null,
+      "rows_updated_per_run": null,
+      "harness_queries": 32,
+      "flags": []
+    },
+    {
+      "database": "sqlite",
+      "workers": 4,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 3,
+      "submit_seconds": 0.34,
+      "worker_start_to_first_claim_seconds": 0.6,
+      "completed": 200,
+      "drain_seconds": 26.295695,
+      "runs_per_min": 456.3,
+      "queue_wait": {
+        "p50": 14.255296,
+        "p95": 25.016777,
+        "p99": 26.072521
+      },
+      "claim_to_finish": {
+        "p50": 1.646107,
+        "p95": 4.011825,
+        "p99": 5.963789
+      },
+      "engine_overhead": {
+        "p50": 1.646107,
+        "p95": 4.011825,
+        "p99": 5.963789
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": null,
+      "rollbacks_per_run": null,
+      "rows_inserted_per_run": null,
+      "rows_updated_per_run": null,
+      "harness_queries": 30,
+      "flags": []
+    },
+    {
+      "database": "sqlite",
+      "workers": 16,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 1,
+      "submit_seconds": 0.34,
+      "worker_start_to_first_claim_seconds": 1.51,
+      "completed": 200,
+      "drain_seconds": 28.223376,
+      "runs_per_min": 425.2,
+      "queue_wait": {
+        "p50": 13.425543,
+        "p95": 25.317031,
+        "p99": 26.263302
+      },
+      "claim_to_finish": {
+        "p50": 7.143702,
+        "p95": 14.060839,
+        "p99": 17.429639
+      },
+      "engine_overhead": {
+        "p50": 7.143702,
+        "p95": 14.060839,
+        "p99": 17.429639
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": null,
+      "rollbacks_per_run": null,
+      "rows_inserted_per_run": null,
+      "rows_updated_per_run": null,
+      "harness_queries": 33,
+      "flags": []
+    },
+    {
+      "database": "sqlite",
+      "workers": 16,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 2,
+      "submit_seconds": 0.51,
+      "worker_start_to_first_claim_seconds": 1.54,
+      "completed": 200,
+      "drain_seconds": 30.280812,
+      "runs_per_min": 396.3,
+      "queue_wait": {
+        "p50": 13.549132,
+        "p95": 26.919865,
+        "p99": 27.945581
+      },
+      "claim_to_finish": {
+        "p50": 7.671267,
+        "p95": 14.954961,
+        "p99": 17.806248
+      },
+      "engine_overhead": {
+        "p50": 7.671267,
+        "p95": 14.954961,
+        "p99": 17.806248
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": null,
+      "rollbacks_per_run": null,
+      "rows_inserted_per_run": null,
+      "rows_updated_per_run": null,
+      "harness_queries": 35,
+      "flags": []
+    },
+    {
+      "database": "sqlite",
+      "workers": 16,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 3,
+      "submit_seconds": 0.61,
+      "worker_start_to_first_claim_seconds": 1.94,
+      "completed": 200,
+      "drain_seconds": 29.370776,
+      "runs_per_min": 408.6,
+      "queue_wait": {
+        "p50": 14.650219,
+        "p95": 26.849544,
+        "p99": 27.763484
+      },
+      "claim_to_finish": {
+        "p50": 7.989977,
+        "p95": 15.04735,
+        "p99": 18.87606
+      },
+      "engine_overhead": {
+        "p50": 7.989977,
+        "p95": 15.04735,
+        "p99": 18.87606
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": null,
+      "rollbacks_per_run": null,
+      "rows_inserted_per_run": null,
+      "rows_updated_per_run": null,
+      "harness_queries": 35,
+      "flags": []
+    },
+    {
+      "database": "postgres",
+      "workers": 1,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 1,
+      "submit_seconds": 1.15,
+      "worker_start_to_first_claim_seconds": 0.68,
+      "completed": 200,
+      "drain_seconds": 50.152676,
+      "runs_per_min": 239.3,
+      "queue_wait": {
+        "p50": 27.961505,
+        "p95": 48.227708,
+        "p99": 50.002458
+      },
+      "claim_to_finish": {
+        "p50": 0.816809,
+        "p95": 1.123391,
+        "p99": 2.43447
+      },
+      "engine_overhead": {
+        "p50": 0.816809,
+        "p95": 1.123391,
+        "p99": 2.43447
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": 48.1,
+      "rollbacks_per_run": 10.7,
+      "rows_inserted_per_run": 44.0,
+      "rows_updated_per_run": 77.2,
+      "harness_queries": 56,
+      "flags": []
+    },
+    {
+      "database": "postgres",
+      "workers": 1,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 2,
+      "submit_seconds": 0.9,
+      "worker_start_to_first_claim_seconds": 0.55,
+      "completed": 200,
+      "drain_seconds": 48.193516,
+      "runs_per_min": 249.0,
+      "queue_wait": {
+        "p50": 25.269682,
+        "p95": 46.123474,
+        "p99": 47.948223
+      },
+      "claim_to_finish": {
+        "p50": 0.810167,
+        "p95": 1.081647,
+        "p99": 1.220469
+      },
+      "engine_overhead": {
+        "p50": 0.810167,
+        "p95": 1.081647,
+        "p99": 1.220469
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": 47.9,
+      "rollbacks_per_run": 10.4,
+      "rows_inserted_per_run": 43.8,
+      "rows_updated_per_run": 77.0,
+      "harness_queries": 54,
+      "flags": []
+    },
+    {
+      "database": "postgres",
+      "workers": 1,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 3,
+      "submit_seconds": 0.93,
+      "worker_start_to_first_claim_seconds": 0.56,
+      "completed": 200,
+      "drain_seconds": 48.310416,
+      "runs_per_min": 248.4,
+      "queue_wait": {
+        "p50": 25.022876,
+        "p95": 46.274378,
+        "p99": 48.080941
+      },
+      "claim_to_finish": {
+        "p50": 0.803308,
+        "p95": 1.090447,
+        "p99": 1.298721
+      },
+      "engine_overhead": {
+        "p50": 0.803308,
+        "p95": 1.090447,
+        "p99": 1.298721
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": 48.0,
+      "rollbacks_per_run": 10.5,
+      "rows_inserted_per_run": 43.8,
+      "rows_updated_per_run": 77.0,
+      "harness_queries": 54,
+      "flags": []
+    },
+    {
+      "database": "postgres",
+      "workers": 4,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 1,
+      "submit_seconds": 0.89,
+      "worker_start_to_first_claim_seconds": 0.63,
+      "completed": 200,
+      "drain_seconds": 17.149596,
+      "runs_per_min": 699.7,
+      "queue_wait": {
+        "p50": 10.659792,
+        "p95": 16.618687,
+        "p99": 17.184349
+      },
+      "claim_to_finish": {
+        "p50": 1.100409,
+        "p95": 1.750862,
+        "p99": 1.89388
+      },
+      "engine_overhead": {
+        "p50": 1.100409,
+        "p95": 1.750862,
+        "p99": 1.89388
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": 50.0,
+      "rollbacks_per_run": 11.4,
+      "rows_inserted_per_run": 43.5,
+      "rows_updated_per_run": 78.6,
+      "harness_queries": 23,
+      "flags": []
+    },
+    {
+      "database": "postgres",
+      "workers": 4,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 2,
+      "submit_seconds": 0.86,
+      "worker_start_to_first_claim_seconds": 0.63,
+      "completed": 200,
+      "drain_seconds": 20.376964,
+      "runs_per_min": 588.9,
+      "queue_wait": {
+        "p50": 11.883156,
+        "p95": 18.926549,
+        "p99": 20.12511
+      },
+      "claim_to_finish": {
+        "p50": 1.332463,
+        "p95": 1.966954,
+        "p99": 2.10962
+      },
+      "engine_overhead": {
+        "p50": 1.332463,
+        "p95": 1.966954,
+        "p99": 2.10962
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": 51.3,
+      "rollbacks_per_run": 11.9,
+      "rows_inserted_per_run": 43.6,
+      "rows_updated_per_run": 80.1,
+      "harness_queries": 26,
+      "flags": []
+    },
+    {
+      "database": "postgres",
+      "workers": 4,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 3,
+      "submit_seconds": 1.04,
+      "worker_start_to_first_claim_seconds": 0.7,
+      "completed": 200,
+      "drain_seconds": 18.728515,
+      "runs_per_min": 640.7,
+      "queue_wait": {
+        "p50": 10.885617,
+        "p95": 17.51507,
+        "p99": 18.700536
+      },
+      "claim_to_finish": {
+        "p50": 1.209109,
+        "p95": 1.840702,
+        "p99": 1.93063
+      },
+      "engine_overhead": {
+        "p50": 1.209109,
+        "p95": 1.840702,
+        "p99": 1.93063
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": 50.6,
+      "rollbacks_per_run": 11.9,
+      "rows_inserted_per_run": 43.9,
+      "rows_updated_per_run": 79.2,
+      "harness_queries": 25,
+      "flags": []
+    },
+    {
+      "database": "postgres",
+      "workers": 16,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 1,
+      "submit_seconds": 1.08,
+      "worker_start_to_first_claim_seconds": 1.62,
+      "completed": 200,
+      "drain_seconds": 17.300815,
+      "runs_per_min": 693.6,
+      "queue_wait": {
+        "p50": 9.935638,
+        "p95": 16.436579,
+        "p99": 16.970204
+      },
+      "claim_to_finish": {
+        "p50": 4.460697,
+        "p95": 7.012096,
+        "p99": 7.18934
+      },
+      "engine_overhead": {
+        "p50": 4.460697,
+        "p95": 7.012096,
+        "p99": 7.18934
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": 60.0,
+      "rollbacks_per_run": 20.6,
+      "rows_inserted_per_run": 44.0,
+      "rows_updated_per_run": 92.3,
+      "harness_queries": 24,
+      "flags": []
+    },
+    {
+      "database": "postgres",
+      "workers": 16,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 2,
+      "submit_seconds": 0.86,
+      "worker_start_to_first_claim_seconds": 1.51,
+      "completed": 200,
+      "drain_seconds": 15.821084,
+      "runs_per_min": 758.5,
+      "queue_wait": {
+        "p50": 8.501447,
+        "p95": 15.043142,
+        "p99": 15.547132
+      },
+      "claim_to_finish": {
+        "p50": 4.307266,
+        "p95": 5.651874,
+        "p99": 6.170645
+      },
+      "engine_overhead": {
+        "p50": 4.307266,
+        "p95": 5.651874,
+        "p99": 6.170645
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": 59.2,
+      "rollbacks_per_run": 19.3,
+      "rows_inserted_per_run": 43.6,
+      "rows_updated_per_run": 91.0,
+      "harness_queries": 22,
+      "flags": []
+    },
+    {
+      "database": "postgres",
+      "workers": 16,
+      "slots": 4,
+      "workflow": "w20",
+      "latency_ms": 0,
+      "runs": 200,
+      "repeat": 3,
+      "submit_seconds": 0.91,
+      "worker_start_to_first_claim_seconds": 1.54,
+      "completed": 200,
+      "drain_seconds": 12.562917,
+      "runs_per_min": 955.2,
+      "queue_wait": {
+        "p50": 7.120062,
+        "p95": 11.999935,
+        "p99": 12.619668
+      },
+      "claim_to_finish": {
+        "p50": 3.289466,
+        "p95": 4.249782,
+        "p99": 4.525262
+      },
+      "engine_overhead": {
+        "p50": 3.289466,
+        "p95": 4.249782,
+        "p99": 4.525262
+      },
+      "reclaims": 0,
+      "statuses": {
+        "success": 200
+      },
+      "errors": {},
+      "model_calls": 200,
+      "commits_per_run": 57.5,
+      "rollbacks_per_run": 17.7,
+      "rows_inserted_per_run": 43.5,
+      "rows_updated_per_run": 88.3,
+      "harness_queries": 19,
+      "flags": []
+    }
+  ],
+  "completed_at": "2026-11-17T02:47:21.544151+00:00"
+}

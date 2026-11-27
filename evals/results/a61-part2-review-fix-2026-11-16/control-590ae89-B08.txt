@@ -1,0 +1,73 @@
+
+Running 1 test using 1 worker
+
+[1/1] tests/browser/repeat.spec.ts:435:1 › B08 Switch cases named body, check, flow and output connect and draw at their own routes
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:49 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+
+[WebServer] 12:51:50 PM [vite] (client) [console.warn] React Flow: It seems like you are hiding the attribution. Please only do this when you are subscribed to React Flow Pro: https://reactflow.dev/remove-attr
+[WebServer] You can ignore this warning if you are subscribed.
+
+  1 passed (5.7s)

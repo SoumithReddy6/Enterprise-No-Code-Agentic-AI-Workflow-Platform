@@ -4,6 +4,7 @@ import ApprovalReview from './approval-review';
 import WorkflowSetup from './workflow-setup';
 import RequestChecks from './request-checks';
 import SwitchCases from './switch-cases';
+import ConditionFields from './condition-fields';
 import { defaultSwitchConfig, removeCase, routeLabel } from '@/lib/switch';
 import { createRequestWorkflow, requestTemplates, admissionDetails, ACCEPT_QUOTED_RISK, fieldsReadDownstream, withSuggestedFields } from '@/lib/request-routing';
 
@@ -67,6 +68,7 @@ import {
   X,
   Zap,
   Calculator,
+  Repeat,
 } from 'lucide-react';
 import {
   api,
@@ -101,6 +103,14 @@ import {
   nodeRoutes,
   inputPorts,
   setInputBinding,
+  canvasEdge,
+  isLoopType,
+  loopPorts,
+  newRepeatConfig,
+  portInUse,
+  removeElements,
+  savedConnection,
+  withLoopAttachment,
 } from '@/lib/workflow';
 import '@xyflow/react/dist/style.css';
 import StudioDialog from './studio-dialog';
@@ -113,7 +123,7 @@ import PlatformSettings, {
   type ToolConnection,
 } from './platform-settings';
 import { sourcesForRun } from '@/lib/knowledge';
-import { eventNotes, incompleteRun, usageLabel } from '@/lib/run-status';
+import { eventNotes, eventTitle, incompleteRun, nodeStatuses, usageLabel } from '@/lib/run-status';
 import {
   type AllowedModel,
   selectedModelId,
@@ -155,6 +165,7 @@ const icons: Record<string, typeof Zap> = {
   condition: GitBranch,
   join: GitMerge,
   calculate: Calculator,
+  repeat: Repeat,
   response: Send,
 };
 
@@ -186,7 +197,9 @@ function WorkflowCard({ id, data, selected }: NodeProps<CanvasNode>) {
             : String(spec.config.model)
           : spec.type === 'join'
             ? `Waits for ${arrivals ?? 0} ${arrivals === 1 ? 'branch' : 'branches'}`
-            : definition?.description || spec.type}
+            : spec.type === 'repeat'
+              ? `Up to ${Number(spec.config.max_iterations ?? 3)} ${Number(spec.config.max_iterations ?? 3) === 1 ? 'iteration' : 'iterations'}`
+              : definition?.description || spec.type}
       </p>
       <div className="node-bottom">
         <span className="mono">{spec.type.replaceAll('_', ' ')}</span>
@@ -212,6 +225,17 @@ function WorkflowCard({ id, data, selected }: NodeProps<CanvasNode>) {
           <span className="port-label right">specialists</span>
         </>
       )}
+      {isLoopType(spec.type) && (
+        // The attachments: one row per port with its handle on the right edge, as Switch routes.
+        <div className="switch-routes loop-ports" aria-label="Loop ports">
+          {loopPorts(spec.type).map((port) => (
+            <div className="switch-route" key={port}>
+              <span className="port-label route">{port}</span>
+              <Handle type="source" id={port} position={Position.Right} />
+            </div>
+          ))}
+        </div>
+      )}
       {spec.type === 'switch' ? (
         // One row per route: the card grows, so up to 15 cases and Default never overlap.
         <div className="switch-routes" aria-label="Routes">
@@ -234,7 +258,8 @@ function WorkflowCard({ id, data, selected }: NodeProps<CanvasNode>) {
         ))
       ) : (
         spec.type !== 'response' && (
-          <Handle type="source" position={Position.Bottom} />
+          // On a loop card the flow port is named, so no edge depends on handle order.
+          <Handle type="source" id={isLoopType(spec.type) ? 'flow' : undefined} position={Position.Bottom} />
         )
       )}
     </div>
@@ -396,6 +421,13 @@ function Editor() {
     window.addEventListener('beforeunload', fn);
     return () => window.removeEventListener('beforeunload', fn);
   }, [dirty]);
+  // One selection at a time. A node the editor selects (a click, a drop, an issue link)
+  // deselects every edge, and selecting an edge clears the node (onEdgesChange), so Delete
+  // removes only what the user selected last. Every node selection goes through here.
+  function select(id: string) {
+    setSelected(id);
+    if (id) setEdges((es) => (es.some((e) => e.selected) ? es.map((e) => (e.selected ? { ...e, selected: false } : e)) : es));
+  }
 
 
   // Located issues from the server; plain messages from an older server stay unlocated.
@@ -403,7 +435,7 @@ function Editor() {
     return issues ?? messages.map((message) => ({ node_id: null, message }));
   }
   function showNode(id: string) {
-    setSelected(id);
+    select(id);
     setInspectorOpen(true);
     void canvas.fitView({ nodes: [{ id }], duration: 300, maxZoom: 1.2 });
   }
@@ -429,7 +461,7 @@ function Editor() {
     setEdges(w.edges);
     setName(w.name);
     setDescription(w.description);
-    setSelected(
+    select(
       w.nodes.find((n) => n.type === 'agent')?.id || w.nodes[0]?.id || '',
     );
     setErrors([]);
@@ -459,6 +491,22 @@ function Editor() {
           : n,
       ),
     );
+  }
+  const graphNow = () => ({ nodes: nodes.map((n) => n.data.spec), edges: edges as WorkflowEdge[] });
+  // Apply a changed graph from the helpers in lib/workflow: nodes keep their canvas state.
+  function applyGraph(graph: { nodes: WorkflowNode[]; edges: WorkflowEdge[] }) {
+    const specs = new Map(graph.nodes.map((n) => [n.id, n]));
+    setNodes((ns) => ns.filter((n) => specs.has(n.id)).map((n) =>
+      n.data.spec === specs.get(n.id) ? n : { ...n, data: { ...n.data, spec: { ...specs.get(n.id)!, position: n.position } } }));
+    setEdges(graph.edges as typeof edges);
+  }
+  // Every removal (keyboard, inspector) is one change and one undo entry: the nodes, their
+  // edges and the loop settings that named a removed attachment.
+  function removeFromCanvas(nodeIds: string[], edgeIds: string[]) {
+    if (running || (!nodeIds.length && !edgeIds.length)) return;
+    snapshot();
+    applyGraph(removeElements(graphNow(), nodeIds, edgeIds));
+    if (nodeIds.includes(selected)) select('');
   }
   // Removing or repairing a Switch case changes its connections in the same step (one undo entry).
   function removeSwitchCase(caseId: string) {
@@ -523,7 +571,7 @@ function Editor() {
     if (first) draft = { ...draft, nodes: draft.nodes.map(n => ['agent', 'request_router', 'request_reader', 'llm', 'query'].includes(n.type) ? { ...n, config: modelConfig(n.config, first) } : n) };
     loadDocument(draft);
     if (template) setMessage(template.sample);
-    setSelected('reader');
+    select('reader');
   }
   async function load(id: string) {
     if (!discardAllowed()) return;
@@ -773,6 +821,8 @@ function Editor() {
     };
     // A new Switch starts with one case, so its handle and Default are drawn at once.
     if (type === 'switch') spec.config = { ...defaultSwitchConfig() };
+    // `until` is required and has no default: a new Repeat starts with the pass eq true rule.
+    if (type === 'repeat') spec.config = newRepeatConfig();
     if (['agent', 'query', 'llm', 'request_router', 'request_reader'].includes(type)) {
       const model =
         allowedModels.find((m) => m.enabled && m.provider === 'ollama') ||
@@ -783,21 +833,33 @@ function Editor() {
       ...ns,
       { id, type: 'workflow', position: spec.position, data: { spec } },
     ]);
-    setSelected(id);
+    select(id);
     setInspectorOpen(true);
   }
-  function onConnect(connection: Connection) {
-    const from = nodes.find((n) => n.id === connection.source)?.data.spec;
-    const target = nodes.find((n) => n.id === connection.target)?.data.spec;
+  function onConnect(drawn: Connection) {
+    const from = nodes.find((n) => n.id === drawn.source)?.data.spec;
+    const target = nodes.find((n) => n.id === drawn.target)?.data.spec;
     if (!from || !target || from.id === target.id) return;
+    const connection = savedConnection(drawn, from.type);
     const kind = connectionKind(
       from.type,
       target.type,
-      connection.sourceHandle,
-      connection.targetHandle,
+      drawn.sourceHandle,
+      drawn.targetHandle,
     );
     if (!kind) {
       setNotice('These ports do not support this connection.');
+      return;
+    }
+    if (kind === 'loop') {
+      // One edge per setting: an occupied port is refused, not replaced.
+      const port = drawn.sourceHandle!;
+      if (portInUse(graphNow(), from.id, port)) {
+        setNotice(`The ${port} port is already connected. Delete its connection first.`);
+        return;
+      }
+      snapshot();
+      applyGraph(withLoopAttachment(graphNow(), { ...connection, id: crypto.randomUUID(), kind } as WorkflowEdge));
       return;
     }
     snapshot();
@@ -883,9 +945,7 @@ function Editor() {
       if (importRef.current) importRef.current.value = '';
     }
   }
-  const statuses = Object.fromEntries(
-    events.filter((e) => e.node_id).map((e) => [e.node_id, e.status]),
-  );
+  const statuses = nodeStatuses(events);
   const invalidNodes = new Set(errors.map((e) => e.node_id));
   // Labels from the run on screen, only when it ran this same graph.
   const trust =
@@ -898,6 +958,12 @@ function Editor() {
     { nodes: nodes.map((n) => n.data.spec), edges },
     (type) => Object.keys(catalog.find((d) => d.type === type)?.outputs ?? {}),
   );
+  // Saved handles drawn at the card's ports (display only; the saved graph keeps its values).
+  const typeById = new Map(nodes.map((n) => [n.id, n.data.spec.type]));
+  const drawnEdges = edges.map((e) => {
+    const drawn = canvasEdge(e as WorkflowEdge, typeById.get(e.source) ?? '');
+    return { ...e, sourceHandle: drawn.sourceHandle, targetHandle: drawn.targetHandle };
+  });
   const renderedNodes = nodes.map((n) => ({
     ...n,
     data: {
@@ -1249,10 +1315,10 @@ function Editor() {
             >
               <ReactFlow<CanvasNode, Edge>
                 nodes={renderedNodes}
-                edges={edges.map((e) => ({
+                edges={drawnEdges.map((e) => ({
                   ...e,
                   type: 'smoothstep',
-                  label: e.kind && e.kind !== 'flow' ? e.kind : undefined,
+                  label: e.kind === 'loop' ? e.sourceHandle || e.kind : e.kind && e.kind !== 'flow' ? e.kind : undefined,
                   style: {
                     stroke:
                       e.kind === 'tool'
@@ -1269,23 +1335,28 @@ function Editor() {
                 nodeTypes={nodeTypes}
                 onNodesChange={(changes) => {
                   if (running) return;
-                  const relevant = changes.filter((c) => c.type !== 'select');
-                  if (relevant.some((c) => c.type === 'remove')) snapshot();
+                  // Removal goes through onDelete (one change with the edges and settings).
+                  const relevant = changes.filter((c) => c.type !== 'select' && c.type !== 'remove');
                   if (relevant.some((c) => c.type === 'position'))
                     setDirty(true);
                   setNodes((ns) => applyNodeChanges(relevant, ns));
                 }}
                 onEdgesChange={(changes) => {
                   if (running) return;
-                  if (changes.some((c) => c.type === 'remove')) snapshot();
-                  setEdges((es) => applyEdgeChanges(changes, es));
+                  // Selecting an edge deselects the node the editor holds (renderedNodes
+                  // forces its `selected`), so Delete removes the edge, never that node.
+                  if (changes.some((c) => c.type === 'select' && c.selected)) select('');
+                  setEdges((es) => applyEdgeChanges(changes.filter((c) => c.type !== 'remove'), es));
                 }}
+                onDelete={({ nodes: gone, edges: cut }) =>
+                  removeFromCanvas(gone.map((n) => n.id), cut.map((e) => e.id))
+                }
                 onNodeDragStart={() => snapshot()}
                 onNodeClick={(_, n) => {
-                  setSelected(n.id);
+                  select(n.id);
                   setInspectorOpen(true);
                 }}
-                onPaneClick={() => setSelected('')}
+                onPaneClick={() => select('')}
                 onConnect={onConnect}
                 nodesDraggable={!running}
                 nodesConnectable={!running}
@@ -1445,7 +1516,7 @@ function Editor() {
                     >
                       {/* Inside the scroll region so every cause, and the response below, stay reachable. */}
                       {(() => {
-                        const incomplete = incompleteRun(run);
+                        const incomplete = incompleteRun(run, run?.workflow);
                         if (!incomplete) return null;
                         return (
                           <section className={`incomplete-run${incomplete.unverified ? ' unverified' : ''}`} aria-live="polite" aria-label="Incomplete run">
@@ -1509,7 +1580,7 @@ function Editor() {
                       <details key={e.seq} className="event-row">
                         <summary>
                           <span className={`event-dot ${e.status}`} />
-                          <span>{e.node_id || 'Workflow'}</span>
+                          <span>{eventTitle(e, run?.workflow)}</span>
                           <span className="event-status">
                             {e.status}
                             {e.cached ? ' · restored' : ''}
@@ -1522,7 +1593,7 @@ function Editor() {
                           </span>
                           <ChevronDown size={13} />
                         </summary>
-                        {eventNotes(e).map((note, i) => (
+                        {eventNotes(e, run?.workflow).map((note, i) => (
                           <p className="helper" key={i}>
                             {note}
                           </p>
@@ -1716,6 +1787,63 @@ function Editor() {
                         onRepair={(result) => applySwitchRepair(result as { config: Record<string, unknown>; edges: Edge[] })}
                       />
                     )}
+                    {isLoopType(chosen.type) && definition && (() => {
+                      // Body and Checker follow the connections; they are not typed.
+                      const named = (id: unknown) => {
+                        if (typeof id !== 'string' || !id) return '';
+                        const spec = nodes.find((n) => n.id === id)?.data.spec;
+                        return spec ? spec.label || spec.id : id;
+                      };
+                      const repeat = chosen.type === 'repeat';
+                      const until = chosen.config.until && typeof chosen.config.until === 'object'
+                        ? (chosen.config.until as Record<string, unknown>) : {};
+                      const field = typeof until.field === 'string' ? until.field : '';
+                      return (
+                        <>
+                        <section className="settings-section loop-settings" aria-label="Loop attachments">
+                          <h3>{repeat ? 'BODY AND CHECKER' : 'BODY'}</h3>
+                          <p className="readonly-setting">
+                            <span>Body</span>
+                            <output aria-label="Body">{named(chosen.config.body) || 'Connect a node to the body port'}</output>
+                          </p>
+                          {repeat && (
+                            <p className="readonly-setting">
+                              <span>Checker</span>
+                              <output aria-label="Checker">{named(chosen.config.check) || 'No checker'}</output>
+                            </p>
+                          )}
+                          <p className="helper">
+                            {repeat
+                              ? 'Connect the body port to the step that writes an answer, and optionally the check port to an Agent that judges it. The bottom port continues this workflow.'
+                              : 'Connect the body port to the step that runs once per item. The bottom port continues this workflow.'}
+                          </p>
+                        </section>
+                          {repeat && (
+                            <section className="settings-section" aria-label="Stop rule">
+                              <h3>STOP RULE</h3>
+                              <p className="helper">
+                                The Repeat stops when this rule is met, or after its maximum number of iterations.
+                              </p>
+                              <ConditionFields
+                                idPrefix={chosen.id}
+                                title="Stop rule"
+                                predicate={definition.config_schema.$defs?.ConditionConfig?.properties ?? {}}
+                                rule={until}
+                                disabled={running}
+                                onChange={(next) => modifyNode({ config: { ...chosen.config, until: next } })}
+                              />
+                              {chosen.config.check ? (
+                                <p className="helper">The checker&apos;s output schema must require the field the rule reads.</p>
+                              ) : field ? (
+                                <p className="helper">
+                                  The stop rule reads the body&apos;s output. This rule expects a JSON object with a <code>{field}</code> field.
+                                </p>
+                              ) : null}
+                            </section>
+                          )}
+                        </>
+                      );
+                    })()}
                     {definition && chosen.type !== 'switch' &&
                       Object.keys(definition.config_schema.properties).length >
                         0 && (
@@ -1820,7 +1948,9 @@ function Editor() {
                                 !(
                                   chosen.type === 'condition' &&
                                   !conditionSettingVisible(chosen.config, key)
-                                ),
+                                ) &&
+                                // Shown above: attachments from the connections, the rule as fields.
+                                !(isLoopType(chosen.type) && ['body', 'check', 'until'].includes(key)),
                             )
                             .map(([key, property]) => {
                               const update = (value: unknown) => {
@@ -1979,15 +2109,8 @@ function Editor() {
                       className="button delete-node"
                       disabled={running}
                       onClick={() => {
-                        snapshot();
-                        setNodes((ns) => ns.filter((n) => n.id !== selected));
-                        setEdges((es) =>
-                          es.filter(
-                            (e) =>
-                              e.source !== selected && e.target !== selected,
-                          ),
-                        );
-                        setSelected('');
+                        removeFromCanvas([selected], []);
+                        select('');
                       }}
                     >
                       <Trash2 size={14} /> Delete node
@@ -2106,6 +2229,14 @@ function Editor() {
                     same time, connect a step after the Request reader to 2–8
                     next steps, and connect the last step of every branch to the
                     same Join.
+                  </p>
+                  <p>
+                    To repeat a step until its answer is good enough, add Repeat
+                    until: connect its body port to the step that writes an answer
+                    and, optionally, the check port to an Agent that judges it. Its
+                    stop rule reads the checker’s answer (or the body’s, with no
+                    checker). It stops when the rule is met or after its iteration
+                    limit, and the execution log shows each iteration.
                   </p>
                 </li>
                 <li>

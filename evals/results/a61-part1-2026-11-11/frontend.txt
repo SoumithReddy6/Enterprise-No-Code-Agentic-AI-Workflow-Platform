@@ -1,0 +1,18 @@
+## Frontend checks (A6.1 Part 1; no frontend source change)
+Only frontend/tests/browser/request-nodes.json changed: the browser tests' copy of the
+backend node registry (/nodes), regenerated from REGISTRY.public() because the registry
+gained `repeat` (155 lines added, none removed; checked by
+backend/tests/test_request_examples.py::test_browser_registry_fixture_matches_the_actual_definitions).
+The editor palette lists node types by an allow-list (frontend/lib/workflow.ts paletteCategory),
+which does not include `repeat`, so the editor does not offer it (Part 2 work).
+
+## npm test
+tests 118, pass 118, fail 0
+## typecheck (tsc --noEmit)
+exit 0
+## lint (oxlint)
+exit 0
+## build (vinext build)
+exit 0
+## browser (Chromium, playwright test)
+54 passed (1.0m)

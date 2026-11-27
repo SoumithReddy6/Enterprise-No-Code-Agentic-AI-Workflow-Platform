@@ -313,7 +313,7 @@ def assert_budget_abstention(output, node_id='agent', truncations=None):
     assert grounding['abstain'] is True and grounding['compliance'] == 'budget_exhausted'
     assert grounding['answer'] == '' and grounding['citations'] == [] and grounding['reason'] == REASON
     assert grounding['truncated'] is True and grounding['truncation_reason'] == REASON
-    assert grounding['truncations'] == (truncations or [{'node_id': node_id, 'reason': REASON}])
+    assert grounding['truncations'] == (truncations or [{'node_id': node_id, 'reason': REASON, 'kind': 'tokens'}])
 
 
 @pytest.mark.asyncio
@@ -359,7 +359,7 @@ async def test_t9d_a_free_text_agent_with_no_evidence_whose_repair_is_refused_ke
     assert json.loads(output['sources']) == []
     grounding = json.loads(output['grounding'])
     assert grounding['abstain'] is True and grounding['truncated'] is True and grounding['truncation_reason'] == REASON
-    assert grounding['truncations'] == [{'node_id': 'agent', 'reason': REASON}]
+    assert grounding['truncations'] == [{'node_id': 'agent', 'reason': REASON, 'kind': 'tokens'}]
 
 
 @pytest.mark.asyncio
@@ -402,7 +402,7 @@ async def test_t10c_a_nested_free_text_specialist_returns_the_budget_abstention(
     assert len(child) == 1, 'the specialist succeeds with the budget abstention'
     assert_budget_abstention(child[0]['outputs'], 'spec0')
     parent = json.loads(result['values']['agent']['grounding'])
-    assert parent['truncated'] is True and {'node_id': 'spec0', 'reason': REASON} in parent['truncations']
+    assert parent['truncated'] is True and {'node_id': 'spec0', 'reason': REASON, 'kind': 'tokens'} in parent['truncations']
     assert len(verified) == 3, 'each budget abstention checks its sources once, then the Response (R01)'
 
 

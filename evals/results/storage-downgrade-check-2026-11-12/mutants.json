@@ -1,0 +1,35 @@
+[
+  {
+    "mutant": "M1 missing loop rows hydrate as an empty successful loop",
+    "files": [
+      "backend/app/storage.py"
+    ],
+    "killed": true,
+    "error": "AssertionError: []"
+  },
+  {
+    "mutant": "M2 a contract run with no accounting is treated as an older run",
+    "files": [
+      "backend/app/accounting_state.py"
+    ],
+    "killed": true,
+    "error": "AssertionError: ('paused', 'failed', 'Past token usage cannot be verified for this older run. The unstarted approved action was not sent by this attempt. Saved results were kept.')"
+  },
+  {
+    "mutant": "M3 missing accounting is given an inferred zero baseline",
+    "files": [
+      "backend/app/accounting_state.py"
+    ],
+    "killed": false,
+    "error": null
+  },
+  {
+    "mutant": "M3b both guards give missing accounting a zero baseline",
+    "files": [
+      "backend/app/accounting_state.py",
+      "backend/app/storage.py"
+    ],
+    "killed": true,
+    "error": "AssertionError: ('paused', 'awaiting_approval', '')"
+  }
+]

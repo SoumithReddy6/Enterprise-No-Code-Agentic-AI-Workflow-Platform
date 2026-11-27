@@ -28,7 +28,12 @@ const KIND_LABELS: Record<string, string> = {
 };
 const UNVERIFIED = 'legacy_checkpoint_unverified';
 
-export function incompleteRun(run: RunCompleteness | undefined): IncompleteRun | null {
+// The node types a label or note depends on: the run's own workflow.
+export type NodeTypes = { nodes: { id: string; type: string }[] };
+const typeOf = (workflow: NodeTypes | undefined, id: string | undefined) =>
+  workflow?.nodes.find((n) => n.id === id)?.type;
+
+export function incompleteRun(run: RunCompleteness | undefined, workflow?: NodeTypes): IncompleteRun | null {
   if (!run?.truncated) return null;
   const recorded = run.truncation_causes?.length
     ? run.truncation_causes
@@ -37,7 +42,10 @@ export function incompleteRun(run: RunCompleteness | undefined): IncompleteRun |
   const causes = recorded
     .map((cause) => ({
       node: cause.node_id,
-      label: KIND_LABELS[cause.kind] || 'Work was incomplete',
+      // A Repeat delivered one answer, which did not meet its rule; its reason says which stop.
+      label: cause.kind === 'loop' && typeOf(workflow, cause.node_id) === 'repeat'
+        ? 'Repeat did not meet its stop rule'
+        : KIND_LABELS[cause.kind] || 'Work was incomplete',
       unverified: cause.source === UNVERIFIED,
       reason: cause.reason || 'The run did not deliver all of its work.',
     }))
@@ -56,6 +64,11 @@ export function incompleteRun(run: RunCompleteness | undefined): IncompleteRun |
 
 export type EventSummary = {
   status: string;
+  node_id?: string;
+  kind?: string;
+  loop_node_id?: string;
+  item_index?: number;
+  item_result?: unknown;
   error?: string;
   reason?: string;
   recovered?: boolean;
@@ -68,9 +81,65 @@ export type EventSummary = {
   omitted_fields?: string[];
 };
 
+// Card statuses: the latest event of each node. Loop item and summary events are about the
+// loop's progress, not its status (a Repeat stays running between iterations).
+export function nodeStatuses(events: EventSummary[]): Record<string, string> {
+  return Object.fromEntries(
+    events.filter((e) => e.node_id && e.kind !== 'loop_item' && e.kind !== 'loop_summary').map((e) => [e.node_id, e.status]),
+  );
+}
+
+// An execution log title: the node, and for work inside a loop the iteration (Repeat) or
+// item (For each) it belongs to, counted from 1.
+export function eventTitle(event: EventSummary, workflow?: NodeTypes): string {
+  const name = event.node_id || 'Workflow';
+  if (!event.loop_node_id || typeof event.item_index !== 'number') return name;
+  const unit = typeOf(workflow, event.loop_node_id) === 'repeat' ? 'iteration' : 'item';
+  return `${name} · ${unit} ${event.item_index + 1}`;
+}
+
+// One note per Repeat iteration row. The stored copy of a loop event is bounded, so a large
+// item_result can arrive as a string: a verdict that cannot be read is said to be
+// unavailable, never taken as "not met".
+function iterationNote(event: EventSummary): string {
+  const number = (event.item_index ?? 0) + 1;
+  const row = event.item_result && typeof event.item_result === 'object' ? event.item_result as { status?: unknown; met?: unknown } : null;
+  if (row?.status === 'interrupted') return `Iteration ${number} was stopped by the run budget before it was checked.`;
+  if (row?.status === 'abstained') return `Iteration ${number} stopped: the answerability guard abstained.`;
+  if (row?.met === true) return `Iteration ${number} met the stop rule.`;
+  if (row?.met === false) return `Iteration ${number} did not meet the stop rule.`;
+  return `Iteration ${number} finished. Verdict details are unavailable.`;
+}
+
+// Why a Repeat stopped, from its summary output. A summary that does not parse gives none.
+function stopNote(summary: unknown): string | null {
+  let s: { iterations?: number; max_iterations?: number; stopped_by?: string };
+  try {
+    s = typeof summary === 'string' ? JSON.parse(summary) : null;
+  } catch {
+    return null;
+  }
+  if (!s || typeof s !== 'object') return null;
+  const n = s.iterations ?? 0, m = s.max_iterations ?? 0;
+  switch (s.stopped_by) {
+    case 'rule': return `Stopped by its rule after ${n} of ${m} ${m === 1 ? 'iteration' : 'iterations'}.`;
+    case 'limit': return `Reached its limit of ${m} ${m === 1 ? 'iteration' : 'iterations'} without meeting its rule. Returned the answer from iteration ${n}.`;
+    case 'budget': return `The run budget stopped iteration ${n + 1} before it was checked. Returned the answer from iteration ${n}.`;
+    case 'guard': return 'The answerability guard stopped the loop and returned an abstention.';
+    default: return null;
+  }
+}
+
 // Short notes shown above an event's raw detail in the execution log.
-export function eventNotes(event: EventSummary): string[] {
+export function eventNotes(event: EventSummary, workflow?: NodeTypes): string[] {
   const notes: string[] = [];
+  if (typeOf(workflow, event.node_id) === 'repeat') {
+    if (event.kind === 'loop_item') notes.push(iterationNote(event));
+    else if (event.status === 'success') {
+      const note = stopNote(event.outputs?.summary);
+      if (note) notes.push(note);
+    }
+  }
   if (event.status === 'not_run') notes.push(`Skipped: ${event.reason || 'the action budget was exhausted'}`);
   else if (event.budget_exhausted)
     notes.push(event.recovered ? 'Recovered: refused by the action budget, so its work is missing from this run.' : 'Refused by the action budget.');

@@ -39,6 +39,10 @@ class ExecutionIdentity:
     invocation_id: str
     parent_node_id: str | None = None
     item_index: int | None = None
+    # The base of a root Agent's child call IDs, when it is not the checkpoint owner. A Repeat
+    # sets it to the invocation ID, because its body and checker share one owner per
+    # iteration. None for every other caller, so existing identities do not change.
+    child_base: str | None = None
 
     def event_fields(self,include_invocation=True):
         fields={'node_id':self.node_id}

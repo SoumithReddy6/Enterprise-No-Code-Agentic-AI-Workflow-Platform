@@ -1,0 +1,106 @@
+{
+ "M00": {
+  "change": "control: no change",
+  "oracles": [
+   {
+    "oracle": "unit:U01,U02,U03,U04,U05,U06,U07,U08,U09,U10",
+    "killed": false
+   },
+   {
+    "oracle": "browser:B01,B02,B03,B04,B05,B06,B07,B08",
+    "killed": false
+   },
+   {
+    "oracle": "spec:switch.spec.ts",
+    "killed": false
+   }
+  ],
+  "killed": false
+ },
+ "M53": {
+  "change": "connectionKind reads body and check as loop ports on every card",
+  "oracles": [
+   {
+    "oracle": "unit:U09",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B08",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M54": {
+  "change": "savedConnection drops a flow handle on every card",
+  "oracles": [
+   {
+    "oracle": "unit:U09",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B08",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M55": {
+  "change": "edgePort maps a Switch output case to the unnamed bottom port",
+  "oracles": [
+   {
+    "oracle": "unit:U09",
+    "killed": true
+   },
+   {
+    "oracle": "browser:B08",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M56": {
+  "change": "Removal clears any setting a loop edge names",
+  "oracles": [
+   {
+    "oracle": "unit:U10",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M57": {
+  "change": "Attaching sets any setting a loop edge names",
+  "oracles": [
+   {
+    "oracle": "unit:U10",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M58": {
+  "change": "The editor saves every new connection as if from a loop card",
+  "oracles": [
+   {
+    "oracle": "browser:B08",
+    "killed": true
+   }
+  ],
+  "killed": true
+ },
+ "M59": {
+  "change": "For each also treats check as an attachment",
+  "oracles": [
+   {
+    "oracle": "unit:U10",
+    "killed": true
+   },
+   {
+    "oracle": "unit:U02",
+    "killed": true
+   }
+  ],
+  "killed": true
+ }
+}

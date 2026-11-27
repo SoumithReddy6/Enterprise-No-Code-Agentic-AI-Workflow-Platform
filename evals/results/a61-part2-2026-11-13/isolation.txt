@@ -1,0 +1,38 @@
+Isolation copy: git archive 590ae89 + the 14 changed files below, in a fresh repository.
+Commits:
+  857b69c isolation: final test files
+  45ad63a isolation: 590ae89 + A6.1 Part 2
+Second commit (final test files):
+  frontend/tests/browser/repeat.spec.ts | 2 ++
+  frontend/tests/browser/switch.spec.ts | 2 ++
+  2 files changed, 4 insertions(+)
+Diff of the isolation head against 590ae89 (tracked files):
+  113b29864f339610 same-as-working-tree README.md
+  6141004cd6303a98 same-as-working-tree docs/operations.md
+  c6ad8cc5c210ee5e same-as-working-tree frontend/app/globals.css
+  6ce4bf4ccfff0e0a same-as-working-tree frontend/components/switch-cases.tsx
+  27826e302f0213f1 same-as-working-tree frontend/components/workflow-editor.tsx
+  d784de8f2992758c same-as-working-tree frontend/lib/run-status.ts
+  d8fc939a54ab366a same-as-working-tree frontend/lib/workflow.ts
+  e64765db57296817 same-as-working-tree frontend/components/condition-fields.tsx
+  d05f6328fce74f2f same-as-working-tree frontend/tests/repeat.test.ts
+  f5fda8d8f5b288ee same-as-working-tree frontend/tests/browser/repeat.spec.ts
+  236396eda0245760 same-as-working-tree frontend/tests/browser/switch.spec.ts
+  271f69d0a3d92c3f same-as-working-tree frontend/tests/browser/repeat-issues.json
+  8a76b8c465c69bf9 same-as-working-tree frontend/tests/browser/repeat-run-events.json
+  430e199c7fa5cbcb same-as-working-tree backend/tests/test_repeat_editor_contract.py
+Other tracked files: equal to git archive 590ae89 (check below lists files that differ from 590ae89).
+  differs: README.md
+  new: backend/tests/test_repeat_editor_contract.py
+  differs: docs/operations.md
+  differs: frontend/app/globals.css
+  new: frontend/components/condition-fields.tsx
+  differs: frontend/components/switch-cases.tsx
+  differs: frontend/components/workflow-editor.tsx
+  differs: frontend/lib/run-status.ts
+  differs: frontend/lib/workflow.ts
+  new: frontend/tests/browser/repeat-issues.json
+  new: frontend/tests/browser/repeat-run-events.json
+  new: frontend/tests/browser/repeat.spec.ts
+  differs: frontend/tests/browser/switch.spec.ts
+  new: frontend/tests/repeat.test.ts

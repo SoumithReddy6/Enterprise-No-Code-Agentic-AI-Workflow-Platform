@@ -323,6 +323,106 @@ def parallel_crash(kind, output):
         models.close()
 
 
+class RepeatModels:
+    """Ollama fixture for the A6.1 Repeat rows. The writer drafts, the checker judges. The
+    writer's second request (iteration 1) is held open, so it is outstanding when the worker
+    is killed. Each answered request reports 15 tokens."""
+    def __init__(self):
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        self.calls, self.lock, self.release = [], threading.Lock(), threading.Event()
+        owner = self
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, *args): pass
+            def do_POST(self):
+                model = json.loads(self.rfile.read(int(self.headers['Content-Length'])))['model']
+                with owner.lock:
+                    owner.calls.append(model)
+                    number = owner.calls.count(model)
+                held = model == 'repeat-writer' and number == 2
+                if held: owner.release.wait(120)
+                if model == 'repeat-writer':
+                    content = 'draft 1' if number == 1 else 'draft 2'
+                else:
+                    content = json.dumps({'pass': number > 1, 'feedback': 'add the date' if number == 1 else 'good'})
+                body = json.dumps({'message': {'role': 'assistant', 'content': content},
+                                   'prompt_eval_count': 10, 'eval_count': 5}).encode()
+                try:
+                    self.send_response(200); self.send_header('Content-Length', str(len(body)))
+                    self.send_header('Content-Type', 'application/json'); self.end_headers(); self.wfile.write(body)
+                except OSError: pass  # The killed worker's connection is gone.
+        self.server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True); self.thread.start()
+        self.url = f'http://127.0.0.1:{self.server.server_address[1]}'
+
+    def count(self, model):
+        with self.lock: return self.calls.count(model)
+
+    def close(self):
+        self.release.set(); self.server.shutdown(); self.server.server_close(); self.thread.join()
+
+
+def repeat_flow():
+    verdict = {'type': 'object', 'required': ['pass', 'feedback'],
+               'properties': {'pass': {'type': 'boolean'}, 'feedback': {'type': 'string'}}}
+    nodes = [{'id': 'input', 'type': 'chat_input'},
+             {'id': 'r', 'type': 'repeat', 'inputs': {'input': 'input.message'},
+              'config': {'body': 'writer', 'check': 'judge', 'max_iterations': 3,
+                         'until': {'operator': 'eq', 'field': 'pass', 'compare_to': 'true'}}},
+             {'id': 'writer', 'type': 'agent', 'config': {'provider': 'ollama', 'model': 'repeat-writer', 'system': 'Write a reply.'}},
+             {'id': 'judge', 'type': 'agent', 'config': {'provider': 'ollama', 'model': 'repeat-judge', 'system': 'Judge the reply.',
+                                                         'role': 'critic', 'output_schema': verdict}},
+             {'id': 'out', 'type': 'response', 'inputs': {'text': 'r.text'}}]
+    edges = [{'id': 'e0', 'source': 'input', 'target': 'r'}, {'id': 'e1', 'source': 'r', 'target': 'out'},
+             {'id': 'e2', 'source': 'r', 'target': 'writer', 'kind': 'loop', 'sourceHandle': 'body', 'targetHandle': 'input'},
+             {'id': 'e3', 'source': 'r', 'target': 'judge', 'kind': 'loop', 'sourceHandle': 'check', 'targetHandle': 'input'}]
+    return {'version': 1, 'name': 'A6.1 Repeat crash', 'nodes': nodes, 'edges': edges}
+
+
+def repeat_crash(kind, output):
+    """A6.1: SIGKILL during iteration 1 of a Repeat, while the writer's request is outstanding.
+
+    Iteration 0 (writer, then checker: rule not met) is saved as row 0 before iteration 1
+    starts. After the real lease ends, a new worker reuses row 0 without a request, repeats
+    only iteration 1, and saves row 1. Tokens: each answered request is charged once (30
+    before the kill, 60 at the end); the killed request was never answered.
+    """
+    models = RepeatModels()
+    try:
+        with database(kind) as url, deployed(url, output, {'OLLAMA_BASE_URL': models.url}) as (lab, store):
+            for name in ('repeat-writer', 'repeat-judge'):
+                response = lab.client.post('/api/models', json={'provider': 'ollama', 'model': name})
+                assert response.status_code == 201, response.text
+            identifier = lab.submit(repeat_flow(), 'synthetic repeat probe')
+            held = start_worker(lab)
+            wait_for(lambda: models.count('repeat-writer') == 2, 60)
+            os.kill(held.pid, signal.SIGKILL); held.wait(timeout=10)
+            prior = store.run(identifier, lab.tenant)
+            prior_rows = prior.get('loop_progress', {}).get('r', {})
+            assert sorted(prior_rows) == ['0'] and prior_rows['0']['met'] is False, prior_rows
+            assert 'r' not in prior.get('checkpoints', {}), sorted(prior.get('checkpoints', {}))
+            assert prior['accounting']['tokens_spent'] == 30, prior['accounting']
+            # Wait for the real default 30-second lease, without mutating the database.
+            start_worker(lab)
+            resumed = lab.wait(identifier, timeout=90)
+            assert resumed['status'] == 'success', resumed.get('error')
+            calls = {'repeat-writer': models.count('repeat-writer'), 'repeat-judge': models.count('repeat-judge')}
+            assert calls == {'repeat-writer': 3, 'repeat-judge': 2}, calls
+            rows = resumed['loop_progress']['r']
+            assert sorted(rows) == ['0', '1'], rows
+            assert rows['0'] == prior_rows['0'], 'row 0 was reused, not written again'
+            assert rows['1']['status'] == 'success' and rows['1']['value'] == 'draft 2' and rows['1']['met'] is True
+            assert resumed['output'] == 'draft 2'
+            assert json.loads(resumed['checkpoints']['r']['summary'])['iterations'] == 2
+            assert resumed['accounting']['tokens_spent'] == 60, resumed['accounting']
+            assert lab.provider.calls == []
+            return {'database': kind, 'sigkill': 'iteration 1, writer request outstanding',
+                    'prior_rows': sorted(prior_rows), 'prior_tokens_spent': 30, 'model_calls': calls,
+                    'final_rows': sorted(rows), 'final_tokens_spent': 60}
+    finally:
+        models.close()
+
+
 async def measure(url, n):
     import pytest
     from backend.app.worker import Worker
@@ -386,25 +486,62 @@ def storage_cost():
 
 
 def populated_downgrade(output):
-    # Downgrading an empty database is not proof that populated loop history survives.
+    """A downgrade is not lossless (docs/operations.md); it must not be silent either.
+
+    Revision 0003's downgrade drops run_loop_items and runs.accounting. Three populated runs
+    go through one downgrade to 0001 and back: a finished loop, a loop SIGKILLed after its
+    first item committed, and a write batch paused at its second approval after the first
+    write. The finished run must show its lost item results as unavailable, never as an
+    empty success. Each unfinished run must fail on resume with the accounting refusal and
+    send nothing again: no committed read is repeated and no write is sent twice.
+    """
     from alembic import command
+    from backend.app.accounting_state import INVALID
     with database('postgres') as url, deployed(url, output) as (lab, store):
-        start_worker(lab)
-        identifier = lab.submit(lab.batch('/read/downgrade', n=2, write=False))
-        before = lab.wait(identifier)
-        assert before['status'] == 'success'
-        for process in lab.processes:
+        def run(identifier): return store.run(identifier, lab.tenant)
+        def pending(identifier):
+            return next((a for a in lab.wait(identifier)['approvals'] if a['status'] == 'pending'), None)
+        worker = start_worker(lab)
+        finished = lab.submit(lab.batch('/read/downgrade', n=2, write=False))
+        before = lab.wait(finished)
+        assert before['status'] == 'success' and len(before['checkpoints']['each']['results']) == 2, before.get('error')
+        write_path = '/deliver/downgrade'
+        paused = lab.submit(lab.batch(write_path, n=3))
+        assert lab.decide(paused, pending(paused)).status_code == 200
+        wait_for(lambda: lab.provider.count(write_path) == 1 and run(paused)['status'] == 'awaiting_approval')
+        read_path = '/hold/downgrade'
+        killed = lab.submit(lab.batch(read_path, n=3, write=False))
+        wait_for(lambda: lab.provider.count(read_path) >= 2)
+        os.kill(worker.pid, signal.SIGKILL); worker.wait(timeout=10)
+        held = {name: run(identifier) for name, identifier in [('paused', paused), ('killed', killed)]}
+        assert len(held['killed']['loop_progress']['each']) == 1 and len(held['paused']['loop_progress']['each']) == 1
+        for process in lab.processes[1:]:  # processes[0] is the API; stop every worker.
             if process.poll() is None: process.terminate(); process.wait(timeout=10)
+        calls = len(lab.provider.calls)
         with store.engine.begin() as connection:
             command.downgrade(schema._config(connection), '0001_baseline')
             schema.upgrade(connection)
-        after = store.run(identifier, lab.tenant)
-        expected = before['checkpoints']['each']['results']
-        actual = after['checkpoints']['each']['results']
-        (output / 'comparison.json').write_text(json.dumps({'before_results': expected, 'after_results': actual, 'before_accounting': before['accounting'], 'after_accounting': after.get('accounting')}, indent=2))
-        assert actual == expected, 'Downgrade/re-upgrade lost persisted loop results'
-        assert after['accounting'] == before['accounting'], 'Downgrade/re-upgrade lost accounting'
-        return {'populated_history_preserved': True}
+            assert schema.current_revision(connection) == schema.head_revision()
+        after = run(finished)
+        results = after['checkpoints']['each']['results']
+        (output / 'finished.json').write_text(json.dumps({'before_results': before['checkpoints']['each']['results'], 'after_results': results,
+                                                          'before_accounting': before['accounting'], 'after_accounting': after.get('accounting')}, indent=2))
+        assert after['status'] == 'success' and after['output'] == before['output']
+        assert isinstance(results, dict) and results.get('unavailable') == 'Loop each cannot be restored: 2 of 2 stored item results are missing. Start a new run.', results
+        assert after.get('accounting') is None, 'Downgrade kept accounting; update the documented loss'
+        start_worker(lab)
+        assert lab.decide(paused, pending(paused)).status_code == 200
+        resumed = {name: lab.wait(identifier, timeout=60) for name, identifier in [('paused', paused), ('killed', killed)]}
+        (output / 'unfinished.json').write_text(json.dumps({name: {'status': value['status'], 'error': value.get('error')} for name, value in resumed.items()}, indent=2))
+        (output / 'receiver.json').write_text(json.dumps(lab.provider.calls, indent=2))
+        for name, value in resumed.items():
+            assert value['status'] == 'failed' and value.get('error') == INVALID, (name, value['status'], value.get('error'))
+            # The loop item results were dropped with run_loop_items; the refusal must not say otherwise.
+            assert 'were kept' not in value['error'] and 'start a new run' in value['error'], value['error']
+        assert len(lab.provider.calls) == calls, 'A resumed run sent a request after the downgrade'
+        assert lab.provider.count(write_path) == 1 and lab.provider.count(read_path) == 2
+        return {'lossless': False, 'finished_results': 'unavailable marker, not an empty success', 'accounting_after': None,
+                'unfinished_runs_refused': 2, 'requests_after_downgrade': 0, 'writes_sent': 1}
 
 
 def copied_workspace():
@@ -448,6 +585,7 @@ def main():
         *[(f'{kind}-accounting-{moment.replace("_", "-")}', lambda kind=kind, moment=moment: accounting_commit(kind, moment, output / f'accounting-{kind}-{moment}'))
           for kind in ('sqlite', 'postgres') for moment in ('before_commit', 'after_commit')],
         *[(f'{kind}-parallel-sigkill', lambda kind=kind: parallel_crash(kind, output / f'parallel-{kind}')) for kind in ('sqlite', 'postgres')],
+        *[(f'{kind}-repeat-sigkill', lambda kind=kind: repeat_crash(kind, output / f'repeat-{kind}')) for kind in ('sqlite', 'postgres')],
     ]
     if args.checks and set(args.checks) - {name for name, _ in checks}:
         parser.error('Unknown check name')

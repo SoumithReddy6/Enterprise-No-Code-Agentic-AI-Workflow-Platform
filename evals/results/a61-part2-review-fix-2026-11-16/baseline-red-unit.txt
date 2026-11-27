@@ -1,0 +1,65 @@
+✔ U01 Repeat is offered in Control and starts with the stop rule pass eq true; For each stays out (6.075958ms)
+✔ U02 the body and check ports make loop connections; other uses of them are refused (0.099584ms)
+✔ U03 attaching sets the setting, an occupied port is reported, removal clears only its own setting (0.314375ms)
+✔ U04 card statuses come from node events only (0.983041ms)
+✔ U05 the execution log names iterations and explains each verdict and the stop (0.317375ms)
+✔ U06 an incomplete Repeat is labelled by its stop rule, with its recorded reason (0.115833ms)
+✔ U07 saved handles map to drawn ports for display only (0.206583ms)
+✔ U08 unfinished JSON in the stop rule blocks Validate and Run locally (0.191167ms)
+✖ U09 Switch case ids named like loop ports connect, save and draw unchanged (0.380459ms)
+✖ U10 removing or adding a malformed loop edge leaves the other settings unchanged (0.399125ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 8
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 59.717333
+
+✖ failing tests:
+
+test at tests/repeat.test.ts:227:6
+✖ U09 Switch case ids named like loop ports connect, save and draw unchanged (0.380459ms)
+  AssertionError [ERR_ASSERTION]: body connects
+  
+  null !== 'flow'
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/a61r-base-7c4aa62-JFrX/frontend/tests/repeat.test.ts:230:12)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'flow',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/repeat.test.ts:245:6
+✖ U10 removing or adding a malformed loop edge leaves the other settings unchanged (0.399125ms)
+  AssertionError [ERR_ASSERTION]: on_limit stays "last"
+  + actual - expected
+  
+    {
+      body: 'writer',
+      check: '',
+      max_iterations: 3,
+  +   on_limit: '',
+  -   on_limit: 'last',
+      until: {
+        compare_to: 'true',
+        field: 'pass',
+        operator: 'eq'
+      }
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/a61r-base-7c4aa62-JFrX/frontend/tests/repeat.test.ts:254:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { body: 'writer', check: '', max_iterations: 3, on_limit: '', until: { operator: 'eq', field: 'pass', compare_to: 'true' } },
+    expected: { body: 'writer', check: '', max_iterations: 3, on_limit: 'last', until: { operator: 'eq', field: 'pass', compare_to: 'true' } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

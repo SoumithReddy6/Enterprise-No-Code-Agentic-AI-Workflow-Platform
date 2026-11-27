@@ -1,0 +1,38 @@
+[
+ {
+  "id": "S25",
+  "status": "passed",
+  "seconds": 0.7
+ },
+ {
+  "id": "S26a",
+  "status": "passed",
+  "seconds": 0.2
+ },
+ {
+  "id": "S26b",
+  "status": "passed",
+  "seconds": 0.3
+ },
+ {
+  "id": "S26c",
+  "status": "passed",
+  "seconds": 0.0
+ },
+ {
+  "id": "S27",
+  "status": "passed",
+  "seconds": 0.1
+ },
+ {
+  "id": "S28",
+  "status": "passed",
+  "seconds": 30.3
+ },
+ {
+  "id": "S29",
+  "status": "failed",
+  "error": "AssertionError: [{'node_id': 'r', 'status': 'running', 'inputs': {'input': 'Customer case'}, 'seq': 21, 'timestamp': '2026-11-17T00:24:26.752383+00:00'}, {'node_id': 'r', 'status': 'success', 'outputs': {'text': 'Draft 2: refund R-42.', 'feedback': '{\"pass\": true, \"feedback\": \"good\"}', 'summary': '{\"iterations\": 2, \"max_iterations\": 3, \"met\": true, \"stopped_by\": \"rule\", \"truncated\": false, \"truncation_reason\": \"\"}', '_provenance': {'v': 2, 'ports': {'text': 'guessed', 'feedback': 'guessed', 'summary': 'guessed'}}}, 'duration_ms': 1, 'seq': 22, 'timestamp': '2026-11-17T00:24:26.753327+00:00'}]",
+  "seconds": 0.2
+ }
+]

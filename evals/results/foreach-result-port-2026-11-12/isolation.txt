@@ -1,0 +1,14 @@
+# For each result-port isolation copy: git archive 00281fb + the 6 changed files, git init + one commit
+copy: <scratchpad>/fe-iso-ky7c97u1
+commit: 69cfe06dfc512261d59fb7c26f19b2356d06eb5d
+
+## Files copied (sha256; copy == working tree)
+e82866996a86594c611ffb2c36ea7750e8a1aa930ffe72df936c9535acd39b67 README.md match
+5683d273d72b7d7df3a976602fa77a87fd85065dcb5c7755a1ae84cd2870ef0f backend/app/compiler.py match
+47e6477a7f24055dcf2e422855770bff5ffbbb4b7e071a9b6d6a5ee1fcc1552c backend/app/iteration.py match
+7abc70192b6268307dfa21b3f92c18d407405a26fbc8d8da06a2cdbbce9a67e4 backend/app/repeat.py match
+c621348d77e6a674345d9398e9062f61d56bda03b136095df908eed4cc906786 backend/tests/test_for_each_result_port.py match
+37005b181a78aab2136387ec7e631e119b96ebd661b3745c2a952e5f719dbb2b docs/operations.md match
+
+## Tracked files that differ from 00281fb, outside the 6 (evals/ and docs/reviews/ excluded)
+none

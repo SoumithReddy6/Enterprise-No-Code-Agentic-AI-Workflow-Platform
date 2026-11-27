@@ -1,0 +1,5 @@
+cycle: ['Workflow contains a cycle; loops are not supported yet.']
+nested: ['A loop body must be a tool, retrieval or Agent node.', 'Nested loops are not supported yet.', 'outer: items must come from a list; list.text provides string.']
+pass eq true: True False
+score gte 8: True
+non-JSON: Condition field pass: the value is not JSON, so it has no fields.

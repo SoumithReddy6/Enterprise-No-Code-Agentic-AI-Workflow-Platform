@@ -1,0 +1,33 @@
+M38: withoutLoopAttachment clears the setting when another target is removed
+
+$ node --experimental-strip-types --test --test-name-pattern ^(U03)  tests/repeat.test.ts
+exit 1
+✖ U03 attaching sets the setting, an occupied port is reported, removal clears only its own setting (5.54775ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 51.539875
+
+✖ failing tests:
+
+test at tests/repeat.test.ts:71:6
+✖ U03 attaching sets the setting, an occupied port is reported, removal clears only its own setting (5.54775ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  '' !== 'other'
+  
+      at TestContext.<anonymous> (file:///private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/mut/frontend/tests/repeat.test.ts:101:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: 'other',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+

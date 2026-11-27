@@ -296,9 +296,122 @@ export function connectionKind(
         ['retrieve', 'query'].includes(sourceType))
       ? 'tool'
       : null;
-  if (sourceHandle === 'agents')
-    return sourceType === 'agent' && targetType === 'agent' ? 'agent' : null;
+  // The specialists port of an Agent card. On other cards `agents` is an ordinary route id (a
+  // Switch case may be named agents), so it connects as flow.
+  if (sourceType === 'agent' && sourceHandle === 'agents')
+    return targetType === 'agent' ? 'agent' : null;
+  // The loop ports of a Repeat (body, check) and a For each (body). The target type is left
+  // to Validate, which names the node and the rule. On other cards these names are ordinary
+  // route ids (a Switch case may be named body, check or flow), so they connect as flow.
+  if (isLoopType(sourceType) && (sourceHandle === 'body' || sourceHandle === 'check'))
+    return isAttachmentPort(sourceType, sourceHandle) ? 'loop' : null;
   return 'flow';
+}
+
+const LOOP_TYPES = ['repeat', 'for_each'];
+export const isLoopType = (type: string) => LOOP_TYPES.includes(type);
+// The settings a loop edge sets: each names the node attached at that port. Nothing else in a
+// loop node's settings is an attachment, whatever handle a malformed edge carries.
+const ATTACHMENT_PORTS: Record<string, string[]> = { repeat: ['body', 'check'], for_each: ['body'] };
+export const loopPorts = (type: string) => ATTACHMENT_PORTS[type] ?? [];
+const isAttachmentPort = (type: string, port: string | null) => port !== null && loopPorts(type).includes(port);
+
+// A new Repeat. `until` is required and has no schema default; this rule reads the `pass`
+// field of a checker's JSON answer (the writer-and-judge case).
+export function newRepeatConfig(): Record<string, unknown> {
+  return {
+    body: '', check: '', max_iterations: 3, on_limit: 'fail',
+    until: { operator: 'eq', field: 'pass', compare_to: 'true' },
+  };
+}
+
+// The port a saved edge occupies on its source card, from every form the backend accepts
+// (backend/app/platform_graph.py and compiler.py): a Repeat's loop edges name body or check;
+// an older For each loop edge may name no port (body); a flow edge may name no port or
+// `output`, which on a loop card is the bottom port `flow` and elsewhere the unnamed bottom
+// port. A Switch is the exception: its ports are its case ids, any of which may be `output`
+// (or body, check, flow), so its handles are kept as saved. Drawing (canvasEdge) and editing
+// (portInUse, removeElements) both read it, so what is drawn as connected is what the
+// editor treats as connected.
+export function edgePort(edge: WorkflowEdge, sourceType: string): string | null {
+  const handle = edge.sourceHandle ?? null;
+  if (sourceType === 'switch') return handle;
+  if (edge.kind === 'loop') return sourceType === 'for_each' && handle === null ? 'body' : handle;
+  if (handle !== null && handle !== 'output') return handle;
+  return isLoopType(sourceType) && (!edge.kind || edge.kind === 'flow') ? 'flow' : null;
+}
+
+// The edge as drawn: its ports mapped to the card's handles. For display only; the saved
+// graph keeps the handle values it was given. A target `input` is the unnamed top port.
+export function canvasEdge(edge: WorkflowEdge, sourceType: string): WorkflowEdge {
+  return {
+    ...edge,
+    sourceHandle: edgePort(edge, sourceType),
+    targetHandle: edge.targetHandle === 'input' ? null : (edge.targetHandle ?? null),
+  };
+}
+
+// A new connection as saved: the drawn `flow` port of a loop card is saved with no source
+// handle, as every other normal edge is. On any other card `flow` is a route id (a Switch
+// case) and is saved as it is.
+export function savedConnection<T extends { sourceHandle?: string | null; targetHandle?: string | null }>(connection: T, sourceType: string): T {
+  return isLoopType(sourceType) && connection.sourceHandle === 'flow' ? { ...connection, sourceHandle: null } : connection;
+}
+
+type Graph = { nodes: WorkflowNode[]; edges: WorkflowEdge[] };
+const typeOf = (graph: Graph, id: string) => graph.nodes.find((n) => n.id === id)?.type ?? '';
+
+// Whether a loop port (body or check) of a node already has its attachment.
+export function portInUse(graph: Graph, source: string, port: string): boolean {
+  return graph.edges.some((e) => e.kind === 'loop' && e.source === source && edgePort(e, typeOf(graph, source)) === port);
+}
+
+// Attach a node to a loop port: add the edge, set the loop node's body or check to it, and
+// clear the attached node's input bindings (an attached callable takes no bindings).
+export function withLoopAttachment(graph: Graph, edge: WorkflowEdge): Graph {
+  const type = typeOf(graph, edge.source);
+  const port = edgePort(edge, type);
+  return {
+    edges: [...graph.edges, edge],
+    nodes: graph.nodes.map((n) =>
+      n.id === edge.source && isAttachmentPort(type, port) ? { ...n, config: { ...n.config, [port!]: edge.target } }
+        : n.id === edge.target ? { ...n, inputs: {} } : n),
+  };
+}
+
+// The loop settings that named the target of a removed loop edge are cleared; a setting
+// naming another node stays as it is (Validate reports the mismatch). Only attachment
+// settings are cleared: a malformed loop edge whose handle names another setting (on_limit,
+// say) removes the edge and leaves that setting as it is.
+function withoutLoopAttachments(graph: Graph, removed: WorkflowEdge[]): Graph {
+  const cleared = new Map<string, Set<string>>();
+  for (const e of removed) {
+    if (e.kind !== 'loop') continue;
+    const type = typeOf(graph, e.source);
+    const port = edgePort(e, type);
+    const owner = graph.nodes.find((n) => n.id === e.source);
+    if (!isAttachmentPort(type, port) || !owner || owner.config[port!] !== e.target) continue;
+    cleared.set(e.source, (cleared.get(e.source) ?? new Set()).add(port!));
+  }
+  if (!cleared.size) return graph;
+  return {
+    ...graph,
+    nodes: graph.nodes.map((n) => cleared.has(n.id)
+      ? { ...n, config: { ...n.config, ...Object.fromEntries([...cleared.get(n.id)!].map((p) => [p, ''])) } }
+      : n),
+  };
+}
+
+// Remove nodes and edges as one change: the listed edges, every edge of a removed node, and
+// each loop setting that named a removed attachment.
+export function removeElements(graph: Graph, nodeIds: string[], edgeIds: string[]): Graph {
+  const nodes = new Set(nodeIds), edges = new Set(edgeIds);
+  const removed = graph.edges.filter((e) => edges.has(e.id) || nodes.has(e.source) || nodes.has(e.target));
+  const kept = withoutLoopAttachments(graph, removed);
+  return {
+    nodes: kept.nodes.filter((n) => !nodes.has(n.id)),
+    edges: graph.edges.filter((e) => !removed.includes(e)),
+  };
 }
 export const paletteCategories = [
   'Input',
@@ -334,6 +447,7 @@ export function paletteCategory(type: string): string | null {
         join: 'Control',
         request_reader: 'Control',
         switch: 'Control',
+        repeat: 'Control',
         response: 'Output',
       } as Record<string, string>
     )[type] || null
@@ -428,20 +542,22 @@ export function unparsedJsonSettings(
           message: `${property.title || key} is not valid JSON yet. Fix it before validating or running.`,
         });
     }
-    // A Switch case's rule is a nested Condition: its JSON settings (Options) need the same check.
-    if (node.type === 'switch' && Array.isArray(node.config.cases)) {
-      const predicate = definition?.config_schema.$defs?.ConditionConfig?.properties ?? {};
-      node.config.cases.forEach((entry: unknown, index: number) => {
-        const when = entry && typeof entry === 'object' ? (entry as { when?: unknown }).when : undefined;
-        if (!when || typeof when !== 'object') return;
-        for (const [key, property] of Object.entries(predicate))
-          if (isJson(property) && typeof (when as Record<string, unknown>)[key] === 'string')
-            problems.push({
-              node_id: node.id,
-              message: `Case ${index + 1} ${property.title || key} is not valid JSON yet. Fix it before validating or running.`,
-            });
-      });
-    }
+    // A Switch case's rule and a Repeat's stop rule are nested Conditions: their JSON
+    // settings (Options) need the same check.
+    const predicate = definition?.config_schema.$defs?.ConditionConfig?.properties ?? {};
+    const rule = (value: unknown, name: string) => {
+      if (!value || typeof value !== 'object') return;
+      for (const [key, property] of Object.entries(predicate))
+        if (isJson(property) && typeof (value as Record<string, unknown>)[key] === 'string')
+          problems.push({
+            node_id: node.id,
+            message: `${name} ${property.title || key} is not valid JSON yet. Fix it before validating or running.`,
+          });
+    };
+    if (node.type === 'switch' && Array.isArray(node.config.cases))
+      node.config.cases.forEach((entry: unknown, index: number) =>
+        rule(entry && typeof entry === 'object' ? (entry as { when?: unknown }).when : undefined, `Case ${index + 1}`));
+    if (node.type === 'repeat') rule(node.config.until, 'Stop rule');
   }
   return problems;
 }

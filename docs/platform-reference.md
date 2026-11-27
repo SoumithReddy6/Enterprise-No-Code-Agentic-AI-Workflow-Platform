@@ -478,7 +478,7 @@ Configuration can be supplied through a root `.env` file. See [.env.example](../
 
 | Implemented | Next engineering work | Later platform work |
 | --- | --- | --- |
-| Visual workflow editor, section-aware chunking, and durable write approvals | Subgraphs and bounded loops (A6) | Published workflow versions |
+| Visual workflow editor, section-aware chunking, and durable write approvals | Subgraphs: a saved workflow used as one step (A6.2), after published workflow versions | Published workflow versions |
 | Local/cloud providers and opt-in local reranking | Writes and approvals inside parallel branches (A5.3b) | |
 | Agent roles and specialist delegation | Regex matching for conditions, with a ReDoS-safe engine | Webhooks and scheduled triggers |
 | Named, versioned knowledge bases | Remaining regulatory retrieval misses | Shared runtime state and per-tenant budgets |
@@ -486,6 +486,7 @@ Configuration can be supplied through a root `.env` file. See [.env.example](../
 | Durable queued execution with per-node error policy and retries | Improved retrieval test lab | Audit, retention, and PII controls |
 | Typed conditions over text, numbers and JSON fields; Switch multi-way routing | | |
 | Parallel read-only branches with an explicit Join, in the API and the editor, with deployed-process scenarios | | |
+| Bounded loops (Repeat) with a checker and a typed stop rule, in the API and the editor, with deployed-process scenarios | | |
 | For-each iteration with per-item checkpoints and bounded storage | Broader browser interaction tests | Managed production deployment |
 | Grounding and citation validation | Real remote-adapter integration tests | |
 | Tool integrations and probed Python sandbox | | |

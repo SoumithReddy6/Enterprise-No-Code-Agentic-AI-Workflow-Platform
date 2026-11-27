@@ -1,10 +1,10 @@
 'use client';
-import { ConfigField } from './platform-settings';
+import ConditionFields from './condition-fields';
 import {
   addCase, caseEdges, caseEntries, caseProblem, entryConnections, isSwitchCase, MAX_CASES, moveCase,
   removeEntry, replaceEntry, resetCases, unreachableCases, updateCase, type SwitchCase,
 } from '@/lib/switch';
-import { conditionSettingVisible, withConditionOperator, type ConfigProperty } from '@/lib/workflow';
+import type { ConfigProperty } from '@/lib/workflow';
 
 type Edge = { id: string; source: string; sourceHandle?: string | null };
 
@@ -98,28 +98,14 @@ export default function SwitchCases({
               />
             </label>
             <p className="helper mono" aria-label={`Case ${index + 1} route id`}>Route id: {item.id}</p>
-            {Object.entries(predicate)
-              .filter(([key]) => conditionSettingVisible(when, key))
-              .map(([key, property]) => (
-                <ConfigField
-                  key={`${item.id}:${key}`}
-                  name={key}
-                  // The rule help is shown once above the list, not repeated in every case.
-                  property={{ ...property, title: `Case ${index + 1} ${property.title || key}`, description: undefined }}
-                  value={when[key]}
-                  disabled={disabled}
-                  onChange={(value) => {
-                    if (key === 'operator') {
-                      onChange(updateCase(config, item.id, { when: withConditionOperator(when, String(value)) }));
-                      return;
-                    }
-                    const next = { ...when };
-                    if (value === undefined) delete next[key];
-                    else next[key] = value;
-                    onChange(updateCase(config, item.id, { when: next }));
-                  }}
-                />
-              ))}
+            <ConditionFields
+              idPrefix={item.id}
+              title={`Case ${index + 1}`}
+              predicate={predicate}
+              rule={when}
+              disabled={disabled}
+              onChange={(next) => onChange(updateCase(config, item.id, { when: next }))}
+            />
             {unreachable.has(index) && (
               <output className="warning-text">
                 This case can never match: case {unreachable.get(index)! + 1} has the same rule.

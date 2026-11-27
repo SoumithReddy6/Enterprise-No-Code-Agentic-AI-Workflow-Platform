@@ -24,6 +24,28 @@ DETAILS_OMITTED='[omitted: results reached their size ceiling]'
 PREVIEW_CHARS=2000
 
 
+# The port that holds an attached body's result. Every body type declares 'text' except
+# Retrieve, whose result is its evidence envelope in 'context'. For each and Repeat read it here.
+RESULT_PORTS={'retrieve':'context'}
+
+
+def result_port(node_type):
+    return RESULT_PORTS.get(node_type,'text')
+
+
+def check_restored_item(node_id,body,index,entry):
+    """Refuse a saved item that holds no result although its body always returns one.
+
+    Before result ports, For each read 'text' and saved '' for every Retrieve item, with
+    status success. A Retrieve result is never empty (it is an evidence envelope), so such
+    an item is a lost result, not an empty answer. A value dropped by the size contract
+    (value_dropped) is accounted for and is restored as before.
+    """
+    if (result_port(body.type)!='text' and isinstance(entry,dict) and entry.get('status')=='success'
+            and entry.get('value')=='' and not entry.get('value_dropped')):
+        raise ValueError(f'{node_id} cannot be restored: item {index+1} was saved without its Retrieve result by an earlier Relay version. Start a new run.')
+
+
 def item_owner(ctx,index):
     """Per-item checkpoint owner: '<loop node>:<index>'."""
     return f'{ctx.node_id}:{index}'
@@ -257,6 +279,7 @@ async def for_each_node(inputs,config,ctx):
             # Its text is reused without its passages; the Response checks its saved sources.
             if ctx.run is not None:ctx.run.setdefault('reused_owners',set()).add(item_owner(ctx,index))
             saved=done[index]
+            check_restored_item(ctx.node_id,body,index,saved)
             if PROVENANCE_KEY in saved:
                 saved={**saved,PROVENANCE_KEY:restored_record(body,saved[PROVENANCE_KEY])}
             # Restored from an earlier attempt: it passes through the same admission and
@@ -347,14 +370,25 @@ async def _run_item(ctx,body,emit,index,value):
             if body.retry.attempts:event['attempt']=outcome.attempts
             await item_emit(event)
             journal(event='loop.item_failed',node_id=ctx.node_id,reason_code='item_error')
+        elif not isinstance(outcome.outputs.get(result_port(body.type)),str):
+            # A body that returned without its result port fails its item: '' would read as
+            # an empty result with status success.
+            error=f"{body.id}: the body's {result_port(body.type)} output is missing."
+            entry={'index':index,'status':'failed','value':'','error':error}
+            event={**common,'status':'failed','error':error}
+            if outcome.usage:event['usage']=outcome.usage
+            await item_emit(event)
+            journal(event='loop.item_failed',node_id=ctx.node_id,reason_code='item_error')
         else:
             output=outcome.outputs
-            entry={'index':index,'status':'success','value':output.get('text',''),'error':''}
+            port=result_port(body.type)
+            entry={'index':index,'status':'success','value':output[port],'error':''}
             record=output.get(provenance.PROVENANCE_KEY)
             if record:
                 # The body's whole model-text port is guessed; the item's aggregate
-                # label is the weakest actually inspected field, including omissions.
-                entry[provenance.PROVENANCE_KEY]={**record,'ports':{**record['ports'],'text':provenance.output_label(output)}}
+                # label is the weakest actually inspected field of the result port,
+                # including omissions. It is kept under 'text', which item_label reads.
+                entry[provenance.PROVENANCE_KEY]={**record,'ports':{**record['ports'],'text':provenance.output_label(output,port)}}
             reason=body_truncation(output)
             if reason:entry['truncation_reason']=reason
             event={**common,'status':'success','outputs':output}

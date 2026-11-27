@@ -1,0 +1,23 @@
+{
+ "id": "G8",
+ "file": "backend/app/storage.py",
+ "planned": [
+  "S28"
+ ],
+ "results": {
+  "S25": "passed",
+  "S26a": "passed",
+  "S26b": "passed",
+  "S26c": "passed",
+  "S27": "passed",
+  "S28": "failed",
+  "S29": "passed"
+ },
+ "errors": {
+  "S28": "AssertionError: {'claimed_before_lease_end_seconds': 24.977}"
+ },
+ "failed": [
+  "S28"
+ ],
+ "killed": true
+}

@@ -1,0 +1,37 @@
+[
+ {
+  "id": "S25",
+  "status": "passed",
+  "seconds": 0.6
+ },
+ {
+  "id": "S26a",
+  "status": "passed",
+  "seconds": 0.1
+ },
+ {
+  "id": "S26b",
+  "status": "passed",
+  "seconds": 0.3
+ },
+ {
+  "id": "S26c",
+  "status": "passed",
+  "seconds": 0.0
+ },
+ {
+  "id": "S27",
+  "status": "passed",
+  "seconds": 0.1
+ },
+ {
+  "id": "S28",
+  "status": "passed",
+  "seconds": 30.3
+ },
+ {
+  "id": "S29",
+  "status": "passed",
+  "seconds": 0.4
+ }
+]

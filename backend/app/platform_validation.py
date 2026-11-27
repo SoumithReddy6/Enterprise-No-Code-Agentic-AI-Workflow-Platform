@@ -32,10 +32,11 @@ async def kb_errors(services,workflow,tenant,checkpoints=None,dependencies=None,
             cached=checkpoints.get(node.id)
             if cached:await services.verify(canonical(source_list(cached['sources'])),tenant)
         except (KeyError,ValueError,TypeError):errors.append(f'{node.id}: knowledge base or saved sources are unavailable. Check indexing status and permissions.')
-    loops={node.id for node in workflow.nodes if node.type=='for_each'}
+    loops={node.id for node in workflow.nodes if node.type in ('for_each','repeat')}
     def reused(owner):
         if owner in checkpoints:return True
-        loop,_,index=owner.rpartition(':')  # A loop item's owner is '<loop id>:<index>' (iteration.item_owner).
+        # A loop item's owner is '<loop id>:<index>' (iteration.item_owner, repeat.owner).
+        loop,_,index=owner.rpartition(':')
         done=progress.get(loop)
         return loop in loops and index.isdigit() and (loop in checkpoints or isinstance(done,dict) and index in done)
     for owner,sources in (dependencies or {}).items():

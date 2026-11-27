@@ -1,0 +1,134 @@
+........................................................................ [ 87%]
+.....FF.FF                                                               [100%]
+=================================== FAILURES ===================================
+_ test_r27g_an_upstream_abstention_without_an_envelope_stops_the_repeat_before_any_model _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11268c910>
+
+    @pytest.mark.asyncio
+    async def test_r27g_an_upstream_abstention_without_an_envelope_stops_the_repeat_before_any_model(monkeypatch):
+        from backend.app.agent_runtime import NO_EVIDENCE
+        guard_abstains(monkeypatch)
+        script = Script(monkeypatch, writer=['model-generated draft'], judge=[verdict(True)], solo=['solo answer'])
+        raw = upstream_guarded()
+        assert errors(raw) == []
+        values, exc, events = await run_mem(raw, platform=fixture_kb())
+        assert exc is None, exc
+>       assert script.count('writer') == 0 and script.count('judge') == 0
+E       AssertionError: assert (1 == 0)
+E        +  where 1 = count('writer')
+E        +    where count = <test_repeat.Script object at 0x1115900b0>.count
+
+backend/tests/test_repeat.py:1324: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.176221+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"writer","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":1,"completion_tokens":0}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.176913+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"judge","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":1,"completion_tokens":0}
+_ test_r27h_a_tool_body_with_a_checker_runs_nothing_under_an_upstream_abstention _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1119feac0>
+
+    @pytest.mark.asyncio
+    async def test_r27h_a_tool_body_with_a_checker_runs_nothing_under_an_upstream_abstention(monkeypatch):
+        from backend.app.agent_runtime import NO_EVIDENCE
+        guard_abstains(monkeypatch)
+        script = Script(monkeypatch, judge=[verdict(True)])
+        platform, calls = tools_and_kb()
+        raw = upstream_guarded(body=jira())
+        assert errors(raw) == []
+        values, exc, events = await run_mem(raw, platform=platform)
+        assert exc is None, exc
+>       assert calls == [] and script.count('judge') == 0, 'no tool call whose result no checker could read'
+E       AssertionError: no tool call whose result no checker could read
+E       assert (['r:0:lookup'] == []
+E         
+E         Left contains one more item: 'r:0:lookup'
+E         Use -v to get more diff)
+
+backend/tests/test_repeat.py:1349: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.256106+00:00","request_id":null,"run_id":null,"tenant":null,"event":"model.usage","node_id":"judge","provider":"ollama","model":"fixture","usage_status":"reported","prompt_tokens":1,"completion_tokens":0}
+____________ test_r27j_the_upstream_guard_row_survives_resume[row] _____________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-432/test_r27j_the_upstream_guard_r0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1119ffcb0>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x1119fc1a0>
+stop = 'row'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('stop', ['row', 'checkpoint'])
+    async def test_r27j_the_upstream_guard_row_survives_resume(tmp_path, monkeypatch, services, stop):
+        from backend.app.agent_runtime import NO_EVIDENCE
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        asked = guard_abstains(monkeypatch)
+        script = Script(monkeypatch, writer=[], judge=[])
+        raw = upstream_guarded()
+        raw['nodes'][1]['config']['knowledge_base_id'] = kb['id']
+        crash_on(monkeypatch, store, row_saved(0) if stop == 'row' else checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw, message='project codename')
+        assert first['status'] != 'success' and ('r' in first['checkpoints']) == (stop == 'checkpoint'), first.get('error')
+        saved = rows(store, id)
+>       assert set(saved) == {0} and saved[0]['status'] == 'abstained' and saved[0]['value'].startswith(NO_EVIDENCE)
+E       assert (set() == {0}
+E         
+E         Extra items in the right set:
+E         0
+E         Use -v to get more diff)
+
+backend/tests/test_repeat.py:1378: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.347548+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.365662+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.366243+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.019}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.371000+00:00","request_id":null,"run_id":"fbf7c85c5c394725830459b8f88cad8e","tenant":"local","event":"job.lease_acquired","worker_id":"fa13496c8d26412887b6ad1833016559"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.371289+00:00","request_id":null,"run_id":"fbf7c85c5c394725830459b8f88cad8e","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.406805+00:00","request_id":null,"run_id":"fbf7c85c5c394725830459b8f88cad8e","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":4}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.412517+00:00","request_id":null,"run_id":"fbf7c85c5c394725830459b8f88cad8e","tenant":"local","event":"node.success","node_id":"retrieve","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.414707+00:00","request_id":null,"run_id":"fbf7c85c5c394725830459b8f88cad8e","tenant":"local","event":"node.success","node_id":"retrieve","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.418729+00:00","request_id":null,"run_id":"fbf7c85c5c394725830459b8f88cad8e","tenant":"local","event":"node.failed","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.419568+00:00","request_id":null,"run_id":"fbf7c85c5c394725830459b8f88cad8e","tenant":"local","event":"node.failed","node_id":"r","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.419850+00:00","request_id":null,"run_id":"fbf7c85c5c394725830459b8f88cad8e","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.421001+00:00","request_id":null,"run_id":"fbf7c85c5c394725830459b8f88cad8e","tenant":"local","event":"run.finish","status":"failed","seconds":0.05}
+_________ test_r27j_the_upstream_guard_row_survives_resume[checkpoint] _________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-432/test_r27j_the_upstream_guard_r1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1121acf30>
+services = <backend.app.kb_gateway.KnowledgeServices object at 0x1121afcb0>
+stop = 'checkpoint'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('stop', ['row', 'checkpoint'])
+    async def test_r27j_the_upstream_guard_row_survives_resume(tmp_path, monkeypatch, services, stop):
+        from backend.app.agent_runtime import NO_EVIDENCE
+        store, worker, kb, doc = await kb_lab(tmp_path, monkeypatch, services)
+        asked = guard_abstains(monkeypatch)
+        script = Script(monkeypatch, writer=[], judge=[])
+        raw = upstream_guarded()
+        raw['nodes'][1]['config']['knowledge_base_id'] = kb['id']
+        crash_on(monkeypatch, store, row_saved(0) if stop == 'row' else checkpoint_of('r'))
+        id, first = await attempt(store, worker, raw, message='project codename')
+>       assert first['status'] != 'success' and ('r' in first['checkpoints']) == (stop == 'checkpoint'), first.get('error')
+E       AssertionError: r: iteration 1: Iteration call failed.
+E       assert ('failed' != 'success' and ('r' in {'input': {'message': 'project codename', '_provenance': {'v': 2, 'ports': {'message': 'source'}, 'eligible_ports': ['... 'fields': {'context': {'/question': 'source', '/passages': 'source'}}, 'passage_ports': ['context', 'sources'], ...}}}) == ('checkpoint' == 'checkpoint'
+E         
+E           checkpoint))
+
+backend/tests/test_repeat.py:1376: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.486344+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.503804+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.504364+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.508826+00:00","request_id":null,"run_id":"61a163e78f6d4491a79fe4ca5474e71f","tenant":"local","event":"job.lease_acquired","worker_id":"135304868c0c4d5ba4f14c2a5c0563fa"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.509108+00:00","request_id":null,"run_id":"61a163e78f6d4491a79fe4ca5474e71f","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.544671+00:00","request_id":null,"run_id":"61a163e78f6d4491a79fe4ca5474e71f","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":4}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.550345+00:00","request_id":null,"run_id":"61a163e78f6d4491a79fe4ca5474e71f","tenant":"local","event":"node.success","node_id":"retrieve","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.552045+00:00","request_id":null,"run_id":"61a163e78f6d4491a79fe4ca5474e71f","tenant":"local","event":"node.success","node_id":"retrieve","transient":false,"cached":false,"duration_ms":6}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.555539+00:00","request_id":null,"run_id":"61a163e78f6d4491a79fe4ca5474e71f","tenant":"local","event":"node.failed","node_id":"writer","transient":true,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.556331+00:00","request_id":null,"run_id":"61a163e78f6d4491a79fe4ca5474e71f","tenant":"local","event":"node.failed","node_id":"r","transient":false,"cached":false,"duration_ms":null}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.556608+00:00","request_id":null,"run_id":"61a163e78f6d4491a79fe4ca5474e71f","tenant":"local","event":"run.failure","error_type":"ValueError"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-11T22:30:42.557645+00:00","request_id":null,"run_id":"61a163e78f6d4491a79fe4ca5474e71f","tenant":"local","event":"run.finish","status":"failed","seconds":0.049}
+=========================== short test summary info ============================
+FAILED backend/tests/test_repeat.py::test_r27g_an_upstream_abstention_without_an_envelope_stops_the_repeat_before_any_model
+FAILED backend/tests/test_repeat.py::test_r27h_a_tool_body_with_a_checker_runs_nothing_under_an_upstream_abstention
+FAILED backend/tests/test_repeat.py::test_r27j_the_upstream_guard_row_survives_resume[row]
+FAILED backend/tests/test_repeat.py::test_r27j_the_upstream_guard_row_survives_resume[checkpoint]
+4 failed, 78 passed in 8.06s

@@ -1,0 +1,99 @@
+M58: The editor saves every new connection as if from a loop card
+
+$ npx playwright test tests/browser/repeat.spec.ts --reporter=line -g (B08) 
+exit 1
+
+Running 1 test using 1 worker
+
+[1/1] tests/browser/repeat.spec.ts:435:1 › B08 Switch cases named body, check, flow and output connect and draw at their own routes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  1) tests/browser/repeat.spec.ts:435:1 › B08 Switch cases named body, check, flow and output connect and draw at their own routes 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        "body->out_body",
+        "check->out_check",
+        "default->out_default",
+    -   "flow->out_flow",
+    +   "null->out_flow",
+        "output->out_output",
+      ]
+
+      456 |   for (const id of ['body', 'check', 'flow']) await connect(page, port(route, id), target(card(page, `out_${id}`)));
+      457 |   const saved = await validate(page, h);
+    > 458 |   expect(routeEdges(saved)).toEqual(expected);
+          |                             ^
+      459 |   expect(saved.edges.filter((e) => e.source === 'route').every((e) => (e.kind ?? 'flow') === 'flow')).toBe(true);
+      460 |   for (const e of saved.edges.filter((e) => e.source === 'route'))
+      461 |     await attaches(page, e.id, port(route, e.sourceHandle!), target(card(page, e.target)));
+        at /private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/a61r-mut-6kbZ/frontend/tests/browser/repeat.spec.ts:458:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/repeat-B08-Switch-cases-na-dace0-nd-draw-at-their-own-routes/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/repeat-B08-Switch-cases-na-dace0-nd-draw-at-their-own-routes/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/repeat-B08-Switch-cases-na-dace0-nd-draw-at-their-own-routes/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/repeat-B08-Switch-cases-na-dace0-nd-draw-at-their-own-routes/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    tests/browser/repeat.spec.ts:435:1 › B08 Switch cases named body, check, flow and output connect and draw at their own routes 
+
+r-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "continue", edge id: reader-agent. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:53 PM [vite] (client) [console.warn] [React Flow]: Couldn't create edge for source handle id: "reply", edge id: reader-readerReply. Help: https://reactflow.dev/error#008
+[WebServer] 12:54:54 PM [vite] (client) [console.warn] React Flow: It seems like you are hiding the attribution. Please only do this when you are subscribed to React Flow Pro: https://reactflow.dev/remove-attr
+[WebServer] You can ignore this warning if you are subscribed.
