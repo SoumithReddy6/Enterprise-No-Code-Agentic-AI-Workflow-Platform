@@ -89,7 +89,7 @@ def pause(store,run_id,owner,exc,*,accounting=None):
             budget['deferred']=[*[k for k in budget.get('deferred',[]) if k!=key],key]
             accounting['action_budget']=budget
         store._set_accounting(run,accounting)
-        run.data={**run.data,'status':'awaiting_approval','agent_frames':exc.frames};run.status='awaiting_approval'
+        run.data={**run.data,'status':'awaiting_approval','agent_frames':{**run.data.get('agent_frames',{}),**exc.frames}};run.status='awaiting_approval'
         job.status='awaiting_approval';job.owner='';job.lease_until=0
         store._event(s,run,{'kind':'approval','approval_kind':kind,'node_id':exc.node_id,'status':'awaiting_approval','approval_id':row.id})
         s.commit();journal(event='approval.pending',run_id=run_id,tenant=run.tenant_id,node_id=exc.node_id,approval_kind=kind)
@@ -193,13 +193,15 @@ def begin(store,run_id,owner,approval_id):
         writes=set(run.data.get('write_nodes',[]));row.owns_marker=int(row.checkpoint_owner not in writes);writes.add(row.checkpoint_owner)
         run.data={**run.data,'write_nodes':list(writes)};row.status='executing';s.commit()
 
-def complete(store,run_id,owner,approval_id,result):
+def complete(store,run_id,owner,approval_id,result,frames=None):
     with Session(store.engine) as s:
         if not store._fence(s,run_id,owner):raise ValueError('Execution lease lost after external write; reconciliation required')
         row=s.get(ApprovalRecord,approval_id);run=s.get(RunRecord,run_id)
         if not row or row.run_id!=run_id or row.status!='executing':raise ValueError('Approval execution receipt unavailable')
         row.status='completed';row.result=result
         if row.owns_marker:run.data={**run.data,'write_nodes':[n for n in run.data.get('write_nodes',[]) if n!=row.checkpoint_owner]}
+        # Same rule as settle_write: the Agents on the call path keep the step that sent it.
+        if frames:run.data={**run.data,'agent_frames':{**run.data.get('agent_frames',{}),**frames}}
         store._event(s,run,{'kind':'approval','node_id':row.node_id,'status':'completed','approval_id':row.id});s.commit()
 
 

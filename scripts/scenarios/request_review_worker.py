@@ -34,8 +34,8 @@ def main():
         return result
     approvals.consume_review=consume
     old_settle=store.settle_write
-    def settle(*args):
-        result=old_settle(*args);block('settlement');return result
+    def settle(*args,**kwargs):
+        result=old_settle(*args,**kwargs);block('settlement');return result
     store.settle_write=settle
     worker=Worker(store,concurrency=1)
     old_execute=worker.tools.execute

@@ -1,0 +1,16 @@
+{
+ "id": "M04",
+ "file": "backend/app/storage.py",
+ "planned": [
+  "test_agent_write_resume.py::test_a_loop_item_agent_write_resumes_inside_the_item"
+ ],
+ "planned_hit": [
+  "test_agent_write_resume.py::test_a_loop_item_agent_write_resumes_inside_the_item"
+ ],
+ "oracle": "rw",
+ "failed": [
+  "test_agent_write_resume.py::test_a_loop_item_agent_write_resumes_inside_the_item"
+ ],
+ "killed": true,
+ "ran": 48
+}

@@ -1,0 +1,10 @@
+{
+ "id": "M08",
+ "file": "backend/app/approvals.py",
+ "planned": [],
+ "planned_hit": [],
+ "oracle": "rw+full",
+ "failed": [],
+ "killed": false,
+ "ran": 2057
+}

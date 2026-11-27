@@ -1,0 +1,148 @@
+{
+ "M00": {
+  "control_passes": true,
+  "oracle": "rw+full",
+  "planned": [],
+  "planned_hit": [],
+  "failed": [],
+  "ran": 2057
+ },
+ "M01": {
+  "killed": true,
+  "oracle": "rw",
+  "planned": [
+   "test_agent_write_resume.py::test_settle_write_saves_the_open_frames_in_its_commit"
+  ],
+  "planned_hit": [
+   "test_agent_write_resume.py::test_settle_write_saves_the_open_frames_in_its_commit"
+  ],
+  "failed": [
+   "test_agent_write_resume.py::test_settle_write_saves_the_open_frames_in_its_commit"
+  ],
+  "ran": 48
+ },
+ "M02": {
+  "killed": true,
+  "oracle": "rw",
+  "planned": [
+   "test_agent_write_resume.py::test_a_specialist_write_saves_a_frame_for_each_agent_on_the_path"
+  ],
+  "planned_hit": [],
+  "failed": [
+   "test_agent_write_resume.py::test_a_loop_item_agent_write_resumes_inside_the_item"
+  ],
+  "ran": 48
+ },
+ "M03": {
+  "killed": true,
+  "oracle": "rw",
+  "planned": [
+   "test_agent_write_resume.py::test_def01_a_settled_agent_write_is_not_sent_again_when_its_step_moves",
+   "test_agent_write_resume.py::test_settle_write_saves_the_open_frames_in_its_commit"
+  ],
+  "planned_hit": [
+   "test_agent_write_resume.py::test_def01_a_settled_agent_write_is_not_sent_again_when_its_step_moves",
+   "test_agent_write_resume.py::test_settle_write_saves_the_open_frames_in_its_commit"
+  ],
+  "failed": [
+   "test_agent_write_resume.py::test_a_loop_item_agent_write_resumes_inside_the_item",
+   "test_agent_write_resume.py::test_a_specialist_write_saves_a_frame_for_each_agent_on_the_path",
+   "test_agent_write_resume.py::test_def01_a_settled_agent_write_is_not_sent_again_when_its_step_moves",
+   "test_agent_write_resume.py::test_resume_does_not_ask_the_model_for_the_settled_step",
+   "test_agent_write_resume.py::test_settle_write_saves_the_open_frames_in_its_commit"
+  ],
+  "ran": 48
+ },
+ "M04": {
+  "killed": true,
+  "oracle": "rw",
+  "planned": [
+   "test_agent_write_resume.py::test_a_loop_item_agent_write_resumes_inside_the_item"
+  ],
+  "planned_hit": [
+   "test_agent_write_resume.py::test_a_loop_item_agent_write_resumes_inside_the_item"
+  ],
+  "failed": [
+   "test_agent_write_resume.py::test_a_loop_item_agent_write_resumes_inside_the_item"
+  ],
+  "ran": 48
+ },
+ "M05": {
+  "killed": true,
+  "oracle": "rw",
+  "planned": [
+   "test_agent_write_resume.py::test_def02_a_stored_write_result_is_not_returned_for_a_different_request"
+  ],
+  "planned_hit": [],
+  "failed": [
+   "test_agent_write_resume.py::test_a_different_request_at_the_same_invocation_stops_the_run"
+  ],
+  "ran": 48
+ },
+ "M06": {
+  "killed": true,
+  "oracle": "rw",
+  "planned": [
+   "test_agent_write_resume.py::test_a_different_request_at_the_same_invocation_stops_the_run"
+  ],
+  "planned_hit": [
+   "test_agent_write_resume.py::test_a_different_request_at_the_same_invocation_stops_the_run"
+  ],
+  "failed": [
+   "test_agent_write_resume.py::test_a_different_request_at_the_same_invocation_stops_the_run"
+  ],
+  "ran": 48
+ },
+ "M07": {
+  "killed": false,
+  "oracle": "rw+full",
+  "planned": [
+   "test_agent_write_resume.py::test_an_approved_write_saves_frames_at_complete"
+  ],
+  "planned_hit": [],
+  "failed": [],
+  "ran": 2057
+ },
+ "M08": {
+  "killed": false,
+  "oracle": "rw+full",
+  "planned": [],
+  "planned_hit": [],
+  "failed": [],
+  "ran": 2057
+ },
+ "M09": {
+  "killed": true,
+  "oracle": "rw",
+  "planned": [
+   "test_agent_write_resume.py::test_def02_a_stored_write_result_is_not_returned_for_a_different_request"
+  ],
+  "planned_hit": [],
+  "failed": [
+   "test_agent_write_resume.py::test_a_different_request_at_the_same_invocation_stops_the_run"
+  ],
+  "ran": 48
+ },
+ "M10": {
+  "killed": true,
+  "oracle": "rw",
+  "planned": [
+   "test_agent_write_resume.py::test_an_old_result_row_without_a_digest_is_served_as_before"
+  ],
+  "planned_hit": [
+   "test_agent_write_resume.py::test_an_old_result_row_without_a_digest_is_served_as_before"
+  ],
+  "failed": [
+   "test_agent_write_resume.py::test_an_old_result_row_without_a_digest_is_served_as_before"
+  ],
+  "ran": 48
+ },
+ "M11": {
+  "killed": false,
+  "oracle": "rw+full",
+  "planned": [],
+  "planned_hit": [],
+  "failed": [],
+  "ran": 2057
+ }
+}

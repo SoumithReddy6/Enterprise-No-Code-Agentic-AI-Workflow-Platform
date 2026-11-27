@@ -1,0 +1,16 @@
+{
+ "id": "M06",
+ "file": "backend/app/execution_policy.py",
+ "planned": [
+  "test_agent_write_resume.py::test_a_different_request_at_the_same_invocation_stops_the_run"
+ ],
+ "planned_hit": [
+  "test_agent_write_resume.py::test_a_different_request_at_the_same_invocation_stops_the_run"
+ ],
+ "oracle": "rw",
+ "failed": [
+  "test_agent_write_resume.py::test_a_different_request_at_the_same_invocation_stops_the_run"
+ ],
+ "killed": true,
+ "ran": 48
+}

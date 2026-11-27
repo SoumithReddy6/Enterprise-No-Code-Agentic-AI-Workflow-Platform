@@ -1,0 +1,16 @@
+Suite and mutants: git archive f3771b3, committed in a throwaway repository (isolation copy).
+Deployed gate and request_enforcement after the fix: git archive f3771b3 + the wrapper fix below.
+request_enforcement before the fix: the isolation copy (f3771b3 exactly).
+sha256 (16 hex) working tree / isolation copy / gate copy:
+backend/app/agent_runtime.py 13f2479b53bb3725 13f2479b53bb3725 13f2479b53bb3725 equal
+backend/app/approvals.py b1f128466d8e04b4 b1f128466d8e04b4 b1f128466d8e04b4 equal
+backend/app/execution_policy.py 99b66c81f0070dea 99b66c81f0070dea 99b66c81f0070dea equal
+backend/app/storage.py d998fb9ae7f49bf4 d998fb9ae7f49bf4 d998fb9ae7f49bf4 equal
+backend/app/tool_service.py 7280e3393f9f2f9b 7280e3393f9f2f9b 7280e3393f9f2f9b equal
+backend/app/worker.py 746df386430ff1ef 746df386430ff1ef 746df386430ff1ef equal
+backend/migrations/versions/0007_action_result_digest.py 151145af2e7cc653 151145af2e7cc653 151145af2e7cc653 equal
+backend/tests/test_agent_write_resume.py 372e5ccb8d9aed9d 372e5ccb8d9aed9d 372e5ccb8d9aed9d equal
+scripts/scenarios/request_review_worker.py 233056a2ef5561e1 49847229a10791c3 233056a2ef5561e1 gate copy and working tree equal; isolation copy is f3771b3
+scripts/check_production_scenarios.py 98e449f64147d5a5 98e449f64147d5a5 98e449f64147d5a5 equal
+Isolation copy vs gate copy, scripts/:  1 file changed, 2 insertions(+), 2 deletions(-)
+Isolation copy vs gate copy, backend/: equal

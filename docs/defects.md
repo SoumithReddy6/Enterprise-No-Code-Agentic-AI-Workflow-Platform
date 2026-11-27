@@ -22,8 +22,8 @@ Run them:
 
 | Id | Severity | One line | Test |
 |---|---|---|---|
-| DEF-01 | **Critical** | An Agent's settled write is sent a second time on resume when the model changes the step order | `test_def01_def02_agent_write_resume.py::test_def01_…` |
-| DEF-02 | High | A stored write result is returned for a different request; the new request is never sent and is reported as success | `test_def01_def02_agent_write_resume.py::test_def02_…` |
+| DEF-01 | **Critical** | **Fixed in `f3771b3` (2026-11-27).** An Agent's settled write is sent a second time on resume when the model changes the step order | `backend/tests/test_agent_write_resume.py::test_def01_…` |
+| DEF-02 | High | **Fixed in `f3771b3` (2026-11-27).** A stored write result is returned for a different request; the new request is never sent and is reported as success | `backend/tests/test_agent_write_resume.py::test_def02_…` |
 | DEF-03 | High | Validation takes exponential time; one request stops the API process | `test_def03_validation_exponential.py` |
 | DEF-04 | High | A run whose worker dies on every attempt is claimed without limit | `test_def04_def05_def07_claim.py::test_def04_…` |
 | DEF-05 | Medium | A cancelled run is claimed and started again | `test_def04_def05_def07_claim.py::test_def05_…` |
@@ -88,7 +88,28 @@ A model that asks for the same write again **after** it saw the result is a diff
 is a new action, and Relay cannot tell it from an intended second write. The test's model
 therefore gives its final answer when its transcript shows the write as done.
 
-**Test.** `backend/tests/defects/test_def01_def02_agent_write_resume.py::test_def01_a_settled_agent_write_is_not_sent_again_when_its_step_moves`
+**Test.** `backend/tests/test_agent_write_resume.py::test_def01_a_settled_agent_write_is_not_sent_again_when_its_step_moves` (moved from `backend/tests/defects/`; no xfail).
+
+**Fix (2026-11-26).** As designed above, with one change of channel: the open frames travel in a
+`ContextVar` (`agent_runtime.OPEN_FRAMES`), not as a sixth argument of `ctx.platform('tool', …)`.
+The argument broke every `platform` with a fixed signature (test doubles and any outside
+resolver). A `ContextVar` also limits the frames to the current call path without a filter: an
+asyncio task copies its context, so a parallel branch never sees another branch's frames. The
+worker reads them (`worker.py`, tool action) and `settle_write` writes them into `agent_frames`
+in its one commit; `approvals.complete` does the same, and `approvals.pause` now merges its
+frames with the saved ones instead of replacing them. A `loop_item` event drops the frames of
+its item owner (`storage.py`, `worker_event`). Mutants M00–M11 (`evals/results/def01-02-2026-11-27/`):
+the control passes, and M01–M06 and M09–M10 are killed. M07 (`complete` saves no frames), M08
+(`pause` replaces the saved frames) and M11 (a finished item clears every frame) survive the
+whole suite. They change only frames that are not on the current call path, and no reachable
+workflow has such a frame: a parallel branch cannot write, and For each runs its items in order.
+They are kept as defensive code.
+
+**Gates (2026-11-27).** Backend 2,176 passed and 7 xfailed at PYTHONHASHSEED 0–4 with
+PostgreSQL; the deployed gate 35 of 35 three times. The first CI run of `f3771b3` failed `scripts.scenarios.request_enforcement`: its
+test-only wrapper `request_review_worker.py` took no keyword arguments, and `settle_write` now
+gets `payload_sha256`. The wrapper is fixed in the commit after `f3771b3`. Evidence:
+`evals/results/def01-02-2026-11-27/README.md`.
 
 ## DEF-02 — A stored write result is returned for a different request (High)
 
@@ -107,7 +128,17 @@ Agent gets "accepted", the event log shows a tool success, and the run ends `suc
 `storage.py:99-110`). On a hit with a different digest, raise a typed error that stops the run
 ("the resumed action differs from the one that was sent"), as the approval path does.
 
-**Test.** `…::test_def02_a_stored_write_result_is_not_returned_for_a_different_request`
+**Test.** `backend/tests/test_agent_write_resume.py::test_def02_a_stored_write_result_is_not_returned_for_a_different_request`.
+With part A this test passes for the right reason (the frame replays X; Y is a new step and is
+sent). `test_a_different_request_at_the_same_invocation_stops_the_run` forces the state with no
+frame (a run settled by an older build) and checks part B.
+
+**Fix (2026-11-26).** Revision `0007_action_result_digest` adds `run_action_results.payload_sha256`.
+The worker stores `approvals.digest({payload, connection_id})` of the prepared request with the
+result. On a stored-result hit with a non-NULL digest that differs, it raises
+`WriteReplayMismatch` (in `CONTROL_FLOW`), so the run fails with "The resumed action differs
+from the request that was already sent. Start a new run." A NULL digest (older row) is served
+as before.
 
 ## DEF-03 — Validation takes exponential time (High)
 

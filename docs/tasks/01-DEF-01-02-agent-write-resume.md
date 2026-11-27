@@ -26,7 +26,7 @@ interruption it starts at step 0 and asks the model again. See `docs/defects.md`
    Remove the key in a `finally` after the outcome is handled (success, failure, or exception).
    A specialist is an Agent too, so each level of the call path registers its own frame; the dict
    then holds one frame for each Agent between the flow node and the tool.
-2. `ctx.platform('tool', …)` gets the frames: add a sixth argument at the two call sites
+2. *(Done differently on 2026-11-26: the frames travel in a `ContextVar`, `agent_runtime.OPEN_FRAMES`, because a sixth argument broke every `platform` with a fixed signature. See `docs/defects.md` DEF-01, Fix.)* `ctx.platform('tool', …)` gets the frames: add a sixth argument at the two call sites
    (`agent_runtime.py:36` passes `None`; `execution_policy.py:321` passes
    `dict(ctx.run.get('open_frames') or {})` when `ctx.run` exists, else `None`).
 3. `worker.py:155` unpacks it (`node_type, settings, input_text, identity, *rest`; `frames = rest[0] if rest else None`).

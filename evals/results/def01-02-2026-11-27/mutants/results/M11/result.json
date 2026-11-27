@@ -1,0 +1,10 @@
+{
+ "id": "M11",
+ "file": "backend/app/storage.py",
+ "planned": [],
+ "planned_hit": [],
+ "oracle": "rw+full",
+ "failed": [],
+ "killed": false,
+ "ran": 2057
+}

@@ -108,6 +108,9 @@ class ActionResultRecord(Base):
     invocation=Column(String(300),primary_key=True)
     result=Column(Text,nullable=False)
     created_at=Column(String(64),nullable=False)
+    # The digest of the request that was sent (approvals.digest of payload and connection).
+    # NULL for rows from before revision 0007 and for writes with no prepared request.
+    payload_sha256=Column(String(64),nullable=True)
 
 class JobRecord(Base):
     __tablename__='execution_jobs'
@@ -732,6 +735,11 @@ class Store:
                 # instead of repeating paid work or an external write. merge makes a
                 # repeated event for the same item an update, not a duplicate.
                 s.merge(RunLoopItemRecord(run_id=id,node_id=event['node_id'],item_index=int(event['item_index']),entry=event['item_result']))
+                # The item's result is durable now, so the frames saved under its owner are spent.
+                item=f"{event['node_id']}:{int(event['item_index'])}"
+                frames=data.get('agent_frames',{})
+                if any(v.get('checkpoint_owner')==item for v in frames.values()):
+                    data={**data,'agent_frames':{k:v for k,v in frames.items() if v.get('checkpoint_owner')!=item}}
             if checkpoint is not None:
                 data={**data,'checkpoints':{**data.get('checkpoints',{}),event['node_id']:checkpoint},'agent_frames':{k:v for k,v in data.get('agent_frames',{}).items() if v.get('checkpoint_owner')!=event['node_id']}}
             if data is not row.data:row.data=data
@@ -819,11 +827,16 @@ class Store:
 
     def completed_action(self,id,identifier):
         """The stored result of an external write that already ran, or None."""
+        found=self.completed_write(id,identifier)
+        return found[0] if found else None
+
+    def completed_write(self,id,identifier):
+        """(result, request digest or None) of an external write that already ran, or None."""
         with Session(self.engine) as s:
             row=s.get(ActionResultRecord,(id,identifier))
-            return row.result if row else None
+            return (row.result,row.payload_sha256) if row else None
 
-    def settle_write(self,id,owner,identifier,result):
+    def settle_write(self,id,owner,identifier,result,frames=None,payload_sha256=None):
         """Record a completed external write and clear its marker in one transaction.
 
         mark_write records intent; this records the resolved outcome, so a finished write
@@ -838,11 +851,16 @@ class Store:
             if not self._fence(s,id,owner):raise ValueError('Execution lease is no longer owned.')
             row=s.get(RunRecord,id)
             if s.get(ActionResultRecord,(id,identifier)) is None:
-                s.add(ActionResultRecord(run_id=id,invocation=identifier,result=result,created_at=now()))
+                s.add(ActionResultRecord(run_id=id,invocation=identifier,result=result,created_at=now(),payload_sha256=payload_sha256))
             remaining=[n for n in row.data.get('write_nodes',[]) if n!=identifier]
             if len(remaining)!=len(row.data.get('write_nodes',[])):
                 row.data={**row.data,'write_nodes':remaining}
-            # One commit: the marker never clears without the outcome beside it.
+            if frames:
+                # The Agents on the call path, at the step that sent this write: a resume
+                # replays that step and reaches the stored result instead of asking the
+                # model again and sending the write at a new invocation (DEF-01).
+                row.data={**row.data,'agent_frames':{**row.data.get('agent_frames',{}),**frames}}
+            # One commit: the marker never clears without the outcome and the frames beside it.
             s.commit()
 
     @staticmethod

@@ -12,7 +12,7 @@ import random
 from .models import RetryPolicy
 from .approvals import ApprovalPause,ReviewPause
 from .request_safety import UnsafeExecutionError
-from .tool_service import TransientToolError, UncertainWriteError
+from .tool_service import TransientToolError, UncertainWriteError, WriteReplayMismatch
 from .storage import LeaseLost
 from .accounting_state import AccountingUnavailable
 
@@ -20,7 +20,7 @@ from .accounting_state import AccountingUnavailable
 # recovered, or turned into an observation an agent can plan around. Every handler near
 # the policy seam re-raises these before any generic clause. It is one exported tuple
 # because four defects so far came from a hand-maintained list missing a member.
-CONTROL_FLOW=(ApprovalPause,ReviewPause,UnsafeExecutionError,UncertainWriteError,asyncio.CancelledError,LeaseLost,AccountingUnavailable)
+CONTROL_FLOW=(ApprovalPause,ReviewPause,UnsafeExecutionError,UncertainWriteError,WriteReplayMismatch,asyncio.CancelledError,LeaseLost,AccountingUnavailable)
 from . import token_budget
 
 

@@ -1,0 +1,17 @@
+[
+  {
+    "method": "POST",
+    "path": "/deliver/s25",
+    "body": "{\"input\":\"Draft 2: refund R-42 is on its way.\"}"
+  },
+  {
+    "method": "POST",
+    "path": "/deliver/s28",
+    "body": "{\"input\":\"Draft 2\"}"
+  },
+  {
+    "method": "POST",
+    "path": "/deliver/s29",
+    "body": "{\"input\":\"Draft 2: refund R-42.\"}"
+  }
+]
