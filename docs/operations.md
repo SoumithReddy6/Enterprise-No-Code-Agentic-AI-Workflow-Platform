@@ -169,6 +169,8 @@ Workers sweep pending and approved-but-not-dispatched approvals every five secon
    - **Still unknown:** leave it blocked and escalate to the remote service owner. Wait for asynchronous processing/log visibility as appropriate. Do not treat elapsed time alone as proof of failure. A duplicate-risk decision needs explicit business-owner authorization and a documented mitigation; it is not an automatic technical retry.
 5. **Close the incident record.** Include the observed outcome, evidence links/IDs, investigator, decision time, and any replacement run IDs. An accidental duplicate or harmful applied action requires a separately authorized corrective action; do not silently delete or undo it.
 
+A run whose Agent write was settled by a build before revision `0007_action_result_digest` has no saved Agent position and no request digest. If it is resumed, its Agent asks the model again from the start, and a write the model moves to a new step can be sent again (DEF-01). Do not resume such a run after an upgrade; start a new run. Runs settled by the new build replay the settled step instead, and a different request at the same step fails with "The resumed action differs from the request that was already sent".
+
 An approved write that has a durable completed receipt can be replayed internally without resending. An executing write without that receipt retains the uncertainty barrier. If there is doubt about which case applies, use the remote investigation above rather than modifying the ledger.
 
 ## Authentication recovery and registration

@@ -172,6 +172,7 @@ stateDiagram-v2
 - External writes are **never retried**. Validation rejects a retry policy on any write node, including write tools attached to agents and loop bodies.
 - `on_error: continue` and `route` **cannot hide uncertainty**: an uncertain write stops the run even inside a recovery path (S03, S04).
 - Resuming a run whose write is uncertain is refused with HTTP 409.
+- An Agent continues after a settled write without asking the model again for that step. The settle commit also saves the position of each Agent on the call path, so a resume replays that step, gets the stored result and goes on from the transcript that shows the write as done. The stored result also keeps the digest of the request that was sent: a different request at the same step stops the run instead of getting the old result.
 - Uncertainty is reserved for the send itself. The request is built and checked *before* the marker is written, so a refusal at that stage, such as missing write consent, a mismatched connection or a number JSON cannot carry exactly, is an ordinary failure with nothing to reconcile. Address checks happen at connect time and stay on the uncertain side.
 
 **Evidence.** S16: the worker is killed *after the receiver accepted the write but before the response arrived*. The receiver logged exactly one request after recovery, and resume was refused.

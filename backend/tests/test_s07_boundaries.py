@@ -32,9 +32,14 @@ async def test_agent_settled_write_keeps_identity_after_crash(lab,monkeypatch):
     connection=worker.tools.save_connection({'name':'sink','provider':'http','endpoint':'https://example.com'})
     workflow=calc_flow();workflow.nodes[2].type='tool_http'
     workflow.nodes[2].config={'connection_id':connection['id'],'method':'POST','enable_writes':True,'approval':False}
-    scripted(monkeypatch,['{"action":"call","target":"calc","input":"same reply"}',
-                          '{"action":"call","target":"calc","input":"same reply"}',
-                          '{"action":"final","text":"done"}'])
+    # A faithful model: it asks for the write until its transcript shows the result, then
+    # answers. (A model that asks for the same write again after it saw the result asks for a
+    # new write; the resume must not turn one write into two, which the assertion checks.)
+    from backend.app import registry
+    async def model(inputs,config,ctx):
+        text='{"action":"final","text":"done"}' if '"tool_result"' in inputs['prompt'] else '{"action":"call","target":"calc","input":"same reply"}'
+        return {'text':text,'provider':'demo'}
+    monkeypatch.setattr(registry,'llm_node',model)
     async def send(_type,_settings,text,*_):deliveries.append(text);return 'sent'
     monkeypatch.setattr(worker.tools,'execute',send)
     original=store.worker_event

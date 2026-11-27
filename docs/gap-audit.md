@@ -1009,7 +1009,8 @@ storage and latency), S9 (prompt injection), E3 and E5 (judge validity, agent-ta
 |---|---|
 | W01–W24 | Not started. Implementation starts only on "implement <phase>" |
 | W05 | Phase A partly done on 2026-11-16: harness `scripts/load/`, tests `backend/tests/test_load_harness.py`, baseline `evals/results/load-baseline-2026-11-16/` for `w3` and `w20`. Not done: `loop50`, the idle cell, 32 workers, the smoke test H08, phase B |
-| DEF-01 … DEF-09 | Open. Found by the defect hunt (`docs/defects.md`); each has a strict xfail test in `backend/tests/defects/` |
+| DEF-01, DEF-02 | Fixed in the working tree on 2026-11-26, not committed. Tests `backend/tests/test_agent_write_resume.py` (11); full backend suite 2,173 passed, 7 xfailed (one seed). `test_s07_boundaries.py::test_agent_settled_write_keeps_identity_after_crash` now uses a faithful scripted model, assertion unchanged (user decision, 2026-11-26). Not run: seeds 1–4, deployed gate, PostgreSQL checks |
+| DEF-03 … DEF-09 | Open. Found by the defect hunt (`docs/defects.md`); each has a strict xfail test in `backend/tests/defects/` |
 
 Handoff cards, in the order to do them: `docs/tasks/README.md`. Specs: `docs/specs/`.
 

@@ -319,8 +319,8 @@ async def test_settled_write_is_not_replayed_when_the_worker_dies_before_checkpo
 
     # Die in the window: after settlement commits, before the item result persists.
     original = store.settle_write
-    def settle_then_die(run_id, owner, identifier, result=None):
-        original(run_id, owner, identifier, result)   # commits settlement
+    def settle_then_die(run_id, owner, identifier, result=None, **settled):
+        original(run_id, owner, identifier, result, **settled)   # commits settlement
         raise asyncio.CancelledError()                # ...then the worker dies
     monkeypatch.setattr(store, 'settle_write', settle_then_die)
 
@@ -364,8 +364,8 @@ async def test_replaying_a_settled_write_does_not_charge_it_again(store, worker,
         delivered.append(text); return 'ok'
     monkeypatch.setattr(worker.tools, 'execute', execute)
     original = store.settle_write
-    def settle_then_die(run_id, owner, identifier, result):
-        original(run_id, owner, identifier, result)
+    def settle_then_die(run_id, owner, identifier, result, **settled):
+        original(run_id, owner, identifier, result, **settled)
         raise asyncio.CancelledError()
     monkeypatch.setattr(store, 'settle_write', settle_then_die)
 

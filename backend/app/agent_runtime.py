@@ -1,5 +1,6 @@
 """Bounded, explicit tool selection and specialist delegation over text providers."""
 import asyncio
+import contextvars
 import json
 import os
 import re
@@ -7,6 +8,14 @@ from dataclasses import replace
 from .tool_service import UncertainWriteError, WriteNotSent, is_write
 from .approvals import ApprovalPause
 from . import token_budget
+
+# The frames of the Agents on the current call path, while each one's tool call runs. An
+# asyncio task copies its context, so a parallel branch never sees another branch's frames.
+# The worker saves them with a settled write in its one commit (DEF-01).
+OPEN_FRAMES=contextvars.ContextVar('relay_open_agent_frames',default=None)
+
+def open_frames():
+    return dict(OPEN_FRAMES.get() or {})
 
 ROLES={
  'planner':'Create an actionable ordered plan with dependencies and concrete completion criteria.',
@@ -354,6 +363,10 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
         attached_ctx=replace(ctx,input_origins=EvidenceContext(complete=False),input_label=GUESSED,
             execution_identity=identity,node_id=target_node.id,node_type=target_node.type)
         write_attempt=False
+        # While this call runs, the Agent's position is open: a write settled under it saves
+        # the frame in its settle commit, so a resume replays this step with no model call
+        # and reaches the same invocation (DEF-01). Snapshots: the transcript grows later.
+        opened=OPEN_FRAMES.set({**(OPEN_FRAMES.get() or {}),frame_key:{'checkpoint_owner':checkpoint_owner,'step':step,'action':action,'invocation':invocation,'transcript':list(transcript),'evidence':list(evidence),'grounded':grounded,'truncations':list(truncations),'provider':provider,'memory':memory}})
         try:
             if target_node.type.startswith('tool_'):
                 target_config=REGISTRY[target_node.type].config_model.model_validate(target_node.config)
@@ -445,6 +458,8 @@ async def _execute_agent(node_id,input_text,workflow,ctx,emit,depth,budget,check
                 raise UncertainWriteError('External write outcome is uncertain; reconciliation is required before trying again. Check the remote system.') from None
             # A failed call is an observation for the model, not the end of the run; the budget bounds retries.
             transcript.extend([{'agent_action':action},{'tool_error':message}]);continue
+        finally:
+            OPEN_FRAMES.reset(opened)
         if child_grounding.get('abstention_source')=='answerability_guard':return immediate_abstention({'decision':'abstain'})
         # Observations are rendered for the model; evidence passages keep their run-wide labels.
         observation=output.get('text','')

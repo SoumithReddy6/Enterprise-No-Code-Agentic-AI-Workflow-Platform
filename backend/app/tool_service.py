@@ -23,6 +23,12 @@ RETRYABLE_TOOL_STATUS=frozenset({408,425,429,500,502,503,504,529})
 class UncertainWriteError(ValueError):
     """An external mutation may have completed; automatic retries must stop."""
 
+class WriteReplayMismatch(ValueError):
+    """A resumed write's request differs from the one already sent at its invocation.
+
+    Control flow, never a tool error: the stored result belongs to another request, and an
+    Agent that read this as an observation could continue as if its request had been sent."""
+
 class WriteNotSent(ValueError):
     """A write refused while it was being prepared, before anything left this machine.
 

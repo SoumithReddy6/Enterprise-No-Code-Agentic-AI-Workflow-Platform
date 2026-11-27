@@ -8,7 +8,7 @@ from pathlib import Path
 from .storage import Store, local_key, new_id
 from .models import Workflow
 from .compiler import compile_workflow,PersistedNodeCancellation
-from .tool_service import ToolService,CONFIGS,is_write,UncertainWriteError,WriteNotSent
+from .tool_service import ToolService,CONFIGS,is_write,UncertainWriteError,WriteNotSent,WriteReplayMismatch
 from .agent_memory import MemoryService
 from .platform_validation import platform_errors,kb_errors
 from .kb_gateway import KnowledgeServices
@@ -153,6 +153,8 @@ class Worker:
                         return lookup_common_reply(message,config),scope
                     if action=='tool':
                         node_type,settings,input_text,identity=args
+                        from .agent_runtime import open_frames
+                        frames=open_frames()
                         if not isinstance(identity,ExecutionIdentity):
                             raise ValueError('Tool execution requires a typed execution identity.')
                         checkpoint_owner=identity.checkpoint_owner
@@ -187,19 +189,30 @@ class Worker:
                             did_work()
                             try:
                                 result=await self.tools.execute_prepared(saved['prepared'],tenant)
-                                approvals.complete(self.store,id,owner,saved['id'],result)
+                                approvals.complete(self.store,id,owner,saved['id'],result,frames=frames)
                                 return result
                             except Exception:
                                 raise UncertainWriteError('Approved write outcome is uncertain; reconciliation is required before another attempt.') from None
                         # Intent is recorded per action, not per node, so one completed
                         # write does not leave a sibling action looking unresolved.
                         marker=invocation if write else checkpoint_owner
+                        sent_digest=None
                         if write:
-                            done=self.store.completed_action(id,marker)
-                            if done is not None:did_work();return done  # Already sent; never send again.
+                            def request_digest():
+                                # Python has no prepared request, so nothing to compare.
+                                if node_type=='tool_python':return None
+                                prepared=prepare_write()
+                                return approvals.digest({'payload':prepared['payload'],'connection_id':prepared['connection_id']})
+                            done=self.store.completed_write(id,marker)
+                            if done is not None:
+                                stored,stored_digest=done
+                                if stored_digest is not None and request_digest()!=stored_digest:
+                                    raise WriteReplayMismatch('The resumed action differs from the request that was already sent. Start a new run.')
+                                did_work();return stored  # Already sent; never send again.
                             # Check the request before marking: a refusal here sends nothing, and
                             # only the send itself can leave an outcome unknown.
-                            prepare_write()
+                            if node_type=='tool_python':prepare_write()
+                            else:sent_digest=request_digest()
                             self.store.mark_write(id,owner,marker)
                         did_work()
                         try:
@@ -208,7 +221,7 @@ class Worker:
                             if write:
                                 raise UncertainWriteError('External write outcome is uncertain; reconciliation is required before trying again. Check the remote system.') from None
                             raise
-                        if write:self.store.settle_write(id,owner,marker,result)
+                        if write:self.store.settle_write(id,owner,marker,result,**({'frames':frames} if frames else {}),**({'payload_sha256':sent_digest} if sent_digest else {}))
                         return result
                     if action=='kb_retrieve':did_work();return await self.kbs.retrieve(*args,tenant)
                     if action=='verify_vector_sources':return await self.kbs.verify(args[0],tenant)
