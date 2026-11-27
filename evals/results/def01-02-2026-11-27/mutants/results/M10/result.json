@@ -1,0 +1,16 @@
+{
+ "id": "M10",
+ "file": "backend/app/worker.py",
+ "planned": [
+  "test_agent_write_resume.py::test_an_old_result_row_without_a_digest_is_served_as_before"
+ ],
+ "planned_hit": [
+  "test_agent_write_resume.py::test_an_old_result_row_without_a_digest_is_served_as_before"
+ ],
+ "oracle": "rw",
+ "failed": [
+  "test_agent_write_resume.py::test_an_old_result_row_without_a_digest_is_served_as_before"
+ ],
+ "killed": true,
+ "ran": 48
+}

@@ -1,0 +1,12 @@
+{
+ "id": "M07",
+ "file": "backend/app/approvals.py",
+ "planned": [
+  "test_agent_write_resume.py::test_an_approved_write_saves_frames_at_complete"
+ ],
+ "planned_hit": [],
+ "oracle": "rw+full",
+ "failed": [],
+ "killed": false,
+ "ran": 2057
+}

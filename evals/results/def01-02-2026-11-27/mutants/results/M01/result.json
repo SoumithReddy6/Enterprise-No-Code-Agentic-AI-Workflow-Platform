@@ -1,0 +1,16 @@
+{
+ "id": "M01",
+ "file": "backend/app/storage.py",
+ "planned": [
+  "test_agent_write_resume.py::test_settle_write_saves_the_open_frames_in_its_commit"
+ ],
+ "planned_hit": [
+  "test_agent_write_resume.py::test_settle_write_saves_the_open_frames_in_its_commit"
+ ],
+ "oracle": "rw",
+ "failed": [
+  "test_agent_write_resume.py::test_settle_write_saves_the_open_frames_in_its_commit"
+ ],
+ "killed": true,
+ "ran": 48
+}

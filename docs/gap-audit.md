@@ -1009,7 +1009,7 @@ storage and latency), S9 (prompt injection), E3 and E5 (judge validity, agent-ta
 |---|---|
 | W01–W24 | Not started. Implementation starts only on "implement <phase>" |
 | W05 | Phase A partly done on 2026-11-16: harness `scripts/load/`, tests `backend/tests/test_load_harness.py`, baseline `evals/results/load-baseline-2026-11-16/` for `w3` and `w20`. Not done: `loop50`, the idle cell, 32 workers, the smoke test H08, phase B |
-| DEF-01, DEF-02 | Fixed in the working tree on 2026-11-26, not committed. Tests `backend/tests/test_agent_write_resume.py` (11); full backend suite 2,173 passed, 7 xfailed (one seed). `test_s07_boundaries.py::test_agent_settled_write_keeps_identity_after_crash` now uses a faithful scripted model, assertion unchanged (user decision, 2026-11-26). Not run: seeds 1–4, deployed gate, PostgreSQL checks |
+| DEF-01, DEF-02 | Fixed in `f3771b3` (2026-11-27); the test-only wrapper of `request_enforcement` is fixed in the next commit. Tests `backend/tests/test_agent_write_resume.py` (10). Backend 2,176 passed, 7 xfailed at PYTHONHASHSEED 0–4 with PostgreSQL; `request_enforcement` 9 of 9 on SQLite and PostgreSQL; deployed gate 35 of 35 three times; mutants M01–M06, M09, M10 killed, M07, M08, M11 probably equivalent. `test_s07_boundaries.py::test_agent_settled_write_keeps_identity_after_crash` now uses a faithful scripted model, assertion unchanged (user decision, 2026-11-26). Evidence: `evals/results/def01-02-2026-11-27/` |
 | DEF-03 … DEF-09 | Open. Found by the defect hunt (`docs/defects.md`); each has a strict xfail test in `backend/tests/defects/` |
 
 Handoff cards, in the order to do them: `docs/tasks/README.md`. Specs: `docs/specs/`.

@@ -1,0 +1,33 @@
+PostgreSQL migrations round trip and model parity passed
+{"timestamp":"2026-11-27T15:18:33.636536+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:18:33.648026+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"current","reason_code":"0007_action_result_digest"}
+{"timestamp":"2026-11-27T15:18:33.649142+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.013}
+sqlite pause failed
+{"timestamp":"2026-11-27T15:18:36.506387+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:18:36.512621+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"current","reason_code":"0007_action_result_digest"}
+{"timestamp":"2026-11-27T15:18:36.513399+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.007}
+sqlite confirmation failed
+{"timestamp":"2026-11-27T15:18:39.990397+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:18:39.996612+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"current","reason_code":"0007_action_result_digest"}
+{"timestamp":"2026-11-27T15:18:39.997364+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.007}
+sqlite settlement failed
+{"timestamp":"2026-11-27T15:19:12.638992+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:19:12.645066+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"current","reason_code":"0007_action_result_digest"}
+{"timestamp":"2026-11-27T15:19:12.645799+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.007}
+sqlite uncertain passed
+{"timestamp":"2026-11-27T15:19:16.143957+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:19:16.169530+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"current","reason_code":"0007_action_result_digest"}
+{"timestamp":"2026-11-27T15:19:16.172520+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.029}
+postgres pause failed
+{"timestamp":"2026-11-27T15:19:19.392453+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:19:19.420950+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"current","reason_code":"0007_action_result_digest"}
+{"timestamp":"2026-11-27T15:19:19.423848+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.031}
+postgres confirmation failed
+{"timestamp":"2026-11-27T15:19:23.517879+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:19:23.543192+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"current","reason_code":"0007_action_result_digest"}
+{"timestamp":"2026-11-27T15:19:23.546411+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.029}
+postgres settlement failed
+{"timestamp":"2026-11-27T15:19:55.930971+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:19:55.956481+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"current","reason_code":"0007_action_result_digest"}
+{"timestamp":"2026-11-27T15:19:55.958611+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.028}
+postgres uncertain passed

@@ -1,0 +1,14 @@
+{
+ "id": "M02",
+ "file": "backend/app/agent_runtime.py",
+ "planned": [
+  "test_agent_write_resume.py::test_a_specialist_write_saves_a_frame_for_each_agent_on_the_path"
+ ],
+ "planned_hit": [],
+ "oracle": "rw",
+ "failed": [
+  "test_agent_write_resume.py::test_a_loop_item_agent_write_resumes_inside_the_item"
+ ],
+ "killed": true,
+ "ran": 48
+}

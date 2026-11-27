@@ -22,8 +22,8 @@ Run them:
 
 | Id | Severity | One line | Test |
 |---|---|---|---|
-| DEF-01 | **Critical** | **Fixed 2026-11-26 (not yet committed).** An Agent's settled write is sent a second time on resume when the model changes the step order | `backend/tests/test_agent_write_resume.py::test_def01_…` |
-| DEF-02 | High | **Fixed 2026-11-26 (not yet committed).** A stored write result is returned for a different request; the new request is never sent and is reported as success | `backend/tests/test_agent_write_resume.py::test_def02_…` |
+| DEF-01 | **Critical** | **Fixed in `f3771b3` (2026-11-27).** An Agent's settled write is sent a second time on resume when the model changes the step order | `backend/tests/test_agent_write_resume.py::test_def01_…` |
+| DEF-02 | High | **Fixed in `f3771b3` (2026-11-27).** A stored write result is returned for a different request; the new request is never sent and is reported as success | `backend/tests/test_agent_write_resume.py::test_def02_…` |
 | DEF-03 | High | Validation takes exponential time; one request stops the API process | `test_def03_validation_exponential.py` |
 | DEF-04 | High | A run whose worker dies on every attempt is claimed without limit | `test_def04_def05_def07_claim.py::test_def04_…` |
 | DEF-05 | Medium | A cancelled run is claimed and started again | `test_def04_def05_def07_claim.py::test_def05_…` |
@@ -98,9 +98,18 @@ asyncio task copies its context, so a parallel branch never sees another branch'
 worker reads them (`worker.py`, tool action) and `settle_write` writes them into `agent_frames`
 in its one commit; `approvals.complete` does the same, and `approvals.pause` now merges its
 frames with the saved ones instead of replacing them. A `loop_item` event drops the frames of
-its item owner (`storage.py`, `worker_event`). Mutants M00–M06 (control; second commit; frame
-not reset; frames not saved; loop clean-up removed; digest not compared; mismatch not control
-flow): control passes, all six killed.
+its item owner (`storage.py`, `worker_event`). Mutants M00–M11 (`evals/results/def01-02-2026-11-27/`):
+the control passes, and M01–M06 and M09–M10 are killed. M07 (`complete` saves no frames), M08
+(`pause` replaces the saved frames) and M11 (a finished item clears every frame) survive the
+whole suite. They change only frames that are not on the current call path, and no reachable
+workflow has such a frame: a parallel branch cannot write, and For each runs its items in order.
+They are kept as defensive code.
+
+**Gates (2026-11-27).** Backend 2,176 passed and 7 xfailed at PYTHONHASHSEED 0–4 with
+PostgreSQL; the deployed gate 35 of 35 three times. The first CI run of `f3771b3` failed `scripts.scenarios.request_enforcement`: its
+test-only wrapper `request_review_worker.py` took no keyword arguments, and `settle_write` now
+gets `payload_sha256`. The wrapper is fixed in the commit after `f3771b3`. Evidence:
+`evals/results/def01-02-2026-11-27/README.md`.
 
 ## DEF-02 — A stored write result is returned for a different request (High)
 

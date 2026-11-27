@@ -1,0 +1,14 @@
+{
+ "id": "M05",
+ "file": "backend/app/worker.py",
+ "planned": [
+  "test_agent_write_resume.py::test_def02_a_stored_write_result_is_not_returned_for_a_different_request"
+ ],
+ "planned_hit": [],
+ "oracle": "rw",
+ "failed": [
+  "test_agent_write_resume.py::test_a_different_request_at_the_same_invocation_stops_the_run"
+ ],
+ "killed": true,
+ "ran": 48
+}

@@ -1,0 +1,554 @@
+FF.FFF.FFF.................                                              [100%]
+=================================== FAILURES ===================================
+E   AssertionError: DEF-01: the receiver got the same write 2 times: ['{"ticket": "X"}', '{"ticket": "X"}']
+    assert ['{"ticket": ...icket": "X"}'] == ['{"ticket": "X"}']
+      
+      Left contains one more item: '{"ticket": "X"}'
+      Use -v to get more diff
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:01.736915+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:01.818079+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:01.819061+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.082}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:01.882480+00:00","request_id":"143ff1c2e0924d2eb005738f1847e4fc","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/connections","status":200,"duration_ms":4.742}
+{"timestamp":"2026-11-27T15:05:01.885742+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"http.request","method":"POST","path":"/api/runs","status":201,"duration_ms":2.821}
+{"timestamp":"2026-11-27T15:05:01.888835+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"job.lease_acquired","worker_id":"acf971b26df54f118e7c444231727aaa"}
+{"timestamp":"2026-11-27T15:05:01.889142+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-27T15:05:01.917603+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":4}
+{"timestamp":"2026-11-27T15:05:01.926807+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:01.927771+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"node.failed","node_id":"agent","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:01.928065+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-27T15:05:01.929182+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"run.finish","status":"failed","seconds":0.04}
+{"timestamp":"2026-11-27T15:05:01.932924+00:00","request_id":"c837669ff428409fb75c495917c5b869","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"http.request","method":"POST","path":"/api/runs/{id}/resume","status":202,"duration_ms":2.341}
+{"timestamp":"2026-11-27T15:05:01.934174+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"job.lease_acquired","worker_id":"acf971b26df54f118e7c444231727aaa"}
+{"timestamp":"2026-11-27T15:05:01.934285+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"run.start","nodes":4,"resumed":true}
+{"timestamp":"2026-11-27T15:05:01.959438+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:01.965635+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:01.966519+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"node.success","node_id":"agent","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-27T15:05:01.968597+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:01.969993+00:00","request_id":"e63f319848c94eaaaaa6f1c53b7cd863","run_id":"5a8bcaf39bff4939aa6934221edb2c33","tenant":"local","event":"run.finish","status":"success","seconds":0.036}
+/private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/def01/base.LTnD/backend/tests/test_agent_write_resume.py:102: AssertionError: DEF-01: the receiver got the same write 2 times: ['{"ticket": "X"}', '{"ticket": "X"}']
+E   AssertionError: {}
+    assert set() == {'agent:0:agent'}
+      
+      Extra items in the right set:
+      'agent:0:agent'
+      Use -v to get more diff
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:01.972692+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:01.989528+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:01.990022+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:02.047513+00:00","request_id":"aba29888629e47f4b0a542ecc70bcdf6","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/connections","status":200,"duration_ms":1.784}
+{"timestamp":"2026-11-27T15:05:02.049378+00:00","request_id":"e35a7845ead64d28af5b4c34c02c76e5","run_id":"7ecb12c5d5e74519824e83c79e68bb81","tenant":"local","event":"http.request","method":"POST","path":"/api/runs","status":201,"duration_ms":1.555}
+{"timestamp":"2026-11-27T15:05:02.051665+00:00","request_id":"e35a7845ead64d28af5b4c34c02c76e5","run_id":"7ecb12c5d5e74519824e83c79e68bb81","tenant":"local","event":"job.lease_acquired","worker_id":"d6ed0cc44644437e8a24df7f03a42b36"}
+{"timestamp":"2026-11-27T15:05:02.051904+00:00","request_id":"e35a7845ead64d28af5b4c34c02c76e5","run_id":"7ecb12c5d5e74519824e83c79e68bb81","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-27T15:05:02.078300+00:00","request_id":"e35a7845ead64d28af5b4c34c02c76e5","run_id":"7ecb12c5d5e74519824e83c79e68bb81","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:02.084438+00:00","request_id":"e35a7845ead64d28af5b4c34c02c76e5","run_id":"7ecb12c5d5e74519824e83c79e68bb81","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.085203+00:00","request_id":"e35a7845ead64d28af5b4c34c02c76e5","run_id":"7ecb12c5d5e74519824e83c79e68bb81","tenant":"local","event":"node.failed","node_id":"agent","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.085479+00:00","request_id":"e35a7845ead64d28af5b4c34c02c76e5","run_id":"7ecb12c5d5e74519824e83c79e68bb81","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-27T15:05:02.086511+00:00","request_id":"e35a7845ead64d28af5b4c34c02c76e5","run_id":"7ecb12c5d5e74519824e83c79e68bb81","tenant":"local","event":"run.finish","status":"failed","seconds":0.035}
+/private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/def01/base.LTnD/backend/tests/test_agent_write_resume.py:127: AssertionError: {}
+E   assert ('success' == 'success'
+      
+        success and ['{"ticket": ...icket": "X"}'] == ['{"ticket": "X"}']
+      
+      Left contains one more item: '{"ticket": "X"}'
+      Use -v to get more diff)
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:02.207275+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:02.224009+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:02.224514+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:02.282889+00:00","request_id":"b5b67a418e4040e1b5171ae2c76b8b38","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/connections","status":200,"duration_ms":2.189}
+{"timestamp":"2026-11-27T15:05:02.284718+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"http.request","method":"POST","path":"/api/runs","status":201,"duration_ms":1.476}
+{"timestamp":"2026-11-27T15:05:02.287366+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"job.lease_acquired","worker_id":"0ba3f4d478fe4b72a786f4eb6ccd389b"}
+{"timestamp":"2026-11-27T15:05:02.287625+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-27T15:05:02.317190+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":4}
+{"timestamp":"2026-11-27T15:05:02.324334+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.325245+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"node.failed","node_id":"agent","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.325509+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-27T15:05:02.326606+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"run.finish","status":"failed","seconds":0.039}
+{"timestamp":"2026-11-27T15:05:02.330024+00:00","request_id":"06dc9c5586f64ae1abe89d684c2fcc7d","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"http.request","method":"POST","path":"/api/runs/{id}/resume","status":202,"duration_ms":2.316}
+{"timestamp":"2026-11-27T15:05:02.331306+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"job.lease_acquired","worker_id":"0ba3f4d478fe4b72a786f4eb6ccd389b"}
+{"timestamp":"2026-11-27T15:05:02.331434+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"run.start","nodes":4,"resumed":true}
+{"timestamp":"2026-11-27T15:05:02.356728+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:02.362721+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.363607+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"node.success","node_id":"agent","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-27T15:05:02.365488+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:02.366763+00:00","request_id":"cc35f82f3509484b9d66ef2e7db2ea0b","run_id":"d7018eac68464fcf8a07057e76de91e1","tenant":"local","event":"run.finish","status":"success","seconds":0.035}
+/private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/def01/base.LTnD/backend/tests/test_agent_write_resume.py:156: assert ('success' == 'success'
+E   AssertionError: {}
+    assert set() == {'agent:0:age...agent:1:spec'}
+      
+      Extra items in the right set:
+      'agent:1:spec'
+      'agent:0:agent'
+      Use -v to get more diff
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:02.369238+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:02.386093+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:02.386583+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:02.443931+00:00","request_id":"042b923724814d72b3238604b9f0bf1f","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/connections","status":200,"duration_ms":1.69}
+{"timestamp":"2026-11-27T15:05:02.445725+00:00","request_id":"dce1c4180670463fb238b4419a61c935","run_id":"bd5eb1938e564a7283921da26eb41e3f","tenant":"local","event":"http.request","method":"POST","path":"/api/runs","status":201,"duration_ms":1.495}
+{"timestamp":"2026-11-27T15:05:02.447917+00:00","request_id":"dce1c4180670463fb238b4419a61c935","run_id":"bd5eb1938e564a7283921da26eb41e3f","tenant":"local","event":"job.lease_acquired","worker_id":"544da58895d64064b67163da7cf5e2e9"}
+{"timestamp":"2026-11-27T15:05:02.448137+00:00","request_id":"dce1c4180670463fb238b4419a61c935","run_id":"bd5eb1938e564a7283921da26eb41e3f","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+{"timestamp":"2026-11-27T15:05:02.476085+00:00","request_id":"dce1c4180670463fb238b4419a61c935","run_id":"bd5eb1938e564a7283921da26eb41e3f","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:02.484164+00:00","request_id":"dce1c4180670463fb238b4419a61c935","run_id":"bd5eb1938e564a7283921da26eb41e3f","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.484986+00:00","request_id":"dce1c4180670463fb238b4419a61c935","run_id":"bd5eb1938e564a7283921da26eb41e3f","tenant":"local","event":"node.success","node_id":"spec","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.485808+00:00","request_id":"dce1c4180670463fb238b4419a61c935","run_id":"bd5eb1938e564a7283921da26eb41e3f","tenant":"local","event":"node.failed","node_id":"agent","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.486071+00:00","request_id":"dce1c4180670463fb238b4419a61c935","run_id":"bd5eb1938e564a7283921da26eb41e3f","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-27T15:05:02.487146+00:00","request_id":"dce1c4180670463fb238b4419a61c935","run_id":"bd5eb1938e564a7283921da26eb41e3f","tenant":"local","event":"run.finish","status":"failed","seconds":0.039}
+/private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/def01/base.LTnD/backend/tests/test_agent_write_resume.py:193: AssertionError: {}
+E   KeyError: 'each:1:0:agent'
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:02.489891+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:02.506635+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:02.507162+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:02.572461+00:00","request_id":"7069144e4da64802bd5a926c5a47b7b7","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/connections","status":200,"duration_ms":1.972}
+{"timestamp":"2026-11-27T15:05:02.573538+00:00","request_id":"ea2a7a6dd2aa4fbd8d185beea6a883db","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/connections","status":200,"duration_ms":0.771}
+{"timestamp":"2026-11-27T15:05:02.575333+00:00","request_id":"f052974533cb4169bb409525a4b0a9e4","run_id":"78e71cc628094438b69399f599f98c5a","tenant":"local","event":"http.request","method":"POST","path":"/api/runs","status":201,"duration_ms":1.518}
+{"timestamp":"2026-11-27T15:05:02.577659+00:00","request_id":"f052974533cb4169bb409525a4b0a9e4","run_id":"78e71cc628094438b69399f599f98c5a","tenant":"local","event":"job.lease_acquired","worker_id":"706e418f22894011ba50821b0da3e483"}
+{"timestamp":"2026-11-27T15:05:02.578853+00:00","request_id":"f052974533cb4169bb409525a4b0a9e4","run_id":"78e71cc628094438b69399f599f98c5a","tenant":"local","event":"run.start","nodes":6,"resumed":false}
+{"timestamp":"2026-11-27T15:05:02.646343+00:00","request_id":"f052974533cb4169bb409525a4b0a9e4","run_id":"78e71cc628094438b69399f599f98c5a","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":4}
+{"timestamp":"2026-11-27T15:05:02.650194+00:00","request_id":"f052974533cb4169bb409525a4b0a9e4","run_id":"78e71cc628094438b69399f599f98c5a","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:02.656912+00:00","request_id":"f052974533cb4169bb409525a4b0a9e4","run_id":"78e71cc628094438b69399f599f98c5a","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.657767+00:00","request_id":"f052974533cb4169bb409525a4b0a9e4","run_id":"78e71cc628094438b69399f599f98c5a","tenant":"local","event":"node.success","node_id":"agent","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.659117+00:00","request_id":"f052974533cb4169bb409525a4b0a9e4","run_id":"78e71cc628094438b69399f599f98c5a","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.664872+00:00","request_id":"f052974533cb4169bb409525a4b0a9e4","run_id":"78e71cc628094438b69399f599f98c5a","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.665163+00:00","request_id":"f052974533cb4169bb409525a4b0a9e4","run_id":"78e71cc628094438b69399f599f98c5a","tenant":"local","event":"run.failure","error_type":"AccountingUnavailable"}
+{"timestamp":"2026-11-27T15:05:02.666429+00:00","request_id":"f052974533cb4169bb409525a4b0a9e4","run_id":"78e71cc628094438b69399f599f98c5a","tenant":"local","event":"run.finish","status":"failed","seconds":0.088}
+/private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/def01/base.LTnD/backend/tests/test_agent_write_resume.py:258: KeyError: 'each:1:0:agent'
+E   AssertionError: DEF-02: run success, tool success reported=True, but the receiver got only ['{"ticket": "X"}']
+    assert ('{"ticket": "Y"}' in ['{"ticket": "X"}'] or 'success' == 'failed'
+      
+      - failed
+      + success)
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:02.862031+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:02.879202+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:02.879703+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:02.936158+00:00","request_id":"dcc01d9266f54f32a80b40ae865f8fbf","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/connections","status":200,"duration_ms":1.802}
+{"timestamp":"2026-11-27T15:05:02.938130+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"http.request","method":"POST","path":"/api/runs","status":201,"duration_ms":1.649}
+{"timestamp":"2026-11-27T15:05:02.940572+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"job.lease_acquired","worker_id":"373e5f511c5e46cfab7f916bfce4d824"}
+{"timestamp":"2026-11-27T15:05:02.940829+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-27T15:05:02.967677+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:02.974184+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.974988+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"node.failed","node_id":"agent","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.975251+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-27T15:05:02.976279+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"run.finish","status":"failed","seconds":0.035}
+{"timestamp":"2026-11-27T15:05:02.979862+00:00","request_id":"a8d6b99816464219be4f7f4ccb94f824","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"http.request","method":"POST","path":"/api/runs/{id}/resume","status":202,"duration_ms":2.467}
+{"timestamp":"2026-11-27T15:05:02.981067+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"job.lease_acquired","worker_id":"373e5f511c5e46cfab7f916bfce4d824"}
+{"timestamp":"2026-11-27T15:05:02.981181+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"run.start","nodes":4,"resumed":true}
+{"timestamp":"2026-11-27T15:05:03.004993+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:03.010296+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.011168+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"node.success","node_id":"agent","transient":false,"cached":false,"duration_ms":5}
+{"timestamp":"2026-11-27T15:05:03.013100+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:03.014307+00:00","request_id":"698847ebcc6e4f5baf70249968710ee0","run_id":"1ed4e43a61ac4029a776eafd3a610459","tenant":"local","event":"run.finish","status":"success","seconds":0.033}
+/private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/def01/base.LTnD/backend/tests/test_agent_write_resume.py:310: AssertionError: DEF-02: run success, tool success reported=True, but the receiver got only ['{"ticket": "X"}']
+E   AssertionError: success
+    assert 'success' == 'failed'
+      
+      - failed
+      + success
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:03.016811+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:03.034138+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:03.034671+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:03.090953+00:00","request_id":"a2e5427b8b654dd186872453a3f2e2cd","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/connections","status":200,"duration_ms":1.706}
+{"timestamp":"2026-11-27T15:05:03.092882+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"http.request","method":"POST","path":"/api/runs","status":201,"duration_ms":1.588}
+{"timestamp":"2026-11-27T15:05:03.095199+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"job.lease_acquired","worker_id":"a93f4ae730224c38bebc472f1d120beb"}
+{"timestamp":"2026-11-27T15:05:03.095434+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-27T15:05:03.122079+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:03.128459+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.129276+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"node.failed","node_id":"agent","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.129550+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-27T15:05:03.130589+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"run.finish","status":"failed","seconds":0.035}
+{"timestamp":"2026-11-27T15:05:03.134471+00:00","request_id":"a42c18a81e7740aebd304aadf13c893a","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"http.request","method":"POST","path":"/api/runs/{id}/resume","status":202,"duration_ms":2.386}
+{"timestamp":"2026-11-27T15:05:03.135697+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"job.lease_acquired","worker_id":"a93f4ae730224c38bebc472f1d120beb"}
+{"timestamp":"2026-11-27T15:05:03.135816+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"run.start","nodes":4,"resumed":true}
+{"timestamp":"2026-11-27T15:05:03.159497+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:03.164492+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.165438+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"node.success","node_id":"agent","transient":false,"cached":false,"duration_ms":5}
+{"timestamp":"2026-11-27T15:05:03.167333+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:03.168570+00:00","request_id":"a35c08643e124cc08b653756e7030fc1","run_id":"8e15e900f2664054ad4629774631741e","tenant":"local","event":"run.finish","status":"success","seconds":0.033}
+/private/tmp/claude-501/-Users-soumith-Library-Mobile-Documents-iCloud-md-obsidian-Documents-Soumith-No-Code-Agentic-AI/c9fb8c51-e131-486f-b6a6-953560c70fca/scratchpad/def01/base.LTnD/backend/tests/test_agent_write_resume.py:330: AssertionError: success
+E   sqlite3.OperationalError: no such column: payload_sha256
+
+The above exception was the direct cause of the following exception:
+E   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: payload_sha256
+    [SQL: UPDATE run_action_results SET payload_sha256 = NULL WHERE run_id = ?]
+    [parameters: ('5750b59e07e142508898c8192af4b585',)]
+    (Background on this error at: https://sqlalche.me/e/20/e3q8)
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:03.170950+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:03.188128+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:03.188627+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:03.245889+00:00","request_id":"f0ab4ddcaf984d6093137a895075f26e","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/connections","status":200,"duration_ms":1.695}
+{"timestamp":"2026-11-27T15:05:03.247807+00:00","request_id":"27c1dd1b24fe477b9461156f31f86749","run_id":"5750b59e07e142508898c8192af4b585","tenant":"local","event":"http.request","method":"POST","path":"/api/runs","status":201,"duration_ms":1.592}
+{"timestamp":"2026-11-27T15:05:03.250069+00:00","request_id":"27c1dd1b24fe477b9461156f31f86749","run_id":"5750b59e07e142508898c8192af4b585","tenant":"local","event":"job.lease_acquired","worker_id":"30eac2a826be468f8046143b047ed546"}
+{"timestamp":"2026-11-27T15:05:03.250289+00:00","request_id":"27c1dd1b24fe477b9461156f31f86749","run_id":"5750b59e07e142508898c8192af4b585","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-27T15:05:03.277270+00:00","request_id":"27c1dd1b24fe477b9461156f31f86749","run_id":"5750b59e07e142508898c8192af4b585","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:03.283594+00:00","request_id":"27c1dd1b24fe477b9461156f31f86749","run_id":"5750b59e07e142508898c8192af4b585","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.284462+00:00","request_id":"27c1dd1b24fe477b9461156f31f86749","run_id":"5750b59e07e142508898c8192af4b585","tenant":"local","event":"node.failed","node_id":"agent","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.284717+00:00","request_id":"27c1dd1b24fe477b9461156f31f86749","run_id":"5750b59e07e142508898c8192af4b585","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-27T15:05:03.285791+00:00","request_id":"27c1dd1b24fe477b9461156f31f86749","run_id":"5750b59e07e142508898c8192af4b585","tenant":"local","event":"run.finish","status":"failed","seconds":0.036}
+/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/lib/python3.14/site-packages/sqlalchemy/engine/default.py:952: sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: payload_sha256
+=============================== warnings summary ===============================
+../../../../../../../../Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/lib/python3.14/site-packages/starlette/testclient.py:53
+  /Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+_____ test_a_kill_between_send_and_settle_saves_no_frame_and_blocks_resume _____
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:02.089664+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:02.106163+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:02.106673+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:02.162877+00:00","request_id":"d0106fdceec0494a899e3dbad7e0993f","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/connections","status":200,"duration_ms":1.872}
+{"timestamp":"2026-11-27T15:05:02.164588+00:00","request_id":"3f0fa01d530c41a6bf4d106eea9c697b","run_id":"a717b5b27adf4976ade0c20cadae0772","tenant":"local","event":"http.request","method":"POST","path":"/api/runs","status":201,"duration_ms":1.399}
+{"timestamp":"2026-11-27T15:05:02.168188+00:00","request_id":"3f0fa01d530c41a6bf4d106eea9c697b","run_id":"a717b5b27adf4976ade0c20cadae0772","tenant":"local","event":"job.lease_acquired","worker_id":"d846e2f07807471cad9ef58cea70bb87"}
+{"timestamp":"2026-11-27T15:05:02.168425+00:00","request_id":"3f0fa01d530c41a6bf4d106eea9c697b","run_id":"a717b5b27adf4976ade0c20cadae0772","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-27T15:05:02.195159+00:00","request_id":"3f0fa01d530c41a6bf4d106eea9c697b","run_id":"a717b5b27adf4976ade0c20cadae0772","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:02.200839+00:00","request_id":"3f0fa01d530c41a6bf4d106eea9c697b","run_id":"a717b5b27adf4976ade0c20cadae0772","tenant":"local","event":"node.failed","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.201693+00:00","request_id":"3f0fa01d530c41a6bf4d106eea9c697b","run_id":"a717b5b27adf4976ade0c20cadae0772","tenant":"local","event":"node.failed","node_id":"agent","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.201970+00:00","request_id":"3f0fa01d530c41a6bf4d106eea9c697b","run_id":"a717b5b27adf4976ade0c20cadae0772","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-27T15:05:02.203026+00:00","request_id":"3f0fa01d530c41a6bf4d106eea9c697b","run_id":"a717b5b27adf4976ade0c20cadae0772","tenant":"local","event":"run.finish","status":"failed","seconds":0.035}
+{"timestamp":"2026-11-27T15:05:02.205671+00:00","request_id":"c327e0ad1bd74fbe9780f582024d4f5f","run_id":"a717b5b27adf4976ade0c20cadae0772","tenant":"local","event":"http.request","method":"POST","path":"/api/runs/{id}/resume","status":409,"duration_ms":1.576}
+_______________ test_an_approved_write_saves_frames_at_complete ________________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:02.669483+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:02.685960+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:02.686458+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:02.742576+00:00","request_id":"d31d38a0789749a3b5f28a6521dd1a5b","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/connections","status":200,"duration_ms":1.835}
+{"timestamp":"2026-11-27T15:05:02.744350+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"http.request","method":"POST","path":"/api/runs","status":201,"duration_ms":1.483}
+{"timestamp":"2026-11-27T15:05:02.746875+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"job.lease_acquired","worker_id":"4c63cc7272b34b84985eea16e5ff9554"}
+{"timestamp":"2026-11-27T15:05:02.747106+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-27T15:05:02.774840+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:02.780284+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"node.paused","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.781104+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"node.paused","node_id":"agent","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.783239+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"approval.pending","node_id":"post","approval_kind":"write"}
+{"timestamp":"2026-11-27T15:05:02.783278+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"run.awaiting_approval"}
+{"timestamp":"2026-11-27T15:05:02.786887+00:00","request_id":null,"run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"approval.approved","node_id":"post"}
+{"timestamp":"2026-11-27T15:05:02.788079+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"job.lease_acquired","worker_id":"4c63cc7272b34b84985eea16e5ff9554"}
+{"timestamp":"2026-11-27T15:05:02.788188+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"run.start","nodes":4,"resumed":true}
+{"timestamp":"2026-11-27T15:05:02.812290+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:02.819675+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.820631+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"node.failed","node_id":"agent","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.820897+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-27T15:05:02.821978+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"run.finish","status":"failed","seconds":0.034}
+{"timestamp":"2026-11-27T15:05:02.824816+00:00","request_id":"323129535f1c4ace82823bd35af572c6","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"http.request","method":"POST","path":"/api/runs/{id}/resume","status":202,"duration_ms":2.173}
+{"timestamp":"2026-11-27T15:05:02.825944+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"job.lease_acquired","worker_id":"4c63cc7272b34b84985eea16e5ff9554"}
+{"timestamp":"2026-11-27T15:05:02.826054+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"run.start","nodes":4,"resumed":true}
+{"timestamp":"2026-11-27T15:05:02.850063+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:02.855754+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"node.success","node_id":"post","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:02.856697+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"node.success","node_id":"agent","transient":false,"cached":false,"duration_ms":5}
+{"timestamp":"2026-11-27T15:05:02.858675+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:02.859853+00:00","request_id":"2d9863ec60b34b49ac51085276a46d61","run_id":"db69dd3e51f943888ebe3e4662a5ab41","tenant":"local","event":"run.finish","status":"success","seconds":0.034}
+_______ test_loop_pauses_for_approval_instead_of_recording_a_failed_item _______
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:03.289802+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:03.306176+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:03.307867+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:03.312545+00:00","request_id":null,"run_id":"117ff73c40ae4520ab89aa7a5a04c02c","tenant":"local","event":"job.lease_acquired","worker_id":"ec07890553654f84a6a8a420e4d2914f"}
+{"timestamp":"2026-11-27T15:05:03.312779+00:00","request_id":null,"run_id":"117ff73c40ae4520ab89aa7a5a04c02c","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+{"timestamp":"2026-11-27T15:05:03.346548+00:00","request_id":null,"run_id":"117ff73c40ae4520ab89aa7a5a04c02c","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":2}
+{"timestamp":"2026-11-27T15:05:03.350418+00:00","request_id":null,"run_id":"117ff73c40ae4520ab89aa7a5a04c02c","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:03.355441+00:00","request_id":null,"run_id":"117ff73c40ae4520ab89aa7a5a04c02c","tenant":"local","event":"node.paused","node_id":"send","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.356208+00:00","request_id":null,"run_id":"117ff73c40ae4520ab89aa7a5a04c02c","tenant":"local","event":"node.paused","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.358216+00:00","request_id":null,"run_id":"117ff73c40ae4520ab89aa7a5a04c02c","tenant":"local","event":"approval.pending","node_id":"send","approval_kind":"write"}
+{"timestamp":"2026-11-27T15:05:03.358252+00:00","request_id":null,"run_id":"117ff73c40ae4520ab89aa7a5a04c02c","tenant":"local","event":"run.awaiting_approval"}
+__________ test_uncertain_write_is_not_recovered_by_on_error_continue __________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:03.360127+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:03.376334+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:03.376837+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:03.380923+00:00","request_id":null,"run_id":"91935ee3573643eb8a06ac4dcd6f9a4c","tenant":"local","event":"job.lease_acquired","worker_id":"58b6b980261844688cd7b5d86e2816b3"}
+{"timestamp":"2026-11-27T15:05:03.381140+00:00","request_id":null,"run_id":"91935ee3573643eb8a06ac4dcd6f9a4c","tenant":"local","event":"run.start","nodes":3,"resumed":false}
+{"timestamp":"2026-11-27T15:05:03.408701+00:00","request_id":null,"run_id":"91935ee3573643eb8a06ac4dcd6f9a4c","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:03.412916+00:00","request_id":null,"run_id":"91935ee3573643eb8a06ac4dcd6f9a4c","tenant":"local","event":"node.failed","node_id":"send","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.413177+00:00","request_id":null,"run_id":"91935ee3573643eb8a06ac4dcd6f9a4c","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-27T15:05:03.414188+00:00","request_id":null,"run_id":"91935ee3573643eb8a06ac4dcd6f9a4c","tenant":"local","event":"run.finish","status":"failed","seconds":0.033}
+___________ test_uncertain_write_is_not_recovered_by_on_error_route ____________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:03.415955+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:03.432022+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:03.432533+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:03.436761+00:00","request_id":null,"run_id":"bfcd8bedc74d477e8b1496a02378d68b","tenant":"local","event":"job.lease_acquired","worker_id":"c2e2bf143030475eaecb37478c40b9a9"}
+{"timestamp":"2026-11-27T15:05:03.436997+00:00","request_id":null,"run_id":"bfcd8bedc74d477e8b1496a02378d68b","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-27T15:05:03.473106+00:00","request_id":null,"run_id":"bfcd8bedc74d477e8b1496a02378d68b","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-27T15:05:03.477323+00:00","request_id":null,"run_id":"bfcd8bedc74d477e8b1496a02378d68b","tenant":"local","event":"node.failed","node_id":"send","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.477584+00:00","request_id":null,"run_id":"bfcd8bedc74d477e8b1496a02378d68b","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-27T15:05:03.478612+00:00","request_id":null,"run_id":"bfcd8bedc74d477e8b1496a02378d68b","tenant":"local","event":"run.finish","status":"failed","seconds":0.042}
+________________ test_write_identity_is_per_action_not_per_loop ________________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:03.480474+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:03.497849+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:03.498354+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:03.503211+00:00","request_id":null,"run_id":"3ed5244a64b54874b3986c170f565dd7","tenant":"local","event":"job.lease_acquired","worker_id":"a412a741182e43dbbb0dbbf3c104349c"}
+{"timestamp":"2026-11-27T15:05:03.503437+00:00","request_id":null,"run_id":"3ed5244a64b54874b3986c170f565dd7","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+{"timestamp":"2026-11-27T15:05:03.539860+00:00","request_id":null,"run_id":"3ed5244a64b54874b3986c170f565dd7","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-27T15:05:03.543708+00:00","request_id":null,"run_id":"3ed5244a64b54874b3986c170f565dd7","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:03.549135+00:00","request_id":null,"run_id":"3ed5244a64b54874b3986c170f565dd7","tenant":"local","event":"node.success","node_id":"send","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.550337+00:00","request_id":null,"run_id":"3ed5244a64b54874b3986c170f565dd7","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.554038+00:00","request_id":null,"run_id":"3ed5244a64b54874b3986c170f565dd7","tenant":"local","event":"node.cancelled","node_id":"send","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.554822+00:00","request_id":null,"run_id":"3ed5244a64b54874b3986c170f565dd7","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.555064+00:00","request_id":null,"run_id":"3ed5244a64b54874b3986c170f565dd7","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+{"timestamp":"2026-11-27T15:05:03.556213+00:00","request_id":null,"run_id":"3ed5244a64b54874b3986c170f565dd7","tenant":"local","event":"run.finish","status":"failed","seconds":0.053}
+_____________ test_batch_is_resumable_once_every_write_has_settled _____________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:03.558076+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:03.574603+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:03.575252+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:03.579622+00:00","request_id":null,"run_id":"dd8c80e58b4f4368a338499261d848b9","tenant":"local","event":"job.lease_acquired","worker_id":"6edd094567024533a09b8e59682e8b9a"}
+{"timestamp":"2026-11-27T15:05:03.579855+00:00","request_id":null,"run_id":"dd8c80e58b4f4368a338499261d848b9","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+{"timestamp":"2026-11-27T15:05:03.614756+00:00","request_id":null,"run_id":"dd8c80e58b4f4368a338499261d848b9","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:03.618647+00:00","request_id":null,"run_id":"dd8c80e58b4f4368a338499261d848b9","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:03.624413+00:00","request_id":null,"run_id":"dd8c80e58b4f4368a338499261d848b9","tenant":"local","event":"node.success","node_id":"send","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.625624+00:00","request_id":null,"run_id":"dd8c80e58b4f4368a338499261d848b9","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.630259+00:00","request_id":null,"run_id":"dd8c80e58b4f4368a338499261d848b9","tenant":"local","event":"node.success","node_id":"send","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.631279+00:00","request_id":null,"run_id":"dd8c80e58b4f4368a338499261d848b9","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.632053+00:00","request_id":null,"run_id":"dd8c80e58b4f4368a338499261d848b9","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.633189+00:00","request_id":null,"run_id":"dd8c80e58b4f4368a338499261d848b9","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":false,"duration_ms":13}
+{"timestamp":"2026-11-27T15:05:03.635254+00:00","request_id":null,"run_id":"dd8c80e58b4f4368a338499261d848b9","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:03.636697+00:00","request_id":null,"run_id":"dd8c80e58b4f4368a338499261d848b9","tenant":"local","event":"run.finish","status":"success","seconds":0.057}
+______________ test_loop_item_model_usage_reaches_durable_events _______________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:03.638675+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:03.655086+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:03.655711+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:03.660858+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"job.lease_acquired","worker_id":"abd6a883ee5145a2a7976486e27eac52"}
+{"timestamp":"2026-11-27T15:05:03.661127+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+{"timestamp":"2026-11-27T15:05:03.698450+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-27T15:05:03.702507+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:03.705227+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"model.usage","node_id":"worker","provider":"ollama","model":"llama3.1:latest","usage_status":"reported","prompt_tokens":11,"completion_tokens":7}
+{"timestamp":"2026-11-27T15:05:03.706569+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"node.success","node_id":"worker","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":11,"completion_tokens":7}}
+{"timestamp":"2026-11-27T15:05:03.707969+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.709454+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"model.usage","node_id":"worker","provider":"ollama","model":"llama3.1:latest","usage_status":"reported","prompt_tokens":11,"completion_tokens":7}
+{"timestamp":"2026-11-27T15:05:03.710452+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"node.success","node_id":"worker","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":11,"completion_tokens":7}}
+{"timestamp":"2026-11-27T15:05:03.711687+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.712515+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.713739+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":false,"duration_ms":10}
+{"timestamp":"2026-11-27T15:05:03.715815+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:03.717225+00:00","request_id":null,"run_id":"dcfd519a964d4d26b66ece2fb2b807b1","tenant":"local","event":"run.finish","status":"success","seconds":0.056}
+_______ test_completed_write_settles_so_a_gated_second_write_can_resume ________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:03.719106+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:03.735655+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:03.736325+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:03.742251+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"job.lease_acquired","worker_id":"3496405df55840b5a42f4eadfb1c6d46"}
+{"timestamp":"2026-11-27T15:05:03.742478+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"run.start","nodes":7,"resumed":false}
+{"timestamp":"2026-11-27T15:05:03.780204+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-27T15:05:03.785133+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:03.793304+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.success","node_id":"ack","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.798184+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.paused","node_id":"reply","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.799220+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.paused","node_id":"worker","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.800313+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.paused","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.802874+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"approval.pending","node_id":"reply","approval_kind":"write"}
+{"timestamp":"2026-11-27T15:05:03.802926+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"run.awaiting_approval"}
+{"timestamp":"2026-11-27T15:05:03.806884+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"approval.approved","node_id":"reply"}
+{"timestamp":"2026-11-27T15:05:03.808174+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"job.lease_acquired","worker_id":"3496405df55840b5a42f4eadfb1c6d46"}
+{"timestamp":"2026-11-27T15:05:03.808303+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"run.start","nodes":7,"resumed":true}
+{"timestamp":"2026-11-27T15:05:03.842530+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:03.845413+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:03.852982+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.success","node_id":"reply","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.853871+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.success","node_id":"worker","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.855195+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.856002+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.857144+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":false,"duration_ms":10}
+{"timestamp":"2026-11-27T15:05:03.859074+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:03.860528+00:00","request_id":null,"run_id":"d01f63474ce844a98d40ce7ee916d8bf","tenant":"local","event":"run.finish","status":"success","seconds":0.052}
+__ test_settled_write_is_not_replayed_when_the_worker_dies_before_checkpoint ___
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:03.862193+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:03.878888+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:03.879369+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:03.884092+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"job.lease_acquired","worker_id":"572e45e54cf8467d836ac9fd40a6f9df"}
+{"timestamp":"2026-11-27T15:05:03.884323+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+{"timestamp":"2026-11-27T15:05:03.931420+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":15}
+{"timestamp":"2026-11-27T15:05:03.935783+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:03.941748+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"node.cancelled","node_id":"send","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.942528+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:03.942793+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+{"timestamp":"2026-11-27T15:05:03.943817+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"run.finish","status":"failed","seconds":0.059}
+{"timestamp":"2026-11-27T15:05:03.947285+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"job.lease_acquired","worker_id":"572e45e54cf8467d836ac9fd40a6f9df"}
+{"timestamp":"2026-11-27T15:05:03.947395+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"run.start","nodes":5,"resumed":true}
+{"timestamp":"2026-11-27T15:05:04.027964+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:04.030795+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:04.034514+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"node.success","node_id":"send","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.035836+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.036670+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.037750+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-27T15:05:04.039672+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:04.040890+00:00","request_id":null,"run_id":"5805357340d54ffbb8619ec67d565cf6","tenant":"local","event":"run.finish","status":"success","seconds":0.093}
+_________________ test_settlement_requires_a_recorded_outcome __________________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:04.042387+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:04.058653+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:04.059134+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+___________ test_replaying_a_settled_write_does_not_charge_it_again ____________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:04.060608+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:04.076818+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:04.077528+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:04.081977+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"job.lease_acquired","worker_id":"d0ce0b69ccf34e16838e33c48ea69000"}
+{"timestamp":"2026-11-27T15:05:04.082335+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"run.start","nodes":5,"resumed":false}
+{"timestamp":"2026-11-27T15:05:04.119737+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-27T15:05:04.123683+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:04.129264+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"node.cancelled","node_id":"send","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.129987+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"node.cancelled","node_id":"each","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.130236+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+{"timestamp":"2026-11-27T15:05:04.131289+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"run.finish","status":"failed","seconds":0.049}
+{"timestamp":"2026-11-27T15:05:04.134468+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"job.lease_acquired","worker_id":"d0ce0b69ccf34e16838e33c48ea69000"}
+{"timestamp":"2026-11-27T15:05:04.134580+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"run.start","nodes":5,"resumed":true}
+{"timestamp":"2026-11-27T15:05:04.166691+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:04.168069+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"node.success","node_id":"tickets","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:04.171465+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"node.success","node_id":"send","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.172745+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.173533+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"node.info","node_id":"each","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.174603+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"node.success","node_id":"each","transient":false,"cached":false,"duration_ms":5}
+{"timestamp":"2026-11-27T15:05:04.176490+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:04.177658+00:00","request_id":null,"run_id":"e6718520f92a4b9abc365196179c26a9","tenant":"local","event":"run.finish","status":"success","seconds":0.043}
+_____________ test_agent_settled_write_keeps_identity_after_crash ______________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:04.179207+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:04.195371+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:04.195892+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:04.200160+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"job.lease_acquired","worker_id":"cd7beb83601a45ada267d0f000022a5b"}
+{"timestamp":"2026-11-27T15:05:04.200392+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-27T15:05:04.230223+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-27T15:05:04.236392+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"node.cancelled","node_id":"calc","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.237130+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"node.cancelled","node_id":"agent","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.237384+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+{"timestamp":"2026-11-27T15:05:04.238391+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"run.finish","status":"failed","seconds":0.038}
+{"timestamp":"2026-11-27T15:05:04.240999+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"job.lease_acquired","worker_id":"cd7beb83601a45ada267d0f000022a5b"}
+{"timestamp":"2026-11-27T15:05:04.241105+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"run.start","nodes":4,"resumed":true}
+{"timestamp":"2026-11-27T15:05:04.266008+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:04.269827+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"node.success","node_id":"calc","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.270665+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"node.success","node_id":"agent","transient":false,"cached":false,"duration_ms":4}
+{"timestamp":"2026-11-27T15:05:04.272518+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:04.273705+00:00","request_id":null,"run_id":"61cf4cb36a7f4494b76fa526875a0bd9","tenant":"local","event":"run.finish","status":"success","seconds":0.033}
+__________________ test_reexecuted_read_is_not_free_on_resume __________________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:04.274848+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:04.291199+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:04.291685+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:04.295116+00:00","request_id":null,"run_id":"9a1bf3e9030e440a8f801ca804b1d6a9","tenant":"local","event":"job.lease_acquired","worker_id":"137d9b0e129844b1ba71523493d790f8"}
+{"timestamp":"2026-11-27T15:05:04.295348+00:00","request_id":null,"run_id":"9a1bf3e9030e440a8f801ca804b1d6a9","tenant":"local","event":"run.start","nodes":3,"resumed":false}
+{"timestamp":"2026-11-27T15:05:04.322109+00:00","request_id":null,"run_id":"9a1bf3e9030e440a8f801ca804b1d6a9","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":3}
+{"timestamp":"2026-11-27T15:05:04.326304+00:00","request_id":null,"run_id":"9a1bf3e9030e440a8f801ca804b1d6a9","tenant":"local","event":"node.cancelled","node_id":"work","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.326617+00:00","request_id":null,"run_id":"9a1bf3e9030e440a8f801ca804b1d6a9","tenant":"local","event":"run.failure","error_type":"NodeCancelledError"}
+{"timestamp":"2026-11-27T15:05:04.327779+00:00","request_id":null,"run_id":"9a1bf3e9030e440a8f801ca804b1d6a9","tenant":"local","event":"run.finish","status":"failed","seconds":0.032}
+{"timestamp":"2026-11-27T15:05:04.331070+00:00","request_id":null,"run_id":"9a1bf3e9030e440a8f801ca804b1d6a9","tenant":"local","event":"job.lease_acquired","worker_id":"137d9b0e129844b1ba71523493d790f8"}
+{"timestamp":"2026-11-27T15:05:04.331185+00:00","request_id":null,"run_id":"9a1bf3e9030e440a8f801ca804b1d6a9","tenant":"local","event":"run.start","nodes":3,"resumed":true}
+{"timestamp":"2026-11-27T15:05:04.357187+00:00","request_id":null,"run_id":"9a1bf3e9030e440a8f801ca804b1d6a9","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:04.359278+00:00","request_id":null,"run_id":"9a1bf3e9030e440a8f801ca804b1d6a9","tenant":"local","event":"node.failed","node_id":"work","transient":false,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.359571+00:00","request_id":null,"run_id":"9a1bf3e9030e440a8f801ca804b1d6a9","tenant":"local","event":"run.failure","error_type":"ValueError"}
+{"timestamp":"2026-11-27T15:05:04.360536+00:00","request_id":null,"run_id":"9a1bf3e9030e440a8f801ca804b1d6a9","tenant":"local","event":"run.finish","status":"failed","seconds":0.029}
+_________________ test_approval_resume_usage_not_counted_twice _________________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:04.384725+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:04.401553+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:04.402092+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:04.407318+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"job.lease_acquired","worker_id":"f83cec7261bd471ba7defe26a1d6c6a5"}
+{"timestamp":"2026-11-27T15:05:04.407554+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-27T15:05:04.436409+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":4}
+{"timestamp":"2026-11-27T15:05:04.438667+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"m","usage_status":"reported","prompt_tokens":10,"completion_tokens":0}
+{"timestamp":"2026-11-27T15:05:04.443936+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"node.paused","node_id":"calc","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.444979+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"node.paused","node_id":"agent","transient":true,"cached":false,"duration_ms":null,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":0}}
+{"timestamp":"2026-11-27T15:05:04.447236+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"approval.pending","node_id":"calc","approval_kind":"write"}
+{"timestamp":"2026-11-27T15:05:04.447279+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"run.awaiting_approval"}
+{"timestamp":"2026-11-27T15:05:04.450794+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"approval.approved","node_id":"calc"}
+{"timestamp":"2026-11-27T15:05:04.451929+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"job.lease_acquired","worker_id":"f83cec7261bd471ba7defe26a1d6c6a5"}
+{"timestamp":"2026-11-27T15:05:04.452039+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"run.start","nodes":4,"resumed":true}
+{"timestamp":"2026-11-27T15:05:04.476433+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:04.483837+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"node.success","node_id":"calc","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.484309+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"model.usage","node_id":"agent","provider":"ollama","model":"m","usage_status":"reported","prompt_tokens":10,"completion_tokens":0}
+{"timestamp":"2026-11-27T15:05:04.486021+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"node.success","node_id":"agent","transient":false,"cached":false,"duration_ms":8,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":0}}
+{"timestamp":"2026-11-27T15:05:04.487897+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:04.489265+00:00","request_id":null,"run_id":"6e6cd45024d7439c982286d31f5820f1","tenant":"local","event":"run.finish","status":"success","seconds":0.037}
+____________ test_token_persistence_failure_preserves_paid_response ____________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:04.491097+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:04.508074+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:04.508617+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.018}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:04.513405+00:00","request_id":null,"run_id":"ecbe575a5fc44d57be41fb4bf8df15c6","tenant":"local","event":"job.lease_acquired","worker_id":"8d6b55c46a8249209c61be8a5f9c7d3b"}
+{"timestamp":"2026-11-27T15:05:04.513646+00:00","request_id":null,"run_id":"ecbe575a5fc44d57be41fb4bf8df15c6","tenant":"local","event":"run.start","nodes":3,"resumed":false}
+{"timestamp":"2026-11-27T15:05:04.544351+00:00","request_id":null,"run_id":"ecbe575a5fc44d57be41fb4bf8df15c6","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-27T15:05:04.545952+00:00","request_id":null,"run_id":"ecbe575a5fc44d57be41fb4bf8df15c6","tenant":"local","event":"model.usage","node_id":"work","provider":"ollama","model":"m","usage_status":"reported","prompt_tokens":10,"completion_tokens":0}
+{"timestamp":"2026-11-27T15:05:04.546101+00:00","request_id":null,"run_id":"ecbe575a5fc44d57be41fb4bf8df15c6","tenant":"local","event":"accounting.persist_failed","node_id":"work","reason_code":"post_spend","error_type":"RuntimeError"}
+{"timestamp":"2026-11-27T15:05:04.547330+00:00","request_id":null,"run_id":"ecbe575a5fc44d57be41fb4bf8df15c6","tenant":"local","event":"node.success","node_id":"work","transient":false,"cached":false,"duration_ms":1,"usage":{"calls":1,"prompt_tokens":10,"completion_tokens":0}}
+{"timestamp":"2026-11-27T15:05:04.549384+00:00","request_id":null,"run_id":"ecbe575a5fc44d57be41fb4bf8df15c6","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:04.550809+00:00","request_id":null,"run_id":"ecbe575a5fc44d57be41fb4bf8df15c6","tenant":"local","event":"run.finish","status":"success","seconds":0.037}
+___________ test_approval_frame_does_not_restore_old_budget_ceiling ____________
+---------------------------- Captured stderr setup -----------------------------
+{"timestamp":"2026-11-27T15:05:04.552803+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+{"timestamp":"2026-11-27T15:05:04.569444+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0006_usage_status"}
+{"timestamp":"2026-11-27T15:05:04.570004+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.017}
+----------------------------- Captured stderr call -----------------------------
+{"timestamp":"2026-11-27T15:05:04.574243+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"job.lease_acquired","worker_id":"5c86f708968142d59f571b431a1a12ee"}
+{"timestamp":"2026-11-27T15:05:04.574470+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"run.start","nodes":4,"resumed":false}
+{"timestamp":"2026-11-27T15:05:04.603822+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-27T15:05:04.609567+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"node.paused","node_id":"calc","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.610414+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"node.paused","node_id":"agent","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.612425+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"approval.pending","node_id":"calc","approval_kind":"write"}
+{"timestamp":"2026-11-27T15:05:04.612466+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"run.awaiting_approval"}
+{"timestamp":"2026-11-27T15:05:04.615724+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"approval.approved","node_id":"calc"}
+{"timestamp":"2026-11-27T15:05:04.616912+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"job.lease_acquired","worker_id":"5c86f708968142d59f571b431a1a12ee"}
+{"timestamp":"2026-11-27T15:05:04.617028+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"run.start","nodes":4,"resumed":true}
+{"timestamp":"2026-11-27T15:05:04.642152+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"node.success","node_id":"input","transient":false,"cached":true,"duration_ms":0}
+{"timestamp":"2026-11-27T15:05:04.647891+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"node.success","node_id":"calc","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.648731+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"node.warning","node_id":"agent","transient":true,"cached":false,"duration_ms":null}
+{"timestamp":"2026-11-27T15:05:04.649609+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"node.success","node_id":"agent","transient":false,"cached":false,"duration_ms":6}
+{"timestamp":"2026-11-27T15:05:04.651489+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"node.success","node_id":"out","transient":false,"cached":false,"duration_ms":1}
+{"timestamp":"2026-11-27T15:05:04.652868+00:00","request_id":null,"run_id":"61c401d03f504d7da12104f2d62ed7ba","tenant":"local","event":"run.finish","status":"success","seconds":0.036}
+=========================== short test summary info ============================
+PASSED backend/tests/test_agent_write_resume.py::test_a_kill_between_send_and_settle_saves_no_frame_and_blocks_resume
+PASSED backend/tests/test_agent_write_resume.py::test_an_approved_write_saves_frames_at_complete
+PASSED backend/tests/test_execution_safety.py::test_loop_pauses_for_approval_instead_of_recording_a_failed_item
+PASSED backend/tests/test_execution_safety.py::test_uncertain_write_is_not_recovered_by_on_error_continue
+PASSED backend/tests/test_execution_safety.py::test_uncertain_write_is_not_recovered_by_on_error_route
+PASSED backend/tests/test_execution_safety.py::test_write_identity_is_per_action_not_per_loop
+PASSED backend/tests/test_execution_safety.py::test_batch_is_resumable_once_every_write_has_settled
+PASSED backend/tests/test_execution_safety.py::test_loop_item_model_usage_reaches_durable_events
+PASSED backend/tests/test_execution_safety.py::test_completed_write_settles_so_a_gated_second_write_can_resume
+PASSED backend/tests/test_execution_safety.py::test_settled_write_is_not_replayed_when_the_worker_dies_before_checkpoint
+PASSED backend/tests/test_execution_safety.py::test_settlement_requires_a_recorded_outcome
+PASSED backend/tests/test_execution_safety.py::test_replaying_a_settled_write_does_not_charge_it_again
+PASSED backend/tests/test_s07_boundaries.py::test_agent_settled_write_keeps_identity_after_crash
+PASSED backend/tests/test_s07_boundaries.py::test_reexecuted_read_is_not_free_on_resume
+PASSED backend/tests/test_s07_boundaries.py::test_agent_does_not_swallow_reservation_lease_loss
+PASSED backend/tests/test_s07_boundaries.py::test_approval_resume_usage_not_counted_twice
+PASSED backend/tests/test_s07_boundaries.py::test_token_persistence_failure_preserves_paid_response
+PASSED backend/tests/test_s07_boundaries.py::test_approval_frame_does_not_restore_old_budget_ceiling
+PASSED backend/tests/test_s07_boundaries.py::test_the_same_specialist_called_twice_gets_distinct_identities
+FAILED backend/tests/test_agent_write_resume.py::test_def01_a_settled_agent_write_is_not_sent_again_when_its_step_moves
+FAILED backend/tests/test_agent_write_resume.py::test_settle_write_saves_the_open_frames_in_its_commit
+FAILED backend/tests/test_agent_write_resume.py::test_resume_does_not_ask_the_model_for_the_settled_step
+FAILED backend/tests/test_agent_write_resume.py::test_a_specialist_write_saves_a_frame_for_each_agent_on_the_path
+FAILED backend/tests/test_agent_write_resume.py::test_a_loop_item_agent_write_resumes_inside_the_item
+FAILED backend/tests/test_agent_write_resume.py::test_def02_a_stored_write_result_is_not_returned_for_a_different_request
+FAILED backend/tests/test_agent_write_resume.py::test_a_different_request_at_the_same_invocation_stops_the_run
+FAILED backend/tests/test_agent_write_resume.py::test_an_old_result_row_without_a_digest_is_served_as_before
+8 failed, 19 passed, 1 warning in 3.46s
