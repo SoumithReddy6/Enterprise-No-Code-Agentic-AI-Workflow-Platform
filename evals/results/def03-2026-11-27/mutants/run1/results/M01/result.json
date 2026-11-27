@@ -1,0 +1,17 @@
+{
+ "id": "M01",
+ "file": "backend/app/compiler.py",
+ "planned": [
+  "backend/tests/test_validation_cost.py::test_a_record_read_after_a_model_query_is_still_a_trusted_switch_input"
+ ],
+ "planned_hit": [
+  "backend/tests/test_validation_cost.py::test_a_record_read_after_a_model_query_is_still_a_trusted_switch_input"
+ ],
+ "oracle": "walk",
+ "failed": [
+  "backend/tests/test_validation_cost.py::test_a_record_read_after_a_model_query_is_still_a_trusted_switch_input",
+  "backend/tests/test_validation_cost.py::test_unchecked_model_input_visits_each_node_once"
+ ],
+ "killed": true,
+ "ran": 265
+}

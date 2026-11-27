@@ -1,0 +1,749 @@
+{
+  "head_at_start": "20110d4959bdf124e6102350194bc4f46dc2faf8",
+  "head": "20110d4959bdf124e6102350194bc4f46dc2faf8",
+  "working_tree": "",
+  "started_at": 1795808770.4710941,
+  "completed_at": 1795809046.5195048,
+  "source_sha256": {
+    "backend/app/__init__.py": "59489687fe4e7c80a64c9ec50e182e03a117e49ccbf8c555f0b7078a17b86463",
+    "backend/app/accounting_state.py": "c0caf2e2a9906710d71960c4902462aa2a8c788ecba5309b14e39af6c8773119",
+    "backend/app/agent_memory.py": "59421c58d5ef1babce0401e902d37283ffa4a14cede85cc3de5d0bab2f4d3368",
+    "backend/app/agent_runtime.py": "13f2479b53bb3725a10a1b0a40cdcf81f2b8665e8f0c3e60b8fbc04a6ea4837d",
+    "backend/app/answerability_guard.py": "813ceb838c7e99a3516eeff9f8552cb3638e82670928ecead965f59d834251d9",
+    "backend/app/approvals.py": "b1f128466d8e04b426b5c25d317dac989d4ddca074fddef0e4024394f150ba57",
+    "backend/app/auth.py": "085a9b13fa0074d0873b8624a1f11fce1443de5d397e50e1550f0c460f7e2bf3",
+    "backend/app/auth_security.py": "9c5c399d2f2f2f9504e9f7dfe2c4996594644703eb9d6fc5ca1c2bd95ccdf3a5",
+    "backend/app/calculate.py": "13e8602d3a9d6262bf9ae47fc39f27d3cd744eb8dd59631307e1f159d5fbf99e",
+    "backend/app/common_replies.py": "01c61aaeb15dfa053874a9b1f9a4bfa7c9cf0f84eb1c3b31804ec665aa82833c",
+    "backend/app/compiler.py": "963888d39a96ea51cc131b9682f5718a9568d329b8c0e3bcfbf6145e7a399298",
+    "backend/app/conditions.py": "68305e7326bce7c4840e1be6ee6fdda380b7d63b6c5577b5d5421a050bb06031",
+    "backend/app/evidence_registry.py": "462bbafa5bc108e0bfe63fd45beb8fc26d77838be109f08be38bd6b12f488b0b",
+    "backend/app/exact_json.py": "ab438440f11d93486b746b54d6a5b5c3f1047257e7b7733da85a92fc0dcd20c6",
+    "backend/app/execution_policy.py": "99b66c81f0070dea1dd54f73ed7065055f1c2af37a35f63273f8b7fe78091666",
+    "backend/app/extraction_checks.py": "8ac5823f224db38ec0ebcecb6fb9e5fc97ccc53048b45bb460d6dca682b2fdd4",
+    "backend/app/iteration.py": "47e6477a7f24055dcf2e422855770bff5ffbbb4b7e071a9b6d6a5ee1fcc1552c",
+    "backend/app/kb/__init__.py": "b466075df148b1ec103d94036e1d215ae9bd891aa096c0aff9364ee155f9bad8",
+    "backend/app/kb/answerability.py": "224c4cdd6952446a56792c0c224f27ca54f7bf09e186d3bf64db28603762b5c3",
+    "backend/app/kb/embedding.py": "6c6bb4b63216ccbf5b0bf7dd1bb0ac1076e7e6120e7086f53ea6a1021504a3cc",
+    "backend/app/kb/ingestion.py": "c6f9587b14d7b353e1b33089cec27dae9394b480868e20c9e80885bc2dd478e8",
+    "backend/app/kb/management.py": "5b3985a2bab41adde0a70f1e7fa742fbb368dd9c78938a259dff1c54444a848d",
+    "backend/app/kb/management_app.py": "dbb7b6f17eef7e9a138f37a7171392573c374bb453208ef41a013d3c41886d3f",
+    "backend/app/kb/management_models.py": "2b2e65b53c4395998ef067083b81136964e3efa584eda0c62bc6d6790263d118",
+    "backend/app/kb/options.py": "064ef8e0087d8169334dbe15827f9fcf7693c278f9ffe37f5e1956c764637589",
+    "backend/app/kb/reranking.py": "31063b5307857444bdc416f0286df84b74255fdbdffb47af0ee4fde28cf32b91",
+    "backend/app/kb/rpc.py": "bf5bf4d535cf3207845be4a4904538fdfb52d29ed85f82556c711c96fe148bcd",
+    "backend/app/kb/search.py": "8e3354d9782c0e0b07b023d335f84c1f94f1106e6f3b680bf3dd44357bd6730f",
+    "backend/app/kb/search_app.py": "78945d1f66ced1125bf954765f92b1d3d561039e6f431918718f7708cd682aaa",
+    "backend/app/kb/search_models.py": "af8453c5453d515b07ff18db484b6b4c2f4a171c449dae6c75d4b64e77ac46a7",
+    "backend/app/kb/section_chunking.py": "82527dc829fa88fe1ff258f02eb243e2c0469950e00e310eb2fa1345ad77ada7",
+    "backend/app/kb_gateway.py": "efe542364c28f0f48a5605a992e37336ac8d841e471c4fec51596adcaaf0f91a",
+    "backend/app/main.py": "5c6b91ff7457722770bf2f83307d1b1aa46191a8a480e808574d5e4cb9c0d8db",
+    "backend/app/models.py": "8472fcbc7a4c118ef7033a5b59eae8b876151f31322fb7fb13bf6bf9eee287ea",
+    "backend/app/observability.py": "06e64ba26eb67355bb1509b86167fc5bb49ffb4fb59d3fada9b608d6c3180dfe",
+    "backend/app/operator_metrics.py": "81b8f0862e1fb68da6e3c70ffe2e93cb3d223b66603a85f346331d51958249e3",
+    "backend/app/pdf_extract.py": "9d1aeedd5688b52b0eeb61cd435adda695a1e443dc2fd79bb18585e1216c32b1",
+    "backend/app/platform_graph.py": "5e073aca82ff519d2ed0df8b15f4064ecdc003b54a7387811f28fb8513124a8c",
+    "backend/app/platform_nodes.py": "26579b1a05e0699e423ffbcb0cca036739be82665a6d688d677b32ab7df54437",
+    "backend/app/platform_validation.py": "b5b65ac6a53df0de6b310f5f3d0eafbf6d9af11da7b0c1233d694b3f9fd646de",
+    "backend/app/port_types.py": "df4e339dcbeda6eb6ffc5dd7a0123d435e717808dd531b9789da269c6bd6f073",
+    "backend/app/provenance.py": "f404003cfc02198a7fde079947c1b97bae9b01acc417d16d359adba1df0e0b2d",
+    "backend/app/providers.py": "19f567f0614c578d0ff8f58612ced6a2ab0ba050cbfb68f07cc87d3a8f654b4c",
+    "backend/app/readiness.py": "8ee250578eddd36a06e7e22bf1460eaa4a6490f65758de3595a93f65b5079de2",
+    "backend/app/registry.py": "b473b289ea9859992453687692a060d786d6b9535678de3d42864364604096be",
+    "backend/app/repeat.py": "7abc70192b6268307dfa21b3f92c18d407405a26fbc8d8da06a2cdbbce9a67e4",
+    "backend/app/request_contracts.py": "6ef6bcb561b1656b3833feb2243664583c24c05e5efa8de6958e4a25fffe3b92",
+    "backend/app/request_reader.py": "a2b7b3a7a42a15127116470f85d4f011b0e295b66b987968f9b3e4b2c1acf99d",
+    "backend/app/request_router.py": "af3292406f3b1271d650a86b4affef1fa242bc2b142429a2e80f217b24be0253",
+    "backend/app/request_safety.py": "a888f0cffac6d59cead0bcc6f31a41ab0cc975e163ea0f864c8112e8112301a7",
+    "backend/app/sandbox.py": "463c58aa45a4e12aef4a27f332369751a8eba9cebe590bce30365bd0d8997e68",
+    "backend/app/schema.py": "cbbd9eb6a2e5c65069448e48c15d2640e98d75abc0012273bec650763189d882",
+    "backend/app/storage.py": "d998fb9ae7f49bf4c6079b192ce92498de1c2928163e040ad9f54fe374e1ddf0",
+    "backend/app/switch.py": "11a73139d0d290df26d02132173e8178e17c14d1032072f0b1ba84b6f26b2544",
+    "backend/app/token_budget.py": "c5df4875a6dfe54e43d5698c27e9fee6d7e53b43c7584c888e015938e98461cf",
+    "backend/app/tool_api.py": "ef5542b16f8c2ef47ca8e15f75bb6571bfd63b976fc5470cf967f72f81db379d",
+    "backend/app/tool_service.py": "7280e3393f9f2f9b99cafd9357344322f8ab5a9bba32f7d876f628f45db63682",
+    "backend/app/vector_adapters.py": "ed0d207c65b917343c32406deabd8adb6452bc8ac35e2fe1db99110afc328df2",
+    "backend/app/vector_extract.py": "f1e805901e22a8c76ad50604f2a0673a077dea9b7130a605b09fc0f56d174815",
+    "backend/app/verification_receipts.py": "9e94e4b829dafcb891dacad7477daca9d70a11492fc76e2068bbe06e91d6a4c1",
+    "backend/app/worker.py": "746df386430ff1effb8553fef61734c87042c664e96857d663685ecf02ccd9c9",
+    "scripts/scenarios/extraction_verification.py": "f9a0c31b6ccb92aea9ad83be54a8af7f6fe1e8d4f4540f8083317412d3e2fd48",
+    "scripts/scenarios/lab.py": "9ec412e06a757f0a703b0277e4117ff95141b3f4f47fb50bea1677513139c1e0",
+    "scripts/scenarios/milestone_worker.py": "3bd0eeb3e36862e692eefe13d7dbb2063838793378610c63e83ec47470f24fa4",
+    "scripts/scenarios/mixed_approval.py": "c504203bb31d7bc6215c8d7abe61be3dea16dc90087541944b1c0c35758d25fd",
+    "scripts/scenarios/parallel_branches.py": "ef27b3e3b551d4bea32b186ca8ffecbd4ddb110f3766503871b684b9b7cf2f8f",
+    "scripts/scenarios/repeat_loops.py": "8f40c2a8e6ee099318379ab43bfabcaf7238398a9a3a614495d69c06036b9eff",
+    "scripts/scenarios/request_enforcement.py": "21d95b7a620aac3974d60213972060b79bae95b20380ff1084e47d8cfdaf560f",
+    "scripts/scenarios/request_review_worker.py": "233056a2ef5561e1e56d34859ee322930ae9eb0fe3c758f5a2d42d2deca492f5",
+    "scripts/scenarios/request_routing.py": "36d5bcc6f1c0b5d1fafd58785588847f88a4272db7a8af63ddd04fbaf8e34bf0",
+    "scripts/scenarios/switch_routing.py": "9d903ad40be1649d6c4d02de57833ad50f1302ed3b18ebfec15c7b9fc63bd0a8",
+    "scripts/check_production_scenarios.py": "98e449f64147d5a5947bb8ca3b29fca54495cf20715999cb459f74b8a848d288"
+  },
+  "source_files_changed": [],
+  "deployment": "isolated localhost API process + worker process + HTTP provider fixture; SQLite",
+  "external_services": "Jira/delivery fixtures over real HTTP; no live external writes",
+  "rows": [
+    {
+      "id": "S01",
+      "phase": "Batch1",
+      "name": "Ticket batch: approve each exact payload",
+      "status": "passed",
+      "details": {
+        "run_id": "72b6e8ad5aaf4b45a315dc6ae2ac269e",
+        "writes": 3,
+        "distinct_approvals": 3
+      },
+      "seconds": 1.044
+    },
+    {
+      "id": "S02",
+      "phase": "Batch1",
+      "name": "Reject customer reply batch without sending",
+      "status": "passed",
+      "details": {
+        "run_id": "b049e52efe254855a0918585928ff2b3",
+        "writes": 0
+      },
+      "seconds": 0.127
+    },
+    {
+      "id": "S03",
+      "phase": "Batch1",
+      "name": "Uncertain delivery cannot continue",
+      "status": "passed",
+      "details": {
+        "run_id": "fbf3822f92d04abfa2dd7816bc984714",
+        "received_writes": 1,
+        "resume_refused": true
+      },
+      "seconds": 0.127
+    },
+    {
+      "id": "S04",
+      "phase": "Batch1",
+      "name": "Uncertain delivery cannot route onward",
+      "status": "passed",
+      "details": {
+        "run_id": "1d732aaf564e45ec8ca68f35201abbce",
+        "received_writes": 1,
+        "resume_refused": true
+      },
+      "seconds": 0.168
+    },
+    {
+      "id": "S05",
+      "phase": "Batch1",
+      "name": "Worker restart between batch approvals",
+      "status": "passed",
+      "details": {
+        "run_id": "e32bfa1e7020497ca3c546c9417f54aa",
+        "received_writes": 2,
+        "worker_replaced": true
+      },
+      "seconds": 0.923
+    },
+    {
+      "id": "S15",
+      "phase": "Batch1",
+      "name": "Abrupt crash after a durable write item",
+      "status": "passed",
+      "details": {
+        "run_id": "5ea782558456497598bde23efac25fa7",
+        "writes": 2,
+        "crash_after_sql_commit": true,
+        "lease_expiry": "real"
+      },
+      "seconds": 30.212
+    },
+    {
+      "id": "S16",
+      "phase": "Batch1",
+      "name": "Kill worker after receiver accepts a write",
+      "status": "passed",
+      "details": {
+        "run_id": "a66525b8401042d98dc0ee8f5e3e094f",
+        "writes": 1,
+        "uncertain_resume_refused": true
+      },
+      "seconds": 30.256
+    },
+    {
+      "id": "S06",
+      "phase": "A3",
+      "name": "Transient vendor read retries",
+      "status": "passed",
+      "details": {
+        "run_id": "465556c212f04283b20921b13a9f364e",
+        "requests": 2
+      },
+      "seconds": 0.186
+    },
+    {
+      "id": "S07",
+      "phase": "A3-A4",
+      "name": "Loop body retries actually apply",
+      "status": "passed",
+      "details": {
+        "run_id": "556f41848d634220b2434accf63e4b39"
+      },
+      "seconds": 0.128
+    },
+    {
+      "id": "S08",
+      "phase": "A3",
+      "name": "Invalid recovery binding rejected before execution",
+      "status": "passed",
+      "details": {
+        "invalid_binding_rejected": true
+      },
+      "seconds": 0.002
+    },
+    {
+      "id": "S09",
+      "phase": "A4",
+      "name": "Incomplete batch visible at run level",
+      "status": "passed",
+      "details": {
+        "run_id": "6b53bc4410474169b844e090c1162f62"
+      },
+      "seconds": 0.117
+    },
+    {
+      "id": "S10",
+      "phase": "Security",
+      "name": "SSRF denied outside fixture boundary",
+      "status": "passed",
+      "details": {
+        "run_id": "c45f2ea5ec704d61a455c35185f41eaa"
+      },
+      "seconds": 0.119
+    },
+    {
+      "id": "S11",
+      "phase": "Security",
+      "name": "Closed registration and anonymous denial",
+      "status": "passed",
+      "details": {
+        "second_registration": 403,
+        "anonymous_runs": 401
+      },
+      "seconds": 0.005
+    },
+    {
+      "id": "S12",
+      "phase": "Security",
+      "name": "Tenant isolation through authenticated HTTP",
+      "status": "passed",
+      "details": {
+        "foreign_run": 404,
+        "foreign_connections": 0
+      },
+      "seconds": 0.505
+    },
+    {
+      "id": "S13",
+      "phase": "Storage",
+      "name": "Two tabs cannot overwrite silently",
+      "status": "passed",
+      "details": {
+        "fresh": 200,
+        "stale": 409
+      },
+      "seconds": 0.005
+    },
+    {
+      "id": "S14",
+      "phase": "Approvals",
+      "name": "Changed destination invalidates reviewed write",
+      "status": "passed",
+      "details": {
+        "run_id": "8d2b549195ac45f68fb04f80c6203acd",
+        "writes": 0
+      },
+      "seconds": 0.315
+    },
+    {
+      "id": "S17",
+      "phase": "A5.1",
+      "name": "Typed condition routes an external write by amount",
+      "status": "passed",
+      "details": {
+        "branches": {
+          "1200": [
+            "desk",
+            "sent"
+          ],
+          "80": [
+            "kept"
+          ],
+          "1000.00": [
+            "kept"
+          ],
+          "1000.01": [
+            "desk",
+            "sent"
+          ],
+          "9007199254740993.0": [
+            "desk",
+            "sent"
+          ],
+          "1000.00000000000001": "routed to desk; write refused before sending"
+        },
+        "writes": 3
+      },
+      "seconds": 0.856
+    },
+    {
+      "id": "S18",
+      "phase": "A5.1",
+      "name": "Invalid comparison rejected before execution",
+      "status": "passed",
+      "details": {
+        "validation_errors": [
+          "check: gt compares numbers, but compare_to 'a thousand' is not a number."
+        ],
+        "run_created": false
+      },
+      "seconds": 0.006
+    },
+    {
+      "id": "S19",
+      "phase": "A5.1",
+      "name": "Uncomparable value fails the run and takes no branch",
+      "status": "passed",
+      "details": {
+        "run_id": "51752ccb89614a88a036e6e98b5543e5",
+        "error": "Condition field amount 'twelve hundred' is not a number.",
+        "writes": 0
+      },
+      "seconds": 0.187
+    },
+    {
+      "id": "S22",
+      "phase": "A5.3",
+      "name": "Fork: branches run together, the Join waits for both, one write is sent",
+      "status": "passed",
+      "details": {
+        "run_id": "2ad691f23f0c429c92f3a21e8e4c6d4f",
+        "join_runs": 1,
+        "join_running_event": 9,
+        "branch_success_events": {
+          "a1": 5,
+          "b2": 8
+        },
+        "deliveries": [
+          {
+            "lookup": "a"
+          }
+        ],
+        "output": "{\"lookup\": \"s22-b2\"}",
+        "actions_charged": [
+          "a1#0",
+          "b1#0",
+          "b2#0",
+          "send#0"
+        ]
+      },
+      "seconds": 0.185
+    },
+    {
+      "id": "S23a",
+      "phase": "A5.3",
+      "name": "A failed branch cancels its held sibling; nothing after the Join is sent",
+      "status": "passed",
+      "details": {
+        "run_id": "04fe4cd3cb4e41bfb6782a97959497d1",
+        "error": "Tool provider returned HTTP 500",
+        "a1": "failed",
+        "b1": "cancelled while its answer was held",
+        "join_events": 0,
+        "deliveries": 0,
+        "b1_requests": 1
+      },
+      "seconds": 0.129
+    },
+    {
+      "id": "S23b",
+      "phase": "A5.3",
+      "name": "A write inside a branch is refused before any run",
+      "status": "passed",
+      "details": {
+        "validation_errors": [
+          "b1: external writes belong after the Join."
+        ],
+        "submission": 422,
+        "runs_created": 0,
+        "requests": 0
+      },
+      "seconds": 0.006
+    },
+    {
+      "id": "S24",
+      "phase": "A5.3",
+      "name": "A worker killed in a fork resumes without repeating finished work",
+      "status": "passed",
+      "details": {
+        "run_id": "9f5420ae4db9486a84f80ade270bd220",
+        "checkpoints_at_kill": [
+          "a1",
+          "input"
+        ],
+        "deliveries_at_kill": 0,
+        "resumed_after_seconds": 30.1,
+        "a1_requests": 1,
+        "b1_requests": 2,
+        "join_runs": 1,
+        "deliveries": [
+          {
+            "lookup": "a"
+          }
+        ],
+        "lease_expiry": "real",
+        "claimed_after_lease_end_seconds": 0.043
+      },
+      "seconds": 30.255
+    },
+    {
+      "id": "S20",
+      "phase": "A5.2",
+      "name": "Switch routes a checked support category to exactly one receiver",
+      "status": "passed",
+      "details": {
+        "routes": {
+          "billing": {
+            "run_id": "9d9f1a675fd6422db9929db8f255e0aa",
+            "route": "billing",
+            "receiver": "/deliver/switch/billing"
+          },
+          "technical": {
+            "run_id": "5ee603091bf34bd1b552e4a89a07f986",
+            "route": "technical",
+            "receiver": "/deliver/switch/technical"
+          }
+        },
+        "receivers_called": [
+          "/deliver/switch/billing",
+          "/deliver/switch/technical"
+        ],
+        "model_reads": 2
+      },
+      "seconds": 0.826
+    },
+    {
+      "id": "S21a",
+      "phase": "A5.2",
+      "name": "A forged saved route is refused before any send",
+      "status": "passed",
+      "details": {
+        "run_id": "242aff58e6644af6bb7bfe3d14637084",
+        "forged_route": "technical",
+        "error": "Switch route does not match its checked input and cases.",
+        "sends": 0
+      },
+      "seconds": 0.375
+    },
+    {
+      "id": "S21b",
+      "phase": "A5.2",
+      "name": "Routing on an unchecked HTTP value or in contract 1 is refused",
+      "status": "passed",
+      "details": {
+        "validation_errors": [
+          "route: Route on checked values, or use a Condition, which supports review."
+        ],
+        "run_status": 422,
+        "contract_1": [
+          "route: Switch requires a contract-2 workflow."
+        ],
+        "contract_1_submission": 422,
+        "runs_created": 0,
+        "sends": 0
+      },
+      "seconds": 0.011
+    },
+    {
+      "id": "S21c",
+      "phase": "A5.2",
+      "name": "A case named \"approved\" cannot bypass a required approval",
+      "status": "passed",
+      "details": {
+        "run_id": "25bcc06d909744bbbc52e753bdd090f3",
+        "approval_kind": "write",
+        "after_reject": "cancelled",
+        "sends": 0
+      },
+      "seconds": 0.187
+    },
+    {
+      "id": "S25",
+      "phase": "A6.1",
+      "name": "A support reply is drafted, checked and sent once",
+      "status": "passed",
+      "details": {
+        "run_id": "a7e682bab66e44aabe2d3d412d19f846",
+        "calls": {
+          "writer": 2,
+          "judge": 2
+        },
+        "second_writer_input": {
+          "input": "Customer case",
+          "previous": "Draft 1: your refund is on its way.",
+          "feedback": "{\"pass\": false, \"feedback\": \"add the refund number\"}"
+        },
+        "iterations": 2,
+        "deliveries": [
+          {
+            "input": "Draft 2: refund R-42 is on its way."
+          }
+        ],
+        "tokens_spent": 60,
+        "actions_charged": [
+          "send#0"
+        ]
+      },
+      "seconds": 0.625
+    },
+    {
+      "id": "S26a",
+      "phase": "A6.1",
+      "name": "A reply that never meets the rule is not sent",
+      "status": "passed",
+      "details": {
+        "run_id": "84267075acab4f319b5cffb32152c442",
+        "error": "r: the stop rule was not met after 2 iterations.",
+        "calls": {
+          "writer": 2,
+          "judge": 2
+        },
+        "send_events": 0,
+        "deliveries": 0
+      },
+      "seconds": 0.193
+    },
+    {
+      "id": "S26b",
+      "phase": "A6.1",
+      "name": "An unaccepted reply under on_limit last waits for a person",
+      "status": "passed",
+      "details": {
+        "refused": [
+          "send: a write after r needs approval: true, because r can return an answer that did not meet its stop rule (on_limit: last)."
+        ],
+        "limit": {
+          "run_id": "bdf503588a8346aebd95d3d68672a4fd",
+          "calls": {
+            "writer": 2,
+            "judge": 2
+          },
+          "stopped_by": "limit",
+          "offered": "Draft 2",
+          "deliveries": 0,
+          "run_truncated_key": false
+        },
+        "budget": {
+          "run_id": "faab4e1002a24a19bbba2bf86ac1da58",
+          "calls": {
+            "writer": 2,
+            "judge": 1
+          },
+          "stopped_by": "budget",
+          "offered": "Draft 1",
+          "deliveries": 0,
+          "run_truncated_key": false
+        }
+      },
+      "seconds": 0.28
+    },
+    {
+      "id": "S26c",
+      "phase": "A6.1",
+      "name": "A write inside the loop is refused before any run",
+      "status": "passed",
+      "details": {
+        "validation_errors": [
+          "writer: external writes belong after the Repeat."
+        ],
+        "submission": 422,
+        "runs_created": 0,
+        "requests": 0,
+        "model_calls": 0
+      },
+      "seconds": 0.006
+    },
+    {
+      "id": "S27",
+      "phase": "A6.1-budget",
+      "name": "A token budget that stops the checker sends no unchecked draft",
+      "status": "passed",
+      "details": {
+        "run_id": "79fe8f919a8d45888fa5e30978bfc555",
+        "error": "r: the run budget stopped iteration 2 before it was checked. Run token budget exhausted; raise RELAY_RUN_TOKEN_LIMIT.",
+        "calls": {
+          "writer": 2,
+          "judge": 1
+        },
+        "deliveries": 0,
+        "token_limit": {
+          "policy": "admission",
+          "limit": 100,
+          "spent": 120,
+          "over": 20
+        }
+      },
+      "seconds": 0.124
+    },
+    {
+      "id": "S28",
+      "phase": "A6.1-recovery",
+      "name": "A worker killed in an iteration resumes without repeating saved iterations",
+      "status": "passed",
+      "details": {
+        "run_id": "7bf3c7484f994679924dcd4bb1d5223b",
+        "rows_at_kill": 1,
+        "deliveries_at_kill": 0,
+        "tokens_at_kill": 30,
+        "resumed_after_seconds": 30.2,
+        "calls": {
+          "writer": 3,
+          "judge": 2
+        },
+        "deliveries": [
+          {
+            "input": "Draft 2"
+          }
+        ],
+        "tokens_spent": 60,
+        "lease_expiry": "real",
+        "claimed_after_lease_end_seconds": 0.053
+      },
+      "seconds": 30.322
+    },
+    {
+      "id": "S29",
+      "phase": "A6.1-approvals",
+      "name": "The approval after a Repeat shows the accepted draft",
+      "status": "passed",
+      "details": {
+        "run_id": "1b16a97c1153445ea6ece9c8572a8156",
+        "reviewed": {
+          "input": "Draft 2: refund R-42."
+        },
+        "deliveries": [
+          {
+            "input": "Draft 2: refund R-42."
+          }
+        ],
+        "calls": {
+          "writer": 2,
+          "judge": 2
+        },
+        "r_after_approval": [
+          {
+            "status": "success",
+            "cached": true
+          }
+        ]
+      },
+      "seconds": 0.445
+    },
+    {
+      "id": "M01",
+      "phase": "Batch1-contract",
+      "name": "Mixed approval modes inside one loop agent",
+      "status": "passed",
+      "details": {
+        "command": [
+          "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/bin/python",
+          "-m",
+          "scripts.scenarios.mixed_approval"
+        ],
+        "exit_code": 0
+      },
+      "seconds": 0.944
+    },
+    {
+      "id": "backend",
+      "phase": "repository",
+      "name": "backend",
+      "status": "passed",
+      "details": {
+        "command": [
+          "/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/bin/python",
+          "-m",
+          "pytest",
+          "backend/tests",
+          "-q"
+        ],
+        "exit_code": 0
+      },
+      "seconds": 134.917
+    },
+    {
+      "id": "frontend-tests",
+      "phase": "repository",
+      "name": "frontend-tests",
+      "status": "passed",
+      "details": {
+        "command": [
+          "npm",
+          "--prefix",
+          "frontend",
+          "test"
+        ],
+        "exit_code": 0
+      },
+      "seconds": 1.167
+    },
+    {
+      "id": "typecheck",
+      "phase": "repository",
+      "name": "typecheck",
+      "status": "passed",
+      "details": {
+        "command": [
+          "npm",
+          "--prefix",
+          "frontend",
+          "run",
+          "typecheck"
+        ],
+        "exit_code": 0
+      },
+      "seconds": 2.383
+    },
+    {
+      "id": "lint",
+      "phase": "repository",
+      "name": "lint",
+      "status": "passed",
+      "details": {
+        "command": [
+          "npm",
+          "--prefix",
+          "frontend",
+          "run",
+          "lint"
+        ],
+        "exit_code": 0
+      },
+      "seconds": 0.984
+    },
+    {
+      "id": "build",
+      "phase": "repository",
+      "name": "build",
+      "status": "passed",
+      "details": {
+        "command": [
+          "npm",
+          "--prefix",
+          "frontend",
+          "run",
+          "build"
+        ],
+        "exit_code": 0
+      },
+      "seconds": 1.832
+    }
+  ],
+  "passed": true
+}

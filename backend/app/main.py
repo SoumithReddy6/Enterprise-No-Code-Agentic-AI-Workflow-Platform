@@ -72,7 +72,9 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     install_kb_routes(app,store,tenant,knowledge_services)
     app.state.readiness=Readiness(store,app.state.knowledge_services)
     async def submission_errors(workflow,tenant_id,checkpoints=None,dependencies=None):
-        return validate_workflow(workflow)+store.model_errors(workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id,checkpoints,dependencies)+await sandbox.preflight_errors(workflow)
+        # Validation is CPU work; on the event loop it would stop every other request and, with the
+        # embedded worker, its heartbeat (DEF-03). It reads the workflow only.
+        return await asyncio.to_thread(validate_workflow,workflow)+store.model_errors(workflow,tenant_id)+platform_errors(store,workflow,tenant_id)+await kb_errors(app.state.knowledge_services,workflow,tenant_id,checkpoints,dependencies)+await sandbox.preflight_errors(workflow)
 
     @app.exception_handler(RequestValidationError)
     async def safe_validation_error(request,exc):
@@ -111,7 +113,7 @@ def create_app(database_url=None,encryption_key=None,auth_enabled=True,embedded_
     @app.post('/api/validate')
     async def validate(workflow:Workflow,tenant_id:str=Depends(tenant)):
         from .provenance import decision_warnings
-        errors=await submission_errors(workflow,tenant_id);warnings=type_warnings(workflow)+decision_warnings(workflow)
+        errors=await submission_errors(workflow,tenant_id);warnings=await asyncio.to_thread(lambda:type_warnings(workflow)+decision_warnings(workflow))
         # issues/warning_issues carry the node each message concerns, so the editor can name
         # and highlight it; errors/warnings keep their original text for existing readers.
         return {'valid':not errors,'errors':errors,'warnings':warnings,'issues':locate(errors,workflow),

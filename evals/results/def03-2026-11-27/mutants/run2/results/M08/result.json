@@ -1,0 +1,10 @@
+{
+ "id": "M08",
+ "file": "backend/app/provenance.py",
+ "planned": [],
+ "planned_hit": [],
+ "oracle": "walk+full",
+ "failed": [],
+ "killed": false,
+ "ran": 2075
+}

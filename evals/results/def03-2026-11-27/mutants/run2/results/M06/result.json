@@ -1,0 +1,16 @@
+{
+ "id": "M06",
+ "file": "backend/app/provenance.py",
+ "planned": [
+  "backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered"
+ ],
+ "planned_hit": [
+  "backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered"
+ ],
+ "oracle": "walk",
+ "failed": [
+  "backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered"
+ ],
+ "killed": true,
+ "ran": 265
+}

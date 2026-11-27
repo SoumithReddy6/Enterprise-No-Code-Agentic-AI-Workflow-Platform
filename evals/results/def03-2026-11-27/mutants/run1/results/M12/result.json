@@ -1,0 +1,16 @@
+{
+ "id": "M12",
+ "file": "backend/app/main.py",
+ "planned": [
+  "backend/tests/test_validation_cost.py::test_validate_route_does_not_block_the_event_loop"
+ ],
+ "planned_hit": [
+  "backend/tests/test_validation_cost.py::test_validate_route_does_not_block_the_event_loop"
+ ],
+ "oracle": "walk",
+ "failed": [
+  "backend/tests/test_validation_cost.py::test_validate_route_does_not_block_the_event_loop"
+ ],
+ "killed": true,
+ "ran": 265
+}

@@ -1,0 +1,5 @@
+seed 0: 15 passed, 7 xfailed, 1 warning in 15.15s
+seed 1: 15 passed, 7 xfailed, 1 warning in 14.89s
+seed 2: 15 passed, 7 xfailed, 1 warning in 14.75s
+seed 3: 15 passed, 7 xfailed, 1 warning in 14.60s
+seed 4: 15 passed, 7 xfailed, 1 warning in 14.61s

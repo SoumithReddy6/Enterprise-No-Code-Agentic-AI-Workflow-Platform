@@ -1,0 +1,3 @@
+FAILED backend/tests/test_validation_cost.py::test_each_walk_gives_the_same_answers_as_before_on_small_graphs[fresh-memo]
+FAILED backend/tests/test_validation_cost.py::test_each_walk_gives_the_same_answers_as_before_on_small_graphs[shared-memo]
+2 failed, 272 passed, 1 warning in 16.42s

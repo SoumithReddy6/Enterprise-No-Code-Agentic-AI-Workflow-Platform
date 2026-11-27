@@ -1,0 +1,4 @@
+M07 killed walk ['backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered']
+M06 killed walk ['backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered']
+M00 control passes walk+full []
+M08 SURVIVED walk+full []

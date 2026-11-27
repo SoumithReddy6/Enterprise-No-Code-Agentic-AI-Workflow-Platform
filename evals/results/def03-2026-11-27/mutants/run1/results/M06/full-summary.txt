@@ -1,0 +1,2 @@
+FAILED backend/tests/defects/test_def10_static_label_cycle.py::test_validation_of_a_doubled_chain_with_a_binding_cycle_finishes_in_ten_seconds
+1 failed, 2191 passed, 6 xfailed, 4 warnings in 134.76s (0:02:14)

@@ -1,0 +1,175 @@
+{
+ "M00": {
+  "control_passes": true,
+  "oracle": "walk+full",
+  "planned": [],
+  "planned_hit": [],
+  "failed": [],
+  "ran": 2075
+ },
+ "M01": {
+  "killed": true,
+  "oracle": "walk",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_a_record_read_after_a_model_query_is_still_a_trusted_switch_input"
+  ],
+  "planned_hit": [
+   "backend/tests/test_validation_cost.py::test_a_record_read_after_a_model_query_is_still_a_trusted_switch_input"
+  ],
+  "failed": [
+   "backend/tests/test_validation_cost.py::test_a_record_read_after_a_model_query_is_still_a_trusted_switch_input",
+   "backend/tests/test_validation_cost.py::test_unchecked_model_input_visits_each_node_once"
+  ],
+  "ran": 265
+ },
+ "M02": {
+  "killed": true,
+  "oracle": "walk",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_a_diamond_with_a_model_on_one_side_is_still_refused"
+  ],
+  "planned_hit": [
+   "backend/tests/test_validation_cost.py::test_a_diamond_with_a_model_on_one_side_is_still_refused"
+  ],
+  "failed": [
+   "backend/tests/test_validation_cost.py::test_a_diamond_with_a_model_on_one_side_is_still_refused",
+   "backend/tests/test_validation_cost.py::test_a_node_on_the_walk_path_is_not_remembered_as_safe",
+   "backend/tests/test_validation_cost.py::test_each_walk_gives_the_same_answers_as_before_on_small_graphs[shared-memo]"
+  ],
+  "ran": 265
+ },
+ "M03": {
+  "killed": true,
+  "oracle": "walk",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_a_node_on_the_walk_path_is_not_remembered_as_safe"
+  ],
+  "planned_hit": [
+   "backend/tests/test_validation_cost.py::test_a_node_on_the_walk_path_is_not_remembered_as_safe"
+  ],
+  "failed": [
+   "backend/tests/test_validation_cost.py::test_a_node_on_the_walk_path_is_not_remembered_as_safe",
+   "backend/tests/test_validation_cost.py::test_each_walk_gives_the_same_answers_as_before_on_small_graphs[shared-memo]"
+  ],
+  "ran": 265
+ },
+ "M04": {
+  "killed": true,
+  "oracle": "walk",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_a_node_on_the_walk_path_is_not_remembered_as_safe"
+  ],
+  "planned_hit": [
+   "backend/tests/test_validation_cost.py::test_a_node_on_the_walk_path_is_not_remembered_as_safe"
+  ],
+  "failed": [
+   "backend/tests/test_validation_cost.py::test_a_node_on_the_walk_path_is_not_remembered_as_safe",
+   "backend/tests/test_validation_cost.py::test_each_walk_gives_the_same_answers_as_before_on_small_graphs[shared-memo]",
+   "backend/tests/test_validation_cost.py::test_the_trust_rule_gives_the_same_answers_as_before_for_the_guard_declarations"
+  ],
+  "ran": 265
+ },
+ "M05": {
+  "killed": true,
+  "oracle": "walk",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_unchecked_model_input_visits_each_node_once"
+  ],
+  "planned_hit": [
+   "backend/tests/test_validation_cost.py::test_unchecked_model_input_visits_each_node_once"
+  ],
+  "failed": [
+   "backend/tests/test_validation_cost.py::test_unchecked_model_input_visits_each_node_once"
+  ],
+  "ran": 265
+ },
+ "M06": {
+  "killed": true,
+  "oracle": "walk+full",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered"
+  ],
+  "planned_hit": [],
+  "failed": [
+   "backend/tests/defects/test_def10_static_label_cycle.py::test_validation_of_a_doubled_chain_with_a_binding_cycle_finishes_in_ten_seconds"
+  ],
+  "ran": 2075
+ },
+ "M07": {
+  "killed": false,
+  "oracle": "walk+full",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered"
+  ],
+  "planned_hit": [],
+  "failed": [],
+  "ran": 2075
+ },
+ "M08": {
+  "killed": false,
+  "oracle": "walk+full",
+  "planned": [],
+  "planned_hit": [],
+  "failed": [],
+  "ran": 2075
+ },
+ "M09": {
+  "killed": true,
+  "oracle": "walk",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_static_label_cost_is_linear"
+  ],
+  "planned_hit": [
+   "backend/tests/test_validation_cost.py::test_static_label_cost_is_linear"
+  ],
+  "failed": [
+   "backend/tests/test_validation_cost.py::test_static_label_cost_is_linear",
+   "backend/tests/test_validation_cost.py::test_validation_of_a_40_prompt_chain_into_a_switch_finishes_in_ten_seconds[input.message]"
+  ],
+  "ran": 265
+ },
+ "M10": {
+  "killed": true,
+  "oracle": "walk",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_each_walk_gives_the_same_answers_as_before_on_small_graphs[fresh-memo]"
+  ],
+  "planned_hit": [
+   "backend/tests/test_validation_cost.py::test_each_walk_gives_the_same_answers_as_before_on_small_graphs[fresh-memo]"
+  ],
+  "failed": [
+   "backend/tests/test_validation_cost.py::test_each_walk_gives_the_same_answers_as_before_on_small_graphs[fresh-memo]",
+   "backend/tests/test_validation_cost.py::test_each_walk_gives_the_same_answers_as_before_on_small_graphs[shared-memo]"
+  ],
+  "ran": 265
+ },
+ "M11": {
+  "killed": true,
+  "oracle": "walk",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_checked_dependency_cost_is_linear"
+  ],
+  "planned_hit": [
+   "backend/tests/test_validation_cost.py::test_checked_dependency_cost_is_linear"
+  ],
+  "failed": [
+   "backend/tests/test_validation_cost.py::test_checked_dependency_cost_is_linear",
+   "backend/tests/test_validation_cost.py::test_validation_of_a_40_prompt_chain_into_a_switch_finishes_in_ten_seconds[reader.text]"
+  ],
+  "ran": 265
+ },
+ "M12": {
+  "killed": true,
+  "oracle": "walk",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_validate_route_does_not_block_the_event_loop"
+  ],
+  "planned_hit": [
+   "backend/tests/test_validation_cost.py::test_validate_route_does_not_block_the_event_loop"
+  ],
+  "failed": [
+   "backend/tests/test_validation_cost.py::test_validate_route_does_not_block_the_event_loop"
+  ],
+  "ran": 265
+ }
+}

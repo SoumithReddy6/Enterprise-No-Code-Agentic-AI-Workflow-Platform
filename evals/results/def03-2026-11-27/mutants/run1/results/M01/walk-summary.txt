@@ -1,0 +1,3 @@
+FAILED backend/tests/test_validation_cost.py::test_unchecked_model_input_visits_each_node_once
+FAILED backend/tests/test_validation_cost.py::test_a_record_read_after_a_model_query_is_still_a_trusted_switch_input
+2 failed, 272 passed, 1 warning in 16.60s

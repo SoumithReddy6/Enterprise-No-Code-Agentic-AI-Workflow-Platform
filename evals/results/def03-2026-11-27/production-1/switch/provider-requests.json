@@ -1,0 +1,12 @@
+[
+  {
+    "method": "POST",
+    "path": "/deliver/switch/billing",
+    "body": "{\"summary\":\"Invoice download is broken\",\"category\":\"billing\"}"
+  },
+  {
+    "method": "POST",
+    "path": "/deliver/switch/technical",
+    "body": "{\"summary\":\"Invoice download is broken\",\"category\":\"technical\"}"
+  }
+]
