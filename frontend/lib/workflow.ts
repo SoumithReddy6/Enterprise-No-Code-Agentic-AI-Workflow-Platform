@@ -423,7 +423,9 @@ export const paletteCategories = [
 ];
 export function paletteCategory(type: string): string | null {
   // These stay loadable for saved workflows but are not offered. The Request reader
-  // replaces the greeting cache, router and separate extraction check.
+  // replaces the greeting cache, router and separate extraction check. The Request reader
+  // itself is frozen as experimental (docs/gap-audit.md §8, W03): it fails its usability
+  // gate, so it is not offered either; the templates still start with it.
   if (
     [
       'prompt',
@@ -431,6 +433,7 @@ export function paletteCategory(type: string): string | null {
       'greeting_cache',
       'request_router',
       'verify_extraction',
+      'request_reader',
     ].includes(type)
   )
     return null;
@@ -445,7 +448,6 @@ export function paletteCategory(type: string): string | null {
         condition: 'Control',
         calculate: 'Control',
         join: 'Control',
-        request_reader: 'Control',
         switch: 'Control',
         repeat: 'Control',
         response: 'Output',

@@ -1,0 +1,15 @@
+M00 control 6 passed in 2.36s cli 0
+M01 killed 1 failed, 5 passed in 2.45s cli 1
+M02 killed 1 failed, 5 passed in 2.28s cli 1
+M03 killed 1 failed, 5 passed in 2.25s cli 1
+M04 killed 1 failed, 5 passed in 2.31s cli 1
+M05 killed 2 failed, 4 passed in 2.31s cli 0
+M06 killed 1 failed, 5 passed in 2.29s cli 1
+M07 killed 1 failed, 5 passed in 2.26s cli 1
+M08 killed 1 failed, 5 passed in 2.28s cli 0
+M09 killed 2 failed, 4 passed in 2.29s cli 1
+M10 killed 1 failed, 5 passed in 2.26s cli 1
+M11 killed 2 failed, 4 passed in 2.27s cli 1
+M12 SURVIVED 6 passed in 2.21s cli 0
+M14 killed 1 failed, 5 passed in 2.23s cli 1
+M13 killed 2 failed, 4 passed in 2.23s cli 1

@@ -1,0 +1,43 @@
+FF.F..                                                                   [100%]
+=================================== FAILURES ===================================
+_____________ test_backend_test_count_in_readme_matches_collection _____________
+
+    def test_backend_test_count_in_readme_matches_collection():
+>       assert claims.backend_test_count_errors() == []
+E       AssertionError: assert ['README.md:1...ory has 2204'] == []
+E         
+E         Left contains 2 more items, first extra item: 'README.md:13 states 2176 backend tests; the repository has 2204'
+E         Use -v to get more diff
+
+backend/tests/test_readme_claims.py:9: AssertionError
+________________ test_scenario_count_in_readme_matches_the_gate ________________
+
+    def test_scenario_count_in_readme_matches_the_gate():
+        # 34 S-rows at 24e659c (S01–S29 with variants); README.md said 27 in §5.
+>       assert claims.scenario_count_errors() == []
+E       AssertionError: assert ['README.md:4...itory has 34'] == []
+E         
+E         Left contains one more item: 'README.md:426 states 27 scenarios; the repository has 34'
+E         Use -v to get more diff
+
+backend/tests/test_readme_claims.py:14: AssertionError
+______________ test_stack_line_separates_live_and_fixture_tested _______________
+
+    def test_stack_line_separates_live_and_fixture_tested():
+>       assert claims.stack_errors(claims.documents()['README.md']) == []
+E       assert ['README has ...th fixtures"'] == []
+E         
+E         Left contains 5 more items, first extra item: 'README has no stack row labelled "run live"'
+E         Use -v to get more diff
+
+backend/tests/test_readme_claims.py:22: AssertionError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED backend/tests/test_readme_claims.py::test_ci_job_count_matches_the_workflow
+PASSED backend/tests/test_readme_claims.py::test_checker_refuses_a_document_that_states_no_count
+PASSED backend/tests/test_readme_claims.py::test_checker_reads_thousands_and_number_words
+FAILED backend/tests/test_readme_claims.py::test_backend_test_count_in_readme_matches_collection
+FAILED backend/tests/test_readme_claims.py::test_scenario_count_in_readme_matches_the_gate
+FAILED backend/tests/test_readme_claims.py::test_stack_line_separates_live_and_fixture_tested
+3 failed, 3 passed in 2.77s
+exit 1

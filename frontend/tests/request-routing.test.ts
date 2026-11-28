@@ -30,8 +30,10 @@ void test('new narrative workflow starts with a request reader without pretendin
   );
 });
 
-void test('the palette offers the request reader and hides the replaced admission nodes', () => {
-  assert.equal(paletteCategory('request_reader'), 'Control');
+void test('the palette hides the frozen request reader and the replaced admission nodes', () => {
+  // W03: the reader is frozen as experimental and out of the palette; templates keep it.
+  assert.equal(paletteCategory('request_reader'), null);
+  assert.ok(seed.nodes.some((n) => n.type === 'request_reader'));
   for (const type of ['greeting_cache', 'request_router', 'verify_extraction'])
     assert.equal(paletteCategory(type), null);
 });

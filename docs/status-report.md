@@ -3,6 +3,11 @@
 Read-only audit for an outside senior engineer. Snapshot: commit `7c4aa62` (2026-11-15), branch
 `codex/retrieval-answerability-safety`, audited 2026-11-16. No source code was changed.
 
+Update 2026-11-27 (W03): the Repeat rows (A6.1) and the request reader rows are corrected for the
+state at `813b7ec`. The rest of this report is the 2026-11-16 snapshot; its numbers and line
+references are not updated. The current counts are in `README.md`, checked by
+`scripts/check_readme_claims.py`.
+
 Conventions:
 - "unmeasured" means that no measurement exists in the repository.
 - "not run" means that this audit did not run the check, because it takes more than 5 minutes, needs
@@ -29,8 +34,9 @@ Sources: `README.md:1-14`, `frontend/components/workflow-editor.tsx`, `backend/a
 
 ### Node types
 
-24 types are registered in `backend/app/registry.py:284+`. 19 are offered in the palette
-(`frontend/lib/workflow.ts:412-442`). Five older types still load in saved workflows but are hidden.
+24 types are registered in `backend/app/registry.py:284+`. 18 are offered in the palette
+(`frontend/lib/workflow.ts:424-457`). Five older types and the frozen request reader still load in
+saved workflows but are hidden (W03, 2026-11-27).
 
 | Type | What it does | Status |
 |---|---|---|
@@ -44,8 +50,8 @@ Sources: `README.md:1-14`, `frontend/components/workflow-editor.tsx`, `backend/a
 | `join` | Waits for every branch of one fork (2–8 branches) | DONE |
 | `calculate` | Exact arithmetic and checks on JSON fields in code, not in a model | DONE |
 | `for_each` | Runs an attached body once for each list element, with per-item rows | DONE (backend and display; hidden from the palette by design) |
-| `repeat` | Runs a body and an optional checker Agent until a typed stop rule is met, at most 10 times | PARTIAL: backend DONE; editor committed (`7c4aa62`), review not done; deployed scenarios PLANNED |
-| `request_reader` | Prepared replies, one model read of the request, every value checked in code | PARTIAL: passes its safety gate, fails its usability gate (admits 9 of 20 valid requests, needs 18) (`README.md:276`) |
+| `repeat` | Runs a body and an optional checker Agent until a typed stop rule is met, at most 10 times | DONE (A6.1 Parts 1–3): backend; editor, review closed (`docs/reviews/a61-part2-review-fix-recheck-2026-11-16.md`, fix `8705b7f`); deployed scenarios S25–S29, gate 40 of 40 at `24e659c` (`docs/gap-audit.md` §2.3). No Part 3 review file yet (W04) |
+| `request_reader` | Prepared replies, one model read of the request, every value checked in code | FROZEN, experimental (W03): passes its safety gate, fails its usability gate (admits 9 of 20 valid requests, needs 18). Out of the palette; the templates still start with it |
 | `response` | Ends a path, validates `[S#]` citations, checks sources again | DONE |
 | `tool_http` | Configured HTTP GET or POST with DNS-pinned egress | DONE (one live read-only GET to `api.github.com/zen` in the 2026-10-06 campaign) |
 | `tool_email` | SMTP send | DONE (tested with fixtures; no live SMTP run found) |
@@ -418,8 +424,8 @@ Effort: S < 1 day, M 1–5 days, L > 5 days (auditor estimates). GitHub issues: 
 
 | Item | Status | Effort | Depends on | Risk if left unfinished |
 |---|---|---|---|---|
-| A6.1 Part 2: Repeat editor, implementation review | PARTIAL | S | review findings | The Repeat stays unreviewed in the editor |
-| A6.1 Part 3: Repeat deployed scenarios | PLANNED | M | Part 2 | The loop has no deployed-process crash evidence; it is weaker than fork/Join |
+| A6.1 Part 2: Repeat editor, implementation review | DONE (2026-11-16) | — | — | Review closed: `docs/reviews/a61-part2-review-fix-recheck-2026-11-16.md` |
+| A6.1 Part 3: Repeat deployed scenarios | DONE (2026-11-16) | — | — | S25–S29 pass in the deployed gate; the review record is missing (W04) |
 | A6.2: subgraphs | PLANNED | L | published workflow versions | Large workflows cannot be reused |
 | A5.3b: writes and approvals inside branches | PLANNED | L | a new branch runtime | Parallel work cannot act |
 | Strict token cap (reserve, then settle) | PLANNED | M | provider `max_tokens` on every call | A run can end above its limit |

@@ -27,6 +27,8 @@ jobs:
       # Hash randomisation catches assertions that depend on set iteration order.
       - run: PYTHONHASHSEED=1 python -m pytest backend/tests -q
       - run: python -m pytest backend/tests/test_schema_migrations.py -q
+      # The counts the README states (tests, scenarios, CI jobs) and its stack rows.
+      - run: python -m scripts.check_readme_claims
       # Synthetic model HTTP + real API/worker/local receiver: proves the boundary,
       # never substitutes for the separately recorded live-model admission gate.
       - run: python -u -m scripts.eval_request_admission --profile fault --out evals/results/request-admission-ci

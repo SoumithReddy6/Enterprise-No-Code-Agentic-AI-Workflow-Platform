@@ -1,0 +1,252 @@
+{
+ "head_at_start": "813b7ec3b5ec486841e2fb20f83c0bf6038044eb",
+ "head": "813b7ec3b5ec486841e2fb20f83c0bf6038044eb",
+ "started_at": 1795828369.76112,
+ "completed_at": 1795828640.562391,
+ "source_files_changed": [],
+ "deployment": "isolated localhost API process + worker process + HTTP provider fixture; SQLite",
+ "external_services": "Jira/delivery fixtures over real HTTP; no live external writes",
+ "rows": [
+  {
+   "id": "S01",
+   "name": "Ticket batch: approve each exact payload",
+   "status": "passed",
+   "seconds": 1.011
+  },
+  {
+   "id": "S02",
+   "name": "Reject customer reply batch without sending",
+   "status": "passed",
+   "seconds": 0.174
+  },
+  {
+   "id": "S03",
+   "name": "Uncertain delivery cannot continue",
+   "status": "passed",
+   "seconds": 0.115
+  },
+  {
+   "id": "S04",
+   "name": "Uncertain delivery cannot route onward",
+   "status": "passed",
+   "seconds": 0.119
+  },
+  {
+   "id": "S05",
+   "name": "Worker restart between batch approvals",
+   "status": "passed",
+   "seconds": 0.927
+  },
+  {
+   "id": "S15",
+   "name": "Abrupt crash after a durable write item",
+   "status": "passed",
+   "seconds": 30.227
+  },
+  {
+   "id": "S16",
+   "name": "Kill worker after receiver accepts a write",
+   "status": "passed",
+   "seconds": 30.187
+  },
+  {
+   "id": "S06",
+   "name": "Transient vendor read retries",
+   "status": "passed",
+   "seconds": 0.178
+  },
+  {
+   "id": "S07",
+   "name": "Loop body retries actually apply",
+   "status": "passed",
+   "seconds": 0.122
+  },
+  {
+   "id": "S08",
+   "name": "Invalid recovery binding rejected before execution",
+   "status": "passed",
+   "seconds": 0.003
+  },
+  {
+   "id": "S09",
+   "name": "Incomplete batch visible at run level",
+   "status": "passed",
+   "seconds": 0.119
+  },
+  {
+   "id": "S10",
+   "name": "SSRF denied outside fixture boundary",
+   "status": "passed",
+   "seconds": 0.119
+  },
+  {
+   "id": "S11",
+   "name": "Closed registration and anonymous denial",
+   "status": "passed",
+   "seconds": 0.006
+  },
+  {
+   "id": "S12",
+   "name": "Tenant isolation through authenticated HTTP",
+   "status": "passed",
+   "seconds": 0.481
+  },
+  {
+   "id": "S13",
+   "name": "Two tabs cannot overwrite silently",
+   "status": "passed",
+   "seconds": 0.007
+  },
+  {
+   "id": "S14",
+   "name": "Changed destination invalidates reviewed write",
+   "status": "passed",
+   "seconds": 0.295
+  },
+  {
+   "id": "S17",
+   "name": "Typed condition routes an external write by amount",
+   "status": "passed",
+   "seconds": 0.917
+  },
+  {
+   "id": "S18",
+   "name": "Invalid comparison rejected before execution",
+   "status": "passed",
+   "seconds": 0.009
+  },
+  {
+   "id": "S19",
+   "name": "Uncomparable value fails the run and takes no branch",
+   "status": "passed",
+   "seconds": 0.117
+  },
+  {
+   "id": "S22",
+   "name": "Fork: branches run together, the Join waits for both, one write is sent",
+   "status": "passed",
+   "seconds": 0.177
+  },
+  {
+   "id": "S23a",
+   "name": "A failed branch cancels its held sibling; nothing after the Join is sent",
+   "status": "passed",
+   "seconds": 0.136
+  },
+  {
+   "id": "S23b",
+   "name": "A write inside a branch is refused before any run",
+   "status": "passed",
+   "seconds": 0.007
+  },
+  {
+   "id": "S24",
+   "name": "A worker killed in a fork resumes without repeating finished work",
+   "status": "passed",
+   "seconds": 30.277
+  },
+  {
+   "id": "S20",
+   "name": "Switch routes a checked support category to exactly one receiver",
+   "status": "passed",
+   "seconds": 0.944
+  },
+  {
+   "id": "S21a",
+   "name": "A forged saved route is refused before any send",
+   "status": "passed",
+   "seconds": 0.358
+  },
+  {
+   "id": "S21b",
+   "name": "Routing on an unchecked HTTP value or in contract 1 is refused",
+   "status": "passed",
+   "seconds": 0.013
+  },
+  {
+   "id": "S21c",
+   "name": "A case named \"approved\" cannot bypass a required approval",
+   "status": "passed",
+   "seconds": 0.182
+  },
+  {
+   "id": "S25",
+   "name": "A support reply is drafted, checked and sent once",
+   "status": "passed",
+   "seconds": 0.596
+  },
+  {
+   "id": "S26a",
+   "name": "A reply that never meets the rule is not sent",
+   "status": "passed",
+   "seconds": 0.231
+  },
+  {
+   "id": "S26b",
+   "name": "An unaccepted reply under on_limit last waits for a person",
+   "status": "passed",
+   "seconds": 0.378
+  },
+  {
+   "id": "S26c",
+   "name": "A write inside the loop is refused before any run",
+   "status": "passed",
+   "seconds": 0.006
+  },
+  {
+   "id": "S27",
+   "name": "A token budget that stops the checker sends no unchecked draft",
+   "status": "passed",
+   "seconds": 0.118
+  },
+  {
+   "id": "S28",
+   "name": "A worker killed in an iteration resumes without repeating saved iterations",
+   "status": "passed",
+   "seconds": 30.357
+  },
+  {
+   "id": "S29",
+   "name": "The approval after a Repeat shows the accepted draft",
+   "status": "passed",
+   "seconds": 0.238
+  },
+  {
+   "id": "M01",
+   "name": "Mixed approval modes inside one loop agent",
+   "status": "passed",
+   "seconds": 0.884
+  },
+  {
+   "id": "backend",
+   "name": "backend",
+   "status": "passed",
+   "seconds": 131.294
+  },
+  {
+   "id": "frontend-tests",
+   "name": "frontend-tests",
+   "status": "passed",
+   "seconds": 1.165
+  },
+  {
+   "id": "typecheck",
+   "name": "typecheck",
+   "status": "passed",
+   "seconds": 1.452
+  },
+  {
+   "id": "lint",
+   "name": "lint",
+   "status": "passed",
+   "seconds": 0.744
+  },
+  {
+   "id": "build",
+   "name": "build",
+   "status": "passed",
+   "seconds": 1.99
+  }
+ ],
+ "passed": true
+}

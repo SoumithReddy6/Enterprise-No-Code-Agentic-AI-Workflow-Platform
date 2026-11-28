@@ -1,0 +1,35 @@
+== PYTHONHASHSEED=0
+  <frozen importlib._bootstrap>:491: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [3] backend/tests/test_parallel_accounting.py:41: RELAY_TEST_POSTGRES_URL is not set
+2194 passed, 3 skipped, 7 xfailed, 4 warnings in 130.40s (0:02:10)
+== PYTHONHASHSEED=1
+  <frozen importlib._bootstrap>:491: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [3] backend/tests/test_parallel_accounting.py:41: RELAY_TEST_POSTGRES_URL is not set
+2194 passed, 3 skipped, 7 xfailed, 4 warnings in 128.45s (0:02:08)
+== PYTHONHASHSEED=2
+  <frozen importlib._bootstrap>:491: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [3] backend/tests/test_parallel_accounting.py:41: RELAY_TEST_POSTGRES_URL is not set
+2194 passed, 3 skipped, 7 xfailed, 4 warnings in 128.78s (0:02:08)
+== PYTHONHASHSEED=3
+  <frozen importlib._bootstrap>:491: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [3] backend/tests/test_parallel_accounting.py:41: RELAY_TEST_POSTGRES_URL is not set
+2194 passed, 3 skipped, 7 xfailed, 4 warnings in 128.71s (0:02:08)
+== PYTHONHASHSEED=4
+  <frozen importlib._bootstrap>:491: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [3] backend/tests/test_parallel_accounting.py:41: RELAY_TEST_POSTGRES_URL is not set
+2194 passed, 3 skipped, 7 xfailed, 4 warnings in 129.32s (0:02:09)

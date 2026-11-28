@@ -1,0 +1,175 @@
+[
+  {
+    "id": "M00",
+    "file": null,
+    "killed": false,
+    "pytest_exit": 0,
+    "pytest_summary": "6 passed in 2.36s",
+    "cli_exit": 0,
+    "cli_output": [
+      "README claims match: backend tests, scenarios, CI jobs, stack"
+    ]
+  },
+  {
+    "id": "M01",
+    "file": "scripts/check_readme_claims.py",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "1 failed, 5 passed in 2.45s",
+    "cli_exit": 1,
+    "cli_output": [
+      "FAIL README.md:14 states 2204 backend tests; the repository has 2205",
+      "FAIL README.md:20 states 2204 backend tests; the repository has 2205",
+      "FAIL README.md:218 states 2204 backend tests; the repository has 2205"
+    ]
+  },
+  {
+    "id": "M02",
+    "file": "README.md",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "1 failed, 5 passed in 2.28s",
+    "cli_exit": 1,
+    "cli_output": [
+      "FAIL README.md:218 states 2205 backend tests; the repository has 2204"
+    ]
+  },
+  {
+    "id": "M03",
+    "file": "scripts/check_readme_claims.py",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "1 failed, 5 passed in 2.25s",
+    "cli_exit": 1,
+    "cli_output": [
+      "FAIL README.md:14 states 34 scenarios; the repository has 26",
+      "FAIL README.md:21 states 34 scenarios; the repository has 26",
+      "FAIL README.md:21 states 34 scenarios; the repository has 26"
+    ]
+  },
+  {
+    "id": "M04",
+    "file": "README.md",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "1 failed, 5 passed in 2.31s",
+    "cli_exit": 1,
+    "cli_output": [
+      "FAIL README.md:219 states 27 scenarios; the repository has 34"
+    ]
+  },
+  {
+    "id": "M05",
+    "file": "scripts/check_readme_claims.py",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "2 failed, 4 passed in 2.31s",
+    "cli_exit": 0,
+    "cli_output": [
+      "README claims match: backend tests, scenarios, CI jobs, stack"
+    ]
+  },
+  {
+    "id": "M06",
+    "file": "README.md",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "1 failed, 5 passed in 2.29s",
+    "cli_exit": 1,
+    "cli_output": [
+      "FAIL stack row \"Stack, run live\" names OpenAI, which has no live run; list it under \"adapter, tested with fixtures\""
+    ]
+  },
+  {
+    "id": "M07",
+    "file": "README.md",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "1 failed, 5 passed in 2.26s",
+    "cli_exit": 1,
+    "cli_output": [
+      "FAIL README.md:14 states 6 CI jobs; the repository has 5"
+    ]
+  },
+  {
+    "id": "M08",
+    "file": "scripts/check_readme_claims.py",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "1 failed, 5 passed in 2.28s",
+    "cli_exit": 0,
+    "cli_output": [
+      "README claims match: backend tests, scenarios, CI jobs, stack"
+    ]
+  },
+  {
+    "id": "M09",
+    "file": "scripts/check_readme_claims.py",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "2 failed, 4 passed in 2.29s",
+    "cli_exit": 1,
+    "cli_output": [
+      "FAIL no document states a CI jobs count"
+    ]
+  },
+  {
+    "id": "M10",
+    "file": ".github/workflows/ci.yml",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "1 failed, 5 passed in 2.26s",
+    "cli_exit": 1,
+    "cli_output": [
+      "FAIL README.md:14 states 5 CI jobs; the repository has 6"
+    ]
+  },
+  {
+    "id": "M11",
+    "file": "scripts/check_readme_claims.py",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "2 failed, 4 passed in 2.27s",
+    "cli_exit": 1,
+    "cli_output": [
+      "FAIL README.md:14 states 20204 backend tests; the repository has 2204",
+      "FAIL README.md:20 states 20204 backend tests; the repository has 2204",
+      "FAIL README.md:218 states 20204 backend tests; the repository has 2204"
+    ]
+  },
+  {
+    "id": "M12",
+    "file": "README.md",
+    "killed": false,
+    "pytest_exit": 0,
+    "pytest_summary": "6 passed in 2.21s",
+    "cli_exit": 0,
+    "cli_output": [
+      "README claims match: backend tests, scenarios, CI jobs, stack"
+    ]
+  },
+  {
+    "id": "M14",
+    "file": "README.md",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "1 failed, 5 passed in 2.23s",
+    "cli_exit": 1,
+    "cli_output": [
+      "FAIL README.md:20 states 2203 backend tests; the repository has 2204"
+    ]
+  },
+  {
+    "id": "M13",
+    "file": "scripts/check_readme_claims.py",
+    "killed": true,
+    "pytest_exit": 1,
+    "pytest_summary": "2 failed, 4 passed in 2.23s",
+    "cli_exit": 1,
+    "cli_output": [
+      "FAIL stack row \"Stack, adapter, tested with fixtures\" names OpenAI, which has no live run; list it under \"adapter, tested with fixtures\"",
+      "FAIL stack row \"Stack, adapter, tested with fixtures\" names Claude, which has no live run; list it under \"adapter, tested with fixtures\"",
+      "FAIL stack row \"Stack, adapter, tested with fixtures\" names Elasticsearch, which has no live run; list it under \"adapter, tested with fixtures\""
+    ]
+  }
+]

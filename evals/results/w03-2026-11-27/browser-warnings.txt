@@ -1,0 +1,14 @@
+React Flow "Couldn't create edge" warnings in npm run test:browser (68 tests), 2026-11-28.
+Both runs: a scratch copy of frontend/ (node_modules linked) with examples/; only lib/workflow.ts and tests/request-routing.test.ts differ.
+parent = those two files from 813b7ec; new = the W03 working tree.
+
+parent: 68 passed (1.3m), warnings 6081
+new:    68 passed (1.3m), warnings 6125
+
+By handle:
+"case_accnts"    parent=  503 new=  514 diff=+11
+"case_billng"    parent=  611 new=  622 diff=+11
+"case_techno"    parent=  548 new=  559 diff=+11
+"continue"       parent= 2601 new= 2601 diff=+0
+"default"        parent=  423 new=  434 diff=+11
+"reply"          parent= 1395 new= 1395 diff=+0

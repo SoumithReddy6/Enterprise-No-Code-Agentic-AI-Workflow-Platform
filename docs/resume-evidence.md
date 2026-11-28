@@ -20,9 +20,9 @@ Alternate for data-engineering roles (use it in place of bullet 4 or 5):
 
 - **Loop storage:** Moved loop results from the run document into per-item rows with a SHA-256 marker; SQL bytes written by a 100-item SQLite loop fell from 19.5 MB to 0.74 MB (96%), and growth became linear.
 
-Optional final line:
+Optional final line (A6.1 is DONE; the gate run of W03 verifies S25–S29, see §3):
 
-- **In progress:** Repeat node for bounded evaluator-optimizer loops (writer + checker Agent, typed stop rule), with editor support and crash-resume tests; deployed-process scenarios not yet done.
+- **Repeat node:** Built a bounded evaluator-optimizer loop (writer + checker Agent, typed stop rule, at most 10 iterations) with editor support; 7 deployed-process scenarios (S25–S29) cover crash-resume, budget stops and approvals.
 
 Each line is 230 characters or fewer, including its label.
 
@@ -33,9 +33,9 @@ Each line is 230 characters or fewer, including its label.
 | Frontend | React 19.2.9, `@xyflow/react` ^12.11.6 (React Flow), vinext 1.0.0-beta.9 (Vite 8.2.4), TypeScript 5.9.3, Tailwind CSS 4.2.1, Playwright 1.63.0 |
 | API | FastAPI 0.141.1, Pydantic 2.13.5, uvicorn 0.52.4, SSE event stream |
 | Orchestration | LangGraph 1.2.11 (`StateGraph`, `add_conditional_edges`), langchain-core 1.6.2 |
-| Storage | SQLAlchemy 2.0.52 on SQLite or PostgreSQL 17 (psycopg 3.3.5), Alembic 1.20.0, revisions 0001–0006 |
-| Retrieval | FAISS (faiss-cpu 1.12.0), Elasticsearch and Pinecone adapters, ONNX Runtime 1.30.0 cross-encoder reranking, `embeddinggemma` embeddings |
-| Models | Ollama (`llama3.1`), OpenAI and Claude adapters |
+| Storage | SQLAlchemy 2.0.52 on SQLite or PostgreSQL 17 (psycopg 3.3.5), Alembic 1.20.0, revisions 0001–0007 |
+| Retrieval | FAISS (faiss-cpu 1.12.0), ONNX Runtime 1.30.0 cross-encoder reranking, `embeddinggemma` embeddings; Elasticsearch and Pinecone adapters (tested with fakes, never run live) |
+| Models | Ollama (`llama3.1`), run live; OpenAI and Claude adapters (recorded response shapes, never run live) |
 | Security | Fernet (cryptography 50.0.1), PBKDF2-SHA256, DNS-pinned egress, Docker sandbox |
 | CI | GitHub Actions, 5 jobs: backend, frontend, browser-layout, postgres-conformance, native-macos |
 
@@ -57,23 +57,25 @@ Each line is 230 characters or fewer, including its label.
 | Token accounting (TA01–TA08) | DONE | `worker_event` in `storage.py`; `test_accounting_durability.py`; `*-accounting-*-commit` checks |
 | Truncation causes and "Incomplete run" | DONE | `_truncation` port; S09 |
 | Loop storage bounds (1 MB values, 2,000-char previews, 32 KB events) | DONE | `test_loop_storage.py`, `test_loop_event_bounds.py`; storage probe |
-| Alembic migrations, populated downgrade check | DONE | `backend/migrations/versions/0001–0006`; `postgres-migrations`, `populated-downgrade` in CI |
+| Alembic migrations, populated downgrade check | DONE | `backend/migrations/versions/0001–0007`; `postgres-migrations`, `populated-downgrade` in CI |
 | Knowledge services (ingestion, versioned publish, hybrid search) | DONE | `backend/app/kb/`; `test_kb_*.py` in the full suite |
 | Citation validation and evidence registry | DONE | `evidence_registry.py`; full suite |
 | Answerability guard (opt-in, default off) | DONE as a feature; evaluation is calibration-set only | `answerability_guard.py`, `kb/answerability.py`; `test_runtime_answerability.py`; `evals/results/product-guard-fresh-2026-09-21*.json` |
 | Auth, login budgets, tenant scope, SSRF pinning | DONE | `auth_security.py`, `tool_service.py`; S10–S12 |
 | Optimistic concurrency for workflow saves | DONE | S13 |
 | Repeat node, backend (A6.1 Part 1) | DONE | `backend/app/repeat.py`; `test_repeat.py` (82 collected tests); `*-repeat-sigkill` (2026-11-11) |
-| Repeat node, editor (A6.1 Part 2) | PARTIAL | Committed `7c4aa62`, CI 5/5 (run 43738889884); implementation review not done |
-| Repeat deployed scenarios (A6.1 Part 3) | PLANNED | README §6 |
+| Repeat node, editor (A6.1 Part 2) | DONE | Committed `7c4aa62`; review closed (`docs/reviews/a61-part2-review-fix-recheck-2026-11-16.md`, fix `8705b7f`) |
+| Repeat deployed scenarios (A6.1 Part 3) | DONE | S25, S26a–c, S27, S28, S29 in `scripts/scenarios/repeat_loops.py`; gate 40 of 40 at `24e659c` (`docs/gap-audit.md` §2.3); no Part 3 review file (W04) |
 | Elasticsearch and Pinecone backends | PARTIAL | Adapters exist; tests use fakes (`test_kb_search.py:121`), no live service run |
 | OpenAI and Claude providers | PARTIAL | Adapters and recorded-shape tests (`test_openai.py`, `test_claude.py`); no hosted model through the grounding gate |
 | Live-model workflow shapes (17) | PARTIAL | Last full run 2026-10-06; not re-run since |
-| Opt-in request reader | PARTIAL | Passes its safety gate; fails usability: admitted 9 of 20 valid requests (18 required) |
+| Request reader | FROZEN (experimental, W03) | Passes its safety gate; fails usability: admitted 9 of 20 valid requests (18 required). Out of the palette; not a resume claim |
 | NLI verifier, section chunking for safety | Rejected | Kept as evidence: NLI agreed with labels 8 of 24 |
 | Writes and approvals inside parallel branches (A5.3b) | PLANNED | README §2, §6 |
 | Strict token cap (reserve, then settle) | PLANNED | README §2.6 |
-| Subgraphs (A6.2), Redis (B2), object storage (B3), orgs and roles (B4), SSO/SCIM (B5), data-source SPI (C1), Text-to-SQL (D), GraphRAG (E), OpenTelemetry (F) | PLANNED | README §6 |
+| Plan of `docs/gap-audit.md` §8 (W01–W24): multi-user, durability under load, operability, held-out evaluation, deploy | PLANNED | README §6 |
+| Subgraphs (A6.2) | LATER (decide after Phase 2) | README §6 |
+| Redis (B2), object storage (B3), SCIM (B5), data-source SPI (C1), Text-to-SQL (D), GraphRAG (E) | CUT | README §6, `docs/gap-audit.md` §8 |
 | TLS, managed secrets, backups, load testing | PLANNED | README §7 |
 
 ## 3. Evidence
@@ -180,3 +182,4 @@ in a thread). Draft bullet, only with DEF-10 named as open if asked:
 - 2026-11-16: Corrected the `test_repeat.py` count (82 collected, not 66) and the `worker_event` line (`storage.py:703`), found while writing `docs/status-report.md`.
 - 2026-11-16: Added §7, the load baseline. Recorded in `docs/defects.md` that bullet 3 ("external-write safety") has an open Critical defect, DEF-01: an Agent's settled write can be sent again on resume. Do not use bullet 3 for Agent tools until DEF-01 is fixed.
 - 2026-11-27: Added §8, validation cost (DEF-03). Numbers from `evals/results/def03-2026-11-27/`; DEF-10 recorded as not claimed.
+- 2026-11-27: W03. A6.1 rows changed to DONE (Parts 2 and 3 closed 2026-11-16); the Repeat line is no longer "In progress"; the request reader is FROZEN; the plan rows follow `docs/gap-audit.md` §8; Alembic revisions 0001–0007; OpenAI, Claude, Elasticsearch and Pinecone marked "never run live". Verified in this item: deployed gate 40 of 40 (S25–S29 pass), backend 2,204 collected. No new metric added.

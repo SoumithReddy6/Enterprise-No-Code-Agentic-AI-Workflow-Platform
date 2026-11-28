@@ -1,18 +1,28 @@
 # Relay
 
-**A local-first platform for building and running AI-agent workflows that survive crashes, never send an external write twice, and refuse to guess.**
+**A local-first platform for building and running AI-agent workflows that survive crashes, do not send an external write a second time on their own, and refuse to guess.**
+
+When the outcome of a write is unknown (the connection dropped after the remote system may have accepted it), the run stops and a person checks the remote system. Relay sends no idempotency key and has no reconcile step yet, so it prevents its own second send; it cannot make the remote system idempotent ([design §3](docs/design.md#3-did-the-external-write-happen)).
 
 You draw a workflow on a canvas: a chat input, retrieval over your documents, agents with tools and specialist sub-agents, conditions, loops, approvals and a response. Relay compiles it to a LangGraph state machine and runs it on durable workers. The interesting part is not the canvas. It is what happens when things go wrong: a worker dies mid-loop, two workers think they own the same run, a Jira write times out after the server accepted it, a loop's results outgrow the database row, or a model invents a citation.
 
-This README is about how the system is designed for those cases.
-
 | | |
 | --- | --- |
-| **Status** | Working local platform, single workspace per account. Intended for loopback use until the deployment and identity work below lands. |
-| **Stack** | React + React Flow · FastAPI · LangGraph · SQLAlchemy on SQLite or PostgreSQL · Alembic · Ollama, OpenAI, Claude · FAISS, Elasticsearch, Pinecone · Docker sandbox |
-| **Verification** | 2,176 backend tests run under five hash seeds · 128 frontend unit tests + 68 Chromium tests · 34 deployed-process production scenarios · 17 live-model workflows · PostgreSQL conformance · five GitHub Actions jobs · a 53-question grounding gate with thresholds fixed before measurement |
+| **Status** | Working local platform, single workspace per account. Intended for loopback use until the deployment and identity work in §6 lands. Open defects: §7. |
+| **Stack, run live** | React + React Flow · FastAPI · LangGraph · SQLAlchemy on SQLite or PostgreSQL · Alembic · Ollama · FAISS · Docker sandbox |
+| **Stack, adapter, tested with fixtures** | OpenAI, Claude (recorded response shapes) · Elasticsearch, Pinecone (fake clients) · Jira, GitHub, Confluence, SMTP (local fixture receivers). None of these has run against the live service. |
+| **Verification** | 2,204 backend tests run under five hash seeds · 128 frontend unit tests + 68 Chromium tests · 34 deployed-process production scenarios · PostgreSQL conformance · five GitHub Actions jobs · a 53-question grounding gate on a calibration set (§4) |
 
-**Start here (five minutes).** [§2.3](#23-did-the-external-write-happen) shows how a write with an unknown outcome is never sent twice. [§2.6](#26-budgets-that-reset-on-resume-leak-through-nesting-or-lose-their-count) shows how token spend survives a crash at the exact commit. [§4](#4-evaluation-measured-including-what-failed) shows the grounding results, including the three approaches that failed.
+**Four measured numbers**
+
+| What | Value | Where it comes from |
+| --- | --- | --- |
+| Backend tests | 2,204 backend tests collected; at `PYTHONHASHSEED` 0–4 each run gives 2,194 passed, 3 skipped (they need PostgreSQL), 7 xfailed (the open defects of §7) | `pytest --collect-only`; CI checks this number with [`scripts/check_readme_claims.py`](scripts/check_readme_claims.py) |
+| Deployed-process scenarios | 34 deployed scenarios (S01–S29 with variants); on 2026-11-27 the gate passed 40 of 40 rows (34 scenarios, M01 and 5 stages), with no source file changed during the run | [`scripts/check_production_scenarios.py`](scripts/check_production_scenarios.py), [`evals/results/w03-2026-11-27/`](evals/results/w03-2026-11-27/) |
+| A worker killed after the receiver accepted a write, before the response arrived (S16) | the receiver logged 1 request; resume was refused with HTTP 409 | `crash_during_write` in [`scripts/check_production_scenarios.py`](scripts/check_production_scenarios.py) |
+| SQL bytes written by a 100-item loop (1 KB items, SQLite, one worker) | 19,470,202 → 738,803 (−96%); growth became linear | [`docs/resume-evidence.md`](docs/resume-evidence.md) §3; [`evals/results/loop-storage-2026-09-29/`](evals/results/loop-storage-2026-09-29/), [`evals/results/loop-checkpoint-2026-09-30/`](evals/results/loop-checkpoint-2026-09-30/) |
+
+**Start here (five minutes).** [Design §3](docs/design.md#3-did-the-external-write-happen) shows how a write with an unknown outcome is never sent twice. [Design §6](docs/design.md#6-budgets-that-reset-on-resume-leak-through-nesting-or-lose-their-count) shows how token spend survives a crash at the exact commit. [§4](#4-evaluation-measured-including-what-failed) shows the grounding results, including the three approaches that failed.
 
 ---
 
@@ -51,7 +61,7 @@ flowchart TB
 
     subgraph EDGE["Integrations · untrusted"]
         direction LR
-        MODELS["Ollama · OpenAI · Claude"]
+        MODELS["Ollama (live)<br/>OpenAI · Claude (adapters)"]
         TOOLS["HTTP · Jira · GitHub · Confluence · SMTP<br/>SSRF-pinned egress"]
         SANDBOX["Python in Docker<br/>no network · read-only root"]
         KB["Knowledge services<br/>management · ingestion · hybrid search"]
@@ -115,248 +125,25 @@ sequenceDiagram
 
 ## 2. Production problems Relay is designed for
 
-These are failure modes of shared, long-running, side-effecting systems, the kind that do not show up in a single-user demo. For each one: what goes wrong, how Relay handles it, and the evidence. Scenario IDs (S01–S29) refer to the [deployed-process scenario gate](docs/production-scenario-testing.md), which runs a real API process, real worker processes and a real HTTP receiver.
-
-### 2.1 Two workers believe they own the same run
-
-**What goes wrong.** A worker pauses: a GC stall, a laptop sleep, a `SIGSTOP`, a network partition. Its lease expires, and a second worker claims the run and finishes it. Then the first worker wakes up and keeps writing events, checkpoints and a final status over the finished run.
-
-**Design.** Claiming is a compare-and-set: `UPDATE execution_jobs SET owner=?, lease_until=? WHERE run_id=? AND (status='queued' OR lease_until < now)`. Only one claimant's update matches. Every later write from a worker goes through a **fence**: an `UPDATE … WHERE owner = me AND status='running' AND lease_until > now` in the *same transaction* as the write. If the fence matches no row, the write is refused and the worker stops. Heartbeats renew the 30-second lease through the same fence.
-
-```mermaid
-sequenceDiagram
-    participant A as Worker A
-    participant DB as execution_jobs
-    participant B as Worker B
-    A->>DB: claim (owner=A, lease 30s)
-    Note over A: process stalls (SIGSTOP)
-    Note over DB: lease expires
-    B->>DB: claim — matches "lease_until < now" → owner=B
-    B->>DB: fenced writes … final status
-    Note over A: process resumes
-    A->>DB: fenced write: WHERE owner=A AND lease_until>now
-    DB-->>A: 0 rows → refused, worker abandons the run
-```
-
-**Evidence.** PostgreSQL CI job: a worker is stopped past a real lease, a replacement completes the run, the stale worker resumes, and all five of its stale operations are refused, leaving the final run unchanged. Separately, four worker processes on 50 runs produced 50 unique claims and no duplicated item rows.
-
-### 2.2 A worker dies mid-run, or mid-loop
-
-**What goes wrong.** A run with paid model calls and a 30-item batch dies at item 17. Restarting from scratch repeats paid calls and side effects; restarting from memory is impossible because the process is gone.
-
-**Design.** Every node's result is committed as a checkpoint in the same fenced transaction as its success event. On re-claim, completed nodes restore from checkpoints instead of running. Loops store **one row per item** in `run_loop_items`, committed with that item's event. A crash at item 17 therefore resumes at item 18, and items 1–16 are neither re-run nor re-charged.
-
-**Evidence.**
-- S15: the worker exits right after an item's SQL commit, and real lease expiry hands the run to a new worker without repeating the completed write.
-- S24: the worker is killed in the middle of a fork; the finished branch is restored without a new request, the unfinished one runs again, and the write after the Join is sent once.
-- S28: the worker is killed while a Repeat's second iteration waits for its model; the saved first iteration is not called again and its row is unchanged, and the write after the Repeat is sent once.
-- PostgreSQL CI: `SIGKILL` mid-loop; committed items are not repeated, and checkpoints match an uninterrupted run.
-- Honest boundary: a *read* in flight at the moment of the kill has an unknown outcome and is retried once, and that retry is charged. Relay promises "no duplicate writes", not "every call exactly once".
-
-### 2.3 "Did the external write happen?"
-
-**What goes wrong.** Relay sends a POST to create a Jira issue, and the connection drops. The remote side may have created the issue. Retrying risks a duplicate ticket or a second customer email; skipping risks losing the action. Most systems quietly pick one.
-
-**Design.** Writes follow a three-state protocol per action, not per node:
-
-```mermaid
-stateDiagram-v2
-    [*] --> marked: mark_write(action) committed BEFORE sending
-    marked --> settled: response received → settle_write(result) in one transaction
-    marked --> uncertain: exception, timeout or crash before settlement
-    settled --> [*]: resume returns the stored result — never sends again
-    uncertain --> stopped: run fails with UncertainWriteError
-    stopped --> [*]: operator reconciles with the remote system
-```
-
-- External writes are **never retried**. Validation rejects a retry policy on any write node, including write tools attached to agents and loop bodies.
-- `on_error: continue` and `route` **cannot hide uncertainty**: an uncertain write stops the run even inside a recovery path (S03, S04).
-- Resuming a run whose write is uncertain is refused with HTTP 409.
-- An Agent continues after a settled write without asking the model again for that step. The settle commit also saves the position of each Agent on the call path, so a resume replays that step, gets the stored result and goes on from the transcript that shows the write as done. The stored result also keeps the digest of the request that was sent: a different request at the same step stops the run instead of getting the old result.
-- Uncertainty is reserved for the send itself. The request is built and checked *before* the marker is written, so a refusal at that stage, such as missing write consent, a mismatched connection or a number JSON cannot carry exactly, is an ordinary failure with nothing to reconcile. Address checks happen at connect time and stay on the uncertain side.
-
-**Evidence.** S16: the worker is killed *after the receiver accepted the write but before the response arrived*. The receiver logged exactly one request after recovery, and resume was refused.
-
-### 2.4 A human approves one thing, and something else gets sent
-
-**What goes wrong.** An operator approves "send this reply to customer A". Between approval and execution, the connection's endpoint is edited, the upstream data changes on resume, or a stale browser tab approves an older payload.
-
-**Design.**
-- The approval stores the exact prepared payload, its SHA-256 digest over canonical JSON, and the execution plan encrypted at rest.
-- A decision must quote the digest, which is checked with a constant-time compare. Approvals expire and are rate-limited per tenant.
-- One approval exists per (run, action) through a unique constraint, so a double-click is idempotent.
-- On resume the worker **recomputes** the payload and connection and refuses to send if either differs from what was reviewed.
-- An approval in the `executing` state at resume is treated as uncertain (§2.3).
-- The action-budget reservation made before the pause is recorded in the same transaction that releases the lease, so the approved execution is not charged twice.
-
-**Evidence.**
-- S01: a wrong digest returns 409 and nothing is sent; a duplicate approval is a no-op.
-- S14: changing the destination after review blocks the write.
-- S02: rejection is terminal and cannot be resumed.
-- S05: a worker restart between batch approvals repeats nothing.
-
-### 2.5 Loop results that outgrow the database
-
-**What goes wrong.** The first loop implementation stored all item results inside the run's checkpoint JSON. Each item rewrote a growing blob, so write volume grew quadratically, and a 100-item batch of large tool responses produced multi-megabyte rewrites per item.
-
-**Design.**
-- Item results live in their own rows.
-- The run checkpoint keeps only a compact marker `{stored_in, count, sha256}`. When a run is loaded, the item rows must match that marker exactly, with no missing or extra rows; otherwise the loop is marked unavailable and resume refuses to continue past it, rather than proceeding with a silently partial result.
-- Retained values are capped at 1 MB per loop. Beyond that, values are dropped but statuses kept, and the drop is reported as incomplete work.
-- Event previews are capped at 2,000 characters and the stored event at 32 KB. The ceiling is applied to the event *as stored*, after preview metadata is attached; applying it before was a real bug, fixed and regression-tested.
-
-**Evidence.** Measured on both SQLite and PostgreSQL with 60 KB per item, counting bytes submitted to SQL:
-
-| Items | Run JSON | Item rows | Events | Total written |
-| ---: | ---: | ---: | ---: | ---: |
-| 25 | 8.4 KB | 962 KB | 111 KB | 1.13 MB |
-| 50 | 13.6 KB | 964 KB | 189 KB | 1.26 MB |
-| 100 | 24.1 KB | 968 KB | 344 KB | 1.55 MB |
-
-Each doubling of item count adds roughly 10–25% more bytes, not 4×.
-
-### 2.6 Budgets that reset on resume, leak through nesting, or lose their count
-
-**What goes wrong.** A per-run limit lives in process memory, so a crash and resume resets it to zero. Or the limit is enforced at the top-level graph while loop bodies, retries and nested specialist agents spend freely. Subtler: the provider reports usage but the answer is rejected, so the count is dropped. Or the answer is saved but its count is not, and the resumed run gets that budget back.
-
-**Design.**
-- Two run-wide ceilings: an **action budget** (tool calls and retrievals) and a **token ceiling** (all model spend).
-- Both are enforced by one shared execution-policy layer that every graph node, loop body and agent target goes through, so retries and nested calls are charged in the same place.
-- Usage the provider reported is counted even when the answer is rejected, for example empty text or invalid structured output.
-- **Unknown is not zero.** Every model call has a status: `reported`, `partial`, `unreported` or `unanswered`. A count the provider did not send is never stored as 0, so a call with no usage still shows in operator metrics instead of looking free.
-- **One definition of input.** Claude input is base input plus cache reads plus cache writes. OpenAI and Ollama totals already include cached tokens, so their cache counts are kept only as a breakdown and never added again.
-- Each outcome reports only its own usage, so a cancelled nested agent is not counted twice in operator metrics.
-- **A result and its count commit together.** Each saved result goes into the same fenced transaction as the run's token total, its usage rows, its loop item and its checkpoint. A resume therefore never restores an answer without the tokens it cost.
-- A saved total can never go down: a write with a lower total is refused. Before each provider request, the worker waits until all known spend is saved. If it cannot be saved, the run stops with a named reason instead of spending more.
-- When a budget runs out, the node stops cleanly and the run reports a `budget` truncation cause. A token refusal is typed, so `on_error: continue` or `route` cannot make the run look complete.
-- **Honest boundary.** The token ceiling is an **admission limit**, the same model as Claude Managed Agents session budgets and the Azure API Management token limit. It is checked before each call against spend already reported, and it never aborts a call in flight, so the last call can go over the limit. Every finished run that went over carries a `token_limit` record with the limit, the spend and the overshoot, including cancelled runs and rejected approvals. A strict cap (reserve input plus `max_tokens`, then settle) is not provided. A response lost before any save is paid for again on resume. Missing counts add nothing to the ceiling, so a provider that reports nothing cannot be capped; such calls are counted as `unreported` instead. See §7.
-
-**Evidence.**
-- An early audit found loop-body retries bypassing the retry policy, and replays charging twice. Both were fixed by moving everything onto the shared boundary (S07), and the S07–S09 reviews are kept in [`docs/reviews`](docs/reviews/). A live-model check (L01) confirms real Ollama usage survives into durable events.
-- An independent [token-accounting review](docs/reviews/token-accounting-production-review-2026-10-25.md) compared Relay with published provider and gateway behavior and recorded eight findings (TA01–TA08): four reproduced defects, plus policy limits and conditional gaps. All eight are closed. TA08 (an old snapshot replacing a newer one) needs concurrent commits, so it was fixed with parallel branches (A5.3 Part 1): one lock per run attempt orders the accounting commits, and each commit saves the newest snapshot. Each fix had an independently reviewed design, new tests run first against the previous code (the defect tests failed there by wrong values, not by a missing function), mutation testing, the full suite under five hash seeds and the deployed scenario gate: 138 new tests and 72 deliberate breaks of the fixes, all detected. A5.3 Part 1 added 30 tests and 20 breaks on the same terms, including the correction its review found (a save before a model call now also covers spend another branch reported during that save).
-- TA02: 24 tests, 22 of which failed on the previous code, and 12 of 12 deliberate breaks of the fix detected. Worker processes are killed with `SIGKILL` while the commit is held, on SQLite, and on PostgreSQL in CI. Evidence: [`evals/results/ta02-fix-2026-10-31`](evals/results/ta02-fix-2026-10-31/).
-- The other fixes: [TA01](evals/results/ta01-fix-2026-10-30/) (23 tests, 7 mutants), [TA03](evals/results/ta03-fix-2026-11-03/) (13, 8), [TA04](evals/results/ta04-fix-2026-10-30/) (43, 16), [TA05](evals/results/ta05-fix-2026-11-05/) (9, 9), [TA06](evals/results/ta06-fix-2026-11-05/) (16, 11), [TA07](evals/results/ta07-fix-2026-11-05/) (10, 9). The independent reviews found real gaps, for example two finish paths that skipped the overshoot record and a log filter that dropped the new usage status; each was fixed before closure.
-
-### 2.7 Silent truncation
-
-**What goes wrong.** Jira returns 250 issues and the integration keeps 48. A loop hits `max_items`. An agent hits its step limit. The run shows green and the answer looks complete.
-
-**Design.**
-- Truncation travels as data: a reserved `_truncation` port, validated strictly, carries a `cause` of kind `loop`, `agent`, `tool` or `budget`, each with a reason.
-- Port names starting with `_` are reserved for run metadata and rejected in node definitions and bindings, and truncation records are schema-validated, so malformed or unhashable records fail loudly.
-- Runs carry `truncation_causes`, and the UI shows an *Incomplete run* panel listing each cause.
-- Older checkpoints that cannot prove completeness are reported as **unverified**, not complete.
-
-**Evidence.** S09 (a batch over `max_items` is visible at run level); Chromium layout tests keep the cause list and the answer scrollable at desktop and tablet widths.
-
-### 2.8 Bindings to data that a path cannot provide
-
-**What goes wrong.** A response node reads `agent.text`, but on the branch that ran, the agent never executed: it sat behind a condition, or failed and was routed to an error branch. The run crashes with a `KeyError` at the worst moment, or worse, reads a stale value.
-
-**Design.** The compiler applies a **guaranteed-upstream** rule: a node may bind only to outputs of nodes that run on *every* path reaching it. Error branches cannot read the failed node's outputs, and a node using `on_error: continue` cannot have readers at all. Violations are rejected at validation, before a run exists.
-
-**Evidence.** S08: an invalid recovery binding is rejected before execution through the deployed API. S22: after a Join, one write reads one branch and the Response reads the other, and the history shows that the Join started only after both branches finished. S23a–b: a failing branch cancels its sibling and nothing after the Join is sent; a write inside a branch is refused before any run.
-
-### 2.9 Conditions that guess
-
-**What goes wrong.** A routing condition compares `"1,200"` to `1000`, or a zip code `"02134"` to `2134`, or reads a field the model forgot to output. Most rule engines coerce types or return `false` silently, so a $1,200 purchase skips review.
-
-**Design (A5.1).**
-- Typed operators: `eq ne gt gte lt lte in empty contains`, with optional JSON field paths.
-- Numbers compare as exact decimals, including JSON numbers. They are parsed as `Decimal` from the input through an extraction agent's structured output, because Python's default JSON parsing would turn `1000.00000000000001` into `1000.0`. An agent's output schema judges that same exact value, so `maximum: 1000` rejects `1000.00000000000001` instead of passing a rounded copy. Text equality is the default, so identifiers are never silently treated as numbers.
-- An HTTP write sends a number only if JSON carries exactly that value. Otherwise it is refused before sending, rather than delivering a rounded amount.
-- A value that cannot be compared **fails the run with the reason and takes neither branch**.
-- Invalid configuration is reported verbatim at validation.
-- Saved conditions are unchanged, checked against the original implementation on 20,000 randomized Unicode cases.
-
-**Evidence.**
-- S17: an amount condition gates a real external write at the precision boundary. The receiver got exactly 1200, 1000.01 and 9007199254740993, did not get 80 or 1000.00, and `1000.00000000000001` was refused before sending.
-- An independent review found JSON numbers rounded before comparison, plus a stale-predicate bug in the editor. Both are fixed with regression tests; the review is kept in [`docs/reviews`](docs/reviews/).
-- S18 and S19 cover the error cases.
-
-### 2.10 A route label that pretends to be permission
-
-**What goes wrong.** A multi-way router reads a model's guess, or a case is named
-`approved`, and the path behind it sends money or tickets. Or a saved route is changed and
-the run resumes down a path nobody chose.
-
-**Design (A5.2).**
-- A Switch takes one of up to 15 ordered cases (each a typed condition) or Default. The first
-  match wins; an error fails the run and never falls through to Default.
-- It accepts only checked or trusted values, in contract-2 workflows. Validation and
-  execution share one trust rule, so a workflow that validates is not refused later.
-- A case name grants nothing: writes behind it keep their own eligibility and approval.
-- On resume the route is recomputed from the input; a forged route fails before any send.
-
-**Evidence.**
-- S20: a checked support category reaches exactly one of four receivers.
-- S21a–c: a forged saved route, an unchecked HTTP value and a case named `approved` send
-  nothing on any other path. Without the restore check, the forged route ran to `success`.
-- Six independent reviews found 9 code defects (malformed route callbacks, a trust-rule
-  mismatch between validation and runtime, and editor repair paths) and 2 plan or coverage
-  gaps; each code fix has a test that failed first. See [`docs/reviews`](docs/reviews/).
-- A live run had `llama3.1` extract the amount from free text, and the condition routed it correctly.
-- Details: [`docs/typed-conditions.md`](docs/typed-conditions.md).
-
-### 2.11 Two browser tabs, one workflow
-
-**What goes wrong.** Two tabs edit the same workflow, and the second save silently overwrites the first.
-
-**Design.** Optimistic concurrency: every update must carry the `updated_at` it was based on. A stale update gets HTTP 409 with the current version, and the editor keeps the local edits and offers export and reload.
-
-**Evidence.** S13.
-
-### 2.12 Schema changes against databases that already exist
-
-**What goes wrong.** Hand-rolled `ALTER TABLE` code guesses at the current schema; an upgrade half-applies; a database from an older build is "migrated" into a shape nobody intended.
-
-**Design.**
-- Alembic owns the schema (revisions 0001–0006).
-- Startup upgrades a recognised database to head and refuses an unrecognised schema with an actionable error rather than guessing.
-- Pre-Alembic databases are *adopted* only after structural verification, including databases that still contain retired tables.
-- Downgrades are tested, not promised to be lossless. A downgrade through 0004 refuses a database that holds typed reviews rather than turn a review into a write. For production, rollback means restoring a stopped-system backup.
-
-**Evidence.** PostgreSQL CI upgrades to head, downgrades to 0001 and upgrades back, then compares the result to the models. The PostgreSQL CI job (`populated-downgrade`) also puts three populated runs through the same round trip. Their loop item results and accounting are lost, as documented, but never silently: the finished run shows its loop results as unavailable, not as an empty success, and the two unfinished runs fail on resume without sending a request again. A read-only copy of a real workspace database was upgraded with all 27 table row counts preserved.
-
-### 2.13 Knowledge indexes that break while you rebuild them
-
-**What goes wrong.** A rebuild fails halfway, and search now returns a mix of old and new chunks. Or the embedding model is updated, and old vectors are compared with new query embeddings, giving quietly wrong results.
-
-**Design.**
-
-```mermaid
-flowchart LR
-    UP["Upload"] --> JOB["Durable ingestion job<br/>(leased)"] --> STAGE["Extract · chunk · embed<br/>into an isolated staging segment"]
-    STAGE --> VERIFY{"Verify counts,<br/>dimensions, ownership"}
-    VERIFY -- ok --> PUB["Atomic publish<br/>new version becomes active"]
-    VERIFY -- fail --> CLEAN["Durable cleanup queue<br/>delete partial chunks + vectors"]
-    OLD["Previous version"] -. "keeps serving until publish" .-> PUB
-```
-
-The embedding model's digest is pinned per index. If the installed model changes, semantic search refuses until the index is rebuilt.
-
-**Evidence.** Knowledge-service suites on SQLite and on PostgreSQL management and search schemas cover ingestion, rebuild, archive cleanup, tenant isolation, deletion and source revocation.
-
-### 2.14 Grounded answers that cite sources that do not exist
-
-**What goes wrong.** The model writes `[S7]` when only six passages were retrieved, or cites a passage from a different tool call. The answer looks sourced and is not.
-
-**Design.**
-- A run-wide evidence registry assigns unique labels across retrieval, tool results and nested agents.
-- The response node validates every `[S#]` at the boundary and strips invented labels.
-- Empty retrieval, or a declared lack of evidence, takes a strict abstention path.
-- An optional local answerability reader can abstain before generation.
-- **A source must still be valid when the answer is published.** The response node checks every knowledge source behind it again, including sources behind a restored answer and behind reused loop work. If a document was removed, or a later check rejected it, the run fails closed: no answer, no checkpoint, no output.
-
-**Evidence.**
-- The grounding gate is in §4.
-- An independent review found the response listing every passage the run had seen, including one a nested agent's check had rejected (P1). The review of that fix found a second path: loop items reused on resume were not checked. Both are fixed with tests that failed first. See [`docs/reviews`](docs/reviews/r01-i01-recheck-2026-10-31.md).
-
-### 2.15 Dependencies that are unhealthy, and dependencies that are vulnerable
-
-- **Readiness.** `/api/ready` probes the database, both knowledge services and the age of the worker's last heartbeat. It also probes the Python sandbox by running a real `print(1)` container with the executor's exact flags. A hung Docker CLI is killed and its container removed. Workers re-probe right before execution rather than trusting a cached answer.
-- **A dependency that crashed the process.** onnxruntime's telemetry thread aborted processes at exit on macOS. It is disabled before the package loads, and a native macOS CI job checks for the thread by symbol.
-- **Supply chain.** CI fails on any high or critical npm advisory unless it matches a reviewed exception exactly: same advisory, package, range, dependency path and versions, not expired, and no patched release published. The gate validates npm's report, exit codes and dependency tree, and fails closed on anything malformed. One residual is currently accepted (`braces` through `vinext` build tooling, expiring 2026-12-04) and reported as such, never as "clean". When a new advisory appeared on 2026-10-06, the gate failed and the unused package chain that carried it was removed. See [security hardening](docs/security-hardening.md).
+The full narrative (what goes wrong, the design, the evidence) is in [`docs/design.md`](docs/design.md). Scenario IDs refer to the [deployed-process scenario gate](docs/production-scenario-testing.md), which runs a real API process, real worker processes and a real HTTP receiver.
+
+| Problem | How Relay handles it | Evidence |
+| --- | --- | --- |
+| [Two workers believe they own the same run](docs/design.md#1-two-workers-believe-they-own-the-same-run) | Compare-and-set claim; every worker write is fenced on the lease in the same transaction | PostgreSQL `postgres-stale-lease`: 5 of 5 stale writes refused |
+| [A worker dies mid-run or mid-loop](docs/design.md#2-a-worker-dies-mid-run-or-mid-loop) | A checkpoint per node and a row per loop item, each in the fenced commit of its event | S15, S24, S28; `postgres-sigkill-loop` |
+| ["Did the external write happen?"](docs/design.md#3-did-the-external-write-happen) | Intent committed before the send; result settled in one transaction; an unknown outcome stops the run | S03, S04, S16 |
+| [A human approves one thing, and something else gets sent](docs/design.md#4-a-human-approves-one-thing-and-something-else-gets-sent) | The approval is bound to a SHA-256 digest; the worker builds the payload again and compares | S01, S02, S05, S14 |
+| [Loop results that outgrow the database](docs/design.md#5-loop-results-that-outgrow-the-database) | Per-item rows and a `{stored_in, count, sha256}` marker; bounded values and events | storage probe on SQLite and PostgreSQL |
+| [Budgets that reset, leak or lose their count](docs/design.md#6-budgets-that-reset-on-resume-leak-through-nesting-or-lose-their-count) | One execution-policy layer; usage committed with each result; a saved total never goes down | S07; TA01–TA08 fixes; SIGKILL at the accounting commit |
+| [Silent truncation](docs/design.md#7-silent-truncation) | Truncation travels as data with a typed cause; the UI shows an *Incomplete run* panel | S09 |
+| [Bindings to data that a path cannot provide](docs/design.md#8-bindings-to-data-that-a-path-cannot-provide) | Guaranteed-upstream rule at validation | S08, S22, S23a–b |
+| [Conditions that guess](docs/design.md#9-conditions-that-guess) | Typed operators, exact decimals; an uncomparable value fails the run | S17–S19 |
+| [A route label that pretends to be permission](docs/design.md#10-a-route-label-that-pretends-to-be-permission) | Switch on checked or trusted values only; the route is recomputed on resume | S20, S21a–c |
+| [Two browser tabs, one workflow](docs/design.md#11-two-browser-tabs-one-workflow) | Optimistic concurrency on `updated_at` | S13 |
+| [Schema changes against databases that exist](docs/design.md#12-schema-changes-against-databases-that-already-exist) | Alembic for the core schema; an unknown schema is refused | `postgres-migrations`, `populated-downgrade` |
+| [Knowledge indexes that break during a rebuild](docs/design.md#13-knowledge-indexes-that-break-while-you-rebuild-them) | Staging segment, verify, atomic publish; embedding digest pinned per index | knowledge-service suites on SQLite and PostgreSQL |
+| [Answers that cite sources that do not exist](docs/design.md#14-grounded-answers-that-cite-sources-that-do-not-exist) | Run-wide evidence registry; every `[S#]` checked; sources checked again at publish | §4; review R01 and its recheck |
+| [Unhealthy or vulnerable dependencies](docs/design.md#15-dependencies-that-are-unhealthy-and-dependencies-that-are-vulnerable) | Readiness probes; fail-closed npm advisory gate; `pip-audit` | CI |
 
 ---
 
@@ -371,7 +158,7 @@ flowchart LR
         DOCS["Uploaded documents"]
     end
     subgraph T1["Relay trust boundary"]
-        GATE["Auth + tenant scope<br/>on every query"]
+        GATE["Auth + tenant scope<br/>in application code"]
         VAL["Validation<br/>typed config · allowlists"]
         EGRESS["Egress guard<br/>global IPs only · DNS pinned · no redirects"]
         SBX["Sandbox<br/>no network · read-only · limits"]
@@ -388,11 +175,11 @@ flowchart LR
 | Concern | Control |
 | --- | --- |
 | Password guessing | PBKDF2-SHA256 with 600,000 iterations. Login budgets are checked **before** hashing, per account and per IP, and stored in the database so they hold across API processes: escalating cooldown after 5 attempts, 15-minute lockout after 10. Registration is closed by default; invites are expiring and single-use. |
-| Cross-tenant access | Every query is tenant-scoped; runs, connections and knowledge bases are isolated (S12). Anonymous access and unwanted registration are denied (S11). |
+| Cross-tenant access | Each `Store` method takes the tenant as a parameter and applies it in application code (default `'local'`); runs, connections and knowledge bases are isolated on the tested paths (S12). There is no database-level rule yet (row-level security is W11). Operator metrics are deployment-wide by design, and a stored write result is read by run id with no tenant. Anonymous access and unwanted registration are denied (S11). |
 | SSRF from tool connections | Every DNS answer must be a global address. The request is pinned to the validated IP with the original hostname kept for TLS SNI, which closes DNS rebinding between check and connect. Redirects and proxy environment variables are ignored (S10). |
 | Secrets | Credentials are Fernet-encrypted at rest, never included in workflow exports and never accepted inline in workflow JSON. Approval execution plans are encrypted. |
 | Unapproved models | Per-workspace model allowlists apply to saved and imported workflows too. |
-| Side effects | Writes need explicit node-level enablement and, when signed in, human approval by default. Approvals are bound to a digest (§2.4) and writes are never replayed (§2.3). |
+| Side effects | Writes need explicit node-level enablement and, when signed in, human approval by default. Approvals are bound to a digest ([design §4](docs/design.md#4-a-human-approves-one-thing-and-something-else-gets-sent)) and a settled write is never sent again ([design §3](docs/design.md#3-did-the-external-write-happen)). |
 | Untrusted code | Python runs in an unprivileged container with no network, a read-only root, and CPU, memory, process, output and time limits. |
 | Untrusted model output | Citations are validated against retrieved evidence; structured outputs are schema-validated with one repair attempt. |
 
@@ -402,19 +189,25 @@ flowchart LR
 
 ## 4. Evaluation: measured, including what failed
 
-Relay's grounding gate runs 53 labelled questions over IRS, NIST, OSHA and federal transportation documents, on the **shipping product path**. Thresholds were committed (`33f7da4`) **before** the evaluation that now passes them, and were not moved afterwards.
+Relay's grounding gate runs 53 questions over IRS, NIST, OSHA and federal transportation documents, on the **shipping product path**: 33 answerable and 20 unanswerable.
+
+What this result is, and what it is not:
+
+- **A calibration set, not a held-out evaluation.** The thresholds were committed (`33f7da4`) before the run that now passes them, but they were chosen after an earlier run of the same configuration on the same 53 questions. The result is a repeatability check ([evaluation report](docs/evaluations/2026-09-21-grounding-fresh-result.md)).
+- **Assistant labels.** An AI assistant wrote the labels; no person reviewed them independently. The 7 holdout questions are all unanswerable, so they cannot measure false abstention ([answerability safety report](docs/answerability-safety-report.md)).
+- **Small n, no interval.** The rates come from n = 33 and n = 20.
 
 | Metric | Result | Threshold |
 | --- | ---: | ---: |
-| Answer contains expected fact | 0.848 | ≥ 0.81 |
-| Abstains on unanswerable questions | 0.750 | ≥ 0.70 |
-| False abstention | 0.061 | ≤ 0.09 |
+| Answer contains expected fact | 0.848 (28 of 33) | ≥ 0.81 |
+| Abstains on unanswerable questions | 0.750 (15 of 20) | ≥ 0.70 |
+| False abstention | 0.061 (2 of 33) | ≤ 0.09 |
 | Citation rate | 0.939 | ≥ 0.90 |
 | First-attempt output-contract compliance | 0.947 | ≥ 0.90 |
 
 **Three approaches were rejected and kept as evidence.** Section-aware chunking with reranking improved retrieval from 87.9% to 90.9% but *reduced* abstention on unanswerable questions, so it failed the safety gate. An NLI verifier produced valid output but agreed with labels only 8 times in 24. The answerability reader raised abstention from 45% to 75% at a cost in recall, and was adopted only as an opt-in guard at a separately calibrated operating point.
 
-These are substring and abstention heuristics, not proof of semantic correctness. Methods and limits: [evaluation reports](docs/evaluations/), [answerability safety report](docs/answerability-safety-report.md).
+These are substring and abstention heuristics, not proof of semantic correctness. A held-out, human-labelled set with intervals is work item W21 (§6). Methods and limits: [evaluation reports](docs/evaluations/), [answerability safety report](docs/answerability-safety-report.md).
 
 ---
 
@@ -422,15 +215,16 @@ These are substring and abstention heuristics, not proof of semantic correctness
 
 | Layer | What runs | Where |
 | --- | --- | --- |
-| Unit and integration | 2,176 backend tests (3 need PostgreSQL); 128 frontend tests | CI (a random hash seed, then seed 1) + local (`PYTHONHASHSEED` 0–4 for each change, to catch hidden ordering assumptions) |
-| Deployed processes | 27 scenarios against a real API process, real worker processes and an HTTP receiver: kill -9 mid-write and mid-fork, restarts between approvals, stale leases, SSRF, tenant isolation, parallel branches | `scripts/check_production_scenarios.py` |
-| Live models | 17 workflow shapes on real Ollama models and real Docker (last full run 2026-10-06) | same runner, `--live-models` |
+| Unit and integration | 2,204 backend tests (3 need PostgreSQL; 7 are strict `xfail` tests of open defects); 128 frontend tests | CI (a random hash seed, then seed 1) + local (`PYTHONHASHSEED` 0–4 for each change, to catch hidden ordering assumptions) |
+| Deployed processes | 34 scenarios against a real API process, real worker processes and an HTTP receiver: kill -9 mid-write, mid-fork and mid-Repeat, restarts between approvals, stale leases, SSRF, tenant isolation, parallel branches | `scripts/check_production_scenarios.py`; run by hand or by manual dispatch, not on every push |
 | PostgreSQL | migrations up/down/up with populated history, four concurrent workers, a stale lease, `SIGKILL` inside a loop and at the accounting commit | CI `postgres-conformance` |
 | Browser | 68 Chromium tests: layout, the condition and Switch editors, request routing, building a fork with real drags, building a Repeat, Delete acting only on the last selection, invalid-JSON edits that must never run, and validation errors that name and open their node, against intercepted API fixtures (the fork, Repeat and Switch-port fixtures are held to the real validator) | CI `browser-layout` |
 | Supply chain | `pip-audit` on a fresh environment; the fail-closed npm exception gate | CI |
-| Quality | the 53-question grounding gate | local (needs models and corpus) |
+| README claims | the test, scenario and CI-job counts in this README, and the stack rows | CI `backend` (`scripts/check_readme_claims.py`) |
+| Quality | the 53-question grounding gate (§4) | local (needs models and corpus) |
+| Live models (not current) | 17 workflow shapes on real Ollama models and real Docker. The last full run was 2026-10-06, before Switch, fork/Join and Repeat, and it has not been run since | same runner, `--live-models` |
 
-**Process.** Larger fixes start from a written plan that an independent reviewer approves before code. Each fix is shipped with a test that fails without it: run against the previous commit and against deliberately broken copies of the fix (mutation testing). Each change is also re-verified from a clean `git archive` of exactly the committed files. An independent review of each phase is kept in [`docs/reviews`](docs/reviews/), including the reviews that found defects.
+**Process.** Larger fixes start from a written plan that a reviewer approves before code. The reviewer is a separate AI-assistant session, not a person. Each fix is shipped with a test that fails without it: run against the previous commit and against deliberately broken copies of the fix (mutation testing). Each change is also re-verified from a clean `git archive` of exactly the committed files. The review of each phase is kept in [`docs/reviews`](docs/reviews/), including the reviews that found defects.
 
 **Tests that cannot pass by luck.**
 - A test that depends on timing uses a barrier or a controlled clock, not a sleep. Three tests that passed on a laptop failed under load or on slower GitHub runners: a 10 ms lease, a 100 ms run deadline, and a hung-process check. They now use a controlled clock, a deadline armed at the exact commit it targets, and the killed process's own handle. The deadline fix was confirmed against an injected 200 ms delay that broke the old version.
@@ -438,47 +232,61 @@ These are substring and abstention heuristics, not proof of semantic correctness
 
 ---
 
-## 6. Roadmap
+## 6. Plan
 
-```mermaid
-flowchart LR
-    classDef done fill:#e6f4ea,stroke:#2e7d32,color:#1b5e20
-    classDef next fill:#fff4e5,stroke:#ef6c00,color:#7a3e00
-    classDef later fill:#f1f3f4,stroke:#9aa0a6,color:#3c4043
+The plan is the 8-week plan of [`docs/gap-audit.md`](docs/gap-audit.md) §8. Each phase ends with CI green, the deployed gate passing and the PostgreSQL checks passing. Work items and their status: [`docs/gap-audit.md`](docs/gap-audit.md) §6 and §11; handoff cards: [`docs/tasks/`](docs/tasks/).
 
-    A3["A3 error policy<br/>+ retries"]:::done --> A4["A4 for-each<br/>iteration"]:::done --> A51["A5.1 typed<br/>conditions"]:::done
-    A51 --> A52["A5.2 multi-way<br/>routing"]:::done --> TA["Token accounting<br/>TA01–TA07"]:::done --> A53["A5.3 Part 1: parallel<br/>branches + joins + TA08"]:::done --> A53E["A5.3 Part 2:<br/>editor support"]:::done --> A53S["A5.3 Part 3:<br/>deployed scenarios"]:::done --> A61["A6.1 Part 1: Repeat<br/>bounded loops (backend)"]:::done --> A61E["A6.1 Part 2:<br/>editor support"]:::done --> A61S["A6.1 Part 3:<br/>deployed scenarios"]:::done --> A62["A6.2 subgraphs"]:::next
-    B1["B1 Alembic"]:::done --> B2["B2 Redis: per-tenant budgets,<br/>rate limits, fair queueing"]:::later
-    B2 --> B3["B3 object storage<br/>for documents"]:::later
-    B2 --> B4["B4 orgs, roles,<br/>resource grants"]:::later --> B5["B5 SSO · SCIM ·<br/>audit log"]:::later
-    B1 --> C1["C1 data-source SPI +<br/>conformance suite"]:::later --> D["D Text-to-SQL over<br/>a semantic layer"]:::later
-    E["E GraphRAG, measured<br/>against the same gate"]:::later
-    F["F OpenTelemetry ·<br/>eval cross-checks"]:::later
-```
+| Phase | Weeks | Work items | State at the end |
+| --- | --- | --- | --- |
+| 0. Truth and baseline | 1 | W03, W04, W01, W05 | Honest README; lint, types and coverage in CI; the gate in CI; the first performance numbers |
+| 1. Durability under load | 2 | W06, W07, W20 (a, c) | Database-clock leases; measured claim strategy; poison-run rule; before and after numbers |
+| 2. Multi-user | 3–5 | W08, W24, W09, W10, W12, W23, W13, W11, W14, W15, W16 | Organizations, roles, OIDC, tokens, row-level security, separation of duties, audit log, permission-aware retrieval, fair queue |
+| 3. Operability | 6 | W17, W18, W19, W20 (b, d) | Reconcile path and idempotency key, retention, deletion, traces, metrics |
+| 4. Evaluation | 7 | W21 | Held-out human-labelled result with intervals; one hosted model; a CI check |
+| 5. Deploy and demo | 8 | W22 | A link, a video, a design document |
 
-- **A5.2 (done).** The [Switch](docs/multi-way-routing.md) routes to one of up to 15 cases or Default, on checked or trusted values only.
-- **Token accounting (done).** TA01–TA08 are closed (§2.6); TA08 closed with A5.3 Part 1.
-- **A5.3 Part 1 (done).** A node with 2–8 next nodes forks into [parallel branches](docs/operations.md#parallel-branches) that end at one Join; after the Join every branch output is bindable (§2.8). Branches are read-only, so cancelling the others when one fails changes nothing outside Relay. The token limit stays an admission limit: inside a fork a run can end above it by one call per running branch.
-- **A5.3 Part 2 (done).** Forks are built in the editor: the Join is in the palette, its card shows how many branches arrive, validation messages mark the node they concern, and a branch stopped by a failing sibling shows `cancelled`. The editor does not copy the graph rules; Validate applies the backend's.
-- **A5.3 Part 3 (done).** The [scenario gate](docs/production-scenario-testing.md) runs forks through the deployed processes (S22–S24): branches meet at the receiver, the Join waits for both, a failure cancels the sibling and sends nothing, and a killed worker resumes without repeating finished work. Writes and approvals inside branches need a different runtime and stay later work (A5.3b), as does a strict token cap that reserves input and output allowance before each call (TA05).
-- **A6.1 Part 1 (done).** A [Repeat](docs/operations.md#bounded-loops-repeat) node runs an attached body, and an optional checker Agent, until a typed stop rule is met, at most 10 times (default 3). The graph stays acyclic: the loop runs inside one node. Each iteration is a saved row, so a resumed run reuses finished iterations; a budget stop is saved too and is never judged. Nothing in the loop may write outside Relay.
-- **A6.1 Part 2 (done).** Repeats are built in the editor: Repeat until is in the palette with a starting stop rule, the card has `body` and `check` ports whose connections set the Repeat's settings (and deleting one clears its setting in one undoable change), the stop rule is edited with the Condition fields, and the execution log names the iteration of each body and checker event and says why the Repeat stopped. Older saved loop edges are drawn at their ports and exported unchanged. A port name is special only on its own card (`body`, `check` and `flow` on loop cards, `agents` on an Agent), so Switch cases named `body`, `check`, `flow`, `agents` or `output` connect and draw at their own routes (review findings, fixed). The editor does not copy the graph rules; Validate applies the backend's.
-- **A6.1 Part 3 (done).** The [scenario gate](docs/production-scenario-testing.md) runs Repeat through the deployed processes (S25–S29): the checker's feedback reaches the writer and only the accepted draft is sent, once; an unmet stop rule or a budget stop sends nothing; a killed worker resumes without calling saved iterations again; an approval shows the exact draft and its resume reuses the Repeat's checkpoint. Under `on_limit: last` a Repeat can return a draft that did not meet its stop rule, so every write after it, also one attached to a later step, needs `approval: true` ([the rule](docs/operations.md#bounded-loops-repeat)). A6.1 is complete.
-- **A6.2 (next).** Subgraphs: a saved workflow used as one step, after published workflow versions.
-- **B2.** Shared runtime state in Redis. Today's queue is global FIFO, so one tenant can starve others, and limits are per-run only. Redis stays optional: without it the platform runs exactly as today.
-- **B4–B5.** Organisations with roles and resource-scoped grants, enforced in the worker where credentials resolve (not only at the API), then SSO and SCIM.
-- **C–F.** A data-source interface whose drivers must pass one conformance suite, Text-to-SQL over governed definitions, GraphRAG scored against the existing 53-question gate, and tracing. Each capability lands with a measurement, and anything that does not earn its place gets a written verdict, not a quiet removal.
+**Cut or frozen** (reasons in [`docs/gap-audit.md`](docs/gap-audit.md) §8):
+
+| Item | Decision |
+| --- | --- |
+| A6.2 subgraphs | Later; decide after Phase 2 |
+| A5.3b writes and approvals inside parallel branches | Frozen; the current refusal stays |
+| Strict token cap (reserve, then settle) | Frozen; the admission limit is documented (§7) |
+| Request reader | Frozen as experimental; out of the palette (§7) |
+| Redis, object storage, SCIM | Cut; PostgreSQL does leases, fairness and limits |
+| Data-source SPI, Text-to-SQL, GraphRAG | Cut |
+| Elasticsearch, Pinecone | Code kept; not in the "run live" stack |
+| Jira, Confluence, GitHub, SMTP live runs | Frozen; fixtures are enough for the write protocol |
+
+**Done so far.** Error policy and retries (A3), for-each loops (A4), typed conditions (A5.1), the [Switch](docs/multi-way-routing.md) (A5.2), token accounting TA01–TA08, [parallel branches](docs/operations.md#parallel-branches) with a Join (A5.3 Parts 1–3), the [Repeat](docs/operations.md#bounded-loops-repeat) node with its editor and deployed scenarios S25–S29 (A6.1 Parts 1–3), Alembic (B1), the load-baseline harness (W05, part), and the fixes of defects DEF-01, DEF-02 and DEF-03 ([`docs/defects.md`](docs/defects.md)).
 
 ## 7. Known limitations
 
-- One person per tenant. There is no shared workspace or roles yet (B4).
-- Loopback-only deployment. TLS, managed secrets, backups and load testing are not done.
-- Global FIFO queue and in-process rate state (B2).
-- Quality numbers come from an 8B local model and heuristic scoring. Hosted models have not been put through the same gate yet.
-- The opt-in request reader passes its safety gate but fails its usability gate: it admitted 9 of 20 valid requests against 18 required. Improving it needs a new frozen test set, so the old one is not tuned against.
-- The token ceiling is an admission limit, not a strict cap (§2.6): a run can end above it by its last admitted call (one call per running branch inside a fork), and calls with no reported usage add nothing to it. Relay does not send Claude `cache_control` today, so the cache accounting is tested on recorded response shapes, not on live cached calls. Old runs keep their old counts; nothing is backfilled.
+**Open defects.** Each has a strict `xfail` test in `backend/tests/defects/`; details in [`docs/defects.md`](docs/defects.md).
+
+| Id | Severity | Defect |
+| --- | --- | --- |
+| DEF-04 | High | A run whose worker dies on every attempt is claimed without limit |
+| DEF-05 | Medium | A cancelled run is claimed and started again |
+| DEF-06 | Medium | Agent memory is written with no fence and outside the checkpoint commit; a resume writes it twice |
+| DEF-09 | Medium | An error in the heartbeat query leaves the graph task running with no supervisor |
+| DEF-10 | Medium | Validation is still exponential when bindings form a cycle; one request holds a validation thread |
+| DEF-07 | Low | One job row with no run row blocks the whole queue |
+| DEF-08 | Low | A saved workflow can hold a setting far over its declared limit |
+
+**Other limits.**
+
+- One person per tenant. There is no shared workspace or roles yet (Phase 2).
+- Tenant isolation is in application code only: each `Store` method applies the tenant it is given (default `'local'`). There is no database-level rule yet (row-level security is W11). See §3.
+- Loopback-only deployment. There is no application image, and TLS, managed secrets and backups are not done (W22). The load baseline exists for one laptop only ([`docs/resume-evidence.md`](docs/resume-evidence.md) §7); it is not a capacity claim.
+- Global FIFO queue and in-process rate state (W15).
+- An uncertain write needs a person: Relay sends no idempotency key and has no reconcile path (W17).
+- Quality numbers come from one 8B local model, assistant-written labels and heuristic scoring (§4). OpenAI, Claude, Elasticsearch and Pinecone have adapters tested with fixtures only; none has run live.
+- The request reader is **experimental and frozen**. It passes its safety gate but fails its usability gate: it admitted 9 of 20 valid requests against 18 required. Improving it needs a new frozen test set, so the old one is not tuned against. It is no longer in the palette. Every template still starts with it, because a contract-2 workflow (and so a Switch) needs it as its entry; a deleted reader comes back only from a template.
+- The token ceiling is an admission limit, not a strict cap ([design §6](docs/design.md#6-budgets-that-reset-on-resume-leak-through-nesting-or-lose-their-count)): a run can end above it by its last admitted call (one call per running branch inside a fork), and calls with no reported usage add nothing to it. Relay does not send Claude `cache_control` today, so the cache accounting is tested on recorded response shapes, not on live cached calls. Old runs keep their old counts; nothing is backfilled.
 - Runs created before the TA02 accounting rule are not trusted to resume model calls, and stop with a reason instead.
 - Browser tests cover specific flows on Chromium, not the whole editor.
+- Left open on purpose ([`docs/gap-audit.md`](docs/gap-audit.md) §10): the knowledge services and two startup data migrations are outside Alembic (D4), knowledge-service storage and latency (D6, P4), prompt injection (S9), judge validity and agent-task evaluation (E3, E5), and a backup test (O5).
 
 ---
 
@@ -517,4 +325,4 @@ The editor is at `http://127.0.0.1:3000` and the API docs at `http://127.0.0.1:8
 | `backend/app/tool_service.py` | Integrations and SSRF-pinned egress |
 | `backend/app/kb/` | Knowledge management, ingestion and search services |
 | `scripts/check_production_scenarios.py` | Deployed-process scenario gate |
-| `docs/` | Design notes, evaluation reports, [full platform reference](docs/platform-reference.md), [independent reviews](docs/reviews/) |
+| `docs/` | Design notes, evaluation reports, [full platform reference](docs/platform-reference.md), [design reviews](docs/reviews/) (by a separate AI-assistant session), [design narrative](docs/design.md), [open defects](docs/defects.md) |

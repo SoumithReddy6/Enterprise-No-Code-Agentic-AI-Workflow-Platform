@@ -1,0 +1,258 @@
+# Relay design: failure modes and how Relay handles them
+
+This document holds the failure-mode narrative that was §2 of the [README](../README.md) until
+W03 (2026-11-27). Open defects are in [`defects.md`](defects.md); the plan is in
+[`gap-audit.md`](gap-audit.md) §8.
+
+About "review" in this document: the design and fix reviews in [`reviews/`](reviews/) were done
+by a separate AI-assistant session (not a person), with no access to the author's session. They
+are kept as the record, including the reviews that found defects.
+
+
+These are failure modes of shared, long-running, side-effecting systems, the kind that do not show up in a single-user demo. For each one: what goes wrong, how Relay handles it, and the evidence. Scenario IDs (S01–S29) refer to the [deployed-process scenario gate](production-scenario-testing.md), which runs a real API process, real worker processes and a real HTTP receiver.
+
+## 1. Two workers believe they own the same run
+
+**What goes wrong.** A worker pauses: a GC stall, a laptop sleep, a `SIGSTOP`, a network partition. Its lease expires, and a second worker claims the run and finishes it. Then the first worker wakes up and keeps writing events, checkpoints and a final status over the finished run.
+
+**Design.** Claiming is a compare-and-set: `UPDATE execution_jobs SET owner=?, lease_until=? WHERE run_id=? AND (status='queued' OR lease_until < now)`. Only one claimant's update matches. Every later write from a worker goes through a **fence**: an `UPDATE … WHERE owner = me AND status='running' AND lease_until > now` in the *same transaction* as the write. If the fence matches no row, the write is refused and the worker stops. Heartbeats renew the 30-second lease through the same fence.
+
+```mermaid
+sequenceDiagram
+    participant A as Worker A
+    participant DB as execution_jobs
+    participant B as Worker B
+    A->>DB: claim (owner=A, lease 30s)
+    Note over A: process stalls (SIGSTOP)
+    Note over DB: lease expires
+    B->>DB: claim — matches "lease_until < now" → owner=B
+    B->>DB: fenced writes … final status
+    Note over A: process resumes
+    A->>DB: fenced write: WHERE owner=A AND lease_until>now
+    DB-->>A: 0 rows → refused, worker abandons the run
+```
+
+**Evidence.** PostgreSQL CI job: a worker is stopped past a real lease, a replacement completes the run, the stale worker resumes, and all five of its stale operations are refused, leaving the final run unchanged. Separately, four worker processes on 50 runs produced 50 unique claims and no duplicated item rows.
+
+## 2. A worker dies mid-run, or mid-loop
+
+**What goes wrong.** A run with paid model calls and a 30-item batch dies at item 17. Restarting from scratch repeats paid calls and side effects; restarting from memory is impossible because the process is gone.
+
+**Design.** Every node's result is committed as a checkpoint in the same fenced transaction as its success event. On re-claim, completed nodes restore from checkpoints instead of running. Loops store **one row per item** in `run_loop_items`, committed with that item's event. A crash at item 17 therefore resumes at item 18, and items 1–16 are neither re-run nor re-charged.
+
+**Evidence.**
+- S15: the worker exits right after an item's SQL commit, and real lease expiry hands the run to a new worker without repeating the completed write.
+- S24: the worker is killed in the middle of a fork; the finished branch is restored without a new request, the unfinished one runs again, and the write after the Join is sent once.
+- S28: the worker is killed while a Repeat's second iteration waits for its model; the saved first iteration is not called again and its row is unchanged, and the write after the Repeat is sent once.
+- PostgreSQL CI: `SIGKILL` mid-loop; committed items are not repeated, and checkpoints match an uninterrupted run.
+- Honest boundary: a *read* in flight at the moment of the kill has an unknown outcome and is retried once, and that retry is charged. Relay promises "no duplicate writes", not "every call exactly once".
+
+## 3. "Did the external write happen?"
+
+**What goes wrong.** Relay sends a POST to create a Jira issue, and the connection drops. The remote side may have created the issue. Retrying risks a duplicate ticket or a second customer email; skipping risks losing the action. Most systems quietly pick one.
+
+**Design.** Writes follow a three-state protocol per action, not per node:
+
+```mermaid
+stateDiagram-v2
+    [*] --> marked: mark_write(action) committed BEFORE sending
+    marked --> settled: response received → settle_write(result) in one transaction
+    marked --> uncertain: exception, timeout or crash before settlement
+    settled --> [*]: resume returns the stored result — never sends again
+    uncertain --> stopped: run fails with UncertainWriteError
+    stopped --> [*]: operator reconciles with the remote system
+```
+
+- External writes are **never retried**. Validation rejects a retry policy on any write node, including write tools attached to agents and loop bodies.
+- `on_error: continue` and `route` **cannot hide uncertainty**: an uncertain write stops the run even inside a recovery path (S03, S04).
+- Resuming a run whose write is uncertain is refused with HTTP 409.
+- An Agent continues after a settled write without asking the model again for that step. The settle commit also saves the position of each Agent on the call path, so a resume replays that step, gets the stored result and goes on from the transcript that shows the write as done. The stored result also keeps the digest of the request that was sent: a different request at the same step stops the run instead of getting the old result.
+- Uncertainty is reserved for the send itself. The request is built and checked *before* the marker is written, so a refusal at that stage, such as missing write consent, a mismatched connection or a number JSON cannot carry exactly, is an ordinary failure with nothing to reconcile. Address checks happen at connect time and stay on the uncertain side.
+
+**Evidence.** S16: the worker is killed *after the receiver accepted the write but before the response arrived*. The receiver logged exactly one request after recovery, and resume was refused.
+
+## 4. A human approves one thing, and something else gets sent
+
+**What goes wrong.** An operator approves "send this reply to customer A". Between approval and execution, the connection's endpoint is edited, the upstream data changes on resume, or a stale browser tab approves an older payload.
+
+**Design.**
+- The approval stores the exact prepared payload, its SHA-256 digest over canonical JSON, and the execution plan encrypted at rest.
+- A decision must quote the digest, which is checked with a constant-time compare. Approvals expire and are rate-limited per tenant.
+- One approval exists per (run, action) through a unique constraint, so a double-click is idempotent.
+- On resume the worker **recomputes** the payload and connection and refuses to send if either differs from what was reviewed.
+- An approval in the `executing` state at resume is treated as uncertain (§3).
+- The action-budget reservation made before the pause is recorded in the same transaction that releases the lease, so the approved execution is not charged twice.
+
+**Evidence.**
+- S01: a wrong digest returns 409 and nothing is sent; a duplicate approval is a no-op.
+- S14: changing the destination after review blocks the write.
+- S02: rejection is terminal and cannot be resumed.
+- S05: a worker restart between batch approvals repeats nothing.
+
+## 5. Loop results that outgrow the database
+
+**What goes wrong.** The first loop implementation stored all item results inside the run's checkpoint JSON. Each item rewrote a growing blob, so write volume grew quadratically, and a 100-item batch of large tool responses produced multi-megabyte rewrites per item.
+
+**Design.**
+- Item results live in their own rows.
+- The run checkpoint keeps only a compact marker `{stored_in, count, sha256}`. When a run is loaded, the item rows must match that marker exactly, with no missing or extra rows; otherwise the loop is marked unavailable and resume refuses to continue past it, rather than proceeding with a silently partial result.
+- Retained values are capped at 1 MB per loop. Beyond that, values are dropped but statuses kept, and the drop is reported as incomplete work.
+- Event previews are capped at 2,000 characters and the stored event at 32 KB. The ceiling is applied to the event *as stored*, after preview metadata is attached; applying it before was a real bug, fixed and regression-tested.
+
+**Evidence.** Measured on both SQLite and PostgreSQL with 60 KB per item, counting bytes submitted to SQL:
+
+| Items | Run JSON | Item rows | Events | Total written |
+| ---: | ---: | ---: | ---: | ---: |
+| 25 | 8.4 KB | 962 KB | 111 KB | 1.13 MB |
+| 50 | 13.6 KB | 964 KB | 189 KB | 1.26 MB |
+| 100 | 24.1 KB | 968 KB | 344 KB | 1.55 MB |
+
+Each doubling of item count adds roughly 10–25% more bytes, not 4×.
+
+## 6. Budgets that reset on resume, leak through nesting, or lose their count
+
+**What goes wrong.** A per-run limit lives in process memory, so a crash and resume resets it to zero. Or the limit is enforced at the top-level graph while loop bodies, retries and nested specialist agents spend freely. Subtler: the provider reports usage but the answer is rejected, so the count is dropped. Or the answer is saved but its count is not, and the resumed run gets that budget back.
+
+**Design.**
+- Two run-wide ceilings: an **action budget** (tool calls and retrievals) and a **token ceiling** (all model spend).
+- Both are enforced by one shared execution-policy layer that every graph node, loop body and agent target goes through, so retries and nested calls are charged in the same place.
+- Usage the provider reported is counted even when the answer is rejected, for example empty text or invalid structured output.
+- **Unknown is not zero.** Every model call has a status: `reported`, `partial`, `unreported` or `unanswered`. A count the provider did not send is never stored as 0, so a call with no usage still shows in operator metrics instead of looking free.
+- **One definition of input.** Claude input is base input plus cache reads plus cache writes. OpenAI and Ollama totals already include cached tokens, so their cache counts are kept only as a breakdown and never added again.
+- Each outcome reports only its own usage, so a cancelled nested agent is not counted twice in operator metrics.
+- **A result and its count commit together.** Each saved result goes into the same fenced transaction as the run's token total, its usage rows, its loop item and its checkpoint. A resume therefore never restores an answer without the tokens it cost.
+- A saved total can never go down: a write with a lower total is refused. Before each provider request, the worker waits until all known spend is saved. If it cannot be saved, the run stops with a named reason instead of spending more.
+- When a budget runs out, the node stops cleanly and the run reports a `budget` truncation cause. A token refusal is typed, so `on_error: continue` or `route` cannot make the run look complete.
+- **Honest boundary.** The token ceiling is an **admission limit**, the same model as Claude Managed Agents session budgets and the Azure API Management token limit. It is checked before each call against spend already reported, and it never aborts a call in flight, so the last call can go over the limit. Every finished run that went over carries a `token_limit` record with the limit, the spend and the overshoot, including cancelled runs and rejected approvals. A strict cap (reserve input plus `max_tokens`, then settle) is not provided. A response lost before any save is paid for again on resume. Missing counts add nothing to the ceiling, so a provider that reports nothing cannot be capped; such calls are counted as `unreported` instead. See [README §7, known limits](../README.md#7-known-limitations).
+
+**Evidence.**
+- An early audit found loop-body retries bypassing the retry policy, and replays charging twice. Both were fixed by moving everything onto the shared boundary (S07), and the S07–S09 reviews are kept in [`docs/reviews`](reviews/). A live-model check (L01) confirms real Ollama usage survives into durable events.
+- A [token-accounting review](reviews/token-accounting-production-review-2026-10-25.md) compared Relay with published provider and gateway behavior and recorded eight findings (TA01–TA08): four reproduced defects, plus policy limits and conditional gaps. All eight are closed. TA08 (an old snapshot replacing a newer one) needs concurrent commits, so it was fixed with parallel branches (A5.3 Part 1): one lock per run attempt orders the accounting commits, and each commit saves the newest snapshot. Each fix had a reviewed design, new tests run first against the previous code (the defect tests failed there by wrong values, not by a missing function), mutation testing, the full suite under five hash seeds and the deployed scenario gate: 138 new tests and 72 deliberate breaks of the fixes, all detected. A5.3 Part 1 added 30 tests and 20 breaks on the same terms, including the correction its review found (a save before a model call now also covers spend another branch reported during that save).
+- TA02: 24 tests, 22 of which failed on the previous code, and 12 of 12 deliberate breaks of the fix detected. Worker processes are killed with `SIGKILL` while the commit is held, on SQLite, and on PostgreSQL in CI. Evidence: [`evals/results/ta02-fix-2026-10-31`](../evals/results/ta02-fix-2026-10-31/).
+- The other fixes: [TA01](../evals/results/ta01-fix-2026-10-30/) (23 tests, 7 mutants), [TA03](../evals/results/ta03-fix-2026-11-03/) (13, 8), [TA04](../evals/results/ta04-fix-2026-10-30/) (43, 16), [TA05](../evals/results/ta05-fix-2026-11-05/) (9, 9), [TA06](../evals/results/ta06-fix-2026-11-05/) (16, 11), [TA07](../evals/results/ta07-fix-2026-11-05/) (10, 9). The reviews found real gaps, for example two finish paths that skipped the overshoot record and a log filter that dropped the new usage status; each was fixed before closure.
+
+## 7. Silent truncation
+
+**What goes wrong.** Jira returns 250 issues and the integration keeps 48. A loop hits `max_items`. An agent hits its step limit. The run shows green and the answer looks complete.
+
+**Design.**
+- Truncation travels as data: a reserved `_truncation` port, validated strictly, carries a `cause` of kind `loop`, `agent`, `tool` or `budget`, each with a reason.
+- Port names starting with `_` are reserved for run metadata and rejected in node definitions and bindings, and truncation records are schema-validated, so malformed or unhashable records fail loudly.
+- Runs carry `truncation_causes`, and the UI shows an *Incomplete run* panel listing each cause.
+- Older checkpoints that cannot prove completeness are reported as **unverified**, not complete.
+
+**Evidence.** S09 (a batch over `max_items` is visible at run level); Chromium layout tests keep the cause list and the answer scrollable at desktop and tablet widths.
+
+## 8. Bindings to data that a path cannot provide
+
+**What goes wrong.** A response node reads `agent.text`, but on the branch that ran, the agent never executed: it sat behind a condition, or failed and was routed to an error branch. The run crashes with a `KeyError` at the worst moment, or worse, reads a stale value.
+
+**Design.** The compiler applies a **guaranteed-upstream** rule: a node may bind only to outputs of nodes that run on *every* path reaching it. Error branches cannot read the failed node's outputs, and a node using `on_error: continue` cannot have readers at all. Violations are rejected at validation, before a run exists.
+
+**Evidence.** S08: an invalid recovery binding is rejected before execution through the deployed API. S22: after a Join, one write reads one branch and the Response reads the other, and the history shows that the Join started only after both branches finished. S23a–b: a failing branch cancels its sibling and nothing after the Join is sent; a write inside a branch is refused before any run.
+
+## 9. Conditions that guess
+
+**What goes wrong.** A routing condition compares `"1,200"` to `1000`, or a zip code `"02134"` to `2134`, or reads a field the model forgot to output. Most rule engines coerce types or return `false` silently, so a $1,200 purchase skips review.
+
+**Design (A5.1).**
+- Typed operators: `eq ne gt gte lt lte in empty contains`, with optional JSON field paths.
+- Numbers compare as exact decimals, including JSON numbers. They are parsed as `Decimal` from the input through an extraction agent's structured output, because Python's default JSON parsing would turn `1000.00000000000001` into `1000.0`. An agent's output schema judges that same exact value, so `maximum: 1000` rejects `1000.00000000000001` instead of passing a rounded copy. Text equality is the default, so identifiers are never silently treated as numbers.
+- An HTTP write sends a number only if JSON carries exactly that value. Otherwise it is refused before sending, rather than delivering a rounded amount.
+- A value that cannot be compared **fails the run with the reason and takes neither branch**.
+- Invalid configuration is reported verbatim at validation.
+- Saved conditions are unchanged, checked against the original implementation on 20,000 randomized Unicode cases.
+
+**Evidence.**
+- S17: an amount condition gates a real external write at the precision boundary. The receiver got exactly 1200, 1000.01 and 9007199254740993, did not get 80 or 1000.00, and `1000.00000000000001` was refused before sending.
+- A review found JSON numbers rounded before comparison, plus a stale-predicate bug in the editor. Both are fixed with regression tests; the review is kept in [`docs/reviews`](reviews/).
+- S18 and S19 cover the error cases.
+
+## 10. A route label that pretends to be permission
+
+**What goes wrong.** A multi-way router reads a model's guess, or a case is named
+`approved`, and the path behind it sends money or tickets. Or a saved route is changed and
+the run resumes down a path nobody chose.
+
+**Design (A5.2).**
+- A Switch takes one of up to 15 ordered cases (each a typed condition) or Default. The first
+  match wins; an error fails the run and never falls through to Default.
+- It accepts only checked or trusted values, in contract-2 workflows. Validation and
+  execution share one trust rule, so a workflow that validates is not refused later.
+- A case name grants nothing: writes behind it keep their own eligibility and approval.
+- On resume the route is recomputed from the input; a forged route fails before any send.
+
+**Evidence.**
+- S20: a checked support category reaches exactly one of four receivers.
+- S21a–c: a forged saved route, an unchecked HTTP value and a case named `approved` send
+  nothing on any other path. Without the restore check, the forged route ran to `success`.
+- Six reviews found 9 code defects (malformed route callbacks, a trust-rule
+  mismatch between validation and runtime, and editor repair paths) and 2 plan or coverage
+  gaps; each code fix has a test that failed first. See [`docs/reviews`](reviews/).
+- A live run had `llama3.1` extract the amount from free text, and the condition routed it correctly.
+- Details: [`docs/typed-conditions.md`](typed-conditions.md).
+
+## 11. Two browser tabs, one workflow
+
+**What goes wrong.** Two tabs edit the same workflow, and the second save silently overwrites the first.
+
+**Design.** Optimistic concurrency: every update must carry the `updated_at` it was based on. A stale update gets HTTP 409 with the current version, and the editor keeps the local edits and offers export and reload.
+
+**Evidence.** S13.
+
+## 12. Schema changes against databases that already exist
+
+**What goes wrong.** Hand-rolled `ALTER TABLE` code guesses at the current schema; an upgrade half-applies; a database from an older build is "migrated" into a shape nobody intended.
+
+**Design.**
+- Alembic owns the schema of the core database (revisions 0001–0007).
+- Not under Alembic: the knowledge services create their tables with `create_all` and add a
+  column with an `ALTER TABLE` at startup (`backend/app/kb/search.py:52-57`,
+  `backend/app/kb/management.py:52-69`). Two data migrations also run at startup and keep their own
+  `schema_migrations` records (`backend/app/storage.py:273-274`).
+- Startup upgrades a recognised database to head and refuses an unrecognised schema with an actionable error rather than guessing.
+- Pre-Alembic databases are *adopted* only after structural verification, including databases that still contain retired tables.
+- Downgrades are tested, not promised to be lossless. A downgrade through 0004 refuses a database that holds typed reviews rather than turn a review into a write. For production, rollback means restoring a stopped-system backup.
+
+**Evidence.** PostgreSQL CI upgrades to head, downgrades to 0001 and upgrades back, then compares the result to the models. The PostgreSQL CI job (`populated-downgrade`) also puts three populated runs through the same round trip. Their loop item results and accounting are lost, as documented, but never silently: the finished run shows its loop results as unavailable, not as an empty success, and the two unfinished runs fail on resume without sending a request again. A read-only copy of a real workspace database was upgraded with all 27 table row counts preserved, at revision `0003` on 2026-10-05. That check has not passed since: the 2026-11-11 run had no workspace copy, and it was not run at `0006` or `0007` ([status report](status-report.md) §10).
+
+## 13. Knowledge indexes that break while you rebuild them
+
+**What goes wrong.** A rebuild fails halfway, and search now returns a mix of old and new chunks. Or the embedding model is updated, and old vectors are compared with new query embeddings, giving quietly wrong results.
+
+**Design.**
+
+```mermaid
+flowchart LR
+    UP["Upload"] --> JOB["Durable ingestion job<br/>(leased)"] --> STAGE["Extract · chunk · embed<br/>into an isolated staging segment"]
+    STAGE --> VERIFY{"Verify counts,<br/>dimensions, ownership"}
+    VERIFY -- ok --> PUB["Atomic publish<br/>new version becomes active"]
+    VERIFY -- fail --> CLEAN["Durable cleanup queue<br/>delete partial chunks + vectors"]
+    OLD["Previous version"] -. "keeps serving until publish" .-> PUB
+```
+
+The embedding model's digest is pinned per index. If the installed model changes, semantic search refuses until the index is rebuilt.
+
+**Evidence.** Knowledge-service suites on SQLite and on PostgreSQL management and search schemas cover ingestion, rebuild, archive cleanup, tenant isolation, deletion and source revocation.
+
+## 14. Grounded answers that cite sources that do not exist
+
+**What goes wrong.** The model writes `[S7]` when only six passages were retrieved, or cites a passage from a different tool call. The answer looks sourced and is not.
+
+**Design.**
+- A run-wide evidence registry assigns unique labels across retrieval, tool results and nested agents.
+- The response node validates every `[S#]` at the boundary and strips invented labels.
+- Empty retrieval, or a declared lack of evidence, takes a strict abstention path.
+- An optional local answerability reader can abstain before generation.
+- **A source must still be valid when the answer is published.** The response node checks every knowledge source behind it again, including sources behind a restored answer and behind reused loop work. If a document was removed, or a later check rejected it, the run fails closed: no answer, no checkpoint, no output.
+
+**Evidence.**
+- The grounding gate is in [README §4](../README.md#4-evaluation-measured-including-what-failed).
+- A review found the response listing every passage the run had seen, including one a nested agent's check had rejected (P1). The review of that fix found a second path: loop items reused on resume were not checked. Both are fixed with tests that failed first. See [`docs/reviews`](reviews/r01-i01-recheck-2026-10-31.md).
+
+## 15. Dependencies that are unhealthy, and dependencies that are vulnerable
+
+- **Readiness.** `/api/ready` probes the database, both knowledge services and the age of the worker's last heartbeat. It also probes the Python sandbox by running a real `print(1)` container with the executor's exact flags. A hung Docker CLI is killed and its container removed. Workers re-probe right before execution rather than trusting a cached answer.
+- **A dependency that crashed the process.** onnxruntime's telemetry thread aborted processes at exit on macOS. It is disabled before the package loads, and a native macOS CI job checks for the thread by symbol.
+- **Supply chain.** CI fails on any high or critical npm advisory unless it matches a reviewed exception exactly: same advisory, package, range, dependency path and versions, not expired, and no patched release published. The gate validates npm's report, exit codes and dependency tree, and fails closed on anything malformed. One residual is currently accepted (`braces` through `vinext` build tooling, expiring 2026-12-04) and reported as such, never as "clean". When a new advisory appeared on 2026-10-06, the gate failed and the unused package chain that carried it was removed. See [security hardening](security-hardening.md).
+
