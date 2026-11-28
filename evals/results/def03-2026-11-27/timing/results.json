@@ -1,0 +1,17 @@
+{
+ "plain_chain(98)": {
+  "nodes": 100,
+  "best_s": 0.0015,
+  "worst_s": 0.0022
+ },
+ "switch_chain(92, input.message)": {
+  "nodes": 100,
+  "best_s": 0.0023,
+  "worst_s": 0.0259
+ },
+ "switch_chain(92, reader.text)": {
+  "nodes": 100,
+  "best_s": 0.0019,
+  "worst_s": 0.0021
+ }
+}

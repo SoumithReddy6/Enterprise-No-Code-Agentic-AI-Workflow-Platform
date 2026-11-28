@@ -24,16 +24,17 @@ Run them:
 |---|---|---|---|
 | DEF-01 | **Critical** | **Fixed in `f3771b3` (2026-11-27).** An Agent's settled write is sent a second time on resume when the model changes the step order | `backend/tests/test_agent_write_resume.py::test_def01_…` |
 | DEF-02 | High | **Fixed in `f3771b3` (2026-11-27).** A stored write result is returned for a different request; the new request is never sent and is reported as success | `backend/tests/test_agent_write_resume.py::test_def02_…` |
-| DEF-03 | High | Validation takes exponential time; one request stops the API process | `test_def03_validation_exponential.py` |
+| DEF-03 | High | **Fixed (2026-11-27).** Validation takes exponential time; one request stops the API process | `backend/tests/test_validation_cost.py` |
 | DEF-04 | High | A run whose worker dies on every attempt is claimed without limit | `test_def04_def05_def07_claim.py::test_def04_…` |
 | DEF-05 | Medium | A cancelled run is claimed and started again | `test_def04_def05_def07_claim.py::test_def05_…` |
 | DEF-06 | Medium | Agent memory is written with no fence and outside the checkpoint commit; a resume writes it twice | `test_def06_memory_write.py` |
 | DEF-09 | Medium | An error in the heartbeat query leaves the graph task running with no supervisor | `test_def09_heartbeat_error_orphans_task.py` |
 | DEF-07 | Low | One job row with no run row blocks the whole queue | `test_def04_def05_def07_claim.py::test_def07_…` |
 | DEF-08 | Low | A saved workflow can hold a setting far over its declared limit | `test_def08_workflow_save_size.py` |
+| DEF-10 | Medium | Found while fixing DEF-03. `static_label` is still exponential when the bindings form a cycle; one request holds a validation thread | `test_def10_static_label_cycle.py` |
 
 Fix order: DEF-01 and DEF-02 together (one root cause), DEF-03, DEF-04 with DEF-05 and DEF-07 (all
-in `claim_next`), DEF-09, DEF-06, DEF-08.
+in `claim_next`), DEF-09, DEF-06, DEF-08. DEF-10 (found 2026-11-27) needs a decision first.
 
 ---
 
@@ -160,8 +161,65 @@ Contract 1 is not affected (measured: 0.0 s at n = 18).
 `provenance.static_label` (`provenance.py:536-544`), which also passes a per-path set. Run
 validation with `asyncio.to_thread`. Add a hard node-visit budget that fails closed.
 
-**Test.** `backend/tests/defects/test_def03_validation_exponential.py` (a child process with a
-10 s limit, so the test cannot hang the suite).
+**Test.** Was `backend/tests/defects/test_def03_validation_exponential.py` (a child process with a
+10 s limit, so the test cannot hang the suite). Now `backend/tests/test_validation_cost.py`.
+
+**Two more walks (2026-11-27).** Measured before the fix, on the same doubled chain:
+`provenance.static_label` and `compiler.checked_dependency` (`compiler.py:514-521`, not in the
+card) also make 2**(n+1) − 1 calls (n = 18: 524,287 calls each). A chain from the reader's
+checked text into a Switch reaches `checked_dependency`; a chain from the trigger reaches
+`static_label`. The user added `checked_dependency` to DEF-03 (2026-11-27).
+
+**Fix (2026-11-27).** Each walk keeps one visited set (or one path) for each top-level call and
+remembers only complete answers. The meaning of each walk does not change:
+
+- `unchecked_model_input` is reachability: some walk over inputs (stopping at a verifier's
+  `text`, and with `stop_at_sources` at an independent read) or attachments reaches a model. A
+  node met again adds nothing, so one visited set is enough. `memo` keeps answers by
+  `(state, stop_at_sources)` across the calls of one validation (`request_contract_errors`
+  makes one): a true when found, and a false only for the states of a call whose answer is
+  false. A state visited in a call that found a model (it can have been on the current path) is
+  not remembered. `calls_model` is the `('calls', id)` state of the same walk. Runtime
+  (`request_safety.py`) calls the same function, with a fresh memo for each call.
+- `checked_dependency`: a node met again on the path is false, and `all` passes that false to
+  every node on the cycle, so every answer is complete and is remembered by node.
+- `static_label`: a reference met again on the path is guessed, so an answer that met a
+  reference higher on the path depends on the path. The memo keeps only the other answers, by
+  `(reference, field)`. The depth limit (`len(seen) > len(nodes) * 4`) also depends on the path:
+  when the graph has more distinct references than the limit allows, nothing is remembered.
+- `/api/validate` and `/api/runs` run `validate_workflow` (and the warnings) with
+  `asyncio.to_thread`. `/api/runs/{id}/resume` does not validate the graph (no change).
+- No hard node-visit budget (not in the card, user decision).
+
+**Gates (2026-11-27).** Before the fix, `backend/tests/test_validation_cost.py` gave 10 failed and
+5 passed on the parent code (the 5 are meaning tests that must pass there). After: n = 100
+validates in 1.5–2.3 ms (best of 5); each walk on the doubled chain makes 2n + 2 calls (parent:
+2^(n+1) − 1). The same errors and warnings as `88d4d8b` for 69 workflows (60 from
+`test_request_contract_validation.py` and `test_switch.py`, 9 from `examples/`), and the same
+walk answers on 600 random graphs. Backend 2,191 passed and 6 xfailed at PYTHONHASHSEED 0–4 with
+PostgreSQL; deployed gate 40 of 40. Mutants M00–M12: the control passes; M01–M07 and M09–M12 are
+killed; M08 (the depth-limit guard always on) survives, no counterexample found. Evidence:
+`evals/results/def03-2026-11-27/README.md`.
+
+## DEF-10 — `static_label` is exponential on a binding cycle (Medium)
+
+**Trigger.** The DEF-03 chain into a Switch, where the first Prompt also binds the last one:
+`p0.inputs.x = "p39.text"`. Validation reports `invalid binding x = p39.text`, but the Switch
+rule runs first.
+
+**Evidence.** `static_label` calls a reference met again on its path guessed. After the DEF-03
+fix the memo keeps only answers that met no higher reference on the path; here every answer
+meets the root, so none is kept. Measured after the DEF-03 fix
+(`evals/results/def03-2026-11-27/timing/cyclic.txt`): n = 14 0.020 s, n = 16 0.081 s,
+n = 18 0.331 s (×4 for each two nodes). `checked_dependency` and `unchecked_model_input` take
+0.0 s on the same graph. The event loop answers (validation runs in a thread), but one request
+holds a thread and a CPU.
+
+**Suggested fix.** Needs a decision: a rule for a cycle (for example, do not run the trust walks
+when a binding is invalid, and report the binding), or the hard node-visit budget of DEF-03.
+
+**Test.** `backend/tests/defects/test_def10_static_label_cycle.py` (a child process with a 10 s
+limit).
 
 ## DEF-04 — A run is claimed without limit (High)
 

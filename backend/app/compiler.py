@@ -398,6 +398,7 @@ def request_contract_errors(workflow, flow, deps):
     order, arrivals, nodes = flow_order(flow)
     _, available = binding_guarantees(order, arrivals, nodes)
     full = {n.id: n for n in workflow.nodes}
+    model_memo = {}  # unchecked_model_input's complete answers for this workflow (DEF-03)
     outgoing = {id: [e for e in flow.edges if e.source == id] for id in nodes}
     triggers = [n for n in flow.nodes if n.type in ('chat_input', 'manual_input')]
     if len(triggers) != 1:return ['Contract 2 requires exactly one entry trigger.']
@@ -443,11 +444,11 @@ def request_contract_errors(workflow, flow, deps):
                 errors.append(f'{node.id}: reference must come from an independent read, not a model, echo or transformation.')
         if node.type == 'switch':
             # The existing trust rule, not a new list; runtime applies the same lineage walk.
-            if not switch_input_allowed(node.inputs.get('value', ''), full, deps):
+            if not switch_input_allowed(node.inputs.get('value', ''), full, deps, memo=model_memo):
                 errors.append(f'{node.id}: Route on checked values, or use a Condition, which supports review.')
         if node.type == 'agent' and node.config.get('role') in ('extraction', 'classification') and node.inputs.get('input') != original:
             errors.append(f'{node.id}: extraction must bind the original trigger message.')
-        model_inputs = any(unchecked_model_input(ref, full, deps) for ref in node.inputs.values())
+        model_inputs = any(unchecked_model_input(ref, full, deps, memo=model_memo) for ref in node.inputs.values())
         consequential = is_write_node(node, REGISTRY.get(node.type)) or (model_inputs and (node.type == 'condition' or (node.type == 'calculate' and node.config.get('mode') == 'check')))
         if consequential:
             if not any(nodes[id].type in VERIFIERS for id in available.get(node.id, set())):
@@ -475,50 +476,87 @@ def independent_reference(ref, nodes):
     return bool(sep and node and node.type in ('tool_jira', 'tool_confluence', 'tool_github', 'retrieve') and not is_write_node(node, REGISTRY.get(node.type)))
 
 
-def unchecked_model_input(ref, nodes, deps=None, seen=None, stop_at_sources=False):
+MODEL_CALLERS = ('agent', 'llm', 'query', 'request_router', 'request_reader')
+
+
+def unchecked_model_input(ref, nodes, deps=None, stop_at_sources=False, *, memo=None):
     """Whether a model's output can reach this reference without a verifier on the way.
 
     With stop_at_sources, an independent record read ends the walk: its records are source
-    data whoever wrote its query (provenance.independent_source). The Switch rule uses this."""
-    source, sep, port = ref.partition('.')
-    node = nodes.get(source)
-    seen = set() if seen is None else seen
-    if not sep or not node or source in seen:return False
-    seen = seen | {source}
-    if node.type in VERIFIERS and port == 'text':return False
-    if stop_at_sources:
-        from .provenance import independent_source
-        if independent_source(node):return False
-    if node.type in ('agent', 'llm', 'query', 'request_router', 'request_reader'):return True
-    # A loop's flow inputs do not describe what its attached body produces. Walk
-    # callable dependencies as well, including specialist/tool chains. Otherwise an
-    # attached Agent's guessed result would look like a deterministic Jira list.
-    dependencies = deps or {}
-    def calls_model(id, visited):
-        if id in visited or id not in nodes:return False
-        if nodes[id].type in ('agent', 'llm', 'query', 'request_router', 'request_reader'):return True
-        return any(calls_model(child, visited | {id}) for child in dependencies.get(id, []))
-    return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
-        unchecked_model_input(value, nodes, dependencies, seen, stop_at_sources) for value in node.inputs.values())
+    data whoever wrote its query (provenance.independent_source). The Switch rule uses this.
+
+    The answer is whether some walk over inputs and attachments reaches a model. A node met
+    again adds nothing that its first visit does not already search, so one call keeps one
+    visited set (DEF-03: a per-path set made a doubled chain cost 2**n). `memo` keeps complete
+    answers across calls over the same nodes and deps, by (reference, stop_at_sources): a true
+    as soon as it is found, and a false only for the states of a call whose answer is false,
+    because only then was everything they reach searched. A state visited inside a call that
+    found a model (it can have been on the current path) is not remembered."""
+    memo = {} if memo is None else memo
+    visited = set()
+    found = _model_walk(('ref', ref), nodes, deps or {}, stop_at_sources, memo, visited)
+    if not found:memo.update(dict.fromkeys(((*state, stop_at_sources) for state in visited), False))
+    return found
 
 
-def switch_input_allowed(ref, nodes, deps=None):
+def _model_walk(state, nodes, deps, stop_at_sources, memo, visited):
+    key = (*state, stop_at_sources)
+    if key in memo:return memo[key]
+    if state in visited:return False
+    visited.add(state)
+    walk = lambda next: _model_walk(next, nodes, deps, stop_at_sources, memo, visited)
+    kind, name = state
+    if kind == 'calls':
+        # An attached node (tool, specialist, loop body) and what it calls in turn. Every
+        # attachment counts here, verifier or not: its result is not a checked port.
+        found = name in nodes and (nodes[name].type in MODEL_CALLERS or any(walk(('calls', child)) for child in deps.get(name, [])))
+    else:
+        source, sep, port = name.partition('.')
+        node = nodes.get(source)
+        if not sep or not node:return False
+        if node.type in VERIFIERS and port == 'text':return False
+        if stop_at_sources:
+            from .provenance import independent_source
+            if independent_source(node):return False
+        if node.type in MODEL_CALLERS:found = True
+        # A loop's flow inputs do not describe what its attached body produces. Walk
+        # callable dependencies as well, including specialist/tool chains. Otherwise an
+        # attached Agent's guessed result would look like a deterministic Jira list.
+        else:found = any(walk(('calls', id)) for id in deps.get(source, [])) or any(walk(('ref', value)) for value in node.inputs.values())
+    if found:memo[key] = True
+    return found
+
+
+def switch_input_allowed(ref, nodes, deps=None, *, memo=None):
     """The Switch's input rule, shared by validation and runtime: a verifier's checked text
     (or a Prompt or Calculate built only from it), or trusted data that no unverified model
-    output reaches before an independent source."""
+    output reaches before an independent source. `memo` is unchecked_model_input's."""
     from .provenance import STATIC_TRUSTED, static_label
     return checked_dependency(ref, nodes) or (static_label(nodes, ref) == STATIC_TRUSTED
-        and not unchecked_model_input(ref, nodes, deps, stop_at_sources=True))
+        and not unchecked_model_input(ref, nodes, deps, stop_at_sources=True, memo=memo))
 
 
-def checked_dependency(ref, nodes, seen=None):
+def checked_dependency(ref, nodes, *, memo=None):
+    """A verifier's checked text, or a Prompt or Calculate whose every input is one.
+
+    A node met again on the path (a cycle) is false, and `all` passes that false to every node
+    on the cycle: each of them reaches the cycle from anywhere. So every answer is complete and
+    `memo` keeps them by node (DEF-03: a per-path set made a doubled chain cost 2**n)."""
+    return _checked_walk(ref, nodes, {} if memo is None else memo, set())
+
+
+def _checked_walk(ref, nodes, memo, path):
     source, sep, port = ref.partition('.')
     node = nodes.get(source)
-    seen = set() if seen is None else seen
-    if not sep or not node or source in seen:return False
+    if not sep or not node or source in path:return False
     if node.type in VERIFIERS:return port == 'text'
     if node.type not in ('prompt', 'calculate'):return False
-    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+    if source in memo:return memo[source]
+    path.add(source)
+    try:found = bool(node.inputs) and all(_checked_walk(value, nodes, memo, path) for value in node.inputs.values())
+    finally:path.discard(source)
+    memo[source] = found
+    return found
 
 
 def type_warnings(workflow: Workflow) -> list[str]:

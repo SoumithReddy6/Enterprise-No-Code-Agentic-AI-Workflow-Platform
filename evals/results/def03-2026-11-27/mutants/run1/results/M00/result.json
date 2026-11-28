@@ -1,0 +1,10 @@
+{
+ "id": "M00",
+ "file": null,
+ "planned": [],
+ "planned_hit": [],
+ "oracle": "walk+full",
+ "failed": [],
+ "killed": true,
+ "ran": 2075
+}

@@ -1,0 +1,2 @@
+FAILED backend/tests/test_validation_cost.py::test_validate_route_does_not_block_the_event_loop
+1 failed, 273 passed, 1 warning in 15.61s

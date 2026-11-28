@@ -533,19 +533,50 @@ def _static_weakest(labels):
     return min(labels, key=_STATIC_RANK.get) if labels else STATIC_TRUSTED
 
 
-def static_label(nodes, ref, field='', seen=None):
-    """What the value at `ref` (and `field` within it) can be, before any run."""
-    seen = set() if seen is None else seen
+def static_label(nodes, ref, field='', *, memo=None):
+    """What the value at `ref` (and `field` within it) can be, before any run.
+
+    One call keeps the path of references it is on. A reference met again on that path is
+    guessed, as before; so an answer that met a reference higher on the path depends on how
+    the walk came there, and only the other answers are complete. `memo` keeps the complete
+    ones, by (reference, field) (DEF-03: without it a doubled chain cost 2**n). The depth limit
+    also depends on the path: when the graph has more distinct references than the limit
+    allows, the limit can apply, and nothing is remembered."""
+    memo = {} if memo is None else memo
+    refs = {ref} | {r for node in nodes.values() for r in node.inputs.values()}
+    return _static_walk(nodes, ref, field, {}, memo, len(refs) - 1 <= len(nodes) * 4)[0]
+
+
+_NO_CUT = float('inf')
+
+
+def _static_walk(nodes, ref, field, path, memo, remember):
+    """(label, cut): cut is the lowest path depth that a stop in this walk depended on (-1 for
+    the depth limit, _NO_CUT for none). path maps each reference on the path to its depth."""
     source, _, port = ref.partition('.')
     node = nodes.get(source)
-    if node is None or ref in seen or len(seen) > len(nodes) * 4:
-        return STATIC_GUESSED
-    seen = seen | {ref}
-    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+    if node is None:return STATIC_GUESSED, _NO_CUT
+    if ref in path:return STATIC_GUESSED, path[ref]
+    if len(path) > len(nodes) * 4:return STATIC_GUESSED, -1
+    if (ref, field) in memo:return memo[(ref, field)], _NO_CUT
+    depth, cut = len(path), [_NO_CUT]
+    def label(r, f=''):
+        value, at = _static_walk(nodes, r, f, path, memo, remember)
+        cut[0] = min(cut[0], at)
+        return value
+    path[ref] = depth
+    try:value = _static_rule(nodes, node, port, field, label)
+    finally:del path[ref]
+    if remember and cut[0] >= depth:memo[(ref, field)] = value
+    return value, cut[0]
+
+
+def _static_rule(nodes, node, port, field, label):
+    inputs = lambda: [label(r) for r in node.inputs.values()]
     if independent_source(node):
         return STATIC_TRUSTED
     if node.type == 'retrieve':
-        query = static_label(nodes, node.inputs['query'], '', seen) if 'query' in node.inputs else STATIC_GUESSED
+        query = label(node.inputs['query']) if 'query' in node.inputs else STATIC_GUESSED
         if port == 'query' or port == 'context' and field == 'question': return query
         if port == 'context' and not field: return query
         return STATIC_TRUSTED
@@ -562,11 +593,11 @@ def static_label(nodes, ref, field='', seen=None):
         except CalculationError:
             return STATIC_GUESSED
         value = node.inputs.get('value')
-        label = _static_weakest(static_label(nodes, value, path, seen) for path in used) if value else STATIC_GUESSED
+        weakest = _static_weakest(label(value, path) for path in used) if value else STATIC_GUESSED
         # A compute expression can return null for a missing operand. That outcome
         # is absent, so "always guessed / every run reviews" would be false.
         nullable = (node.config or {}).get('mode', 'compute') == 'compute' and bool(used)
-        return STATIC_RUNTIME if (conditional or nullable) and label == STATIC_GUESSED else label
+        return STATIC_RUNTIME if (conditional or nullable) and weakest == STATIC_GUESSED else weakest
     if node.type == 'for_each':
         if port != 'results':
             return STATIC_TRUSTED

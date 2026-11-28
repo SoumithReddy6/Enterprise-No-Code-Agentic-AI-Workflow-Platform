@@ -1,0 +1,8 @@
+963888d39a96ea51 963888d39a96ea51 backend/app/compiler.py
+5c6b91ff74577227 5c6b91ff74577227 backend/app/main.py
+f404003cfc02198a f404003cfc02198a backend/app/provenance.py
+67c8dddc179fc8c3 67c8dddc179fc8c3 backend/tests/fixtures/validation_answers_88d4d8b.json
+878e75ffe4f377fe 878e75ffe4f377fe backend/tests/test_validation_cost.py
+deleted in both: yes
+34a1b05967088863 34a1b05967088863 backend/tests/defects/test_def10_static_label_cycle.py (second copy commit)
+16e1f6027ffaf995 16e1f6027ffaf995 backend/tests/test_validation_cost.py (third copy commit: label test field fix)

@@ -1,0 +1,928 @@
+FFFFFF..FF...FF                                                          [100%]
+=================================== FAILURES ===================================
+________ test_validation_of_a_42_node_workflow_finishes_in_ten_seconds _________
+
+    def test_validation_of_a_42_node_workflow_finishes_in_ten_seconds():
+        # 42 nodes is under the 100-node limit (models.py:43). The child is killed at the timeout.
+        try:
+>           subprocess.run([sys.executable, '-c', PROBE], timeout=10, check=True, capture_output=True)
+
+backend/tests/test_validation_cost.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:557: in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:1221: in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:2154: in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Popen: returncode: -9 args: ['/Users/soumith/Library/Mobile Documents/iClou...>
+endtime = 927235.17846075, orig_timeout = 10, stdout_seq = [], stderr_seq = []
+skip_check_and_raise = False
+
+    def _check_timeout(self, endtime, orig_timeout, stdout_seq, stderr_seq,
+                       skip_check_and_raise=False):
+        """Convenience for checking if a timeout has expired."""
+        if endtime is None:
+            return
+        if skip_check_and_raise or _time() > endtime:
+>           raise TimeoutExpired(
+                    self.args, orig_timeout,
+                    output=b''.join(stdout_seq) if stdout_seq else None,
+                    stderr=b''.join(stderr_seq) if stderr_seq else None)
+E           subprocess.TimeoutExpired: Command '['/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/bin/python', '-c', "\nfrom backend.app.models import Workflow\nfrom backend.app.compiler import validate_workflow\nnodes=[{'id':'input','type':'chat_input'}];edges=[];prev,port='input','message'\nfor i in range(40):\n    ref=f'{prev}.{port}'\n    nodes.append({'id':f'p{i}','type':'prompt','inputs':{'message':ref,'x':ref},'config':{'template':'{message}'}})\n    edges.append({'id':f'e{i}','source':prev,'target':f'p{i}'});prev,port=f'p{i}','text'\nnodes.append({'id':'out','type':'response','inputs':{'text':f'{prev}.text'}})\nedges.append({'id':'eo','source':prev,'target':'out'})\nvalidate_workflow(Workflow.model_validate({'version':1,'contract':2,'name':'chain','nodes':nodes,'edges':edges}))\n"]' timed out after 10 seconds
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:1268: TimeoutExpired
+
+During handling of the above exception, another exception occurred:
+
+    def test_validation_of_a_42_node_workflow_finishes_in_ten_seconds():
+        # 42 nodes is under the 100-node limit (models.py:43). The child is killed at the timeout.
+        try:
+            subprocess.run([sys.executable, '-c', PROBE], timeout=10, check=True, capture_output=True)
+        except subprocess.TimeoutExpired:
+>           pytest.fail('DEF-03: validate_workflow did not finish in 10 s for a 42-node workflow')
+E           Failed: DEF-03: validate_workflow did not finish in 10 s for a 42-node workflow
+
+backend/tests/test_validation_cost.py:121: Failed
+_ test_validation_of_a_40_prompt_chain_into_a_switch_finishes_in_ten_seconds[input.message] _
+
+start = 'input.message'
+
+    @pytest.mark.parametrize('start', ['input.message', 'reader.text'])
+    def test_validation_of_a_40_prompt_chain_into_a_switch_finishes_in_ten_seconds(start):
+        # input.message: the Switch rule reaches static_label. reader.text: checked text, so the
+        # rule reaches checked_dependency, which is true at every step.
+        try:
+>           subprocess.run([sys.executable, '-c', SWITCH_PROBE, start], timeout=10, check=True, capture_output=True, cwd=ROOT)
+
+backend/tests/test_validation_cost.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:557: in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:1221: in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:2154: in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Popen: returncode: -9 args: ['/Users/soumith/Library/Mobile Documents/iClou...>
+endtime = 927245.242706208, orig_timeout = 10, stdout_seq = [], stderr_seq = []
+skip_check_and_raise = False
+
+    def _check_timeout(self, endtime, orig_timeout, stdout_seq, stderr_seq,
+                       skip_check_and_raise=False):
+        """Convenience for checking if a timeout has expired."""
+        if endtime is None:
+            return
+        if skip_check_and_raise or _time() > endtime:
+>           raise TimeoutExpired(
+                    self.args, orig_timeout,
+                    output=b''.join(stdout_seq) if stdout_seq else None,
+                    stderr=b''.join(stderr_seq) if stderr_seq else None)
+E           subprocess.TimeoutExpired: Command '['/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/bin/python', '-c', '\nimport sys\nfrom backend.app.models import Workflow\nfrom backend.app.compiler import validate_workflow\nfrom backend.tests.test_validation_cost import switch_chain\nvalidate_workflow(Workflow.model_validate(switch_chain(40, sys.argv[1])))\n', 'input.message']' timed out after 10 seconds
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:1268: TimeoutExpired
+
+During handling of the above exception, another exception occurred:
+
+start = 'input.message'
+
+    @pytest.mark.parametrize('start', ['input.message', 'reader.text'])
+    def test_validation_of_a_40_prompt_chain_into_a_switch_finishes_in_ten_seconds(start):
+        # input.message: the Switch rule reaches static_label. reader.text: checked text, so the
+        # rule reaches checked_dependency, which is true at every step.
+        try:
+            subprocess.run([sys.executable, '-c', SWITCH_PROBE, start], timeout=10, check=True, capture_output=True, cwd=ROOT)
+        except subprocess.TimeoutExpired:
+>           pytest.fail(f'DEF-03: validate_workflow did not finish in 10 s for a 40-Prompt chain from {start} into a Switch')
+E           Failed: DEF-03: validate_workflow did not finish in 10 s for a 40-Prompt chain from input.message into a Switch
+
+backend/tests/test_validation_cost.py:140: Failed
+_ test_validation_of_a_40_prompt_chain_into_a_switch_finishes_in_ten_seconds[reader.text] _
+
+start = 'reader.text'
+
+    @pytest.mark.parametrize('start', ['input.message', 'reader.text'])
+    def test_validation_of_a_40_prompt_chain_into_a_switch_finishes_in_ten_seconds(start):
+        # input.message: the Switch rule reaches static_label. reader.text: checked text, so the
+        # rule reaches checked_dependency, which is true at every step.
+        try:
+>           subprocess.run([sys.executable, '-c', SWITCH_PROBE, start], timeout=10, check=True, capture_output=True, cwd=ROOT)
+
+backend/tests/test_validation_cost.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:557: in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:1221: in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:2154: in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Popen: returncode: -9 args: ['/Users/soumith/Library/Mobile Documents/iClou...>
+endtime = 927255.28368875, orig_timeout = 10, stdout_seq = [], stderr_seq = []
+skip_check_and_raise = False
+
+    def _check_timeout(self, endtime, orig_timeout, stdout_seq, stderr_seq,
+                       skip_check_and_raise=False):
+        """Convenience for checking if a timeout has expired."""
+        if endtime is None:
+            return
+        if skip_check_and_raise or _time() > endtime:
+>           raise TimeoutExpired(
+                    self.args, orig_timeout,
+                    output=b''.join(stdout_seq) if stdout_seq else None,
+                    stderr=b''.join(stderr_seq) if stderr_seq else None)
+E           subprocess.TimeoutExpired: Command '['/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/bin/python', '-c', '\nimport sys\nfrom backend.app.models import Workflow\nfrom backend.app.compiler import validate_workflow\nfrom backend.tests.test_validation_cost import switch_chain\nvalidate_workflow(Workflow.model_validate(switch_chain(40, sys.argv[1])))\n', 'reader.text']' timed out after 10 seconds
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:1268: TimeoutExpired
+
+During handling of the above exception, another exception occurred:
+
+start = 'reader.text'
+
+    @pytest.mark.parametrize('start', ['input.message', 'reader.text'])
+    def test_validation_of_a_40_prompt_chain_into_a_switch_finishes_in_ten_seconds(start):
+        # input.message: the Switch rule reaches static_label. reader.text: checked text, so the
+        # rule reaches checked_dependency, which is true at every step.
+        try:
+            subprocess.run([sys.executable, '-c', SWITCH_PROBE, start], timeout=10, check=True, capture_output=True, cwd=ROOT)
+        except subprocess.TimeoutExpired:
+>           pytest.fail(f'DEF-03: validate_workflow did not finish in 10 s for a 40-Prompt chain from {start} into a Switch')
+E           Failed: DEF-03: validate_workflow did not finish in 10 s for a 40-Prompt chain from reader.text into a Switch
+
+backend/tests/test_validation_cost.py:140: Failed
+_______________ test_unchecked_model_input_visits_each_node_once _______________
+
+    def test_unchecked_model_input_visits_each_node_once():
+        raw = plain_chain(40);nodes, inputs = size(raw)
+        workflow = Workflow.model_validate(raw)
+>       calls = count_calls(compiler, MODEL_WALK, nodes * inputs, lambda: validate_workflow(workflow))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_validation_cost.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_validation_cost.py:90: in count_calls
+    try:call()
+        ^^^^^^
+backend/tests/test_validation_cost.py:148: in <lambda>
+    calls = count_calls(compiler, MODEL_WALK, nodes * inputs, lambda: validate_workflow(workflow))
+                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:240: in validate_workflow
+    errors += request_contract_errors(workflow, flow, deps)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:450: in request_contract_errors
+    model_inputs = any(unchecked_model_input(ref, full, deps) for ref in node.inputs.values())
+                   ^^^
+backend/app/compiler.py:450: in <genexpr>
+    model_inputs = any(unchecked_model_input(ref, full, deps) for ref in node.inputs.values())
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:501: in unchecked_model_input
+    return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
+                                                                                ^^^
+backend/app/compiler.py:502: in <genexpr>
+    unchecked_model_input(value, nodes, dependencies, seen, stop_at_sources) for value in node.inputs.values())
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:501: in unchecked_model_input
+    return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
+                                                                                ^^^
+backend/app/compiler.py:502: in <genexpr>
+    unchecked_model_input(value, nodes, dependencies, seen, stop_at_sources) for value in node.inputs.values())
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:501: in unchecked_model_input
+    return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
+                                                                                ^^^
+backend/app/compiler.py:502: in <genexpr>
+    unchecked_model_input(value, nodes, dependencies, seen, stop_at_sources) for value in node.inputs.values())
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:501: in unchecked_model_input
+    return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
+                                                                                ^^^
+backend/app/compiler.py:502: in <genexpr>
+    unchecked_model_input(value, nodes, dependencies, seen, stop_at_sources) for value in node.inputs.values())
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:501: in unchecked_model_input
+    return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
+                                                                                ^^^
+backend/app/compiler.py:502: in <genexpr>
+    unchecked_model_input(value, nodes, dependencies, seen, stop_at_sources) for value in node.inputs.values())
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:501: in unchecked_model_input
+    return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
+                                                                                ^^^
+backend/app/compiler.py:502: in <genexpr>
+    unchecked_model_input(value, nodes, dependencies, seen, stop_at_sources) for value in node.inputs.values())
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:501: in unchecked_model_input
+    return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
+                                                                                ^^^
+backend/app/compiler.py:502: in <genexpr>
+    unchecked_model_input(value, nodes, dependencies, seen, stop_at_sources) for value in node.inputs.values())
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:501: in unchecked_model_input
+    return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
+                                                                                ^^^
+backend/app/compiler.py:502: in <genexpr>
+    unchecked_model_input(value, nodes, dependencies, seen, stop_at_sources) for value in node.inputs.values())
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:501: in unchecked_model_input
+    return any(calls_model(id, seen) for id in dependencies.get(source, [])) or any(
+                                                                                ^^^
+backend/app/compiler.py:502: in <genexpr>
+    unchecked_model_input(value, nodes, dependencies, seen, stop_at_sources) for value in node.inputs.values())
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:478: in unchecked_model_input
+    def unchecked_model_input(ref, nodes, deps=None, seen=None, stop_at_sources=False):
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+frame = <frame at 0x10bbb34c0, file '/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/backend/app/compiler.py', line 478, code unchecked_model_input>
+event = 'call', arg = None
+
+    def profile(frame, event, arg):
+        if event != 'call' or frame.f_code.co_name not in all_names or frame.f_code.co_filename not in walks:return
+        every[0] += 1
+        if every[0] > ANY_WALK_LIMIT:raise TooManyCalls(f'more than {ANY_WALK_LIMIT} calls of the lineage walks')
+        if frame.f_code.co_name in names and frame.f_code.co_filename == filename:
+            count[0] += 1
+>           if count[0] > limit:raise TooManyCalls(f'more than {limit} calls of {sorted(names)}')
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           test_validation_cost.TooManyCalls: more than 3402 calls of ['_model_walk', 'calls_model', 'unchecked_model_input']
+
+backend/tests/test_validation_cost.py:88: TooManyCalls
+____________________ test_checked_dependency_cost_is_linear ____________________
+
+    def test_checked_dependency_cost_is_linear():
+        # The Switch rule's first test, on checked text: true at every step, so `all` never stops early.
+        raw = switch_chain(40, 'reader.text');nodes, inputs = size(raw)
+        graph = graph_of(raw)
+>       calls = count_calls(compiler, CHECKED_WALK, nodes * inputs, lambda: checked_dependency('p39.text', graph))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_validation_cost.py:162: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_validation_cost.py:90: in count_calls
+    try:call()
+        ^^^^^^
+backend/tests/test_validation_cost.py:162: in <lambda>
+    calls = count_calls(compiler, CHECKED_WALK, nodes * inputs, lambda: checked_dependency('p39.text', graph))
+                                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:521: in checked_dependency
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                 ^^^
+backend/app/compiler.py:521: in <genexpr>
+    return bool(node.inputs) and all(checked_dependency(value, nodes, seen | {source}) for value in node.inputs.values())
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/compiler.py:514: in checked_dependency
+    def checked_dependency(ref, nodes, seen=None):
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+frame = <frame at 0x10bd9fef0, file '/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/backend/app/compiler.py', line 514, code checked_dependency>
+event = 'call', arg = None
+
+    def profile(frame, event, arg):
+        if event != 'call' or frame.f_code.co_name not in all_names or frame.f_code.co_filename not in walks:return
+        every[0] += 1
+        if every[0] > ANY_WALK_LIMIT:raise TooManyCalls(f'more than {ANY_WALK_LIMIT} calls of the lineage walks')
+        if frame.f_code.co_name in names and frame.f_code.co_filename == filename:
+            count[0] += 1
+>           if count[0] > limit:raise TooManyCalls(f'more than {limit} calls of {sorted(names)}')
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           test_validation_cost.TooManyCalls: more than 4176 calls of ['_checked_walk', 'checked_dependency']
+
+backend/tests/test_validation_cost.py:88: TooManyCalls
+_______________________ test_static_label_cost_is_linear _______________________
+
+    def test_static_label_cost_is_linear():
+        raw = switch_chain(40, 'input.message');nodes, inputs = size(raw);graph = graph_of(raw)
+>       calls = count_calls(provenance, LABEL_WALK, nodes * inputs * 4, lambda: static_label(graph, 'p39.text'))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_validation_cost.py:170: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/tests/test_validation_cost.py:90: in count_calls
+    try:call()
+        ^^^^^^
+backend/tests/test_validation_cost.py:170: in <lambda>
+    calls = count_calls(provenance, LABEL_WALK, nodes * inputs * 4, lambda: static_label(graph, 'p39.text'))
+                                                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:577: in static_label
+    return STATIC_TRUSTED if port == 'sources' else _static_weakest(inputs())
+                                                                    ^^^^^^^^
+backend/app/provenance.py:544: in <lambda>
+    inputs = lambda: [static_label(nodes, r, '', seen) for r in node.inputs.values()]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/app/provenance.py:536: in static_label
+    def static_label(nodes, ref, field='', seen=None):
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+frame = <frame at 0x10bd3abc0, file '/Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/backend/app/provenance.py', line 536, code static_label>
+event = 'call', arg = None
+
+    def profile(frame, event, arg):
+        if event != 'call' or frame.f_code.co_name not in all_names or frame.f_code.co_filename not in walks:return
+        every[0] += 1
+        if every[0] > ANY_WALK_LIMIT:raise TooManyCalls(f'more than {ANY_WALK_LIMIT} calls of the lineage walks')
+        if frame.f_code.co_name in names and frame.f_code.co_filename == filename:
+            count[0] += 1
+>           if count[0] > limit:raise TooManyCalls(f'more than {limit} calls of {sorted(names)}')
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           test_validation_cost.TooManyCalls: more than 16704 calls of ['_static_walk', 'static_label']
+
+backend/tests/test_validation_cost.py:88: TooManyCalls
+____________ test_a_node_on_the_walk_path_is_not_remembered_as_safe ____________
+
+    def test_a_node_on_the_walk_path_is_not_remembered_as_safe():
+        nodes, memo = ring(), {}
+>       assert unchecked_model_input('x.text', nodes, memo=memo)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: unchecked_model_input() got an unexpected keyword argument 'memo'
+
+backend/tests/test_validation_cost.py:218: TypeError
+____________ test_a_label_found_on_the_walk_path_is_not_remembered _____________
+
+    def test_a_label_found_on_the_walk_path_is_not_remembered():
+        # c is a nullable calculation over y, and y reads c. From c, y meets c on its path (guessed);
+        # from y itself, the walk goes round to y, and c lifts that guess to runtime.
+        nodes = {'c': Node(id='c', type='calculate', inputs={'value': 'y.text'}, config={'expression': 'coalesce(a, 1)'}),
+                 'y': Node(id='y', type='prompt', inputs={'c': 'c.text'})}
+        fresh = static_label(nodes, 'y.text')
+        memo = {}
+>       static_label(nodes, 'c.text', 'result', memo=memo)
+E       TypeError: static_label() got an unexpected keyword argument 'memo'
+
+backend/tests/test_validation_cost.py:230: TypeError
+_ test_each_walk_gives_the_same_answers_as_before_on_small_graphs[shared-memo] _
+
+expected = {'commit': '88d4d8b', 'graphs': [{'answers': {'ghost.reading': {'checked': False, 'labels': ['guessed', 'guessed', 'gu... {'id': 'send-out', 'kind': 'flow', 'source': 'send', 'sourceHandle': None, ...}, ...], 'name': 'Guarded', ...}}, ...]}
+shared = True
+
+    @pytest.mark.parametrize('shared', [False, True], ids=['fresh-memo', 'shared-memo'])
+    def test_each_walk_gives_the_same_answers_as_before_on_small_graphs(expected, shared):
+        # Random graphs with binding cycles, attachment cycles, missing nodes and every trust case.
+        graphs = expected['graphs']
+        assert len(graphs) >= 500 and any(g['cyclic'] for g in graphs)
+>       differ = [i for i, g in enumerate(graphs) if graph_answers(g, shared) != g['answers']]
+                                                     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend/tests/test_validation_cost.py:290: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+graph = {'answers': {'ghost.reading': {'checked': False, 'labels': ['guessed', 'guessed', 'guessed'], 'switch': False, 'unchec...: {'query': 'ghost.reading'}, 'type': 'tool_jira'}, {'config': {}, 'id': 'n1', 'inputs': {}, 'type': 'response'}], ...}
+shared = True
+
+    def graph_answers(graph, shared):
+        """Each walk's answer for each reference of a small graph. With `shared`, the calls on one
+        graph share one memo for each walk, so a remembered answer must hold for every later call."""
+        nodes = {n['id']: Node.model_validate(n) for n in graph['nodes']}
+        deps = graph['deps']
+        memos = {name: {} for name in ('u0', 'u1', 'ud', 'c', 's')} if shared else None
+        kw = (lambda name: {'memo': memos[name]}) if shared else (lambda name: {})
+        answers = {}
+        for ref in graph['refs']:
+            answers[ref] = {
+>               'unchecked': unchecked_model_input(ref, nodes, deps, **kw('u0')),
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                'unchecked_sources': unchecked_model_input(ref, nodes, deps, stop_at_sources=True, **kw('u1')),
+                'unchecked_no_deps': unchecked_model_input(ref, nodes, **kw('ud')),
+                'checked': checked_dependency(ref, nodes, **kw('c')),
+                'labels': [static_label(nodes, ref, field, **kw('s')) for field in ('', 'result', 'question')],
+                'switch': switch_input_allowed(ref, nodes, deps),
+            }
+E           TypeError: unchecked_model_input() got an unexpected keyword argument 'memo'
+
+backend/tests/test_validation_cost.py:256: TypeError
+______________ test_validate_route_does_not_block_the_event_loop _______________
+
+tmp_path = PosixPath('/private/var/folders/5f/975phmvd4k5_qkpwfsmsch980000gn/T/pytest-of-soumith/pytest-616/test_validate_route_does_not_b0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c81fb70>
+
+    @pytest.mark.asyncio
+    async def test_validate_route_does_not_block_the_event_loop(tmp_path, monkeypatch):
+        from backend.app import main
+        from backend.tests.test_compiler import sample
+        started, ended = [], []
+        def slow(workflow):
+            started.append(time.perf_counter());time.sleep(1);ended.append(time.perf_counter())
+            return []
+        monkeypatch.setattr(main, 'validate_workflow', slow)
+        app = main.create_app(database_url=f'sqlite:///{tmp_path}/t.db', encryption_key=Fernet.generate_key(), auth_enabled=False, embedded_worker=False)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://testserver') as client:
+            validating = asyncio.create_task(client.post('/api/validate', json=sample()))
+            for _ in range(200):
+                if started:break
+                await asyncio.sleep(.01)
+            health = await client.get('/api/health');answered = time.perf_counter()
+            assert (await validating).status_code == 200
+        assert health.status_code == 200
+        # On the event loop, /api/health could answer only after the slow validation ended.
+>       assert answered < ended[0] and answered - started[0] < 0.2, (answered - started[0], ended[0] - started[0])
+E       AssertionError: (1.0111771250376478, 1.005042792065069)
+E       assert (927257.388080416 < 927257.381946083)
+
+backend/tests/test_validation_cost.py:315: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-27T19:12:29.027385+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.start","scope":"startup"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-27T19:12:29.104849+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.schema","scope":"startup","status":"created","reason_code":"0007_action_result_digest"}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-27T19:12:29.105848+00:00","request_id":null,"run_id":null,"tenant":null,"event":"storage.backfill.finish","scope":"startup","status":"success","seconds":0.078}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-27T19:12:30.207521+00:00","request_id":"516dae21294e42d2bc8144cbef3047eb","run_id":null,"tenant":"local","event":"http.request","method":"POST","path":"/api/validate","status":200,"duration_ms":1012.336}
+INFO     relay.journal:observability.py:35 {"timestamp":"2026-11-27T19:12:30.209369+00:00","request_id":"49517d97613e416aa5ba7d5ea2889b55","run_id":null,"tenant":null,"event":"http.request","method":"GET","path":"/api/health","status":200,"duration_ms":0.478}
+=============================== warnings summary ===============================
+.venv/lib/python3.14/site-packages/starlette/testclient.py:53
+  /Users/soumith/Library/Mobile Documents/iCloud~md~obsidian/Documents/Soumith/No Code Agentic AI/.venv/lib/python3.14/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED backend/tests/test_validation_cost.py::test_a_diamond_with_a_model_on_one_side_is_still_refused
+PASSED backend/tests/test_validation_cost.py::test_a_record_read_after_a_model_query_is_still_a_trusted_switch_input
+PASSED backend/tests/test_validation_cost.py::test_the_trust_rule_gives_the_same_answers_as_before
+PASSED backend/tests/test_validation_cost.py::test_the_trust_rule_gives_the_same_answers_as_before_for_the_guard_declarations
+PASSED backend/tests/test_validation_cost.py::test_each_walk_gives_the_same_answers_as_before_on_small_graphs[fresh-memo]
+FAILED backend/tests/test_validation_cost.py::test_validation_of_a_42_node_workflow_finishes_in_ten_seconds
+FAILED backend/tests/test_validation_cost.py::test_validation_of_a_40_prompt_chain_into_a_switch_finishes_in_ten_seconds[input.message]
+FAILED backend/tests/test_validation_cost.py::test_validation_of_a_40_prompt_chain_into_a_switch_finishes_in_ten_seconds[reader.text]
+FAILED backend/tests/test_validation_cost.py::test_unchecked_model_input_visits_each_node_once
+FAILED backend/tests/test_validation_cost.py::test_checked_dependency_cost_is_linear
+FAILED backend/tests/test_validation_cost.py::test_static_label_cost_is_linear
+FAILED backend/tests/test_validation_cost.py::test_a_node_on_the_walk_path_is_not_remembered_as_safe
+FAILED backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered
+FAILED backend/tests/test_validation_cost.py::test_each_walk_gives_the_same_answers_as_before_on_small_graphs[shared-memo]
+FAILED backend/tests/test_validation_cost.py::test_validate_route_does_not_block_the_event_loop
+10 failed, 5 passed, 1 warning in 32.77s

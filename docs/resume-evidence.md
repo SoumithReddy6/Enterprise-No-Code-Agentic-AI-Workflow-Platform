@@ -155,8 +155,28 @@ Draft bullet (use only with the after-numbers of W06 and W07 beside it):
 
 - **Load baseline:** Built a deployed-process load harness for a leased SQL job queue; measured 2,455 runs/min at 4 workers on PostgreSQL 17 and found no gain at 16 workers, then [measured value] after [change].
 
+## 8. Validation cost (DEF-03, 2026-11-27)
+
+Verified numbers, with their conditions. Evidence: `evals/results/def03-2026-11-27/README.md`.
+Source: the DEF-03 commit after `88d4d8b` (isolation copy `20110d4`). One laptop (Apple M5).
+
+| Claim | Value | Conditions |
+|---|---|---|
+| Lineage-walk calls on a doubled chain of n Prompts | parent `88d4d8b`: 2^(n+1) − 1 (n = 18: 524,287) for each of the three walks; fix: 2n + 2 (n = 18: 38; n = 80: 162) | one call from the end of the chain, `baseline/walk-calls-*.txt` |
+| Parent wall time, `validate_workflow` | n = 16 0.32 s, n = 18 1.36 s, n = 20 5.63 s; a 42-node workflow does not finish in 10 s | `docs/defects.md` DEF-03 (2026-11-16); the 10 s child-process tests in `baseline/red.txt` |
+| Fix wall time, 100-node workflows | 1.5–2.3 ms best of 5, 26 ms worst of 5 | `validate_workflow` + `type_warnings` + `decision_warnings`, `timing/results.json` |
+| Same answers as before | 69 workflows (errors and warnings) and 600 random graphs (every walk, every reference) equal to `88d4d8b` | `backend/tests/fixtures/validation_answers_88d4d8b.json` |
+| Event loop during validation | `/api/health` answers while a 1 s validation runs (parent: only after it ends, 1.01 s) | `test_validate_route_does_not_block_the_event_loop` |
+| Test strength | mutants: 11 of 12 killed; M08 survives with no counterexample found | `mutants/` |
+
+Not claimed: DEF-10 (a binding cycle still makes `static_label` exponential; validation now runs
+in a thread). Draft bullet, only with DEF-10 named as open if asked:
+
+- **Validation cost:** Replaced validator walks that made 2^(n+1) calls on chained graphs with memoized reachability; 100-node workflows validate in 2 ms, with the same answers on 69 workflows and 600 random graphs.
+
 ## Changelog
 
 - 2026-11-16: File created at `7c4aa62`. Six draft claims checked; numbers for claims 2, 3, 5 and 6 reproduced or re-checked. Claim 5 moved to an alternate bullet; claims 3, 4 and 6 reworded. Re-ran the deployed gate (33 of 33), 539 targeted backend tests and the storage probe on `bc62b0b`, `11f8773` and HEAD. The PostgreSQL checks and the live grounding run were not re-run (CI and saved evidence used).
 - 2026-11-16: Corrected the `test_repeat.py` count (82 collected, not 66) and the `worker_event` line (`storage.py:703`), found while writing `docs/status-report.md`.
 - 2026-11-16: Added §7, the load baseline. Recorded in `docs/defects.md` that bullet 3 ("external-write safety") has an open Critical defect, DEF-01: an Agent's settled write can be sent again on resume. Do not use bullet 3 for Agent tools until DEF-01 is fixed.
+- 2026-11-27: Added §8, validation cost (DEF-03). Numbers from `evals/results/def03-2026-11-27/`; DEF-10 recorded as not claimed.

@@ -1,0 +1,17 @@
+{
+ "id": "M09",
+ "file": "backend/app/provenance.py",
+ "planned": [
+  "backend/tests/test_validation_cost.py::test_static_label_cost_is_linear"
+ ],
+ "planned_hit": [
+  "backend/tests/test_validation_cost.py::test_static_label_cost_is_linear"
+ ],
+ "oracle": "walk",
+ "failed": [
+  "backend/tests/test_validation_cost.py::test_static_label_cost_is_linear",
+  "backend/tests/test_validation_cost.py::test_validation_of_a_40_prompt_chain_into_a_switch_finishes_in_ten_seconds[input.message]"
+ ],
+ "killed": true,
+ "ran": 265
+}

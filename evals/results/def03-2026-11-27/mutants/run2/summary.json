@@ -1,0 +1,46 @@
+{
+ "M00": {
+  "control_passes": true,
+  "oracle": "walk+full",
+  "planned": [],
+  "planned_hit": [],
+  "failed": [],
+  "ran": 2075
+ },
+ "M06": {
+  "killed": true,
+  "oracle": "walk",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered"
+  ],
+  "planned_hit": [
+   "backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered"
+  ],
+  "failed": [
+   "backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered"
+  ],
+  "ran": 265
+ },
+ "M07": {
+  "killed": true,
+  "oracle": "walk",
+  "planned": [
+   "backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered"
+  ],
+  "planned_hit": [
+   "backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered"
+  ],
+  "failed": [
+   "backend/tests/test_validation_cost.py::test_a_label_found_on_the_walk_path_is_not_remembered"
+  ],
+  "ran": 265
+ },
+ "M08": {
+  "killed": false,
+  "oracle": "walk+full",
+  "planned": [],
+  "planned_hit": [],
+  "failed": [],
+  "ran": 2075
+ }
+}

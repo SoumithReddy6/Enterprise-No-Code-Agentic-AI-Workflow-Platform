@@ -1,0 +1,16 @@
+{
+ "id": "M05",
+ "file": "backend/app/compiler.py",
+ "planned": [
+  "backend/tests/test_validation_cost.py::test_unchecked_model_input_visits_each_node_once"
+ ],
+ "planned_hit": [
+  "backend/tests/test_validation_cost.py::test_unchecked_model_input_visits_each_node_once"
+ ],
+ "oracle": "walk",
+ "failed": [
+  "backend/tests/test_validation_cost.py::test_unchecked_model_input_visits_each_node_once"
+ ],
+ "killed": true,
+ "ran": 265
+}

@@ -1,0 +1,2 @@
+FAILED backend/tests/test_validation_cost.py::test_unchecked_model_input_visits_each_node_once
+1 failed, 273 passed, 1 warning in 16.27s

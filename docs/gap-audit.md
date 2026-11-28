@@ -1010,7 +1010,9 @@ storage and latency), S9 (prompt injection), E3 and E5 (judge validity, agent-ta
 | W01–W24 | Not started. Implementation starts only on "implement <phase>" |
 | W05 | Phase A partly done on 2026-11-16: harness `scripts/load/`, tests `backend/tests/test_load_harness.py`, baseline `evals/results/load-baseline-2026-11-16/` for `w3` and `w20`. Not done: `loop50`, the idle cell, 32 workers, the smoke test H08, phase B |
 | DEF-01, DEF-02 | Fixed in `f3771b3` (2026-11-27); the test-only wrapper of `request_enforcement` is fixed in the next commit. Tests `backend/tests/test_agent_write_resume.py` (10). Backend 2,176 passed, 7 xfailed at PYTHONHASHSEED 0–4 with PostgreSQL; `request_enforcement` 9 of 9 on SQLite and PostgreSQL; deployed gate 35 of 35 three times; mutants M01–M06, M09, M10 killed, M07, M08, M11 probably equivalent. `test_s07_boundaries.py::test_agent_settled_write_keeps_identity_after_crash` now uses a faithful scripted model, assertion unchanged (user decision, 2026-11-26). Evidence: `evals/results/def01-02-2026-11-27/` |
-| DEF-03 … DEF-09 | Open. Found by the defect hunt (`docs/defects.md`); each has a strict xfail test in `backend/tests/defects/` |
+| DEF-03 | Fixed (2026-11-27, commit after `88d4d8b`). `unchecked_model_input`, `checked_dependency` (added to the card by the user) and `static_label` keep one visited set or path for each call and remember only complete answers; `/api/validate` and `/api/runs` validate in a thread. Tests `backend/tests/test_validation_cost.py` (15). n = 100 validates in 1.5–2.3 ms; the same answers as `88d4d8b` on 69 workflows and 600 random graphs. Backend 2,191 passed, 6 xfailed at PYTHONHASHSEED 0–4 with PostgreSQL; deployed gate 40 of 40; mutants M01–M07, M09–M12 killed, M08 survives (no counterexample found). Evidence: `evals/results/def03-2026-11-27/` |
+| DEF-04 … DEF-09 | Open. Found by the defect hunt (`docs/defects.md`); each has a strict xfail test in `backend/tests/defects/` |
+| DEF-10 | Open, found 2026-11-27 while fixing DEF-03: `static_label` is exponential on a binding cycle. Needs a decision (cycle rule or visit budget). Strict xfail `backend/tests/defects/test_def10_static_label_cycle.py` |
 
 Handoff cards, in the order to do them: `docs/tasks/README.md`. Specs: `docs/specs/`.
 
@@ -1024,3 +1026,4 @@ Changelog:
   checks.
 - 2026-11-17: aligned W06 and W24 with the specs in `docs/specs/` (float epoch on the database
   clock; exact copy of existing markers). Defects found by the hunt are in `docs/defects.md`.
+- 2026-11-27: DEF-03 fixed (checked_dependency included, user decision); DEF-10 added (binding cycle, user decision).
